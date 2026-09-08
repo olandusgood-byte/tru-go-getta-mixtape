@@ -5,12 +5,16 @@ on:
     branches: [main]
     paths:
       - 'supabase/migrations/**'
+      - 'supabase/tests/**'
       - 'docs/AB-005-CONTINUOUS-STAGING.md'
+      - 'docs/AB-005-LAUNCH-GATE-READ-ONLY.md'
       - '.github/workflows/ab005-static-check.yml'
   pull_request:
     paths:
       - 'supabase/migrations/**'
+      - 'supabase/tests/**'
       - 'docs/AB-005-CONTINUOUS-STAGING.md'
+      - 'docs/AB-005-LAUNCH-GATE-READ-ONLY.md'
       - '.github/workflows/ab005-static-check.yml'
 
 permissions:
@@ -46,7 +50,6 @@ jobs:
           grep -q "rollback_cutoff" "$f"
           grep -q "checked_at > v_after" "$f"
           grep -q "coalesce(" "$f"
-          grep -q "rollback_cutoff" "$f"
           grep -q "cannot advance without a checkpoint" "$f"
           grep -q "status in ('fail','blocked','manual')" "$f"
           grep -q "v_pass <> v_total" "$f"
@@ -67,10 +70,57 @@ jobs:
           fi
 
           # Client-facing access remains closed; these are internal gate controls.
-          grep -q "revoke all on function public.ab005_prepare_staging" "$f"
-          grep -q "revoke all on function public.ab005_record_smoke" "$f"
-          grep -q "revoke all on function public.ab005_rollback_staging" "$f"
-          grep -q "revoke all on function public.ab005_checkpoint" "$f"
-          grep -q "revoke all on function public.ab005_advance_after_clean_pass" "$f"
+          for fn in \
+            ab005_prepare_staging \
+            ab005_record_smoke \
+            ab005_rollback_staging \
+            ab005_checkpoint \
+            ab005_advance_after_clean_pass; do
+            grep -q "revoke all on function public.${fn}" "$f"
+          done
 
-          echo "AB-005 repeat-cycle static contract gate passed"
+      - name: Validate AB-005 read-only launch gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_ab005_launch_gate_read_only_consumer.sql"
+          t="supabase/tests/ab005_launch_gate_read_only.sql"
+          d="docs/AB-005-LAUNCH-GATE-READ-ONLY.md"
+          test -s "$f"
+          test -s "$t"
+          test -s "$d"
+
+          # Canonical read-only consumer and security boundary.
+          grep -q "function public.tgg_ab005_launch_gate" "$f"
+          grep -q "SECURITY INVOKER" "$f"
+          grep -q "STABLE" "$f"
+          grep -q "revoke all on function public.tgg_ab005_launch_gate" "$f"
+          grep -q "grant execute on function public.tgg_ab005_launch_gate() to authenticated" "$f"
+          grep -q "production_gate_required.*true" "$f"
+          grep -q "production_promoted.*false" "$f"
+          grep -q "read_only.*true" "$f"
+          grep -q "smoke_summary.*ab005_clean_pass" "$f"
+          grep -q "status = 'passed'" "$f"
+          grep -q "checkpoint_key is not null" "$f"
+
+          # Read-only consumer must not contain write or production-authorization operations.
+          if grep -Eiq "^[[:space:]]*(insert|update|delete|truncate)[[:space:]]" "$f"; then
+            echo "Launch Gate consumer must remain read-only"
+            exit 1
+          fi
+          if grep -Eiq "execute[[:space:]]+function|promot|approve[[:space:]]+production|deploy[[:space:]]+production" "$f"; then
+            echo "Launch Gate consumer must not authorize or perform production mutation"
+            exit 1
+          fi
+
+          # Regression test must document the same security and production invariants.
+          grep -q "tgg_ab005_launch_gate" "$t"
+          grep -q "SECURITY INVOKER" "$t"
+          grep -q "authenticated" "$t"
+          grep -q "production_promoted" "$t"
+          grep -q "production_gate_required" "$t"
+          grep -q "read_only" "$t"
+          grep -q "ab005_clean_pass" "$t"
+          grep -q "ab005_advance_after_clean_pass" "$t"
+
+          echo "AB-005 Launch Gate read-only static contract gate passed"

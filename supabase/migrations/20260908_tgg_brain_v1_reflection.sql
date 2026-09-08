@@ -782,3 +782,101 @@ grant execute on function public.tgg_brain_checkpoint_restore(text) to postgres;
 grant execute on function public.tgg_brain_auto_recover_if_unsafe(text) to postgres;
 
 select public.tgg_brain_checkpoint_create('TGG-BRAIN-1.0-BASELINE','TGG Brain 1.0 verified baseline');
+
+
+-- TGG Brain architecture graph
+create table if not exists public.tgg_brain_components (
+  id uuid primary key default gen_random_uuid(),
+  component_key text not null unique,
+  component_type text not null
+    check (component_type in ('database_table','database_function','edge_function','page','api','worker','cron','ui_module','game_system','integration','repository_path')),
+  name text not null,
+  environment text not null default 'shared'
+    check (environment in ('shared','development','staging','production')),
+  source_ref text,
+  canonical boolean not null default false,
+  active boolean not null default true,
+  risk_level text not null default 'medium'
+    check (risk_level in ('low','medium','high')),
+  owner_domain text,
+  capabilities jsonb not null default '[]'::jsonb,
+  constraints jsonb not null default '[]'::jsonb,
+  metadata jsonb not null default '{}'::jsonb,
+  health_status text not null default 'unknown'
+    check (health_status in ('unknown','healthy','warning','degraded','blocked','retired')),
+  last_verified_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.tgg_brain_component_links (
+  id uuid primary key default gen_random_uuid(),
+  from_component_id uuid not null references public.tgg_brain_components(id) on delete cascade,
+  to_component_id uuid not null references public.tgg_brain_components(id) on delete cascade,
+  relationship text not null
+    check (relationship in ('depends_on','reads','writes','calls','renders','routes_to','authenticates_via','deploys_to','tests','monitors','backs_up','syncs_with','extends')),
+  strength integer not null default 50 check (strength between 1 and 100),
+  required boolean not null default true,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique(from_component_id,to_component_id,relationship),
+  check (from_component_id <> to_component_id)
+);
+
+alter table public.tgg_brain_components enable row level security;
+alter table public.tgg_brain_component_links enable row level security;
+revoke all on public.tgg_brain_components from anon,authenticated;
+revoke all on public.tgg_brain_component_links from anon,authenticated;
+
+create or replace function public.tgg_brain_component_impact(p_component_key text,p_depth integer default 2)
+returns jsonb
+language sql security definer set search_path=''
+as $$
+  with recursive seed as (
+    select id,component_key,component_type,name,environment,risk_level,canonical,0 as depth
+    from public.tgg_brain_components
+    where component_key=p_component_key and active=true
+  ),
+  walk as (
+    select * from seed
+    union
+    select c.id,c.component_key,c.component_type,c.name,c.environment,c.risk_level,c.canonical,w.depth+1
+    from walk w
+    join public.tgg_brain_component_links l on l.to_component_id=w.id
+    join public.tgg_brain_components c on c.id=l.from_component_id and c.active=true
+    where w.depth < greatest(0,least(5,p_depth))
+  )
+  select jsonb_build_object(
+    'component_key',p_component_key,
+    'affected_count',(select count(distinct id) from walk)-1,
+    'production_affected',exists(select 1 from walk where depth>0 and environment='production'),
+    'high_risk_affected',exists(select 1 from walk where depth>0 and risk_level='high')
+  )
+$$;
+
+create or replace function public.tgg_brain_component_find(p_query text,p_limit integer default 20)
+returns jsonb
+language sql security definer set search_path=''
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'component_key',component_key,'component_type',component_type,'name',name,
+    'environment',environment,'risk_level',risk_level,'canonical',canonical,
+    'owner_domain',owner_domain,'capabilities',capabilities,'source_ref',source_ref,'health_status',health_status
+  ) order by canonical desc,name),'[]'::jsonb)
+  from (
+    select *
+    from public.tgg_brain_components
+    where active=true and (
+      component_key ilike '%'||trim(p_query)||'%'
+      or name ilike '%'||trim(p_query)||'%'
+      or coalesce(owner_domain,'') ilike '%'||trim(p_query)||'%'
+      or capabilities::text ilike '%'||trim(p_query)||'%'
+    )
+    limit greatest(1,least(50,p_limit))
+  ) q
+$$;
+
+revoke all on function public.tgg_brain_component_impact(text,integer) from public,anon,authenticated;
+revoke all on function public.tgg_brain_component_find(text,integer) from public,anon,authenticated;
+grant execute on function public.tgg_brain_component_impact(text,integer) to postgres;
+grant execute on function public.tgg_brain_component_find(text,integer) to postgres;

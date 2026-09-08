@@ -8,9 +8,11 @@ on:
       - 'supabase/migrations/20260908_world_alpha_rc8_rc9_live_catchup.sql'
       - 'supabase/migrations/20260908_game_idea_autobuilder_pipeline.sql'
       - 'supabase/migrations/20260908_tgg_brain_v1_reflection.sql'
+      - 'supabase/migrations/20260908_tgg_brain_goal_decomposition.sql'
       - 'supabase/tests/autobuilder_continuous_watchdog_safety.sql'
       - 'supabase/tests/game_idea_autobuilder_pipeline_safety.sql'
       - 'supabase/tests/tgg_brain_v1_reflection_safety.sql'
+      - 'supabase/tests/tgg_brain_goal_decomposition_safety.sql'
       - '.github/workflows/tgg-autobuilder-safety.yml'
   pull_request:
     paths:
@@ -130,6 +132,34 @@ jobs:
           grep -q "blocks_production" "$t"
 
           echo "TGG Brain safety contract passed"
+
+      - name: Validate TGG Brain goal decomposition
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_tgg_brain_goal_decomposition.sql"
+          t="supabase/tests/tgg_brain_goal_decomposition_safety.sql"
+          test -s "$f"
+          test -s "$t"
+
+          grep -q "tgg_brain_goals" "$f"
+          grep -q "tgg_brain_goal_steps" "$f"
+          grep -q "tgg_brain_goal_dependencies" "$f"
+          grep -q "cyclic_dependency_forbidden" "$f"
+          grep -q "self_dependency_forbidden" "$f"
+          grep -q "production_allowed=false" "$f"
+          grep -q "risk_level<>'high'" "$f"
+
+          if grep -Eq "grant execute on function public\.tgg_brain_goal_.*to (authenticated|anon)" "$f"; then
+            echo "Goal orchestration must remain internal-only"
+            exit 1
+          fi
+
+          grep -q "rejects_cycles" "$t"
+          grep -q "blocks_production" "$t"
+          grep -q "excludes_high_risk_goals" "$t"
+
+          echo "TGG Brain goal decomposition safety contract passed"
 
       - name: Validate World Alpha catch-up safety boundaries
         shell: bash

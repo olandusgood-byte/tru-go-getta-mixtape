@@ -428,3 +428,12 @@ revoke all on function public.tgg_autonomic_state() from public,anon,authenticat
 grant execute on function public.tgg_autonomic_scan() to postgres;
 grant execute on function public.tgg_autonomic_run_cycle() to postgres;
 grant execute on function public.tgg_autonomic_state() to postgres;
+
+
+-- Final provider/observability completeness override
+
+
+revoke all on function public.tgg_autonomic_completeness() from public,anon,authenticated;
+revoke all on function public.tgg_autonomic_final_cycle() from public,anon,authenticated;
+grant execute on function public.tgg_autonomic_completeness() to postgres;
+grant execute on function public.tgg_autonomic_final_cycle() to postgres;

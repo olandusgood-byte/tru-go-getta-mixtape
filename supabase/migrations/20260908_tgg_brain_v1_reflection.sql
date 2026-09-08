@@ -1379,3 +1379,156 @@ revoke all on function public.tgg_brain_predict_change_set(text,uuid,uuid,intege
 revoke all on function public.tgg_brain_prediction_latest(text) from public,anon,authenticated;
 grant execute on function public.tgg_brain_predict_change_set(text,uuid,uuid,integer) to postgres;
 grant execute on function public.tgg_brain_prediction_latest(text) to postgres;
+
+
+-- TGG Brain prediction calibration
+create table if not exists public.tgg_brain_prediction_calibrations (
+  id uuid primary key default gen_random_uuid(),
+  prediction_id uuid not null references public.tgg_brain_change_predictions(id) on delete cascade,
+  trial_id uuid references public.tgg_brain_trials(id) on delete set null,
+  predicted_component_count integer not null default 0,
+  actual_component_count integer not null default 0,
+  matched_component_count integer not null default 0,
+  missed_component_count integer not null default 0,
+  overpredicted_component_count integer not null default 0,
+  predicted_test_count integer not null default 0,
+  actual_test_count integer not null default 0,
+  matched_test_count integer not null default 0,
+  component_precision numeric not null default 0,
+  component_recall numeric not null default 0,
+  test_coverage_match numeric not null default 0,
+  calibration_score numeric not null default 0,
+  status text not null default 'complete'
+    check (status in ('complete','warning','insufficient_evidence')),
+  summary jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique(prediction_id,trial_id)
+);
+
+alter table public.tgg_brain_prediction_calibrations enable row level security;
+revoke all on public.tgg_brain_prediction_calibrations from anon,authenticated;
+
+create or replace function public.tgg_brain_calibrate_prediction(
+  p_prediction_id uuid,
+  p_trial_id uuid default null,
+  p_actual_component_keys jsonb default '[]'::jsonb,
+  p_actual_test_types jsonb default '[]'::jsonb
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare
+  v_pred public.tgg_brain_change_predictions%rowtype;
+  v_pred_components text[]; v_actual_components text[];
+  v_pred_tests text[]; v_actual_tests text[];
+  v_pred_count integer:=0; v_actual_count integer:=0; v_match integer:=0;
+  v_missed integer:=0; v_over integer:=0; v_pred_test_count integer:=0;
+  v_actual_test_count integer:=0; v_test_match integer:=0;
+  v_precision numeric:=100; v_recall numeric:=100; v_test_match_score numeric:=100;
+  v_score numeric:=100; v_status text:='complete'; v_id uuid;
+begin
+  select * into v_pred from public.tgg_brain_change_predictions where id=p_prediction_id;
+  if not found then raise exception 'prediction_not_found'; end if;
+
+  select coalesce(array_agg(distinct x->>'component_key'),array[]::text[])
+  into v_pred_components
+  from jsonb_array_elements(v_pred.predicted_edits) x
+  where x ? 'component_key';
+
+  select coalesce(array_agg(distinct value),array[]::text[])
+  into v_actual_components
+  from jsonb_array_elements_text(coalesce(p_actual_component_keys,'[]'::jsonb));
+
+  select coalesce(array_agg(distinct value),array[]::text[])
+  into v_pred_tests
+  from jsonb_array_elements_text(v_pred.predicted_tests);
+
+  select coalesce(array_agg(distinct value),array[]::text[])
+  into v_actual_tests
+  from jsonb_array_elements_text(coalesce(p_actual_test_types,'[]'::jsonb));
+
+  v_pred_count:=cardinality(v_pred_components);
+  v_actual_count:=cardinality(v_actual_components);
+  v_pred_test_count:=cardinality(v_pred_tests);
+  v_actual_test_count:=cardinality(v_actual_tests);
+
+  select count(*) into v_match from unnest(v_pred_components) p where p=any(v_actual_components);
+  v_missed:=greatest(v_actual_count-v_match,0);
+  v_over:=greatest(v_pred_count-v_match,0);
+
+  select count(*) into v_test_match from unnest(v_pred_tests) p where p=any(v_actual_tests);
+
+  if v_pred_count>0 then v_precision:=round((v_match::numeric/v_pred_count)*100,2); end if;
+  if v_actual_count>0 then v_recall:=round((v_match::numeric/v_actual_count)*100,2); end if;
+  if v_pred_test_count>0 then v_test_match_score:=round((v_test_match::numeric/v_pred_test_count)*100,2); end if;
+
+  if v_actual_count=0 and v_actual_test_count=0 then
+    v_status:='insufficient_evidence'; v_score:=0;
+  else
+    v_score:=round(v_precision*0.35+v_recall*0.40+v_test_match_score*0.25,2);
+    if v_score<80 then v_status:='warning'; end if;
+  end if;
+
+  insert into public.tgg_brain_prediction_calibrations(
+    prediction_id,trial_id,predicted_component_count,actual_component_count,matched_component_count,
+    missed_component_count,overpredicted_component_count,predicted_test_count,actual_test_count,
+    matched_test_count,component_precision,component_recall,test_coverage_match,
+    calibration_score,status,summary
+  )
+  values(
+    p_prediction_id,p_trial_id,v_pred_count,v_actual_count,v_match,v_missed,v_over,
+    v_pred_test_count,v_actual_test_count,v_test_match,v_precision,v_recall,v_test_match_score,
+    v_score,v_status,
+    jsonb_build_object(
+      'source_component_key',v_pred.source_component_key,
+      'predicted_risk',v_pred.predicted_risk,
+      'approval_required',v_pred.approval_required,
+      'actual_component_keys',coalesce(p_actual_component_keys,'[]'::jsonb),
+      'actual_test_types',coalesce(p_actual_test_types,'[]'::jsonb)
+    )
+  )
+  on conflict(prediction_id,trial_id) do update
+  set predicted_component_count=excluded.predicted_component_count,
+      actual_component_count=excluded.actual_component_count,
+      matched_component_count=excluded.matched_component_count,
+      missed_component_count=excluded.missed_component_count,
+      overpredicted_component_count=excluded.overpredicted_component_count,
+      predicted_test_count=excluded.predicted_test_count,
+      actual_test_count=excluded.actual_test_count,
+      matched_test_count=excluded.matched_test_count,
+      component_precision=excluded.component_precision,
+      component_recall=excluded.component_recall,
+      test_coverage_match=excluded.test_coverage_match,
+      calibration_score=excluded.calibration_score,
+      status=excluded.status,
+      summary=excluded.summary,
+      created_at=now()
+  returning id into v_id;
+
+  return jsonb_build_object(
+    'ok',true,'calibration_id',v_id,'status',v_status,
+    'component_precision',v_precision,'component_recall',v_recall,
+    'test_coverage_match',v_test_match_score,'calibration_score',v_score,
+    'missed_components',v_missed,'overpredicted_components',v_over
+  );
+end $$;
+
+create or replace function public.tgg_brain_prediction_accuracy()
+returns jsonb
+language sql security definer set search_path=''
+as $$
+  select jsonb_build_object(
+    'calibrations',count(*),
+    'usable_calibrations',count(*) filter(where status<>'insufficient_evidence'),
+    'average_component_precision',coalesce(round(avg(component_precision) filter(where status<>'insufficient_evidence'),2),0),
+    'average_component_recall',coalesce(round(avg(component_recall) filter(where status<>'insufficient_evidence'),2),0),
+    'average_test_coverage_match',coalesce(round(avg(test_coverage_match) filter(where status<>'insufficient_evidence'),2),0),
+    'average_calibration_score',coalesce(round(avg(calibration_score) filter(where status<>'insufficient_evidence'),2),0),
+    'warning_count',count(*) filter(where status='warning')
+  )
+  from public.tgg_brain_prediction_calibrations
+$$;
+
+revoke all on function public.tgg_brain_calibrate_prediction(uuid,uuid,jsonb,jsonb) from public,anon,authenticated;
+revoke all on function public.tgg_brain_prediction_accuracy() from public,anon,authenticated;
+grant execute on function public.tgg_brain_calibrate_prediction(uuid,uuid,jsonb,jsonb) to postgres;
+grant execute on function public.tgg_brain_prediction_accuracy() to postgres;

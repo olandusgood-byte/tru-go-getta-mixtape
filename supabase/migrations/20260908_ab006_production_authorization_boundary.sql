@@ -16,6 +16,17 @@ create table if not exists public.tgg_production_authorizations (
 
 alter table public.tgg_production_authorizations enable row level security;
 
+create policy ab006_admin_authorization_insert
+on public.tgg_production_authorizations
+for insert to authenticated
+with check (
+  authorized_by = auth.uid()
+  and exists (
+    select 1 from public.profiles p
+    where p.id = auth.uid() and p.role = 'admin'
+  )
+);
+
 create or replace function public.ab006_authorize_production(
   p_staging_release_id uuid,
   p_authorization_key text,
@@ -95,8 +106,9 @@ begin
 end;
 $$;
 
-revoke all on table public.tgg_production_authorizations from public, anon, authenticated;
+revoke all on table public.tgg_production_authorizations from public, anon;
 revoke all on function public.ab006_authorize_production(uuid, text, text) from public, anon;
+grant insert on table public.tgg_production_authorizations to authenticated;
 grant execute on function public.ab006_authorize_production(uuid, text, text) to authenticated;
 
 comment on table public.tgg_production_authorizations is 'AB-006 explicit production authorization records; authorization does not itself deploy or promote production.';

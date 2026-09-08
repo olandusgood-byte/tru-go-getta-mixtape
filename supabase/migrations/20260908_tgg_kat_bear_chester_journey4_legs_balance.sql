@@ -144,3 +144,52 @@ set display_name=excluded.display_name,purpose=excluded.purpose,
     high_risk_authority=false,canonical_authority=false,active=true,updated_at=now();
 
 -- Final order is validated by safety test; THE ONE remains last.
+
+
+-- Restore exact 46-layer hierarchy after collision-safe shift.
+update public.tgg_one_layers set layer_order=1  where layer_key='senses';
+update public.tgg_one_layers set layer_order=2  where layer_key='vision';
+update public.tgg_one_layers set layer_order=3  where layer_key='ears';
+update public.tgg_one_layers set layer_order=4  where layer_key='reflexes';
+update public.tgg_one_layers set layer_order=5  where layer_key='scout';
+update public.tgg_one_layers set layer_order=6  where layer_key='kat';
+update public.tgg_one_layers set layer_order=7  where layer_key='gps';
+update public.tgg_one_layers set layer_order=8  where layer_key='hunter';
+update public.tgg_one_layers set layer_order=9  where layer_key='shadow';
+update public.tgg_one_layers set layer_order=10 where layer_key='head';
+update public.tgg_one_layers set layer_order=11 where layer_key='mind';
+update public.tgg_one_layers set layer_order=12 where layer_key='heart';
+update public.tgg_one_layers set layer_order=13 where layer_key='magic';
+update public.tgg_one_layers set layer_order=14 where layer_key='genome';
+update public.tgg_one_layers set layer_order=15 where layer_key='bones';
+update public.tgg_one_layers set layer_order=16 where layer_key='circulation';
+update public.tgg_one_layers set layer_order=17 where layer_key='nervous';
+update public.tgg_one_layers set layer_order=18 where layer_key='curse';
+update public.tgg_one_layers set layer_order=19 where layer_key='immune';
+update public.tgg_one_layers set layer_order=20 where layer_key='bear';
+update public.tgg_one_layers set layer_order=21 where layer_key='lungs';
+update public.tgg_one_layers set layer_order=22 where layer_key='metabolism';
+update public.tgg_one_layers set layer_order=23 where layer_key='detox';
+update public.tgg_one_layers set layer_order=24 where layer_key='muscle';
+update public.tgg_one_layers set layer_order=25 where layer_key='stamina';
+update public.tgg_one_layers set layer_order=26 where layer_key='legs';
+update public.tgg_one_layers set layer_order=27 where layer_key='balance';
+update public.tgg_one_layers set layer_order=28 where layer_key='hands';
+update public.tgg_one_layers set layer_order=29 where layer_key='body';
+update public.tgg_one_layers set layer_order=30 where layer_key='skin';
+update public.tgg_one_layers set layer_order=31 where layer_key='spirit';
+update public.tgg_one_layers set layer_order=32 where layer_key='soul';
+update public.tgg_one_layers set layer_order=33 where layer_key='dream';
+update public.tgg_one_layers set layer_order=34 where layer_key='hair';
+update public.tgg_one_layers set layer_order=35 where layer_key='partner';
+update public.tgg_one_layers set layer_order=36 where layer_key='children';
+update public.tgg_one_layers set layer_order=37 where layer_key='family';
+update public.tgg_one_layers set layer_order=38 where layer_key='veil';
+update public.tgg_one_layers set layer_order=39 where layer_key='matrix_gateway';
+update public.tgg_one_layers set layer_order=40 where layer_key='lewis_portal';
+update public.tgg_one_layers set layer_order=41 where layer_key='chester';
+update public.tgg_one_layers set layer_order=42 where layer_key='journey4';
+update public.tgg_one_layers set layer_order=43 where layer_key='planet';
+update public.tgg_one_layers set layer_order=44 where layer_key='universe';
+update public.tgg_one_layers set layer_order=45 where layer_key='dimensions';
+update public.tgg_one_layers set layer_order=46 where layer_key='the_one';

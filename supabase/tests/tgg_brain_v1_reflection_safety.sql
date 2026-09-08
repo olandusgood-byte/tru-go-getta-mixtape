@@ -185,3 +185,62 @@ where n.nspname='public' and p.proname='tgg_brain_component_impact';
 -- anon_can_execute = false
 -- reports_production_impact = true
 -- reports_high_risk_impact = true
+
+
+-- Architecture + lineage safety
+select c.relname,c.relrowsecurity
+from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public'
+  and c.relname in (
+    'tgg_brain_components',
+    'tgg_brain_component_links',
+    'tgg_brain_lineage_evidence',
+    'tgg_brain_architecture_scans'
+  )
+order by c.relname;
+
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname in (
+    'tgg_brain_architecture_refresh',
+    'tgg_brain_lineage_refresh',
+    'tgg_brain_architecture_scan',
+    'tgg_brain_architecture_latest'
+  )
+order by p.proname;
+
+select
+  count(*) filter(where active=true) as active_lineage,
+  min(confidence) filter(where active=true) as min_confidence,
+  max(confidence) filter(where active=true) as max_confidence
+from public.tgg_brain_lineage_evidence;
+
+select public.tgg_brain_architecture_latest() as architecture_state;
+
+select
+  position('auto_retire_manual_components' in pg_get_functiondef(p.oid)) > 0 as declares_manual_retire_guard,
+  position('false' in lower(pg_get_functiondef(p.oid))) > 0 as manual_retire_false_present
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='tgg_brain_architecture_refresh';
+
+select count(*) as active_architecture_refresh_jobs
+from cron.job
+where jobname='tgg-brain-architecture-refresh' and active=true;
+
+-- Expected:
+-- authenticated_can_execute = false
+-- anon_can_execute = false
+-- confidence remains between 1 and 100
+-- stale_components = 0 and missing_since_previous = 0 for healthy state
+-- canonical_boundary = AB-006
+-- canonical_source_version = V223
+-- production_auto_publish = false
+-- high_risk_auto_execute = false
+-- active_architecture_refresh_jobs = 1

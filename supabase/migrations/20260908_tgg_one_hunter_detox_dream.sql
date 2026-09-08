@@ -96,3 +96,84 @@ begin
     'select public.tgg_one_dream_cycle();'
   );
 end $$;
+
+
+-- Register HUNTER, DETOX, DREAM and lock the 32-layer order.
+update public.tgg_one_layers set layer_order=804 where layer_key='shadow';
+update public.tgg_one_layers set layer_order=805 where layer_key='head';
+update public.tgg_one_layers set layer_order=806 where layer_key='mind';
+update public.tgg_one_layers set layer_order=807 where layer_key='heart';
+update public.tgg_one_layers set layer_order=808 where layer_key='genome';
+update public.tgg_one_layers set layer_order=809 where layer_key='bones';
+update public.tgg_one_layers set layer_order=810 where layer_key='circulation';
+update public.tgg_one_layers set layer_order=811 where layer_key='nervous';
+update public.tgg_one_layers set layer_order=812 where layer_key='immune';
+update public.tgg_one_layers set layer_order=813 where layer_key='lungs';
+update public.tgg_one_layers set layer_order=814 where layer_key='metabolism';
+update public.tgg_one_layers set layer_order=815 where layer_key='muscle';
+update public.tgg_one_layers set layer_order=816 where layer_key='stamina';
+update public.tgg_one_layers set layer_order=817 where layer_key='body';
+update public.tgg_one_layers set layer_order=818 where layer_key='skin';
+update public.tgg_one_layers set layer_order=819 where layer_key='spirit';
+update public.tgg_one_layers set layer_order=820 where layer_key='soul';
+update public.tgg_one_layers set layer_order=821 where layer_key='hair';
+update public.tgg_one_layers set layer_order=822 where layer_key='partner';
+update public.tgg_one_layers set layer_order=823 where layer_key='children';
+update public.tgg_one_layers set layer_order=824 where layer_key='family';
+update public.tgg_one_layers set layer_order=825 where layer_key='veil';
+update public.tgg_one_layers set layer_order=826 where layer_key='matrix_gateway';
+update public.tgg_one_layers set layer_order=827 where layer_key='planet';
+update public.tgg_one_layers set layer_order=828 where layer_key='universe';
+update public.tgg_one_layers set layer_order=829 where layer_key='the_one';
+
+insert into public.tgg_one_layers(
+  layer_key,display_name,layer_order,purpose,responsibility,source_systems,
+  can_execute,can_block,production_authority,high_risk_authority,canonical_authority
+) values
+('hunter','HUNTER 🏹',4,
+ 'Select and track the highest-value already-safe target until caught, verified or gated',
+ jsonb_build_array('target_selection','critical_path_pursuit','skip_checked_targets','no_protected_prey','track_until_verified'),
+ jsonb_build_array('tgg_one_scout_state','tgg_brain_next_actions','tgg_brain_next_critical_unlocks','tgg_build_tasks','tgg_one_skip_check'),
+ false,true,false,false,false),
+('detox','LIVER / KIDNEYS 🧪',16,
+ 'Non-destructive detox, hygiene, stale residue detection and exact-duplicate memory archival',
+ jsonb_build_array('memory_hygiene','stale_claim_detection','stale_agent_detection','failure_residue','non_destructive_cleanup'),
+ jsonb_build_array('tgg_brain_memory_hygiene_state','tgg_brain_memory_compact','tgg_build_failures','tgg_game_idea_inbox','tgg_autobuilder_agent_jobs'),
+ false,true,false,false,false),
+('dream','SLEEP / DREAM 🌙',23,
+ 'Periodic reflection, memory consolidation, architecture refresh and lineage learning',
+ jsonb_build_array('reflection','memory_consolidation','architecture_refresh','lineage_refresh','no_invented_work'),
+ jsonb_build_array('tgg_brain_reflect','tgg_brain_memory_compact','tgg_brain_architecture_scan','tgg_brain_lineage_refresh'),
+ false,true,false,false,false)
+on conflict(layer_key) do update
+set display_name=excluded.display_name,purpose=excluded.purpose,
+    responsibility=excluded.responsibility,source_systems=excluded.source_systems,
+    can_execute=false,can_block=true,production_authority=false,
+    high_risk_authority=false,canonical_authority=false,active=true,updated_at=now();
+
+update public.tgg_one_layers set layer_order=5 where layer_key='shadow';
+update public.tgg_one_layers set layer_order=6 where layer_key='head';
+update public.tgg_one_layers set layer_order=7 where layer_key='mind';
+update public.tgg_one_layers set layer_order=8 where layer_key='heart';
+update public.tgg_one_layers set layer_order=9 where layer_key='genome';
+update public.tgg_one_layers set layer_order=10 where layer_key='bones';
+update public.tgg_one_layers set layer_order=11 where layer_key='circulation';
+update public.tgg_one_layers set layer_order=12 where layer_key='nervous';
+update public.tgg_one_layers set layer_order=13 where layer_key='immune';
+update public.tgg_one_layers set layer_order=14 where layer_key='lungs';
+update public.tgg_one_layers set layer_order=15 where layer_key='metabolism';
+update public.tgg_one_layers set layer_order=17 where layer_key='muscle';
+update public.tgg_one_layers set layer_order=18 where layer_key='stamina';
+update public.tgg_one_layers set layer_order=19 where layer_key='body';
+update public.tgg_one_layers set layer_order=20 where layer_key='skin';
+update public.tgg_one_layers set layer_order=21 where layer_key='spirit';
+update public.tgg_one_layers set layer_order=22 where layer_key='soul';
+update public.tgg_one_layers set layer_order=24 where layer_key='hair';
+update public.tgg_one_layers set layer_order=25 where layer_key='partner';
+update public.tgg_one_layers set layer_order=26 where layer_key='children';
+update public.tgg_one_layers set layer_order=27 where layer_key='family';
+update public.tgg_one_layers set layer_order=28 where layer_key='veil';
+update public.tgg_one_layers set layer_order=29 where layer_key='matrix_gateway';
+update public.tgg_one_layers set layer_order=30 where layer_key='planet';
+update public.tgg_one_layers set layer_order=31 where layer_key='universe';
+update public.tgg_one_layers set layer_order=32 where layer_key='the_one';

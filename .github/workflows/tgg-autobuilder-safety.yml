@@ -46,14 +46,12 @@ jobs:
           grep -q "production_promotion_requires_explicit_approval" "$f"
           grep -q "tgg-autobuilder-continuous-watchdog" "$f"
 
-          # Production and high-risk guardrails must remain present in the test contract too.
           grep -q "production_auto_claim_candidates" "$t"
           grep -q "blocks_high_risk" "$t"
           grep -q "blocks_production" "$t"
           grep -q "authenticated_can_execute" "$t"
           grep -q "anon_can_execute" "$t"
 
-          # Watchdog must not be opened to normal client roles.
           if grep -Eq "grant execute on function public\.tgg_autobuilder_watchdog\(\) to (authenticated|anon)" "$f"; then
             echo "Auto Builder watchdog must remain internal-only"
             exit 1
@@ -84,8 +82,8 @@ jobs:
           grep -q "tgg_world_workout_finish" "$rc89"
           grep -q "tgg_world_crew_set_role" "$rc89"
 
-          # Catch-up migrations must not introduce Stripe or production promotion.
-          if grep -Eiq "stripe_secret|cash.?out|promot.*production|deploy.*production" "$rc67" "$rc89"; then
+          # Ignore explanatory SQL comments; only reject executable production/real-money terms.
+          if grep -Ev '^[[:space:]]*--' "$rc67" "$rc89" | grep -Eiq "stripe_secret|cash.?out|promot.*production|deploy.*production"; then
             echo "World Alpha catch-up must remain virtual/development-only"
             exit 1
           fi

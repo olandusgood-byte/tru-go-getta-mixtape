@@ -110,7 +110,9 @@ grant execute on function public.tgg_lewis_portal_exit(uuid) to authenticated;
 grant execute on function public.tgg_lewis_portal_state() to authenticated;
 grant execute on function public.tgg_one_magic_portal_completeness() to postgres;
 
--- Register new layers; a clean rebuild applies these after prior layer migrations.
+-- Register new layers and lock the 39-layer order.
+update public.tgg_one_layers set layer_order=1100+layer_order where layer_order>=12;
+
 insert into public.tgg_one_layers(
   layer_key,display_name,layer_order,purpose,responsibility,source_systems,
   can_execute,can_block,production_authority,high_risk_authority,canonical_authority
@@ -135,3 +137,29 @@ set display_name=excluded.display_name,purpose=excluded.purpose,
     responsibility=excluded.responsibility,source_systems=excluded.source_systems,
     can_execute=false,can_block=true,production_authority=false,
     high_risk_authority=false,canonical_authority=false,active=true,updated_at=now();
+
+update public.tgg_one_layers set layer_order=13 where layer_key='genome';
+update public.tgg_one_layers set layer_order=14 where layer_key='bones';
+update public.tgg_one_layers set layer_order=15 where layer_key='circulation';
+update public.tgg_one_layers set layer_order=16 where layer_key='nervous';
+update public.tgg_one_layers set layer_order=18 where layer_key='immune';
+update public.tgg_one_layers set layer_order=19 where layer_key='lungs';
+update public.tgg_one_layers set layer_order=20 where layer_key='metabolism';
+update public.tgg_one_layers set layer_order=21 where layer_key='detox';
+update public.tgg_one_layers set layer_order=22 where layer_key='muscle';
+update public.tgg_one_layers set layer_order=23 where layer_key='stamina';
+update public.tgg_one_layers set layer_order=24 where layer_key='hands';
+update public.tgg_one_layers set layer_order=25 where layer_key='body';
+update public.tgg_one_layers set layer_order=26 where layer_key='skin';
+update public.tgg_one_layers set layer_order=27 where layer_key='spirit';
+update public.tgg_one_layers set layer_order=28 where layer_key='soul';
+update public.tgg_one_layers set layer_order=29 where layer_key='dream';
+update public.tgg_one_layers set layer_order=30 where layer_key='hair';
+update public.tgg_one_layers set layer_order=31 where layer_key='partner';
+update public.tgg_one_layers set layer_order=32 where layer_key='children';
+update public.tgg_one_layers set layer_order=33 where layer_key='family';
+update public.tgg_one_layers set layer_order=34 where layer_key='veil';
+update public.tgg_one_layers set layer_order=35 where layer_key='matrix_gateway';
+update public.tgg_one_layers set layer_order=37 where layer_key='planet';
+update public.tgg_one_layers set layer_order=38 where layer_key='universe';
+update public.tgg_one_layers set layer_order=39 where layer_key='the_one';

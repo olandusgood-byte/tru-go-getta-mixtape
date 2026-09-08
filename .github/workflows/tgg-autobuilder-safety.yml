@@ -1,0 +1,93 @@
+name: TGG Auto Builder Safety
+
+on:
+  push:
+    paths:
+      - 'supabase/migrations/20260908_autobuilder_continuous_watchdog.sql'
+      - 'supabase/migrations/20260908_world_alpha_rc6_rc7_live_catchup.sql'
+      - 'supabase/migrations/20260908_world_alpha_rc8_rc9_live_catchup.sql'
+      - 'supabase/tests/autobuilder_continuous_watchdog_safety.sql'
+      - '.github/workflows/tgg-autobuilder-safety.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/20260908_autobuilder_continuous_watchdog.sql'
+      - 'supabase/migrations/20260908_world_alpha_rc6_rc7_live_catchup.sql'
+      - 'supabase/migrations/20260908_world_alpha_rc8_rc9_live_catchup.sql'
+      - 'supabase/tests/autobuilder_continuous_watchdog_safety.sql'
+      - '.github/workflows/tgg-autobuilder-safety.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate continuous Auto Builder guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_autobuilder_continuous_watchdog.sql"
+          t="supabase/tests/autobuilder_continuous_watchdog_safety.sql"
+          test -s "$f"
+          test -s "$t"
+
+          grep -q "function public.tgg_build_claim_ready_batch" "$f"
+          grep -q "target_environment" "$f"
+          grep -q "production" "$f"
+          grep -q "risk_level <> 'high'" "$f"
+          grep -q "historical_only" "$f"
+          grep -q "auto_builder_claim_allowed" "$f"
+          grep -q "function public.tgg_autobuilder_watchdog" "$f"
+          grep -q "production_auto_claim_blocked" "$f"
+          grep -q "high_risk_auto_claim_blocked" "$f"
+          grep -q "production_promotion_requires_explicit_approval" "$f"
+          grep -q "tgg-autobuilder-continuous-watchdog" "$f"
+
+          # Production and high-risk guardrails must remain present in the test contract too.
+          grep -q "production_auto_claim_candidates" "$t"
+          grep -q "blocks_high_risk" "$t"
+          grep -q "blocks_production" "$t"
+          grep -q "authenticated_can_execute" "$t"
+          grep -q "anon_can_execute" "$t"
+
+          # Watchdog must not be opened to normal client roles.
+          if grep -Eq "grant execute on function public\.tgg_autobuilder_watchdog\(\) to (authenticated|anon)" "$f"; then
+            echo "Auto Builder watchdog must remain internal-only"
+            exit 1
+          fi
+
+          echo "Auto Builder safety contract passed"
+
+      - name: Validate World Alpha catch-up safety boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          rc67="supabase/migrations/20260908_world_alpha_rc6_rc7_live_catchup.sql"
+          rc89="supabase/migrations/20260908_world_alpha_rc8_rc9_live_catchup.sql"
+          test -s "$rc67"
+          test -s "$rc89"
+
+          grep -q "rights_transfer.*false" "$rc67"
+          grep -q "real_money.*false" "$rc67"
+          grep -q "virtual_reward_only" "$rc67"
+          grep -q "tgg_world_studio_open" "$rc67"
+          grep -q "tgg_world_open_mic_finish" "$rc67"
+
+          grep -q "tgg_credits" "$rc89"
+          grep -q "virtual_currency" "$rc89"
+          grep -q "real_money.*false" "$rc89"
+          grep -q "tgg_world_purchase" "$rc89"
+          grep -q "idempotency_key" "$rc89"
+          grep -q "tgg_world_workout_finish" "$rc89"
+          grep -q "tgg_world_crew_set_role" "$rc89"
+
+          # Catch-up migrations must not introduce Stripe or production promotion.
+          if grep -Eiq "stripe_secret|cash.?out|promot.*production|deploy.*production" "$rc67" "$rc89"; then
+            echo "World Alpha catch-up must remain virtual/development-only"
+            exit 1
+          fi
+
+          echo "World Alpha catch-up safety contract passed"

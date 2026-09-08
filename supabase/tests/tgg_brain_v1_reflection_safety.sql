@@ -244,3 +244,38 @@ where jobname='tgg-brain-architecture-refresh' and active=true;
 -- production_auto_publish = false
 -- high_risk_auto_execute = false
 -- active_architecture_refresh_jobs = 1
+
+
+-- Change prediction safety
+select c.relname,c.relrowsecurity
+from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public' and c.relname='tgg_brain_change_predictions';
+
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname in ('tgg_brain_predict_change_set','tgg_brain_prediction_latest')
+order by p.proname;
+
+select public.tgg_brain_predict_change_set('system:creator-os',null,null,2) as canonical_prediction;
+
+select
+  position('v_approval:=v_prod or v_high or v_canonical' in replace(pg_get_functiondef(p.oid),' ','')) > 0 as approval_guard_present,
+  position('predicted_tests' in pg_get_functiondef(p.oid)) > 0 as predicts_tests,
+  position('lineage_based' in pg_get_functiondef(p.oid)) > 0 as lineage_based
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='tgg_brain_predict_change_set';
+
+-- Expected:
+-- authenticated_can_execute = false
+-- anon_can_execute = false
+-- Creator OS prediction approval_required = true
+-- canonical_affected = true
+-- high_risk_affected = true
+-- production_affected = false for the current curated Creator OS graph

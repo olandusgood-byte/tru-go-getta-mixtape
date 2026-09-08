@@ -515,3 +515,45 @@ where n.nspname='public' and p.proname='tgg_brain_recall';
 -- high_risk_auto_execute = false
 -- active_guardrails includes production/high-risk/canonical rules
 -- recall_filters_inactive = true
+
+
+-- Structured specification compiler safety
+select c.relname,c.relrowsecurity
+from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public'
+  and c.relname in ('tgg_brain_specs','tgg_brain_spec_requirements','tgg_brain_spec_scope')
+order by c.relname;
+
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname in (
+    'tgg_brain_spec_create',
+    'tgg_brain_spec_add_requirement',
+    'tgg_brain_spec_add_scope',
+    'tgg_brain_spec_validate',
+    'tgg_brain_spec_state'
+  )
+order by p.proname;
+
+select public.tgg_brain_spec_state() as spec_state;
+
+select
+  position('missing_acceptance' in pg_get_functiondef(p.oid))>0 as validates_acceptance,
+  position('missing_owner_domain' in pg_get_functiondef(p.oid))>0 as validates_owner,
+  position('production_allowed=false' in replace(lower(pg_get_functiondef(p.oid)),' ',''))>0 as requires_nonproduction
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='tgg_brain_spec_validate';
+
+-- Expected:
+-- RLS enabled on all spec tables
+-- authenticated_can_execute=false and anon_can_execute=false
+-- production_allowed remains 0 for auto-created specs
+-- spec validation requires MUST acceptance + owner domain
+-- high-risk / approval-required in-scope items prevent ready state

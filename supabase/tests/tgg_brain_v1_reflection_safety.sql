@@ -65,3 +65,57 @@ select public.tgg_brain_state() as brain_state;
 -- high_risk_auto_execute = false
 -- canonical_boundary = AB-006
 -- canonical_source_version = V223
+
+
+-- Versioned self-evaluation safety
+select c.relname,c.relrowsecurity
+from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public'
+  and c.relname in ('tgg_brain_versions','tgg_brain_evaluations','tgg_brain_heuristic_adjustments')
+order by c.relname;
+
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname in (
+    'tgg_brain_evaluate',
+    'tgg_brain_propose_adjustments',
+    'tgg_brain_latest_scorecard',
+    'tgg_brain_periodic_evaluation'
+  )
+order by p.proname;
+
+-- Proposals must never auto-apply.
+select
+  position('auto_apply' in pg_get_functiondef(p.oid)) > 0 as exposes_auto_apply_flag,
+  position('false' in lower(pg_get_functiondef(p.oid))) > 0 as auto_apply_false_present
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='tgg_brain_propose_adjustments';
+
+-- Safety contract remains immutable in the active brain version.
+select version_key,safety_contract
+from public.tgg_brain_versions
+where status='active'
+order by version_no desc
+limit 1;
+
+-- Periodic scorecard cron must exist once and be active.
+select count(*) as active_scorecard_jobs
+from cron.job
+where jobname='tgg-brain-periodic-evaluation' and active=true;
+
+-- Expected:
+-- authenticated_can_execute = false for internal evaluation controls
+-- anon_can_execute = false
+-- auto_apply = false
+-- production_auto_publish = false
+-- high_risk_auto_execute = false
+-- canonical_boundary = AB-006
+-- canonical_source_version = V223
+-- active_scorecard_jobs = 1

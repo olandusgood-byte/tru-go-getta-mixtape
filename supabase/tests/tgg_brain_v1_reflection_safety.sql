@@ -355,3 +355,35 @@ where n.nspname='public' and p.proname='tgg_brain_execution_trace_record';
 -- production_touched = 0
 -- high_risk_executed = 0
 -- boundary_violations = 0
+
+
+-- Uncertainty gate safety
+select c.relname,c.relrowsecurity
+from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public' and c.relname='tgg_brain_uncertainty_checks';
+
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='tgg_brain_uncertainty_gate';
+
+select
+  position('approval_required' in pg_get_functiondef(p.oid)) > 0 as has_approval_action,
+  position('research_required' in pg_get_functiondef(p.oid)) > 0 as has_research_action,
+  position('narrow_scope' in pg_get_functiondef(p.oid)) > 0 as has_narrow_scope_action,
+  position('expanded_qa' in pg_get_functiondef(p.oid)) > 0 as has_expanded_qa_action,
+  position('production_auto_publish' in pg_get_functiondef(p.oid)) > 0 as preserves_production_guard,
+  position('high_risk_auto_execute' in pg_get_functiondef(p.oid)) > 0 as preserves_high_risk_guard
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='tgg_brain_uncertainty_gate';
+
+-- Expected:
+-- authenticated_can_execute = false
+-- anon_can_execute = false
+-- high-risk/canonical components resolve to approval_required
+-- uncertainty never weakens production/high-risk boundaries

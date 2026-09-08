@@ -2516,3 +2516,138 @@ revoke all on function public.tgg_brain_spec_mark_complete(uuid) from public,ano
 grant execute on function public.tgg_brain_requirement_link(uuid,text,uuid,uuid,uuid,jsonb) to postgres;
 grant execute on function public.tgg_brain_spec_coverage(uuid) to postgres;
 grant execute on function public.tgg_brain_spec_mark_complete(uuid) to postgres;
+
+
+-- TGG Brain critical-path planning
+create or replace function public.tgg_brain_critical_path(p_goal_id uuid,p_limit integer default 20)
+returns jsonb
+language sql security definer set search_path=''
+as $$
+with recursive edges as (
+  select s.id step_id,d.goal_step_id dependent_id
+  from public.tgg_brain_goal_steps s
+  join public.tgg_brain_goal_dependencies d on d.depends_on_step_id=s.id
+  where s.goal_id=p_goal_id
+),
+closure as (
+  select e.step_id,e.dependent_id,1 depth from edges e
+  union all
+  select c.step_id,e.dependent_id,c.depth+1
+  from closure c join edges e on e.step_id=c.dependent_id
+  where c.depth<50
+),
+unlock_counts as (
+  select step_id,count(distinct dependent_id) downstream_unlocks
+  from closure group by step_id
+),
+dep_state as (
+  select s.id,count(d.depends_on_step_id) dependency_count,
+         count(d.depends_on_step_id) filter(where dep.status='complete') complete_dependencies
+  from public.tgg_brain_goal_steps s
+  left join public.tgg_brain_goal_dependencies d on d.goal_step_id=s.id
+  left join public.tgg_brain_goal_steps dep on dep.id=d.depends_on_step_id
+  where s.goal_id=p_goal_id
+  group by s.id
+),
+ranked as (
+  select s.id,s.step_key,s.title,s.step_type,s.status,s.sequence_no,s.risk_level,s.acceptance,
+         coalesce(u.downstream_unlocks,0) downstream_unlocks,
+         ds.dependency_count,ds.complete_dependencies,
+         (ds.dependency_count=ds.complete_dependencies) dependencies_satisfied,
+         case
+           when s.risk_level='high' then false
+           when s.status in ('complete','skipped','approval_required','blocked') then false
+           when ds.dependency_count<>ds.complete_dependencies then false
+           else true
+         end autonomous_candidate,
+         (
+           coalesce(u.downstream_unlocks,0)*20
+           + case s.status when 'ready' then 30 when 'queued' then 20 when 'repairing' then 25 else 10 end
+           + greatest(0,20-s.sequence_no)
+           - case s.risk_level when 'medium' then 10 else 0 end
+         )::numeric unlock_score
+  from public.tgg_brain_goal_steps s
+  join dep_state ds on ds.id=s.id
+  left join unlock_counts u on u.step_id=s.id
+  where s.goal_id=p_goal_id and s.status not in ('complete','skipped')
+)
+select jsonb_build_object(
+  'goal_id',p_goal_id,
+  'critical_path',coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'step_id',id,'step_key',step_key,'title',title,'step_type',step_type,'status',status,
+      'sequence_no',sequence_no,'risk_level',risk_level,'downstream_unlocks',downstream_unlocks,
+      'dependency_count',dependency_count,'complete_dependencies',complete_dependencies,
+      'dependencies_satisfied',dependencies_satisfied,'autonomous_candidate',autonomous_candidate,
+      'unlock_score',unlock_score,'acceptance',acceptance
+    ) order by unlock_score desc,sequence_no)
+    from (select * from ranked order by unlock_score desc,sequence_no limit greatest(1,least(50,p_limit))) q
+  ),'[]'::jsonb),
+  'next_safe_unlock',(
+    select jsonb_build_object(
+      'step_id',id,'step_key',step_key,'title',title,'unlock_score',unlock_score,'downstream_unlocks',downstream_unlocks
+    )
+    from ranked where autonomous_candidate=true
+    order by unlock_score desc,sequence_no limit 1
+  ),
+  'blocked_or_approval_count',(
+    select count(*) from ranked where status in ('blocked','approval_required') or risk_level='high'
+  ),
+  'safe_ready_count',(select count(*) from ranked where autonomous_candidate=true)
+)
+$$;
+
+create or replace function public.tgg_brain_next_critical_unlocks(p_limit integer default 10)
+returns jsonb
+language sql security definer set search_path=''
+as $$
+with goals as (
+  select id,goal_key,title,priority_score
+  from public.tgg_brain_goals
+  where status not in ('complete','canceled')
+    and development_only=true and production_allowed=false and risk_level<>'high'
+),
+candidates as (
+  select g.id goal_id,g.goal_key,g.title goal_title,g.priority_score,
+         s.id step_id,s.step_key,s.title step_title,s.step_type,s.sequence_no,s.risk_level,
+         coalesce(u.downstream_unlocks,0) downstream_unlocks,
+         (
+           g.priority_score+coalesce(u.downstream_unlocks,0)*20+greatest(0,20-s.sequence_no)
+           -case s.risk_level when 'medium' then 10 else 0 end
+         )::numeric score
+  from goals g
+  join public.tgg_brain_goal_steps s on s.goal_id=g.id
+  left join (
+    with recursive e as (
+      select d.depends_on_step_id step_id,d.goal_step_id dependent_id
+      from public.tgg_brain_goal_dependencies d
+    ),
+    c as (
+      select step_id,dependent_id,1 depth from e
+      union all
+      select c.step_id,e.dependent_id,c.depth+1
+      from c join e on e.step_id=c.dependent_id
+      where c.depth<50
+    )
+    select step_id,count(distinct dependent_id) downstream_unlocks from c group by step_id
+  ) u on u.step_id=s.id
+  where s.status in ('queued','ready','repairing','testing')
+    and s.risk_level<>'high'
+    and not exists(
+      select 1 from public.tgg_brain_goal_dependencies d
+      join public.tgg_brain_goal_steps dep on dep.id=d.depends_on_step_id
+      where d.goal_step_id=s.id and dep.status<>'complete'
+    )
+)
+select coalesce(jsonb_agg(jsonb_build_object(
+  'goal_id',goal_id,'goal_key',goal_key,'goal_title',goal_title,'step_id',step_id,
+  'step_key',step_key,'step_title',step_title,'step_type',step_type,'risk_level',risk_level,
+  'downstream_unlocks',downstream_unlocks,'score',score
+) order by score desc),'[]'::jsonb)
+from (select * from candidates order by score desc limit greatest(1,least(25,p_limit))) q
+$$;
+
+revoke all on function public.tgg_brain_critical_path(uuid,integer) from public,anon,authenticated;
+revoke all on function public.tgg_brain_next_critical_unlocks(integer) from public,anon,authenticated;
+grant execute on function public.tgg_brain_critical_path(uuid,integer) to postgres;
+grant execute on function public.tgg_brain_next_critical_unlocks(integer) to postgres;

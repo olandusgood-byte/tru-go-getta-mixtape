@@ -480,3 +480,38 @@ where n.nspname='public' and p.proname='tgg_brain_memory_compact';
 -- exact_duplicate_candidates = 0 after healthy compaction
 -- compaction targets lesson/qa only
 -- destructive_delete_performed = false
+
+
+-- Targeted recall + context-pack safety
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname in ('tgg_brain_recall','tgg_brain_context_pack')
+order by p.proname;
+
+select public.tgg_brain_context_pack('Creator OS production boundary',6) as context_pack;
+
+select
+  count(*) filter(where active=false) as inactive_memories,
+  count(*) filter(where active=true) as active_memories
+from public.tgg_brain_memory;
+
+select
+  position('where m.active=true' in lower(pg_get_functiondef(p.oid))) > 0 as recall_filters_inactive
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='tgg_brain_recall';
+
+-- Expected:
+-- authenticated_can_execute = false
+-- anon_can_execute = false
+-- context_pack canonical_boundary = AB-006
+-- context_pack canonical_source_version = V223
+-- production_auto_publish = false
+-- high_risk_auto_execute = false
+-- active_guardrails includes production/high-risk/canonical rules
+-- recall_filters_inactive = true

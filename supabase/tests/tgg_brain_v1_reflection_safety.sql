@@ -279,3 +279,44 @@ where n.nspname='public' and p.proname='tgg_brain_predict_change_set';
 -- canonical_affected = true
 -- high_risk_affected = true
 -- production_affected = false for the current curated Creator OS graph
+
+
+-- Prediction calibration safety
+select c.relname,c.relrowsecurity
+from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public'
+  and c.relname='tgg_brain_prediction_calibrations';
+
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname in ('tgg_brain_calibrate_prediction','tgg_brain_prediction_accuracy')
+order by p.proname;
+
+select
+  count(*) as calibration_rows,
+  count(*) filter(where calibration_score<0 or calibration_score>100) as invalid_calibration_scores,
+  count(*) filter(where component_precision<0 or component_precision>100) as invalid_precision_scores,
+  count(*) filter(where component_recall<0 or component_recall>100) as invalid_recall_scores,
+  count(*) filter(where test_coverage_match<0 or test_coverage_match>100) as invalid_test_match_scores
+from public.tgg_brain_prediction_calibrations;
+
+select
+  position('insufficient_evidence' in pg_get_functiondef(p.oid)) > 0 as has_insufficient_evidence_guard,
+  position('v_actual_count=0 and v_actual_test_count=0' in replace(pg_get_functiondef(p.oid),' ','')) > 0
+    as empty_actuals_do_not_fake_accuracy
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='tgg_brain_calibrate_prediction';
+
+-- Expected:
+-- RLS = true
+-- authenticated_can_execute = false
+-- anon_can_execute = false
+-- all score invalid counts = 0
+-- empty actual evidence => insufficient_evidence

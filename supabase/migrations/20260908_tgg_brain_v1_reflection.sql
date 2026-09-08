@@ -2073,3 +2073,124 @@ revoke all on function public.tgg_brain_memory_compact() from public,anon,authen
 revoke all on function public.tgg_brain_memory_hygiene_state() from public,anon,authenticated;
 grant execute on function public.tgg_brain_memory_compact() to postgres;
 grant execute on function public.tgg_brain_memory_hygiene_state() to postgres;
+
+
+-- TGG Brain targeted recall + focused context packs
+create or replace function public.tgg_brain_recall(
+  p_query text,p_limit integer default 12
+) returns jsonb
+language sql security definer set search_path=''
+as $$
+  with tokens as (
+    select distinct tok
+    from regexp_split_to_table(lower(trim(coalesce(p_query,''))), E'[^a-z0-9_:-]+') tok
+    where length(tok)>=3
+  ), scored as (
+    select m.*,
+      (m.importance::numeric*0.45
+       + case m.memory_type
+           when 'constraint' then 30 when 'system' then 25 when 'architecture' then 22
+           when 'decision' then 20 when 'dependency' then 15 when 'qa' then 10
+           when 'lesson' then 8 else 5 end
+       + case when lower(m.title) like '%'||lower(trim(p_query))||'%' and trim(p_query)<>'' then 35 else 0 end
+       + case when lower(m.content::text) like '%'||lower(trim(p_query))||'%' and trim(p_query)<>'' then 20 else 0 end
+       + (select coalesce(count(*),0)*6 from tokens t
+          where lower(m.title) like '%'||t.tok||'%'
+             or lower(m.content::text) like '%'||t.tok||'%'
+             or lower(coalesce(m.source_ref,'')) like '%'||t.tok||'%')
+      ) relevance_score
+    from public.tgg_brain_memory m
+    where m.active=true
+  ), ranked as (
+    select * from scored
+    where relevance_score>0
+    order by relevance_score desc,importance desc,updated_at desc
+    limit greatest(1,least(30,p_limit))
+  )
+  select jsonb_build_object(
+    'query',p_query,
+    'active_memory_count',(select count(*) from public.tgg_brain_memory where active=true),
+    'returned_count',(select count(*) from ranked),
+    'memories',coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'memory_key',memory_key,'memory_type',memory_type,'title',title,'importance',importance,
+        'relevance_score',round(relevance_score,2),'content',content,'source_ref',source_ref
+      ) order by relevance_score desc,importance desc)
+      from ranked
+    ),'[]'::jsonb)
+  )
+$$;
+
+create or replace function public.tgg_brain_context_pack(
+  p_query text,p_memory_limit integer default 10
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_memory jsonb; v_components jsonb; v_decisions jsonb; v_guardrails jsonb;
+begin
+  v_memory:=public.tgg_brain_recall(p_query,p_memory_limit);
+
+  with tokens as (
+    select distinct tok
+    from regexp_split_to_table(lower(trim(coalesce(p_query,''))), E'[^a-z0-9_:-]+') tok
+    where length(tok)>=3
+  ), scored as (
+    select c.*,
+      (case when lower(c.name)=lower(trim(p_query)) then 60 else 0 end
+       +case when lower(c.name) like '%'||lower(trim(p_query))||'%' and trim(p_query)<>'' then 40 else 0 end
+       +case when c.canonical then 20 else 0 end
+       +(select coalesce(count(*),0)*12 from tokens t
+         where lower(c.name) like '%'||t.tok||'%'
+            or lower(c.component_key) like '%'||t.tok||'%'
+            or lower(coalesce(c.owner_domain,'')) like '%'||t.tok||'%'
+            or lower(c.capabilities::text) like '%'||t.tok||'%')
+      ) relevance_score
+    from public.tgg_brain_components c where c.active=true
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'component_key',component_key,'component_type',component_type,'name',name,
+    'environment',environment,'risk_level',risk_level,'canonical',canonical,
+    'owner_domain',owner_domain,'capabilities',capabilities,'source_ref',source_ref,
+    'health_status',health_status,'relevance_score',relevance_score
+  ) order by relevance_score desc,canonical desc,name),'[]'::jsonb)
+  into v_components
+  from (select * from scored where relevance_score>0
+        order by relevance_score desc,canonical desc,name limit 10) q;
+
+  with tokens as (
+    select distinct tok
+    from regexp_split_to_table(lower(trim(coalesce(p_query,''))), E'[^a-z0-9_:-]+') tok
+    where length(tok)>=3
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'decision_key',d.decision_key,'subject',d.subject,'decision',d.decision,
+    'constraints',d.constraints,'reversible',d.reversible
+  ) order by d.updated_at desc),'[]'::jsonb)
+  into v_decisions
+  from public.tgg_brain_decisions d
+  where d.status='active'
+    and (p_query='' or exists(
+      select 1 from tokens t
+      where lower(d.subject) like '%'||t.tok||'%'
+         or lower(d.decision) like '%'||t.tok||'%'
+         or lower(d.constraints::text) like '%'||t.tok||'%'
+    ));
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'guardrail_key',guardrail_key,'category',category,'severity',severity,'action',action,'rule',rule
+  ) order by case severity when 'critical' then 1 when 'high' then 2 else 3 end,guardrail_key),'[]'::jsonb)
+  into v_guardrails
+  from public.tgg_brain_guardrails where active=true;
+
+  return jsonb_build_object(
+    'query',p_query,'memory',v_memory,'matching_components',v_components,
+    'matching_decisions',v_decisions,'active_guardrails',v_guardrails,
+    'canonical_boundary','AB-006','canonical_source_version','V223',
+    'production_auto_publish',false,'high_risk_auto_execute',false
+  );
+end $$;
+
+revoke all on function public.tgg_brain_recall(text,integer) from public,anon,authenticated;
+revoke all on function public.tgg_brain_context_pack(text,integer) from public,anon,authenticated;
+grant execute on function public.tgg_brain_recall(text,integer) to postgres;
+grant execute on function public.tgg_brain_context_pack(text,integer) to postgres;

@@ -2384,3 +2384,135 @@ grant execute on function public.tgg_brain_spec_add_requirement(uuid,text,text,t
 grant execute on function public.tgg_brain_spec_add_scope(uuid,text,text,text,boolean) to postgres;
 grant execute on function public.tgg_brain_spec_validate(uuid) to postgres;
 grant execute on function public.tgg_brain_spec_state() to postgres;
+
+
+-- TGG Brain requirements traceability matrix
+create table if not exists public.tgg_brain_requirement_links (
+  id uuid primary key default gen_random_uuid(),
+  requirement_id uuid not null references public.tgg_brain_spec_requirements(id) on delete cascade,
+  goal_step_id uuid references public.tgg_brain_goal_steps(id) on delete set null,
+  build_task_id uuid references public.tgg_build_tasks(id) on delete set null,
+  execution_trace_id uuid references public.tgg_brain_execution_traces(id) on delete set null,
+  link_type text not null check (link_type in ('implements','tests','verifies','depends_on')),
+  evidence jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique(requirement_id,goal_step_id,build_task_id,execution_trace_id,link_type)
+);
+
+alter table public.tgg_brain_requirement_links enable row level security;
+revoke all on public.tgg_brain_requirement_links from anon,authenticated;
+
+create or replace function public.tgg_brain_requirement_link(
+  p_requirement_id uuid,p_link_type text,p_goal_step_id uuid default null,p_build_task_id uuid default null,
+  p_execution_trace_id uuid default null,p_evidence jsonb default '{}'::jsonb
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_id uuid;
+begin
+  if p_link_type not in ('implements','tests','verifies','depends_on') then raise exception 'invalid_link_type'; end if;
+  if p_goal_step_id is null and p_build_task_id is null and p_execution_trace_id is null then
+    raise exception 'at_least_one_link_target_required';
+  end if;
+
+  insert into public.tgg_brain_requirement_links(
+    requirement_id,goal_step_id,build_task_id,execution_trace_id,link_type,evidence
+  ) values(
+    p_requirement_id,p_goal_step_id,p_build_task_id,p_execution_trace_id,p_link_type,coalesce(p_evidence,'{}'::jsonb)
+  )
+  on conflict(requirement_id,goal_step_id,build_task_id,execution_trace_id,link_type) do update
+  set evidence=excluded.evidence
+  returning id into v_id;
+
+  return jsonb_build_object('ok',true,'requirement_link_id',v_id,'link_type',p_link_type);
+end $$;
+
+create or replace function public.tgg_brain_spec_coverage(p_spec_id uuid)
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare
+  v_must integer:=0; v_impl integer:=0; v_test integer:=0; v_verify integer:=0;
+  v_uncovered jsonb:='[]'::jsonb; v_complete boolean:=false;
+begin
+  select count(*) into v_must
+  from public.tgg_brain_spec_requirements
+  where spec_id=p_spec_id and priority='must' and scope_status='in_scope';
+
+  select count(*) into v_impl
+  from public.tgg_brain_spec_requirements r
+  where r.spec_id=p_spec_id and r.priority='must' and r.scope_status='in_scope'
+    and exists(
+      select 1 from public.tgg_brain_requirement_links l
+      where l.requirement_id=r.id and l.link_type='implements'
+        and (l.goal_step_id is not null or l.build_task_id is not null)
+    );
+
+  select count(*) into v_test
+  from public.tgg_brain_spec_requirements r
+  where r.spec_id=p_spec_id and r.priority='must' and r.scope_status='in_scope'
+    and exists(select 1 from public.tgg_brain_requirement_links l where l.requirement_id=r.id and l.link_type='tests');
+
+  select count(*) into v_verify
+  from public.tgg_brain_spec_requirements r
+  where r.spec_id=p_spec_id and r.priority='must' and r.scope_status='in_scope'
+    and exists(
+      select 1 from public.tgg_brain_requirement_links l
+      join public.tgg_brain_execution_traces t on t.id=l.execution_trace_id
+      where l.requirement_id=r.id and l.link_type='verifies' and t.trace_status='verified'
+    );
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'requirement_id',r.id,'requirement_key',r.requirement_key,'statement',r.statement,
+    'implemented',exists(select 1 from public.tgg_brain_requirement_links l where l.requirement_id=r.id and l.link_type='implements'),
+    'tested',exists(select 1 from public.tgg_brain_requirement_links l where l.requirement_id=r.id and l.link_type='tests'),
+    'verified',exists(
+      select 1 from public.tgg_brain_requirement_links l
+      join public.tgg_brain_execution_traces t on t.id=l.execution_trace_id
+      where l.requirement_id=r.id and l.link_type='verifies' and t.trace_status='verified'
+    )
+  ) order by r.requirement_key),'[]'::jsonb)
+  into v_uncovered
+  from public.tgg_brain_spec_requirements r
+  where r.spec_id=p_spec_id and r.priority='must' and r.scope_status='in_scope'
+    and not (
+      exists(select 1 from public.tgg_brain_requirement_links l where l.requirement_id=r.id and l.link_type='implements')
+      and exists(select 1 from public.tgg_brain_requirement_links l where l.requirement_id=r.id and l.link_type='tests')
+      and exists(
+        select 1 from public.tgg_brain_requirement_links l
+        join public.tgg_brain_execution_traces t on t.id=l.execution_trace_id
+        where l.requirement_id=r.id and l.link_type='verifies' and t.trace_status='verified'
+      )
+    );
+
+  v_complete:=v_must>0 and v_impl=v_must and v_test=v_must and v_verify=v_must;
+
+  return jsonb_build_object(
+    'ok',true,'spec_id',p_spec_id,'must_requirements',v_must,'implemented',v_impl,'tested',v_test,
+    'verified',v_verify,'coverage_complete',v_complete,'uncovered_requirements',v_uncovered
+  );
+end $$;
+
+create or replace function public.tgg_brain_spec_mark_complete(p_spec_id uuid)
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_validation jsonb; v_coverage jsonb;
+begin
+  v_validation:=public.tgg_brain_spec_validate(p_spec_id);
+  v_coverage:=public.tgg_brain_spec_coverage(p_spec_id);
+
+  if coalesce((v_validation->>'ready')::boolean,false) is not true then raise exception 'spec_not_ready'; end if;
+  if coalesce((v_coverage->>'coverage_complete')::boolean,false) is not true then raise exception 'spec_coverage_incomplete'; end if;
+
+  update public.tgg_brain_specs set status='complete',updated_at=now() where id=p_spec_id;
+
+  return jsonb_build_object('ok',true,'spec_id',p_spec_id,'status','complete','validation',v_validation,'coverage',v_coverage);
+end $$;
+
+revoke all on function public.tgg_brain_requirement_link(uuid,text,uuid,uuid,uuid,jsonb) from public,anon,authenticated;
+revoke all on function public.tgg_brain_spec_coverage(uuid) from public,anon,authenticated;
+revoke all on function public.tgg_brain_spec_mark_complete(uuid) from public,anon,authenticated;
+grant execute on function public.tgg_brain_requirement_link(uuid,text,uuid,uuid,uuid,jsonb) to postgres;
+grant execute on function public.tgg_brain_spec_coverage(uuid) to postgres;
+grant execute on function public.tgg_brain_spec_mark_complete(uuid) to postgres;

@@ -1225,3 +1225,157 @@ begin
   loop perform cron.unschedule(v_jobid); end loop;
   perform cron.schedule('tgg-brain-architecture-refresh','7 * * * *','select public.tgg_brain_architecture_scan();');
 end $$;
+
+
+-- TGG Brain lineage-based change prediction
+create table if not exists public.tgg_brain_change_predictions (
+  id uuid primary key default gen_random_uuid(),
+  prediction_key text not null unique,
+  goal_id uuid references public.tgg_brain_goals(id) on delete cascade,
+  step_id uuid references public.tgg_brain_goal_steps(id) on delete cascade,
+  source_component_key text not null,
+  predicted_edits jsonb not null default '[]'::jsonb,
+  predicted_tests jsonb not null default '[]'::jsonb,
+  predicted_risk integer not null default 0 check (predicted_risk between 0 and 100),
+  production_affected boolean not null default false,
+  high_risk_affected boolean not null default false,
+  canonical_affected boolean not null default false,
+  approval_required boolean not null default false,
+  confidence integer not null default 0 check (confidence between 0 and 100),
+  rationale jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.tgg_brain_change_predictions enable row level security;
+revoke all on public.tgg_brain_change_predictions from anon,authenticated;
+
+create or replace function public.tgg_brain_predict_change_set(
+  p_source_component_key text,
+  p_goal_id uuid default null,
+  p_step_id uuid default null,
+  p_depth integer default 2
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare
+  v_source public.tgg_brain_components%rowtype;
+  v_prediction_key text;
+  v_edits jsonb:='[]'::jsonb; v_tests jsonb:='[]'::jsonb;
+  v_prod boolean:=false; v_high boolean:=false; v_canonical boolean:=false;
+  v_risk integer:=0; v_confidence integer:=90; v_approval boolean:=false; v_id uuid;
+begin
+  select * into v_source from public.tgg_brain_components
+  where component_key=p_source_component_key and active=true;
+  if not found then raise exception 'source_component_not_found'; end if;
+
+  with recursive walk as (
+    select c.id,c.component_key,c.component_type,c.name,c.environment,c.risk_level,c.canonical,
+      0 depth,100::integer path_confidence
+    from public.tgg_brain_components c where c.id=v_source.id
+
+    union all
+
+    select c.id,c.component_key,c.component_type,c.name,c.environment,c.risk_level,c.canonical,
+      w.depth+1,least(w.path_confidence,l.strength)
+    from walk w
+    join public.tgg_brain_component_links l on l.to_component_id=w.id
+    join public.tgg_brain_components c on c.id=l.from_component_id and c.active=true
+    where w.depth<greatest(0,least(4,p_depth))
+  ),
+  distinct_walk as (
+    select distinct on(id)
+      id,component_key,component_type,name,environment,risk_level,canonical,depth,path_confidence
+    from walk
+    order by id,depth,path_confidence desc
+  )
+  select
+    coalesce(jsonb_agg(jsonb_build_object(
+      'component_key',component_key,'component_type',component_type,'name',name,'depth',depth,
+      'confidence',path_confidence,'environment',environment,'risk_level',risk_level,'canonical',canonical
+    ) order by depth,component_key),'[]'::jsonb),
+    exists(select 1 from distinct_walk where environment='production'),
+    exists(select 1 from distinct_walk where risk_level='high'),
+    exists(select 1 from distinct_walk where canonical=true)
+  into v_edits,v_prod,v_high,v_canonical
+  from distinct_walk;
+
+  with affected as (
+    select * from jsonb_to_recordset(v_edits)
+      as x(component_key text,component_type text,name text,depth integer,confidence integer,
+           environment text,risk_level text,canonical boolean)
+  ),
+  tests as (
+    select distinct test_type
+    from affected a
+    cross join lateral (
+      values
+        (case when a.component_type='database_table' then 'schema' end),
+        (case when a.component_type='database_function' then 'integration' end),
+        (case when a.component_type in ('page','ui_module') then 'browser' end),
+        (case when a.component_type in ('page','ui_module') then 'visual' end),
+        (case when a.component_type='game_system' then 'playtest' end),
+        ('regression')
+    ) t(test_type)
+    where test_type is not null
+  )
+  select coalesce(jsonb_agg(test_type order by test_type),'[]'::jsonb) into v_tests from tests;
+
+  v_risk:=least(100,
+    (case when v_prod then 45 else 0 end)
+    +(case when v_high then 35 else 0 end)
+    +(case when v_canonical then 25 else 0 end)
+    +(case v_source.risk_level when 'high' then 30 when 'medium' then 10 else 0 end)
+  );
+
+  v_approval:=v_prod or v_high or v_canonical or v_source.risk_level='high';
+
+  select coalesce(min((x->>'confidence')::integer),90) into v_confidence
+  from jsonb_array_elements(v_edits) x;
+
+  v_prediction_key:='changepred:'||coalesce(p_step_id::text,p_goal_id::text,p_source_component_key)
+    ||':'||md5(p_source_component_key||coalesce(p_step_id::text,'')||coalesce(p_goal_id::text,''));
+
+  insert into public.tgg_brain_change_predictions(
+    prediction_key,goal_id,step_id,source_component_key,predicted_edits,predicted_tests,
+    predicted_risk,production_affected,high_risk_affected,canonical_affected,
+    approval_required,confidence,rationale
+  )
+  values(v_prediction_key,p_goal_id,p_step_id,p_source_component_key,v_edits,v_tests,
+    v_risk,v_prod,v_high,v_canonical,v_approval,v_confidence,
+    jsonb_build_object('depth',greatest(0,least(4,p_depth)),'source_risk',v_source.risk_level,
+      'source_environment',v_source.environment,'lineage_based',true))
+  on conflict(prediction_key) do update set
+    predicted_edits=excluded.predicted_edits,predicted_tests=excluded.predicted_tests,
+    predicted_risk=excluded.predicted_risk,production_affected=excluded.production_affected,
+    high_risk_affected=excluded.high_risk_affected,canonical_affected=excluded.canonical_affected,
+    approval_required=excluded.approval_required,confidence=excluded.confidence,
+    rationale=excluded.rationale,updated_at=now()
+  returning id into v_id;
+
+  return jsonb_build_object('ok',true,'prediction_id',v_id,'source_component_key',p_source_component_key,
+    'predicted_edits',v_edits,'predicted_tests',v_tests,'predicted_risk',v_risk,
+    'production_affected',v_prod,'high_risk_affected',v_high,'canonical_affected',v_canonical,
+    'approval_required',v_approval,'confidence',v_confidence);
+end $$;
+
+create or replace function public.tgg_brain_prediction_latest(p_source_component_key text)
+returns jsonb
+language sql security definer set search_path=''
+as $$
+  select jsonb_build_object(
+    'prediction_id',id,'source_component_key',source_component_key,'predicted_edits',predicted_edits,
+    'predicted_tests',predicted_tests,'predicted_risk',predicted_risk,
+    'production_affected',production_affected,'high_risk_affected',high_risk_affected,
+    'canonical_affected',canonical_affected,'approval_required',approval_required,
+    'confidence',confidence,'rationale',rationale,'updated_at',updated_at
+  )
+  from public.tgg_brain_change_predictions
+  where source_component_key=p_source_component_key
+  order by updated_at desc limit 1
+$$;
+
+revoke all on function public.tgg_brain_predict_change_set(text,uuid,uuid,integer) from public,anon,authenticated;
+revoke all on function public.tgg_brain_prediction_latest(text) from public,anon,authenticated;
+grant execute on function public.tgg_brain_predict_change_set(text,uuid,uuid,integer) to postgres;
+grant execute on function public.tgg_brain_prediction_latest(text) to postgres;

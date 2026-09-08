@@ -9,10 +9,12 @@ on:
       - 'supabase/migrations/20260908_game_idea_autobuilder_pipeline.sql'
       - 'supabase/migrations/20260908_tgg_brain_v1_reflection.sql'
       - 'supabase/migrations/20260908_tgg_brain_goal_decomposition.sql'
+      - 'supabase/migrations/20260908_tgg_brain_sandbox_trials.sql'
       - 'supabase/tests/autobuilder_continuous_watchdog_safety.sql'
       - 'supabase/tests/game_idea_autobuilder_pipeline_safety.sql'
       - 'supabase/tests/tgg_brain_v1_reflection_safety.sql'
       - 'supabase/tests/tgg_brain_goal_decomposition_safety.sql'
+      - 'supabase/tests/tgg_brain_sandbox_trials_safety.sql'
       - '.github/workflows/tgg-autobuilder-safety.yml'
   pull_request:
     paths:
@@ -20,10 +22,14 @@ on:
       - 'supabase/migrations/20260908_world_alpha_rc6_rc7_live_catchup.sql'
       - 'supabase/migrations/20260908_world_alpha_rc8_rc9_live_catchup.sql'
       - 'supabase/migrations/20260908_game_idea_autobuilder_pipeline.sql'
+      - 'supabase/migrations/20260908_tgg_brain_goal_decomposition.sql'
+      - 'supabase/migrations/20260908_tgg_brain_sandbox_trials.sql'
       - 'supabase/migrations/20260908_tgg_brain_v1_reflection.sql'
       - 'supabase/tests/autobuilder_continuous_watchdog_safety.sql'
       - 'supabase/tests/game_idea_autobuilder_pipeline_safety.sql'
       - 'supabase/tests/tgg_brain_v1_reflection_safety.sql'
+      - 'supabase/tests/tgg_brain_goal_decomposition_safety.sql'
+      - 'supabase/tests/tgg_brain_sandbox_trials_safety.sql'
       - '.github/workflows/tgg-autobuilder-safety.yml'
 
 permissions:
@@ -160,6 +166,27 @@ jobs:
           grep -q "excludes_high_risk_goals" "$t"
 
           echo "TGG Brain goal decomposition safety contract passed"
+
+      - name: Validate TGG Brain sandbox trials
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_tgg_brain_sandbox_trials.sql"
+          t="supabase/tests/tgg_brain_sandbox_trials_safety.sql"
+          test -s "$f"
+          test -s "$t"
+
+          grep -q "tgg_brain_trials" "$f"
+          grep -q "tgg_brain_trial_checks" "$f"
+          grep -q "production_touched boolean not null default false" "$f"
+          grep -q "environment.*sandbox" "$f"
+
+          grep -q "blocks_high_risk" "$t"
+          grep -q "requires_dev_only" "$t"
+          grep -q "has_safe_verdict" "$t"
+          grep -q "has_block_verdict" "$t"
+
+          echo "TGG Brain sandbox trial safety contract passed"
 
       - name: Validate World Alpha catch-up safety boundaries
         shell: bash

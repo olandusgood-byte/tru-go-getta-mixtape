@@ -2651,3 +2651,182 @@ revoke all on function public.tgg_brain_critical_path(uuid,integer) from public,
 revoke all on function public.tgg_brain_next_critical_unlocks(integer) from public,anon,authenticated;
 grant execute on function public.tgg_brain_critical_path(uuid,integer) to postgres;
 grant execute on function public.tgg_brain_next_critical_unlocks(integer) to postgres;
+
+
+-- TGG Safe Speed Booster
+create table if not exists public.tgg_speed_booster_config (
+  id integer primary key check (id=1),
+  enabled boolean not null default true,
+  normal_batch_size integer not null default 5 check (normal_batch_size between 1 and 25),
+  boosted_batch_size integer not null default 15 check (boosted_batch_size between 1 and 25),
+  hard_max_batch_size integer not null default 25 check (hard_max_batch_size between 1 and 25),
+  require_safety_score integer not null default 100 check (require_safety_score between 0 and 100),
+  require_clean_architecture boolean not null default true,
+  require_zero_critical_conflicts boolean not null default true,
+  require_clean_execution_trace boolean not null default true,
+  mode text not null default 'adaptive' check (mode in ('normal','adaptive','boosted')),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.tgg_speed_booster_layers (
+  layer_no integer primary key check (layer_no between 1 and 10),
+  layer_key text not null unique,
+  title text not null,
+  max_items integer not null check (max_items between 1 and 25),
+  parallel_safe boolean not null default true,
+  requires_previous_layer boolean not null default true,
+  work_types jsonb not null default '[]'::jsonb,
+  notes jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.tgg_speed_booster_config enable row level security;
+alter table public.tgg_speed_booster_layers enable row level security;
+revoke all on public.tgg_speed_booster_config from anon,authenticated;
+revoke all on public.tgg_speed_booster_layers from anon,authenticated;
+
+insert into public.tgg_speed_booster_config(
+  id,enabled,normal_batch_size,boosted_batch_size,hard_max_batch_size,
+  require_safety_score,require_clean_architecture,
+  require_zero_critical_conflicts,require_clean_execution_trace,mode
+)
+values(1,true,5,15,25,100,true,true,true,'adaptive')
+on conflict(id) do update set
+  enabled=true,normal_batch_size=5,boosted_batch_size=15,hard_max_batch_size=25,
+  require_safety_score=100,require_clean_architecture=true,
+  require_zero_critical_conflicts=true,require_clean_execution_trace=true,
+  mode='adaptive',updated_at=now();
+
+insert into public.tgg_speed_booster_layers(
+  layer_no,layer_key,title,max_items,parallel_safe,requires_previous_layer,work_types,notes
+)
+values
+(1,'intake','Idea Intake + Dedupe',5,true,false,
+ jsonb_build_array('idea_intake','dedupe','context_pack','guardrail_check'),
+ jsonb_build_object('claim_limit',5)),
+(2,'spec-plan','Spec + Planning',10,true,true,
+ jsonb_build_array('spec_compile','requirements','scope','goal_decomposition','critical_path'),
+ jsonb_build_object('must_be_spec_ready',true)),
+(3,'build','Safe Build + Repair',15,true,true,
+ jsonb_build_array('schema','backend','frontend','integration','repair'),
+ jsonb_build_object('effective_batch_from_speed_booster',true)),
+(4,'qa','QA + Sandbox',15,true,true,
+ jsonb_build_array('schema_check','security','unit','integration','browser','visual','playtest','regression'),
+ jsonb_build_object('sandbox_required',true)),
+(5,'evidence-sync','Evidence + Source Control',15,true,true,
+ jsonb_build_array('calibration','execution_trace','requirements_coverage','migration_sync','github_sync'),
+ jsonb_build_object('verified_trace_preferred',true))
+on conflict(layer_no) do update set
+  layer_key=excluded.layer_key,title=excluded.title,max_items=excluded.max_items,
+  parallel_safe=excluded.parallel_safe,requires_previous_layer=excluded.requires_previous_layer,
+  work_types=excluded.work_types,notes=excluded.notes,updated_at=now();
+
+create or replace function public.tgg_speed_booster_state()
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare
+  v_cfg public.tgg_speed_booster_config%rowtype;
+  v_score jsonb; v_arch jsonb; v_conflicts jsonb; v_trace jsonb;
+  v_safety numeric:=0; v_arch_clean boolean:=false; v_conflict_clean boolean:=false;
+  v_trace_clean boolean:=false; v_boost_allowed boolean:=false;
+  v_effective integer:=5; v_reason text:='normal_mode';
+begin
+  select * into v_cfg from public.tgg_speed_booster_config where id=1;
+  if not found then raise exception 'speed_booster_config_missing'; end if;
+
+  v_score:=public.tgg_brain_latest_scorecard();
+  v_arch:=public.tgg_brain_architecture_latest();
+  v_conflicts:=public.tgg_brain_conflict_state();
+  v_trace:=public.tgg_brain_execution_trace_state();
+
+  v_safety:=coalesce((v_score->>'safety_score')::numeric,0);
+  v_arch_clean:=coalesce(v_arch->>'drift_status','warning')<>'warning'
+    and coalesce((v_arch->>'stale_components')::integer,0)=0
+    and coalesce((v_arch->>'missing_since_previous')::integer,0)=0;
+  v_conflict_clean:=coalesce((v_conflicts->>'critical_open')::integer,0)=0
+    and coalesce((v_conflicts->>'blocked_open')::integer,0)=0;
+  v_trace_clean:=coalesce((v_trace->>'production_touched')::integer,0)=0
+    and coalesce((v_trace->>'high_risk_executed')::integer,0)=0
+    and coalesce((v_trace->>'boundary_violations')::integer,0)=0;
+
+  v_boost_allowed:=v_cfg.enabled
+    and v_safety>=v_cfg.require_safety_score
+    and (not v_cfg.require_clean_architecture or v_arch_clean)
+    and (not v_cfg.require_zero_critical_conflicts or v_conflict_clean)
+    and (not v_cfg.require_clean_execution_trace or v_trace_clean);
+
+  if not v_cfg.enabled then v_effective:=v_cfg.normal_batch_size; v_reason:='booster_disabled';
+  elsif v_cfg.mode='normal' then v_effective:=v_cfg.normal_batch_size; v_reason:='forced_normal';
+  elsif v_cfg.mode='boosted' and v_boost_allowed then
+    v_effective:=least(v_cfg.boosted_batch_size,v_cfg.hard_max_batch_size); v_reason:='forced_boosted_healthy';
+  elsif v_cfg.mode='adaptive' and v_boost_allowed then
+    v_effective:=least(v_cfg.boosted_batch_size,v_cfg.hard_max_batch_size); v_reason:='adaptive_boost_healthy';
+  else v_effective:=v_cfg.normal_batch_size; v_reason:='health_gate_throttle'; end if;
+
+  return jsonb_build_object(
+    'enabled',v_cfg.enabled,'mode',v_cfg.mode,
+    'normal_batch_size',v_cfg.normal_batch_size,
+    'boosted_batch_size',v_cfg.boosted_batch_size,
+    'hard_max_batch_size',v_cfg.hard_max_batch_size,
+    'effective_batch_size',v_effective,'boost_allowed',v_boost_allowed,'reason',v_reason,
+    'health',jsonb_build_object('safety_score',v_safety,'architecture_clean',v_arch_clean,
+      'conflicts_clean',v_conflict_clean,'execution_trace_clean',v_trace_clean),
+    'production_auto_publish',false,'high_risk_auto_execute',false,
+    'canonical_boundary','AB-006','canonical_source_version','V223'
+  );
+end $$;
+
+create or replace function public.tgg_speed_booster_effective_batch_size()
+returns integer
+language sql security definer set search_path=''
+as $$
+  select greatest(1,least(25,(public.tgg_speed_booster_state()->>'effective_batch_size')::integer))
+$$;
+
+create or replace function public.tgg_speed_booster_layer_plan()
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_speed jsonb;
+begin
+  v_speed:=public.tgg_speed_booster_state();
+  return jsonb_build_object(
+    'speed',v_speed,
+    'layers',coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'layer_no',layer_no,'layer_key',layer_key,'title',title,
+        'max_items',case when layer_key='build'
+          then least(max_items,(v_speed->>'effective_batch_size')::integer) else max_items end,
+        'parallel_safe',parallel_safe,'requires_previous_layer',requires_previous_layer,
+        'work_types',work_types,'notes',notes
+      ) order by layer_no)
+      from public.tgg_speed_booster_layers
+    ),'[]'::jsonb),
+    'production_auto_publish',false,'high_risk_auto_execute',false,
+    'canonical_boundary','AB-006','canonical_source_version','V223'
+  );
+end $$;
+
+revoke all on function public.tgg_speed_booster_state() from public,anon,authenticated;
+revoke all on function public.tgg_speed_booster_effective_batch_size() from public,anon,authenticated;
+revoke all on function public.tgg_speed_booster_layer_plan() from public,anon,authenticated;
+grant execute on function public.tgg_speed_booster_state() to postgres;
+grant execute on function public.tgg_speed_booster_effective_batch_size() to postgres;
+grant execute on function public.tgg_speed_booster_layer_plan() to postgres;
+
+-- Controller uses dynamic safe speed batch instead of a fixed batch size.
+-- Existing tgg_build_claim_ready_batch retains all production/high-risk/canonical guards.
+-- Live controller implementation is reconciled separately by migration catch-up.
+
+do $$
+declare v_jobid bigint;
+begin
+  for v_jobid in select jobid from cron.job where jobname='tgg-autobuilder-continuous-watchdog'
+  loop perform cron.unschedule(v_jobid); end loop;
+  perform cron.schedule(
+    'tgg-autobuilder-continuous-watchdog',
+    '*/5 * * * *',
+    'select public.tgg_autobuilder_watchdog();'
+  );
+end $$;

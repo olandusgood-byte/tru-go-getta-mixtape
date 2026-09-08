@@ -72,3 +72,20 @@ revoke all on public.tgg_observability_snapshots from anon,authenticated;
 -- public.tgg_release_train_plan(integer)
 -- public.tgg_release_train_state()
 -- public.tgg_observability_state()
+
+
+-- Live function definitions
+
+
+revoke all on function public.tgg_provider_health_refresh() from public,anon,authenticated;
+revoke all on function public.tgg_provider_health_state() from public,anon,authenticated;
+revoke all on function public.tgg_autonomic_provider_sync() from public,anon,authenticated;
+revoke all on function public.tgg_release_train_plan(integer) from public,anon,authenticated;
+revoke all on function public.tgg_release_train_state() from public,anon,authenticated;
+revoke all on function public.tgg_observability_state() from public,anon,authenticated;
+grant execute on function public.tgg_provider_health_refresh() to postgres;
+grant execute on function public.tgg_provider_health_state() to postgres;
+grant execute on function public.tgg_autonomic_provider_sync() to postgres;
+grant execute on function public.tgg_release_train_plan(integer) to postgres;
+grant execute on function public.tgg_release_train_state() to postgres;
+grant execute on function public.tgg_observability_state() to postgres;

@@ -1532,3 +1532,55 @@ revoke all on function public.tgg_brain_calibrate_prediction(uuid,uuid,jsonb,jso
 revoke all on function public.tgg_brain_prediction_accuracy() from public,anon,authenticated;
 grant execute on function public.tgg_brain_calibrate_prediction(uuid,uuid,jsonb,jsonb) to postgres;
 grant execute on function public.tgg_brain_prediction_accuracy() to postgres;
+
+
+-- TGG Brain execution evidence chain
+create table if not exists public.tgg_brain_execution_traces (
+  id uuid primary key default gen_random_uuid(),
+  trace_key text not null unique,
+  goal_id uuid references public.tgg_brain_goals(id) on delete set null,
+  step_id uuid references public.tgg_brain_goal_steps(id) on delete set null,
+  prediction_id uuid references public.tgg_brain_change_predictions(id) on delete set null,
+  build_task_id uuid references public.tgg_build_tasks(id) on delete set null,
+  trial_id uuid references public.tgg_brain_trials(id) on delete set null,
+  calibration_id uuid references public.tgg_brain_prediction_calibrations(id) on delete set null,
+  source_control jsonb not null default '{}'::jsonb,
+  actual_components jsonb not null default '[]'::jsonb,
+  actual_tests jsonb not null default '[]'::jsonb,
+  acceptance_evidence jsonb not null default '[]'::jsonb,
+  plan_match boolean not null default false,
+  prediction_match boolean not null default false,
+  trial_passed boolean not null default false,
+  acceptance_passed boolean not null default false,
+  production_touched boolean not null default false,
+  high_risk_executed boolean not null default false,
+  canonical_boundary_preserved boolean not null default true,
+  trace_status text not null default 'incomplete'
+    check (trace_status in ('incomplete','verified','warning','blocked')),
+  summary jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.tgg_brain_execution_traces enable row level security;
+revoke all on public.tgg_brain_execution_traces from anon,authenticated;
+
+create or replace function public.tgg_brain_execution_trace_state()
+returns jsonb
+language sql security definer set search_path=''
+as $$
+  select jsonb_build_object(
+    'total',count(*),
+    'verified',count(*) filter(where trace_status='verified'),
+    'warnings',count(*) filter(where trace_status='warning'),
+    'blocked',count(*) filter(where trace_status='blocked'),
+    'incomplete',count(*) filter(where trace_status='incomplete'),
+    'production_touched',count(*) filter(where production_touched=true),
+    'high_risk_executed',count(*) filter(where high_risk_executed=true),
+    'boundary_violations',count(*) filter(where canonical_boundary_preserved=false)
+  )
+  from public.tgg_brain_execution_traces
+$$;
+
+revoke all on function public.tgg_brain_execution_trace_state() from public,anon,authenticated;
+grant execute on function public.tgg_brain_execution_trace_state() to postgres;

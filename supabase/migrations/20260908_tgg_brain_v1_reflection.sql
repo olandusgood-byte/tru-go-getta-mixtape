@@ -1851,3 +1851,125 @@ end $$;
 
 revoke all on function public.tgg_brain_uncertainty_gate(text,uuid,uuid) from public,anon,authenticated;
 grant execute on function public.tgg_brain_uncertainty_gate(text,uuid,uuid) to postgres;
+
+
+-- TGG Brain structured guardrails + conflict detection
+create table if not exists public.tgg_brain_guardrails (
+  id uuid primary key default gen_random_uuid(),
+  guardrail_key text not null unique,
+  category text not null
+    check (category in ('production','risk','canonical','destructive','payments','rights','secrets')),
+  rule jsonb not null,
+  severity text not null default 'high' check (severity in ('medium','high','critical')),
+  action text not null default 'approval_required'
+    check (action in ('block','approval_required','restricted_mode')),
+  active boolean not null default true,
+  immutable boolean not null default true,
+  source_ref text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.tgg_brain_conflicts (
+  id uuid primary key default gen_random_uuid(),
+  conflict_key text not null unique,
+  guardrail_id uuid not null references public.tgg_brain_guardrails(id) on delete restrict,
+  subject_type text not null
+    check (subject_type in ('idea','goal','step','prediction','action','decision','system')),
+  subject_key text not null,
+  proposed_action jsonb not null default '{}'::jsonb,
+  severity text not null check (severity in ('medium','high','critical')),
+  required_action text not null
+    check (required_action in ('block','approval_required','restricted_mode')),
+  status text not null default 'open'
+    check (status in ('open','resolved','accepted_exception','superseded')),
+  evidence jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  resolved_at timestamptz
+);
+
+alter table public.tgg_brain_guardrails enable row level security;
+alter table public.tgg_brain_conflicts enable row level security;
+revoke all on public.tgg_brain_guardrails from anon,authenticated;
+revoke all on public.tgg_brain_conflicts from anon,authenticated;
+
+insert into public.tgg_brain_guardrails(guardrail_key,category,rule,severity,action,immutable,source_ref)
+values
+('guardrail:no-auto-production-publish','production',jsonb_build_object('field','production_auto_publish','forbidden_value',true),'critical','block',true,'TGG-BRAIN-1.0 safety contract'),
+('guardrail:no-auto-production-promotion','production',jsonb_build_object('field','production_promotion','forbidden_value',true),'critical','approval_required',true,'AB-006 V223 boundary'),
+('guardrail:no-high-risk-auto-execute','risk',jsonb_build_object('field','high_risk_auto_execute','forbidden_value',true),'critical','block',true,'TGG-BRAIN-1.0 safety contract'),
+('guardrail:preserve-ab006-v223','canonical',jsonb_build_object('field','canonical_boundary_change','forbidden_value',true),'critical','block',true,'AB-006 V223 canonical handoff'),
+('guardrail:no-destructive-auto','destructive',jsonb_build_object('field','destructive','forbidden_value',true),'critical','approval_required',true,'TGG safe autonomy policy'),
+('guardrail:payments-approval','payments',jsonb_build_object('field','real_money_or_payment_action','forbidden_value',true),'high','approval_required',true,'TGG safe autonomy policy'),
+('guardrail:rights-legal-approval','rights',jsonb_build_object('field','rights_legal_action','forbidden_value',true),'high','approval_required',true,'TGG safe autonomy policy'),
+('guardrail:secret-credential-approval','secrets',jsonb_build_object('field','secret_credential_action','forbidden_value',true),'critical','approval_required',true,'TGG safe autonomy policy')
+on conflict(guardrail_key) do update
+set rule=excluded.rule,severity=excluded.severity,action=excluded.action,
+    active=true,immutable=true,source_ref=excluded.source_ref,updated_at=now();
+
+create or replace function public.tgg_brain_guardrail_check(
+  p_subject_type text,p_subject_key text,p_action jsonb
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare
+  r record; v_field text; v_forbidden jsonb; v_actual jsonb;
+  v_conflicts jsonb:='[]'::jsonb; v_count integer:=0; v_key text;
+begin
+  if p_subject_type not in ('idea','goal','step','prediction','action','decision','system') then
+    raise exception 'invalid_subject_type';
+  end if;
+
+  for r in
+    select * from public.tgg_brain_guardrails where active=true
+    order by case severity when 'critical' then 1 when 'high' then 2 else 3 end,guardrail_key
+  loop
+    v_field:=r.rule->>'field';
+    v_forbidden:=r.rule->'forbidden_value';
+    v_actual:=coalesce(p_action,'{}'::jsonb)->v_field;
+
+    if v_actual is not null and v_actual=v_forbidden then
+      v_key:='conflict:'||md5(p_subject_type||':'||p_subject_key||':'||r.guardrail_key||':'||coalesce(p_action,'{}'::jsonb)::text);
+
+      insert into public.tgg_brain_conflicts(
+        conflict_key,guardrail_id,subject_type,subject_key,proposed_action,severity,required_action,status,evidence
+      )
+      values(
+        v_key,r.id,p_subject_type,p_subject_key,coalesce(p_action,'{}'::jsonb),r.severity,r.action,'open',
+        jsonb_build_object('guardrail_key',r.guardrail_key,'field',v_field,'forbidden_value',v_forbidden,
+          'actual_value',v_actual,'source_ref',r.source_ref)
+      )
+      on conflict(conflict_key) do update set status='open',evidence=excluded.evidence;
+
+      v_conflicts:=v_conflicts||jsonb_build_array(jsonb_build_object(
+        'guardrail_key',r.guardrail_key,'category',r.category,'severity',r.severity,
+        'required_action',r.action,'field',v_field));
+      v_count:=v_count+1;
+    end if;
+  end loop;
+
+  return jsonb_build_object(
+    'ok',v_count=0,'subject_type',p_subject_type,'subject_key',p_subject_key,
+    'conflict_count',v_count,'conflicts',v_conflicts,'allow_autonomous_execution',v_count=0
+  );
+end $$;
+
+create or replace function public.tgg_brain_conflict_state()
+returns jsonb
+language sql security definer set search_path=''
+as $$
+  select jsonb_build_object(
+    'active_guardrails',(select count(*) from public.tgg_brain_guardrails where active=true),
+    'open_conflicts',count(*) filter(where c.status='open'),
+    'critical_open',count(*) filter(where c.status='open' and c.severity='critical'),
+    'high_open',count(*) filter(where c.status='open' and c.severity='high'),
+    'approval_required_open',count(*) filter(where c.status='open' and c.required_action='approval_required'),
+    'blocked_open',count(*) filter(where c.status='open' and c.required_action='block')
+  )
+  from public.tgg_brain_conflicts c
+$$;
+
+revoke all on function public.tgg_brain_guardrail_check(text,text,jsonb) from public,anon,authenticated;
+revoke all on function public.tgg_brain_conflict_state() from public,anon,authenticated;
+grant execute on function public.tgg_brain_guardrail_check(text,text,jsonb) to postgres;
+grant execute on function public.tgg_brain_conflict_state() to postgres;

@@ -1,0 +1,110 @@
+<!-- TGG Game Builder Console · Blogger/Creator OS ready source
+     Staging/source-control artifact only. Do not publish to production without explicit approval. -->
+<div id="tgg-game-builder-console">
+  <style>
+    #tgg-game-builder-console{max-width:980px;margin:30px auto;padding:20px;background:#0b0b0b;color:#fff;border:1px solid #292929;border-radius:18px;font-family:Arial,sans-serif}
+    #tgg-game-builder-console h2{margin:0 0 8px;font-size:30px}#tgg-game-builder-console p{color:#aaa}
+    #tgg-game-builder-console input,#tgg-game-builder-console textarea{width:100%;box-sizing:border-box;margin:0 0 10px;padding:12px;border-radius:10px;border:1px solid #333;background:#080808;color:#fff}
+    #tgg-game-builder-console textarea{min-height:150px;resize:vertical}
+    #tgg-game-builder-console button{padding:10px 13px;border-radius:10px;border:1px solid #333;background:#151515;color:#fff;font-weight:800;cursor:pointer;margin-right:6px}
+    #tgg-game-builder-console .primary{background:#e50914;border-color:#e50914}.tgg-gb-hidden{display:none!important}
+    #tgg-game-builder-console .tgg-gb-status{min-height:18px;margin:8px 0;color:#93d79e}.tgg-gb-error{color:#ff7777!important}
+    #tgg-game-builder-console .tgg-gb-idea{padding:12px 0;border-top:1px solid #292929}.tgg-gb-head{display:flex;justify-content:space-between;gap:12px}
+    #tgg-game-builder-console .tgg-gb-badge{font-size:11px;text-transform:uppercase;border:1px solid #444;border-radius:999px;padding:4px 8px;color:#bbb}
+    #tgg-game-builder-console .tgg-gb-muted{color:#999;font-size:12px}
+  </style>
+
+  <div id="tgg-gb-auth">
+    <h2>Game Builder</h2>
+    <p>Sign in with your Creator OS account, then drop a video-game idea into the automatic build pipeline.</p>
+    <input id="tgg-gb-email" type="email" placeholder="Email">
+    <input id="tgg-gb-password" type="password" placeholder="Password">
+    <button id="tgg-gb-signin" class="primary">Sign In</button>
+    <div id="tgg-gb-auth-status" class="tgg-gb-status"></div>
+  </div>
+
+  <div id="tgg-gb-app" class="tgg-gb-hidden">
+    <h2>Build The Game From An Idea</h2>
+    <p>Idea → duplicate check → plan → build → fix → QA/playtest → staging. Production/high-risk actions stay approval-gated.</p>
+    <input id="tgg-gb-title" placeholder="Optional idea title">
+    <textarea id="tgg-gb-idea" placeholder="Describe any game idea naturally..."></textarea>
+    <button id="tgg-gb-submit" class="primary">Add To Game Builder</button>
+    <button id="tgg-gb-refresh">Refresh</button>
+    <div id="tgg-gb-submit-status" class="tgg-gb-status"></div>
+    <h3>My Ideas</h3>
+    <div id="tgg-gb-ideas">Loading…</div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+
+    const SUPABASE_URL = "https://xsofowzvwetamhyuvlpj.supabase.co";
+    const PUBLISHABLE_KEY = "sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv";
+    const GAME_BUILDER_API = SUPABASE_URL + "/functions/v1/v58-staging-harness-v2";
+    const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+
+    const $ = (id) => document.getElementById(id);
+    const esc = (v) => { const d=document.createElement("div"); d.textContent=v==null?"":String(v); return d.innerHTML; };
+    const say = (id,text,bad=false) => { const el=$(id); el.textContent=text||""; el.classList.toggle("tgg-gb-error",bad); };
+
+    async function api(method, body) {
+      const session = (await sb.auth.getSession()).data.session;
+      if (!session) throw new Error("Sign in required.");
+      const res = await fetch(GAME_BUILDER_API, {
+        method,
+        headers: {
+          "Authorization": "Bearer " + session.access_token,
+          "Content-Type": "application/json"
+        },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Game Builder API error.");
+      return data;
+    }
+
+    async function loadIdeas() {
+      const data = await api("GET");
+      const rows = data.ideas || [];
+      $("tgg-gb-ideas").innerHTML = rows.length ? rows.map((i) => {
+        const title = i.idea_title || i.idea_text.slice(0,70);
+        return '<div class="tgg-gb-idea"><div class="tgg-gb-head"><b>'+esc(title)+'</b><span class="tgg-gb-badge">'+esc(i.status)+'</span></div><div class="tgg-gb-muted">duplicates '+Number(i.duplicate_count||0)+' · retries '+Number(i.retry_count||0)+'/'+Number(i.max_retries||3)+'</div><div>'+esc(i.idea_text)+'</div>'+(i.last_error?'<div class="tgg-gb-error">'+esc(i.last_error)+'</div>':'')+'</div>';
+      }).join("") : "No ideas yet.";
+    }
+
+    async function show() {
+      const session = (await sb.auth.getSession()).data.session;
+      $("tgg-gb-auth").classList.toggle("tgg-gb-hidden",!!session);
+      $("tgg-gb-app").classList.toggle("tgg-gb-hidden",!session);
+      if (session) await loadIdeas();
+    }
+
+    $("tgg-gb-signin").onclick = async () => {
+      try {
+        say("tgg-gb-auth-status","Signing in…");
+        const r=await sb.auth.signInWithPassword({email:$("tgg-gb-email").value.trim(),password:$("tgg-gb-password").value});
+        if(r.error) throw r.error;
+        say("tgg-gb-auth-status","Signed in.");
+        await show();
+      } catch(e) { say("tgg-gb-auth-status",e.message||String(e),true); }
+    };
+
+    $("tgg-gb-submit").onclick = async () => {
+      try {
+        const idea=$("tgg-gb-idea").value.trim();
+        if(idea.length<3) throw new Error("Add a game idea first.");
+        $("tgg-gb-submit").disabled=true;
+        say("tgg-gb-submit-status","Adding idea…");
+        const data=await api("POST",{idea,title:$("tgg-gb-title").value.trim()||null});
+        const result=data.result||{};
+        say("tgg-gb-submit-status",Number(result.duplicate_count||0)>0?"Already known — reused instead of rebuilding.":"Idea added. The automatic game builder will pick it up.");
+        $("tgg-gb-idea").value=""; $("tgg-gb-title").value="";
+        await loadIdeas();
+      } catch(e) { say("tgg-gb-submit-status",e.message||String(e),true); }
+      finally { $("tgg-gb-submit").disabled=false; }
+    };
+
+    $("tgg-gb-refresh").onclick = () => loadIdeas().catch(e=>say("tgg-gb-submit-status",e.message||String(e),true));
+    await show();
+  </script>
+</div>

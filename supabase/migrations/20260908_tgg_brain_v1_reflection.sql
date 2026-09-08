@@ -649,3 +649,136 @@ begin
   loop perform cron.unschedule(v_jobid); end loop;
   perform cron.schedule('tgg-brain-periodic-evaluation','17 */6 * * *','select public.tgg_brain_periodic_evaluation();');
 end $$;
+
+
+-- TGG Brain checkpoint + heuristic rollback
+create table if not exists public.tgg_brain_checkpoints (
+  id uuid primary key default gen_random_uuid(),
+  checkpoint_key text not null unique,
+  brain_version_id uuid not null references public.tgg_brain_versions(id) on delete restrict,
+  label text not null,
+  heuristics jsonb not null,
+  safety_contract jsonb not null,
+  scorecard jsonb not null default '{}'::jsonb,
+  source_evaluation_id uuid references public.tgg_brain_evaluations(id) on delete set null,
+  state text not null default 'ready' check (state in ('ready','superseded','restored','retired')),
+  created_at timestamptz not null default now(),
+  restored_at timestamptz
+);
+
+alter table public.tgg_brain_checkpoints enable row level security;
+revoke all on public.tgg_brain_checkpoints from anon,authenticated;
+
+create or replace function public.tgg_brain_checkpoint_create(p_checkpoint_key text,p_label text)
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare
+  v_version public.tgg_brain_versions%rowtype; v_score jsonb; v_eval_id uuid; v_id uuid;
+begin
+  select * into v_version from public.tgg_brain_versions where status='active' order by version_no desc limit 1;
+  if not found then raise exception 'active_brain_version_required'; end if;
+
+  v_score := public.tgg_brain_latest_scorecard();
+  v_eval_id := nullif(v_score->>'evaluation_id','')::uuid;
+
+  insert into public.tgg_brain_checkpoints(
+    checkpoint_key,brain_version_id,label,heuristics,safety_contract,scorecard,source_evaluation_id,state
+  )
+  values(trim(p_checkpoint_key),v_version.id,trim(p_label),v_version.heuristics,v_version.safety_contract,
+         coalesce(v_score,'{}'::jsonb),v_eval_id,'ready')
+  on conflict(checkpoint_key) do update
+    set label=excluded.label,heuristics=excluded.heuristics,safety_contract=excluded.safety_contract,
+        scorecard=excluded.scorecard,source_evaluation_id=excluded.source_evaluation_id,state='ready'
+  returning id into v_id;
+
+  return jsonb_build_object('ok',true,'checkpoint_id',v_id,'checkpoint_key',p_checkpoint_key,
+    'brain_version',v_version.version_key,'safety_contract',v_version.safety_contract);
+end $$;
+
+create or replace function public.tgg_brain_checkpoint_preview_restore(p_checkpoint_key text)
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_cp public.tgg_brain_checkpoints%rowtype; v_active public.tgg_brain_versions%rowtype;
+begin
+  select * into v_cp from public.tgg_brain_checkpoints
+  where checkpoint_key=p_checkpoint_key and state in ('ready','restored');
+  if not found then raise exception 'checkpoint_not_found'; end if;
+
+  select * into v_active from public.tgg_brain_versions where status='active' order by version_no desc limit 1;
+
+  return jsonb_build_object(
+    'checkpoint_key',v_cp.checkpoint_key,'current_version',v_active.version_key,
+    'heuristics_change',v_active.heuristics is distinct from v_cp.heuristics,
+    'safety_contract_change',v_active.safety_contract is distinct from v_cp.safety_contract,
+    'checkpoint_scorecard',v_cp.scorecard,
+    'restore_allowed',v_active.safety_contract=v_cp.safety_contract,
+    'requires_manual_restore',true
+  );
+end $$;
+
+create or replace function public.tgg_brain_checkpoint_restore(p_checkpoint_key text)
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_cp public.tgg_brain_checkpoints%rowtype; v_active public.tgg_brain_versions%rowtype;
+begin
+  if current_user <> 'postgres' then raise exception 'internal_worker_only'; end if;
+
+  select * into v_cp from public.tgg_brain_checkpoints
+  where checkpoint_key=p_checkpoint_key and state in ('ready','restored');
+  if not found then raise exception 'checkpoint_not_found'; end if;
+
+  select * into v_active from public.tgg_brain_versions where status='active' order by version_no desc limit 1;
+
+  if v_active.safety_contract is distinct from v_cp.safety_contract then
+    raise exception 'safety_contract_mismatch_restore_blocked';
+  end if;
+
+  update public.tgg_brain_versions set heuristics=v_cp.heuristics where id=v_active.id;
+  update public.tgg_brain_checkpoints set state='restored',restored_at=now() where id=v_cp.id;
+
+  return jsonb_build_object('ok',true,'checkpoint_key',p_checkpoint_key,
+    'restored_heuristics',true,'safety_contract_changed',false,'production_touched',false);
+end $$;
+
+create or replace function public.tgg_brain_auto_recover_if_unsafe(
+  p_checkpoint_key text default 'TGG-BRAIN-1.0-BASELINE'
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_score jsonb; v_safety numeric; v_preview jsonb; v_restore jsonb;
+begin
+  v_score := public.tgg_brain_latest_scorecard();
+  if v_score is null then
+    return jsonb_build_object('ok',true,'action','none','reason','no_scorecard');
+  end if;
+
+  v_safety := coalesce((v_score->>'safety_score')::numeric,100);
+  if v_safety>=100 then
+    return jsonb_build_object('ok',true,'action','none','reason','safety_healthy','safety_score',v_safety);
+  end if;
+
+  v_preview := public.tgg_brain_checkpoint_preview_restore(p_checkpoint_key);
+  if coalesce((v_preview->>'restore_allowed')::boolean,false) is not true then
+    return jsonb_build_object('ok',false,'action','blocked','reason','checkpoint_safety_contract_mismatch',
+      'safety_score',v_safety,'preview',v_preview);
+  end if;
+
+  v_restore := public.tgg_brain_checkpoint_restore(p_checkpoint_key);
+  return jsonb_build_object('ok',true,'action','heuristics_restored','reason','safety_score_below_100',
+    'safety_score',v_safety,'restore',v_restore,'safety_contract_changed',false,'production_touched',false);
+end $$;
+
+revoke all on function public.tgg_brain_checkpoint_create(text,text) from public,anon,authenticated;
+revoke all on function public.tgg_brain_checkpoint_preview_restore(text) from public,anon,authenticated;
+revoke all on function public.tgg_brain_checkpoint_restore(text) from public,anon,authenticated;
+revoke all on function public.tgg_brain_auto_recover_if_unsafe(text) from public,anon,authenticated;
+
+grant execute on function public.tgg_brain_checkpoint_create(text,text) to postgres;
+grant execute on function public.tgg_brain_checkpoint_preview_restore(text) to postgres;
+grant execute on function public.tgg_brain_checkpoint_restore(text) to postgres;
+grant execute on function public.tgg_brain_auto_recover_if_unsafe(text) to postgres;
+
+select public.tgg_brain_checkpoint_create('TGG-BRAIN-1.0-BASELINE','TGG Brain 1.0 verified baseline');

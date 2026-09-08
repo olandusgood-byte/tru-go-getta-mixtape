@@ -445,3 +445,38 @@ select public.tgg_brain_conflict_state() as conflict_state;
 -- production/high-risk/canonical guard counts = 1 each
 -- safe_guardrail_probe.allow_autonomous_execution = true
 -- open_conflicts = 0 in healthy baseline
+
+
+-- Memory hygiene + compaction safety
+select c.relname,c.relrowsecurity
+from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public' and c.relname='tgg_brain_memory_archive';
+
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname in ('tgg_brain_memory_compact','tgg_brain_memory_hygiene_state')
+order by p.proname;
+
+select public.tgg_brain_memory_hygiene_state() as memory_hygiene;
+
+select
+  position("memory_type in ('lesson','qa')" in lower(pg_get_functiondef(p.oid))) > 0 as only_lesson_qa_compacted,
+  position('destructive_delete_performed' in pg_get_functiondef(p.oid)) > 0 as destructive_delete_flag_present,
+  position('false' in lower(pg_get_functiondef(p.oid))) > 0 as destructive_delete_false_present
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='tgg_brain_memory_compact';
+
+-- Expected:
+-- RLS enabled on archive table
+-- authenticated_can_execute = false
+-- anon_can_execute = false
+-- exact_duplicate_candidates = 0 after healthy compaction
+-- compaction targets lesson/qa only
+-- destructive_delete_performed = false

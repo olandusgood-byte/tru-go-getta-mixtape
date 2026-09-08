@@ -880,3 +880,348 @@ revoke all on function public.tgg_brain_component_impact(text,integer) from publ
 revoke all on function public.tgg_brain_component_find(text,integer) from public,anon,authenticated;
 grant execute on function public.tgg_brain_component_impact(text,integer) to postgres;
 grant execute on function public.tgg_brain_component_find(text,integer) to postgres;
+
+
+-- TGG Brain architecture graph + lineage
+create table if not exists public.tgg_brain_components (
+  id uuid primary key default gen_random_uuid(),
+  component_key text not null unique,
+  component_type text not null
+    check (component_type in ('database_table','database_function','edge_function','page','api','worker','cron','ui_module','game_system','integration','repository_path')),
+  name text not null,
+  environment text not null default 'shared'
+    check (environment in ('shared','development','staging','production')),
+  source_ref text,
+  canonical boolean not null default false,
+  active boolean not null default true,
+  risk_level text not null default 'medium' check (risk_level in ('low','medium','high')),
+  owner_domain text,
+  capabilities jsonb not null default '[]'::jsonb,
+  constraints jsonb not null default '[]'::jsonb,
+  metadata jsonb not null default '{}'::jsonb,
+  health_status text not null default 'unknown'
+    check (health_status in ('unknown','healthy','warning','degraded','blocked','retired')),
+  last_verified_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.tgg_brain_component_links (
+  id uuid primary key default gen_random_uuid(),
+  from_component_id uuid not null references public.tgg_brain_components(id) on delete cascade,
+  to_component_id uuid not null references public.tgg_brain_components(id) on delete cascade,
+  relationship text not null
+    check (relationship in ('depends_on','reads','writes','calls','renders','routes_to','authenticates_via','deploys_to','tests','monitors','backs_up','syncs_with','extends')),
+  strength integer not null default 50 check (strength between 1 and 100),
+  required boolean not null default true,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique(from_component_id,to_component_id,relationship),
+  check (from_component_id<>to_component_id)
+);
+
+create table if not exists public.tgg_brain_lineage_evidence (
+  id uuid primary key default gen_random_uuid(),
+  from_component_id uuid not null references public.tgg_brain_components(id) on delete cascade,
+  to_component_id uuid not null references public.tgg_brain_components(id) on delete cascade,
+  relationship text not null check (relationship in ('depends_on','reads','writes','calls')),
+  evidence_type text not null check (evidence_type in ('foreign_key','function_sql')),
+  evidence_ref text not null,
+  confidence integer not null default 100 check (confidence between 1 and 100),
+  first_seen_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  active boolean not null default true,
+  unique(from_component_id,to_component_id,relationship,evidence_type,evidence_ref)
+);
+
+create table if not exists public.tgg_brain_architecture_scans (
+  id uuid primary key default gen_random_uuid(),
+  scan_key text not null unique,
+  scanned_at timestamptz not null default now(),
+  active_components integer not null default 0,
+  active_tables integer not null default 0,
+  active_functions integer not null default 0,
+  stale_components integer not null default 0,
+  new_since_previous integer not null default 0,
+  missing_since_previous integer not null default 0,
+  drift_status text not null default 'clean' check (drift_status in ('clean','changed','warning')),
+  summary jsonb not null default '{}'::jsonb
+);
+
+alter table public.tgg_brain_components enable row level security;
+alter table public.tgg_brain_component_links enable row level security;
+alter table public.tgg_brain_lineage_evidence enable row level security;
+alter table public.tgg_brain_architecture_scans enable row level security;
+
+revoke all on public.tgg_brain_components from anon,authenticated;
+revoke all on public.tgg_brain_component_links from anon,authenticated;
+revoke all on public.tgg_brain_lineage_evidence from anon,authenticated;
+revoke all on public.tgg_brain_architecture_scans from anon,authenticated;
+
+create or replace function public.tgg_brain_architecture_refresh()
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_tables integer:=0; v_functions integer:=0; v_verified integer:=0; v_now timestamptz:=now();
+begin
+  with src as (
+    select 'dbtable:'||c.table_name component_key,c.table_name name,
+      case when c.table_name like 'tgg_world_%' then 'game'
+           when c.table_name like 'tgg_brain_%' then 'brain'
+           when c.table_name like 'tgg_build_%' or c.table_name like 'tgg_autobuilder_%' then 'build'
+           when c.table_name like 'tgg_creator_%' then 'creator_platform' else 'platform' end owner_domain,
+      case when c.table_name like 'tgg_build_%' or c.table_name like 'tgg_autobuilder_%' then 'high' else 'medium' end risk_level
+    from information_schema.tables c
+    where c.table_schema='public'
+      and (c.table_name like 'tgg_world_%' or c.table_name like 'tgg_brain_%'
+        or c.table_name like 'tgg_build_%' or c.table_name like 'tgg_autobuilder_%'
+        or c.table_name like 'tgg_creator_%')
+  ), upserted as (
+    insert into public.tgg_brain_components(
+      component_key,component_type,name,environment,source_ref,canonical,active,risk_level,owner_domain,
+      capabilities,constraints,metadata,health_status,last_verified_at,updated_at
+    )
+    select component_key,'database_table',name,'shared','table:public.'||name,false,true,risk_level,owner_domain,
+      jsonb_build_array('database_storage'),jsonb_build_array('internal_component'),
+      jsonb_build_object('auto_discovered',true,'schema','public'),'healthy',v_now,v_now
+    from src
+    on conflict(component_key) do update set
+      component_type='database_table',name=excluded.name,source_ref=excluded.source_ref,active=true,
+      risk_level=excluded.risk_level,owner_domain=excluded.owner_domain,
+      metadata=public.tgg_brain_components.metadata||excluded.metadata,
+      health_status='healthy',last_verified_at=v_now,updated_at=v_now
+    returning 1
+  ) select count(*) into v_tables from upserted;
+
+  with src as (
+    select 'dbfn:'||n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')' component_key,
+      p.proname name,n.nspname schema_name,p.prosecdef security_definer,
+      case when p.proname like 'tgg_world_%' then 'game'
+           when p.proname like 'tgg_brain_%' then 'brain'
+           when p.proname like 'tgg_build_%' or p.proname like 'tgg_autobuilder_%' then 'build'
+           when p.proname like 'tgg_creator_%' then 'creator_platform' else 'platform' end owner_domain,
+      case when p.prosecdef or p.proname like 'tgg_build_%' or p.proname like 'tgg_autobuilder_%' then 'high' else 'medium' end risk_level
+    from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname in ('public','private')
+      and (p.proname like 'tgg_world_%' or p.proname like 'tgg_brain_%'
+        or p.proname like 'tgg_build_%' or p.proname like 'tgg_autobuilder_%'
+        or p.proname like 'tgg_creator_%')
+  ), upserted as (
+    insert into public.tgg_brain_components(
+      component_key,component_type,name,environment,source_ref,canonical,active,risk_level,owner_domain,
+      capabilities,constraints,metadata,health_status,last_verified_at,updated_at
+    )
+    select component_key,'database_function',name,'shared','function:'||schema_name||'.'||name,false,true,
+      risk_level,owner_domain,jsonb_build_array('database_rpc'),
+      case when security_definer then jsonb_build_array('security_definer','internal_review_required')
+           else jsonb_build_array('internal_component') end,
+      jsonb_build_object('auto_discovered',true,'schema',schema_name,'security_definer',security_definer),
+      'healthy',v_now,v_now
+    from src
+    on conflict(component_key) do update set
+      component_type='database_function',name=excluded.name,source_ref=excluded.source_ref,active=true,
+      risk_level=excluded.risk_level,owner_domain=excluded.owner_domain,constraints=excluded.constraints,
+      metadata=public.tgg_brain_components.metadata||excluded.metadata,
+      health_status='healthy',last_verified_at=v_now,updated_at=v_now
+    returning 1
+  ) select count(*) into v_functions from upserted;
+
+  update public.tgg_brain_components c
+  set health_status='warning',active=false,updated_at=v_now,
+      metadata=c.metadata||jsonb_build_object('stale_detected_at',v_now)
+  where coalesce((c.metadata->>'auto_discovered')::boolean,false)=true
+    and c.component_type in ('database_table','database_function')
+    and c.last_verified_at<v_now
+    and not exists(
+      select 1 from information_schema.tables t
+      where c.component_type='database_table'
+        and c.component_key='dbtable:'||t.table_name and t.table_schema='public'
+    )
+    and not exists(
+      select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+      where c.component_type='database_function'
+        and c.component_key='dbfn:'||n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')'
+        and n.nspname in ('public','private')
+    );
+
+  select count(*) into v_verified from public.tgg_brain_components where active=true and last_verified_at=v_now;
+
+  return jsonb_build_object('ok',true,'refreshed_at',v_now,'tables_seen',v_tables,
+    'functions_seen',v_functions,'components_verified',v_verified,'auto_retire_manual_components',false);
+end $$;
+
+create or replace function public.tgg_brain_lineage_refresh()
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_now timestamptz:=now(); v_fk integer:=0; v_reads integer:=0; v_writes integer:=0; v_links integer:=0;
+begin
+  update public.tgg_brain_lineage_evidence set active=false where evidence_type in ('foreign_key','function_sql');
+
+  with fk as (
+    select c_from.id from_id,c_to.id to_id,con.oid::text evidence_ref
+    from pg_constraint con
+    join pg_class src on src.oid=con.conrelid
+    join pg_namespace srcn on srcn.oid=src.relnamespace
+    join pg_class dst on dst.oid=con.confrelid
+    join pg_namespace dstn on dstn.oid=dst.relnamespace
+    join public.tgg_brain_components c_from on c_from.component_key='dbtable:'||src.relname and c_from.active=true
+    join public.tgg_brain_components c_to on c_to.component_key='dbtable:'||dst.relname and c_to.active=true
+    where con.contype='f' and srcn.nspname='public' and dstn.nspname='public'
+      and src.relname like 'tgg_%' and dst.relname like 'tgg_%'
+  ), u as (
+    insert into public.tgg_brain_lineage_evidence(
+      from_component_id,to_component_id,relationship,evidence_type,evidence_ref,confidence,first_seen_at,last_seen_at,active
+    )
+    select from_id,to_id,'depends_on','foreign_key',evidence_ref,100,v_now,v_now,true from fk
+    on conflict(from_component_id,to_component_id,relationship,evidence_type,evidence_ref) do update
+      set confidence=excluded.confidence,last_seen_at=v_now,active=true
+    returning 1
+  ) select count(*) into v_fk from u;
+
+  with defs as (
+    select c_fn.id fn_id,lower(pg_get_functiondef(p.oid)) def,p.oid::text fn_oid
+    from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    join public.tgg_brain_components c_fn
+      on c_fn.component_key='dbfn:'||n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')'
+      and c_fn.active=true
+    where n.nspname in ('public','private') and p.proname like 'tgg_%'
+  ), refs as (
+    select d.fn_id,c_tbl.id tbl_id,d.fn_oid||':read:'||c_tbl.component_key evidence_ref
+    from defs d join public.tgg_brain_components c_tbl
+      on c_tbl.component_type='database_table' and c_tbl.active=true and c_tbl.component_key like 'dbtable:tgg_%'
+    where d.def like '%from public.'||replace(c_tbl.component_key,'dbtable:','')||'%'
+       or d.def like '%join public.'||replace(c_tbl.component_key,'dbtable:','')||'%'
+  ), u as (
+    insert into public.tgg_brain_lineage_evidence(
+      from_component_id,to_component_id,relationship,evidence_type,evidence_ref,confidence,first_seen_at,last_seen_at,active
+    )
+    select fn_id,tbl_id,'reads','function_sql',evidence_ref,95,v_now,v_now,true from refs
+    on conflict(from_component_id,to_component_id,relationship,evidence_type,evidence_ref) do update
+      set confidence=excluded.confidence,last_seen_at=v_now,active=true
+    returning 1
+  ) select count(*) into v_reads from u;
+
+  with defs as (
+    select c_fn.id fn_id,lower(pg_get_functiondef(p.oid)) def,p.oid::text fn_oid
+    from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    join public.tgg_brain_components c_fn
+      on c_fn.component_key='dbfn:'||n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||')'
+      and c_fn.active=true
+    where n.nspname in ('public','private') and p.proname like 'tgg_%'
+  ), refs as (
+    select d.fn_id,c_tbl.id tbl_id,d.fn_oid||':write:'||c_tbl.component_key evidence_ref
+    from defs d join public.tgg_brain_components c_tbl
+      on c_tbl.component_type='database_table' and c_tbl.active=true and c_tbl.component_key like 'dbtable:tgg_%'
+    where d.def like '%insert into public.'||replace(c_tbl.component_key,'dbtable:','')||'%'
+       or d.def like '%update public.'||replace(c_tbl.component_key,'dbtable:','')||'%'
+       or d.def like '%delete from public.'||replace(c_tbl.component_key,'dbtable:','')||'%'
+  ), u as (
+    insert into public.tgg_brain_lineage_evidence(
+      from_component_id,to_component_id,relationship,evidence_type,evidence_ref,confidence,first_seen_at,last_seen_at,active
+    )
+    select fn_id,tbl_id,'writes','function_sql',evidence_ref,98,v_now,v_now,true from refs
+    on conflict(from_component_id,to_component_id,relationship,evidence_type,evidence_ref) do update
+      set confidence=excluded.confidence,last_seen_at=v_now,active=true
+    returning 1
+  ) select count(*) into v_writes from u;
+
+  with grouped as (
+    select from_component_id,to_component_id,relationship,max(confidence) strength,
+      jsonb_agg(jsonb_build_object('evidence_type',evidence_type,'evidence_ref',evidence_ref,'confidence',confidence)
+        order by confidence desc,evidence_ref) evidence
+    from public.tgg_brain_lineage_evidence where active=true
+    group by from_component_id,to_component_id,relationship
+  ), u as (
+    insert into public.tgg_brain_component_links(from_component_id,to_component_id,relationship,strength,required,metadata)
+    select from_component_id,to_component_id,relationship,strength,true,
+      jsonb_build_object('auto_discovered',true,'evidence',evidence)
+    from grouped
+    on conflict(from_component_id,to_component_id,relationship) do update
+      set strength=greatest(public.tgg_brain_component_links.strength,excluded.strength),
+          metadata=public.tgg_brain_component_links.metadata||excluded.metadata
+    returning 1
+  ) select count(*) into v_links from u;
+
+  return jsonb_build_object('ok',true,'refreshed_at',v_now,'foreign_key_dependencies',v_fk,
+    'function_reads',v_reads,'function_writes',v_writes,'links_materialized',v_links,
+    'confidence_policy','foreign_keys=100, writes=98, reads=95');
+end $$;
+
+create or replace function public.tgg_brain_architecture_scan()
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare
+  v_refresh jsonb; v_lineage jsonb; v_now timestamptz:=now();
+  v_active integer:=0; v_tables integer:=0; v_functions integer:=0; v_stale integer:=0;
+  v_prev public.tgg_brain_architecture_scans%rowtype; v_new integer:=0; v_missing integer:=0;
+  v_status text:='clean'; v_key text; v_id uuid;
+begin
+  v_refresh:=public.tgg_brain_architecture_refresh();
+  v_lineage:=public.tgg_brain_lineage_refresh();
+
+  select count(*) filter(where active=true),
+         count(*) filter(where active=true and component_type='database_table'),
+         count(*) filter(where active=true and component_type='database_function'),
+         count(*) filter(where active=false and coalesce((metadata->>'auto_discovered')::boolean,false)=true)
+  into v_active,v_tables,v_functions,v_stale
+  from public.tgg_brain_components;
+
+  select * into v_prev from public.tgg_brain_architecture_scans order by scanned_at desc limit 1;
+  if found then
+    v_new:=greatest(v_active-v_prev.active_components,0);
+    v_missing:=greatest(v_prev.active_components-v_active,0);
+  end if;
+
+  if v_missing>0 or v_stale>0 then v_status:='warning';
+  elsif v_new>0 then v_status:='changed';
+  else v_status:='clean'; end if;
+
+  v_key:='archscan:'||replace(gen_random_uuid()::text,'-','');
+
+  insert into public.tgg_brain_architecture_scans(
+    scan_key,scanned_at,active_components,active_tables,active_functions,stale_components,
+    new_since_previous,missing_since_previous,drift_status,summary
+  )
+  values(v_key,v_now,v_active,v_tables,v_functions,v_stale,v_new,v_missing,v_status,
+    jsonb_build_object('refresh',v_refresh,'lineage',v_lineage,
+      'production_auto_publish',false,'high_risk_auto_execute',false,
+      'canonical_boundary','AB-006','canonical_source_version','V223'))
+  returning id into v_id;
+
+  return jsonb_build_object('ok',true,'scan_id',v_id,'drift_status',v_status,'active_components',v_active,
+    'active_tables',v_tables,'active_functions',v_functions,'stale_components',v_stale,
+    'new_since_previous',v_new,'missing_since_previous',v_missing,'lineage',v_lineage);
+end $$;
+
+create or replace function public.tgg_brain_architecture_latest()
+returns jsonb
+language sql security definer set search_path=''
+as $$
+  select jsonb_build_object(
+    'scan_id',id,'scanned_at',scanned_at,'active_components',active_components,
+    'active_tables',active_tables,'active_functions',active_functions,'stale_components',stale_components,
+    'new_since_previous',new_since_previous,'missing_since_previous',missing_since_previous,
+    'drift_status',drift_status,'summary',summary
+  )
+  from public.tgg_brain_architecture_scans order by scanned_at desc limit 1
+$$;
+
+revoke all on function public.tgg_brain_architecture_refresh() from public,anon,authenticated;
+revoke all on function public.tgg_brain_lineage_refresh() from public,anon,authenticated;
+revoke all on function public.tgg_brain_architecture_scan() from public,anon,authenticated;
+revoke all on function public.tgg_brain_architecture_latest() from public,anon,authenticated;
+
+grant execute on function public.tgg_brain_architecture_refresh() to postgres;
+grant execute on function public.tgg_brain_lineage_refresh() to postgres;
+grant execute on function public.tgg_brain_architecture_scan() to postgres;
+grant execute on function public.tgg_brain_architecture_latest() to postgres;
+
+do $$
+declare v_jobid bigint;
+begin
+  for v_jobid in select jobid from cron.job where jobname='tgg-brain-architecture-refresh'
+  loop perform cron.unschedule(v_jobid); end loop;
+  perform cron.schedule('tgg-brain-architecture-refresh','7 * * * *','select public.tgg_brain_architecture_scan();');
+end $$;

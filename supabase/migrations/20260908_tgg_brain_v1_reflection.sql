@@ -1973,3 +1973,103 @@ revoke all on function public.tgg_brain_guardrail_check(text,text,jsonb) from pu
 revoke all on function public.tgg_brain_conflict_state() from public,anon,authenticated;
 grant execute on function public.tgg_brain_guardrail_check(text,text,jsonb) to postgres;
 grant execute on function public.tgg_brain_conflict_state() to postgres;
+
+
+-- TGG Brain non-destructive memory compaction
+create table if not exists public.tgg_brain_memory_archive (
+  id uuid primary key default gen_random_uuid(),
+  original_memory_id uuid not null,
+  memory_key text not null,
+  memory_type text not null,
+  title text not null,
+  content jsonb not null,
+  importance integer not null,
+  source_ref text,
+  archive_reason text not null check (archive_reason in ('exact_duplicate','manual_retire','superseded')),
+  retained_memory_id uuid,
+  archived_at timestamptz not null default now(),
+  unique(original_memory_id,archive_reason)
+);
+
+alter table public.tgg_brain_memory_archive enable row level security;
+revoke all on public.tgg_brain_memory_archive from anon,authenticated;
+
+create or replace function public.tgg_brain_memory_compact()
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_archived integer:=0; v_before integer:=0; v_after integer:=0;
+begin
+  select count(*) into v_before from public.tgg_brain_memory where active=true;
+
+  with ranked as (
+    select m.*,
+      row_number() over(
+        partition by m.memory_type,md5(m.content::text)
+        order by m.importance desc,m.updated_at desc,m.id
+      ) rn,
+      first_value(m.id) over(
+        partition by m.memory_type,md5(m.content::text)
+        order by m.importance desc,m.updated_at desc,m.id
+      ) keep_id
+    from public.tgg_brain_memory m
+    where m.active=true and m.memory_type in ('lesson','qa')
+  ), losers as (
+    select * from ranked where rn>1
+  ), archived as (
+    insert into public.tgg_brain_memory_archive(
+      original_memory_id,memory_key,memory_type,title,content,importance,source_ref,
+      archive_reason,retained_memory_id
+    )
+    select id,memory_key,memory_type,title,content,importance,source_ref,'exact_duplicate',keep_id
+    from losers
+    on conflict(original_memory_id,archive_reason) do nothing
+    returning original_memory_id
+  ), deactivated as (
+    update public.tgg_brain_memory m
+    set active=false,updated_at=now()
+    where m.id in (select original_memory_id from archived)
+    returning 1
+  )
+  select count(*) into v_archived from deactivated;
+
+  select count(*) into v_after from public.tgg_brain_memory where active=true;
+
+  return jsonb_build_object(
+    'ok',true,'active_before',v_before,'archived_exact_duplicates',v_archived,'active_after',v_after,
+    'protected_types',jsonb_build_array('system','decision','constraint','architecture','dependency','idea'),
+    'destructive_delete_performed',false
+  );
+end $$;
+
+create or replace function public.tgg_brain_memory_hygiene_state()
+returns jsonb
+language sql security definer set search_path=''
+as $$
+  with dupes as (
+    select count(*) groups,coalesce(sum(n-1),0) candidates
+    from (
+      select memory_type,md5(content::text),count(*) n
+      from public.tgg_brain_memory
+      where active=true and memory_type in ('lesson','qa')
+      group by memory_type,md5(content::text)
+      having count(*)>1
+    ) q
+  )
+  select jsonb_build_object(
+    'active_memories',(select count(*) from public.tgg_brain_memory where active=true),
+    'archived_memories',(select count(*) from public.tgg_brain_memory_archive),
+    'exact_duplicate_groups',dupes.groups,
+    'exact_duplicate_candidates',dupes.candidates,
+    'protected_active_memories',(
+      select count(*) from public.tgg_brain_memory
+      where active=true and memory_type in ('system','decision','constraint','architecture','dependency','idea')
+    )
+  )
+  from dupes
+$$;
+
+revoke all on function public.tgg_brain_memory_compact() from public,anon,authenticated;
+revoke all on function public.tgg_brain_memory_hygiene_state() from public,anon,authenticated;
+grant execute on function public.tgg_brain_memory_compact() to postgres;
+grant execute on function public.tgg_brain_memory_hygiene_state() to postgres;

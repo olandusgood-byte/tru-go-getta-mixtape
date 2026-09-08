@@ -1584,3 +1584,142 @@ $$;
 
 revoke all on function public.tgg_brain_execution_trace_state() from public,anon,authenticated;
 grant execute on function public.tgg_brain_execution_trace_state() to postgres;
+
+
+create or replace function public.tgg_brain_execution_trace_record(
+  p_trace_key text,
+  p_goal_id uuid default null,
+  p_step_id uuid default null,
+  p_prediction_id uuid default null,
+  p_build_task_id uuid default null,
+  p_trial_id uuid default null,
+  p_calibration_id uuid default null,
+  p_source_control jsonb default '{}'::jsonb,
+  p_actual_components jsonb default '[]'::jsonb,
+  p_actual_tests jsonb default '[]'::jsonb,
+  p_acceptance_evidence jsonb default '[]'::jsonb,
+  p_production_touched boolean default false,
+  p_high_risk_executed boolean default false
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare
+  v_step public.tgg_brain_goal_steps%rowtype;
+  v_pred public.tgg_brain_change_predictions%rowtype;
+  v_trial public.tgg_brain_trials%rowtype;
+  v_plan_match boolean:=false; v_prediction_match boolean:=false;
+  v_trial_passed boolean:=false; v_acceptance_passed boolean:=false;
+  v_boundary boolean:=true; v_status text:='incomplete'; v_id uuid;
+  v_pred_components text[]; v_actual_components text[];
+  v_pred_tests text[]; v_actual_tests text[];
+  v_acceptance_count integer:=0; v_acceptance_pass_count integer:=0;
+begin
+  if p_step_id is not null then
+    select * into v_step from public.tgg_brain_goal_steps where id=p_step_id;
+  end if;
+  if p_prediction_id is not null then
+    select * into v_pred from public.tgg_brain_change_predictions where id=p_prediction_id;
+  end if;
+  if p_trial_id is not null then
+    select * into v_trial from public.tgg_brain_trials where id=p_trial_id;
+  end if;
+
+  v_plan_match:=p_step_id is not null and v_step.id is not null and (p_goal_id is null or v_step.goal_id=p_goal_id);
+
+  if v_pred.id is not null then
+    select coalesce(array_agg(distinct x->>'component_key'),array[]::text[])
+    into v_pred_components
+    from jsonb_array_elements(v_pred.predicted_edits) x where x ? 'component_key';
+
+    select coalesce(array_agg(distinct value),array[]::text[])
+    into v_actual_components
+    from jsonb_array_elements_text(coalesce(p_actual_components,'[]'::jsonb));
+
+    select coalesce(array_agg(distinct value),array[]::text[])
+    into v_pred_tests
+    from jsonb_array_elements_text(v_pred.predicted_tests);
+
+    select coalesce(array_agg(distinct value),array[]::text[])
+    into v_actual_tests
+    from jsonb_array_elements_text(coalesce(p_actual_tests,'[]'::jsonb));
+
+    v_prediction_match:=
+      (cardinality(v_pred_components)=0 or v_pred_components <@ v_actual_components)
+      and (cardinality(v_pred_tests)=0 or v_pred_tests <@ v_actual_tests);
+  end if;
+
+  v_trial_passed:=v_trial.id is not null and v_trial.status='passed'
+    and v_trial.verdict in ('safe_for_staging','advance_with_expanded_qa')
+    and v_trial.production_touched=false;
+
+  select count(*),count(*) filter(where coalesce((x->>'passed')::boolean,false)=true)
+  into v_acceptance_count,v_acceptance_pass_count
+  from jsonb_array_elements(coalesce(p_acceptance_evidence,'[]'::jsonb)) x;
+
+  if v_step.id is not null and jsonb_array_length(coalesce(v_step.acceptance,'[]'::jsonb))=0 then
+    v_acceptance_passed:=true;
+  elsif v_acceptance_count>0 and v_acceptance_count=v_acceptance_pass_count then
+    v_acceptance_passed:=true;
+  end if;
+
+  v_boundary:=coalesce(p_production_touched,false)=false
+    and coalesce(p_high_risk_executed,false)=false
+    and coalesce(v_pred.canonical_affected,false)=false;
+
+  if coalesce(p_production_touched,false) or coalesce(p_high_risk_executed,false) then
+    v_status:='blocked';
+  elsif v_plan_match and v_prediction_match and v_trial_passed and v_acceptance_passed and v_boundary then
+    v_status:='verified';
+  elsif v_trial.id is not null and v_trial.status in ('failed','blocked') then
+    v_status:='blocked';
+  elsif v_plan_match or v_trial.id is not null or v_pred.id is not null then
+    v_status:='warning';
+  else
+    v_status:='incomplete';
+  end if;
+
+  insert into public.tgg_brain_execution_traces(
+    trace_key,goal_id,step_id,prediction_id,build_task_id,trial_id,calibration_id,
+    source_control,actual_components,actual_tests,acceptance_evidence,
+    plan_match,prediction_match,trial_passed,acceptance_passed,
+    production_touched,high_risk_executed,canonical_boundary_preserved,
+    trace_status,summary,updated_at
+  )
+  values(
+    trim(p_trace_key),p_goal_id,p_step_id,p_prediction_id,p_build_task_id,p_trial_id,p_calibration_id,
+    coalesce(p_source_control,'{}'::jsonb),coalesce(p_actual_components,'[]'::jsonb),
+    coalesce(p_actual_tests,'[]'::jsonb),coalesce(p_acceptance_evidence,'[]'::jsonb),
+    v_plan_match,v_prediction_match,v_trial_passed,v_acceptance_passed,
+    coalesce(p_production_touched,false),coalesce(p_high_risk_executed,false),v_boundary,
+    v_status,
+    jsonb_build_object('brain_version','TGG-BRAIN-1.0','canonical_boundary','AB-006',
+      'canonical_source_version','V223',
+      'predicted_component_count',coalesce(cardinality(v_pred_components),0),
+      'actual_component_count',coalesce(cardinality(v_actual_components),0),
+      'predicted_test_count',coalesce(cardinality(v_pred_tests),0),
+      'actual_test_count',coalesce(cardinality(v_actual_tests),0)),
+    now()
+  )
+  on conflict(trace_key) do update
+  set goal_id=excluded.goal_id,step_id=excluded.step_id,prediction_id=excluded.prediction_id,
+      build_task_id=excluded.build_task_id,trial_id=excluded.trial_id,calibration_id=excluded.calibration_id,
+      source_control=excluded.source_control,actual_components=excluded.actual_components,
+      actual_tests=excluded.actual_tests,acceptance_evidence=excluded.acceptance_evidence,
+      plan_match=excluded.plan_match,prediction_match=excluded.prediction_match,
+      trial_passed=excluded.trial_passed,acceptance_passed=excluded.acceptance_passed,
+      production_touched=excluded.production_touched,high_risk_executed=excluded.high_risk_executed,
+      canonical_boundary_preserved=excluded.canonical_boundary_preserved,
+      trace_status=excluded.trace_status,summary=excluded.summary,updated_at=now()
+  returning id into v_id;
+
+  return jsonb_build_object(
+    'ok',true,'trace_id',v_id,'trace_key',p_trace_key,'trace_status',v_status,
+    'plan_match',v_plan_match,'prediction_match',v_prediction_match,'trial_passed',v_trial_passed,
+    'acceptance_passed',v_acceptance_passed,'canonical_boundary_preserved',v_boundary,
+    'production_touched',coalesce(p_production_touched,false),
+    'high_risk_executed',coalesce(p_high_risk_executed,false)
+  );
+end $$;
+
+revoke all on function public.tgg_brain_execution_trace_record(text,uuid,uuid,uuid,uuid,uuid,uuid,jsonb,jsonb,jsonb,jsonb,boolean,boolean) from public,anon,authenticated;
+grant execute on function public.tgg_brain_execution_trace_record(text,uuid,uuid,uuid,uuid,uuid,uuid,jsonb,jsonb,jsonb,jsonb,boolean,boolean) to postgres;

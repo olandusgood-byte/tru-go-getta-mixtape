@@ -613,3 +613,55 @@ where n.nspname='public' and p.proname='tgg_brain_critical_path';
 -- Expected:
 -- authenticated/anon cannot execute critical-path controls
 -- high-risk, approval-required, blocked, and incomplete-dependency steps are not autonomous candidates
+
+
+-- Safe Speed Booster safety
+select c.relname,c.relrowsecurity
+from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public'
+  and c.relname in ('tgg_speed_booster_config','tgg_speed_booster_layers')
+order by c.relname;
+
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname in (
+    'tgg_speed_booster_state',
+    'tgg_speed_booster_effective_batch_size',
+    'tgg_speed_booster_layer_plan'
+  )
+order by p.proname;
+
+select
+  enabled,mode,normal_batch_size,boosted_batch_size,hard_max_batch_size,
+  require_safety_score,require_clean_architecture,
+  require_zero_critical_conflicts,require_clean_execution_trace
+from public.tgg_speed_booster_config
+where id=1;
+
+select public.tgg_speed_booster_state() as speed_state;
+select public.tgg_speed_booster_layer_plan() as speed_layers;
+
+select count(*) as active_watchdog_jobs
+from cron.job
+where jobname='tgg-autobuilder-continuous-watchdog'
+  and active=true
+  and schedule='*/5 * * * *';
+
+-- Expected:
+-- authenticated_can_execute = false
+-- anon_can_execute = false
+-- normal_batch_size = 5
+-- boosted_batch_size = 15
+-- hard_max_batch_size <= 25
+-- require_safety_score = 100
+-- production_auto_publish = false
+-- high_risk_auto_execute = false
+-- canonical_boundary = AB-006
+-- canonical_source_version = V223
+-- active_watchdog_jobs = 1

@@ -262,3 +262,169 @@ begin
     'select public.tgg_autonomic_final_cycle();'
   );
 end $$;
+
+
+create or replace function public.tgg_autonomic_scan()
+returns jsonb
+language plpgsql
+security definer
+set search_path=''
+as $$
+declare
+  v_score jsonb; v_arch jsonb; v_conf jsonb; v_trace jsonb; v_speed jsonb;
+  v_memory jsonb; v_spec jsonb; v_failures integer:=0; v_new_events integer:=0;
+  v_new_ideas integer:=0; v_open_creator_actions integer:=0; v_open_master_changes integer:=0;
+  v_restricted boolean:=false;
+begin
+  v_score:=public.tgg_brain_latest_scorecard();
+  v_arch:=public.tgg_brain_architecture_latest();
+  v_conf:=public.tgg_brain_conflict_state();
+  v_trace:=public.tgg_brain_execution_trace_state();
+  v_speed:=public.tgg_speed_booster_state();
+  v_memory:=public.tgg_brain_memory_hygiene_state();
+  v_spec:=public.tgg_brain_spec_state();
+
+  select count(*) into v_failures from public.tgg_build_failures where resolved_at is null;
+  select count(*) into v_new_events from public.tgg_autonomic_events where status='new';
+  select count(*) into v_new_ideas from public.tgg_game_idea_inbox
+    where status in ('new','planning','queued','building','testing','staged');
+  select count(*) into v_open_creator_actions from public.tgg_creator_action_queue where status='open';
+  select count(*) into v_open_master_changes from public.tgg_master_change_queue where status in ('pending','ready');
+
+  v_restricted :=
+    coalesce((v_score->>'safety_score')::numeric,0)<100
+    or coalesce(v_arch->>'drift_status','warning')='warning'
+    or coalesce((v_conf->>'critical_open')::integer,0)>0
+    or coalesce((v_conf->>'blocked_open')::integer,0)>0
+    or coalesce((v_trace->>'boundary_violations')::integer,0)>0;
+
+  return jsonb_build_object(
+    'restricted',v_restricted,'speed',v_speed,
+    'safety_score',coalesce((v_score->>'safety_score')::numeric,0),
+    'architecture',v_arch,'conflicts',v_conf,'trace',v_trace,'memory',v_memory,'specs',v_spec,
+    'open_build_failures',v_failures,'new_events',v_new_events,'active_game_ideas',v_new_ideas,
+    'open_creator_actions',v_open_creator_actions,'open_master_changes',v_open_master_changes,
+    'canonical_boundary','AB-006','canonical_source_version','V223',
+    'production_auto_publish',false,'high_risk_auto_execute',false
+  );
+end $$;
+
+create or replace function public.tgg_autonomic_run_cycle()
+returns jsonb
+language plpgsql
+security definer
+set search_path=''
+as $$
+declare
+  v_cycle uuid; v_scan jsonb; v_scan_after jsonb; v_actions jsonb:='[]'::jsonb;
+  v_watchdog jsonb; v_arch jsonb; v_compact jsonb; v_reflect jsonb;
+  v_event_count integer:=0; v_restricted boolean:=false; v_status text:='complete';
+begin
+  v_scan:=public.tgg_autonomic_scan();
+  v_restricted:=coalesce((v_scan->>'restricted')::boolean,false);
+
+  insert into public.tgg_autonomic_cycles(status,speed_state,scan)
+  values(case when v_restricted then 'restricted' else 'running' end,
+         coalesce(v_scan->'speed','{}'::jsonb),v_scan)
+  returning id into v_cycle;
+
+  if coalesce(((v_scan->'memory')->>'exact_duplicate_candidates')::integer,0)>0 then
+    v_compact:=public.tgg_brain_memory_compact();
+    v_actions:=v_actions||jsonb_build_array(jsonb_build_object('action','memory_compact','result',v_compact));
+  end if;
+
+  select count(*) into v_event_count from public.tgg_autonomic_events where status='new';
+
+  if coalesce(v_scan->'architecture'->>'drift_status','warning')='warning'
+     or coalesce((v_scan->'architecture'->>'stale_components')::integer,0)>0
+     or coalesce((v_scan->'architecture'->>'missing_since_previous')::integer,0)>0
+     or v_event_count>0 then
+    v_arch:=public.tgg_brain_architecture_scan();
+    v_actions:=v_actions||jsonb_build_array(jsonb_build_object('action','architecture_scan','result',v_arch));
+  end if;
+
+  update public.tgg_autonomic_events set status='routed',processed_at=now()
+  where status='new' and source_table='tgg_game_idea_inbox';
+  get diagnostics v_event_count=row_count;
+  if v_event_count>0 then
+    v_actions:=v_actions||jsonb_build_array(jsonb_build_object('action','route_game_ideas','count',v_event_count));
+  end if;
+
+  update public.tgg_autonomic_events set status='routed',processed_at=now()
+  where status='new' and source_table in ('content_items','tgg_master_content');
+  get diagnostics v_event_count=row_count;
+  if v_event_count>0 then
+    v_actions:=v_actions||jsonb_build_array(jsonb_build_object(
+      'action','observe_new_content','count',v_event_count,'production_publish_performed',false));
+  end if;
+
+  v_scan_after:=public.tgg_autonomic_scan();
+  v_restricted:=coalesce((v_scan_after->>'restricted')::boolean,false);
+
+  if v_restricted then
+    if coalesce((v_scan_after->>'safety_score')::numeric,0)<100 then
+      v_actions:=v_actions||jsonb_build_array(jsonb_build_object(
+        'action','brain_safe_recovery',
+        'result',public.tgg_brain_auto_recover_if_unsafe('TGG-BRAIN-1.0-BASELINE')));
+    end if;
+    v_status:='restricted';
+  else
+    v_watchdog:=public.tgg_autobuilder_watchdog();
+    v_actions:=v_actions||jsonb_build_array(jsonb_build_object('action','autobuilder_watchdog','result',v_watchdog));
+    v_reflect:=public.tgg_brain_reflect();
+    v_actions:=v_actions||jsonb_build_array(jsonb_build_object('action','brain_reflect','result',v_reflect));
+    v_status:='complete';
+  end if;
+
+  v_scan_after:=public.tgg_autonomic_scan();
+
+  update public.tgg_autonomic_cycles
+  set finished_at=now(),status=v_status,actions=v_actions,
+      summary=jsonb_build_object(
+        'restricted',coalesce((v_scan_after->>'restricted')::boolean,false),
+        'safety_score',v_scan_after->'safety_score',
+        'effective_batch_size',v_scan_after->'speed'->'effective_batch_size',
+        'open_build_failures',v_scan_after->'open_build_failures',
+        'active_game_ideas',v_scan_after->'active_game_ideas',
+        'new_events',v_scan_after->'new_events',
+        'open_creator_actions',v_scan_after->'open_creator_actions',
+        'open_master_changes',v_scan_after->'open_master_changes',
+        'canonical_boundary','AB-006','canonical_source_version','V223',
+        'production_auto_publish',false,'high_risk_auto_execute',false)
+  where id=v_cycle;
+
+  return jsonb_build_object('cycle_id',v_cycle,'status',v_status,'actions',v_actions,'state',v_scan_after);
+end $$;
+
+create or replace function public.tgg_autonomic_state()
+returns jsonb
+language sql
+security definer
+set search_path=''
+as $$
+  select jsonb_build_object(
+    'latest_cycle',(
+      select jsonb_build_object('id',id,'started_at',started_at,'finished_at',finished_at,'status',status,'summary',summary)
+      from public.tgg_autonomic_cycles order by started_at desc limit 1
+    ),
+    'gaps',jsonb_build_object(
+      'open',(select count(*) from public.tgg_autonomic_gaps where status='open'),
+      'repairing',(select count(*) from public.tgg_autonomic_gaps where status='repairing'),
+      'approval_required',(select count(*) from public.tgg_autonomic_gaps where status='approval_required'),
+      'external_required',(select count(*) from public.tgg_autonomic_gaps where status='external_required')
+    ),
+    'events',jsonb_build_object(
+      'new',(select count(*) from public.tgg_autonomic_events where status='new'),
+      'routed',(select count(*) from public.tgg_autonomic_events where status='routed'),
+      'blocked',(select count(*) from public.tgg_autonomic_events where status='blocked')
+    ),
+    'scan',public.tgg_autonomic_scan()
+  )
+$$;
+
+revoke all on function public.tgg_autonomic_scan() from public,anon,authenticated;
+revoke all on function public.tgg_autonomic_run_cycle() from public,anon,authenticated;
+revoke all on function public.tgg_autonomic_state() from public,anon,authenticated;
+grant execute on function public.tgg_autonomic_scan() to postgres;
+grant execute on function public.tgg_autonomic_run_cycle() to postgres;
+grant execute on function public.tgg_autonomic_state() to postgres;

@@ -25,6 +25,12 @@ create table if not exists public.tgg_game_idea_inbox (
   unique(owner_user_id,idea_hash)
 );
 
+alter table public.tgg_game_idea_inbox
+  add column if not exists retry_count integer not null default 0,
+  add column if not exists max_retries integer not null default 3,
+  add column if not exists claimed_at timestamptz,
+  add column if not exists last_heartbeat_at timestamptz;
+
 create index if not exists tgg_game_idea_inbox_status_idx
   on public.tgg_game_idea_inbox(status,created_at);
 
@@ -81,11 +87,8 @@ begin
   returning * into v_row;
 
   return jsonb_build_object(
-    'ok',true,
-    'idea_id',v_row.id,
-    'status',v_row.status,
-    'duplicate_count',v_row.duplicate_count,
-    'release_id',v_row.release_id
+    'ok',true,'idea_id',v_row.id,'status',v_row.status,
+    'duplicate_count',v_row.duplicate_count,'release_id',v_row.release_id
   );
 end $$;
 
@@ -108,18 +111,15 @@ security invoker
 set search_path=''
 as $$
 begin
-  if p_worker is null or length(trim(p_worker))=0 then
-    raise exception 'worker_required';
-  end if;
-  if p_limit<1 or p_limit>10 then
-    raise exception 'invalid_limit';
-  end if;
+  if p_worker is null or length(trim(p_worker))=0 then raise exception 'worker_required'; end if;
+  if p_limit<1 or p_limit>10 then raise exception 'invalid_limit'; end if;
 
   return query
   with picked as (
     select i.id
     from public.tgg_game_idea_inbox i
     where i.status='new'
+      and i.retry_count <= i.max_retries
     order by i.created_at
     for update skip locked
     limit p_limit
@@ -127,6 +127,8 @@ begin
   claimed as (
     update public.tgg_game_idea_inbox i
     set status='planning',
+        claimed_at=now(),
+        last_heartbeat_at=now(),
         build_summary=coalesce(i.build_summary,'{}'::jsonb) ||
           jsonb_build_object('claimed_by',p_worker,'claimed_at',now()),
         updated_at=now()
@@ -141,6 +143,98 @@ end $$;
 
 revoke all on function public.tgg_game_idea_claim_batch(text,integer) from public,anon,authenticated;
 grant execute on function public.tgg_game_idea_claim_batch(text,integer) to postgres;
+
+create or replace function public.tgg_game_idea_heartbeat(
+  p_idea_id uuid,
+  p_status text default null,
+  p_summary jsonb default null
+) returns jsonb
+language plpgsql
+security invoker
+set search_path=''
+as $$
+declare v_status text;
+begin
+  if current_user <> 'postgres' then raise exception 'internal_worker_only'; end if;
+  if p_status is not null and p_status not in
+    ('planning','queued','building','testing','staged','complete','approval_required','blocked','canceled')
+  then raise exception 'invalid_status'; end if;
+
+  update public.tgg_game_idea_inbox
+  set status=coalesce(p_status,status),
+      last_heartbeat_at=now(),
+      updated_at=now(),
+      build_summary=coalesce(build_summary,'{}'::jsonb) || coalesce(p_summary,'{}'::jsonb),
+      completed_at=case when coalesce(p_status,status)='complete' then coalesce(completed_at,now()) else completed_at end
+  where id=p_idea_id
+  returning status into v_status;
+
+  if not found then raise exception 'idea_not_found'; end if;
+
+  return jsonb_build_object('ok',true,'idea_id',p_idea_id,'status',v_status,'heartbeat_at',now());
+end $$;
+
+revoke all on function public.tgg_game_idea_heartbeat(uuid,text,jsonb) from public,anon,authenticated;
+grant execute on function public.tgg_game_idea_heartbeat(uuid,text,jsonb) to postgres;
+
+create or replace function public.tgg_game_idea_recover_stale(
+  p_stale_after interval default interval '2 hours'
+) returns jsonb
+language plpgsql
+security definer
+set search_path=''
+as $$
+declare
+  v_requeued integer := 0;
+  v_blocked integer := 0;
+begin
+  with stale as (
+    select id
+    from public.tgg_game_idea_inbox
+    where status in ('planning','queued','building','testing')
+      and coalesce(last_heartbeat_at,claimed_at,updated_at) < now()-p_stale_after
+      and retry_count < max_retries
+    for update skip locked
+  )
+  update public.tgg_game_idea_inbox i
+  set status='new',
+      retry_count=i.retry_count+1,
+      claimed_at=null,
+      last_heartbeat_at=null,
+      last_error='auto_recovered_stale_worker',
+      build_summary=coalesce(i.build_summary,'{}'::jsonb) ||
+        jsonb_build_object('auto_recovered_at',now(),'reason','stale_worker'),
+      updated_at=now()
+  from stale
+  where i.id=stale.id;
+  get diagnostics v_requeued = row_count;
+
+  with exhausted as (
+    select id
+    from public.tgg_game_idea_inbox
+    where status in ('planning','queued','building','testing')
+      and coalesce(last_heartbeat_at,claimed_at,updated_at) < now()-p_stale_after
+      and retry_count >= max_retries
+    for update skip locked
+  )
+  update public.tgg_game_idea_inbox i
+  set status='blocked',
+      last_error='auto_recovery_retries_exhausted',
+      build_summary=coalesce(i.build_summary,'{}'::jsonb) ||
+        jsonb_build_object('auto_blocked_at',now(),'reason','retry_limit_reached'),
+      updated_at=now()
+  from exhausted
+  where i.id=exhausted.id;
+  get diagnostics v_blocked = row_count;
+
+  return jsonb_build_object(
+    'ok',true,'requeued',v_requeued,
+    'blocked_after_retry_limit',v_blocked,'stale_after',p_stale_after::text
+  );
+end $$;
+
+revoke all on function public.tgg_game_idea_recover_stale(interval) from public,anon,authenticated;
+grant execute on function public.tgg_game_idea_recover_stale(interval) to postgres;
 
 create or replace function public.tgg_game_idea_pipeline_state()
 returns jsonb
@@ -180,11 +274,13 @@ declare
   v_detect jsonb;
   v_cycle jsonb;
   v_ideas jsonb;
+  v_idea_recovery jsonb;
   v_open_failures integer;
   v_stale_jobs integer;
 begin
   v_codesync := private.tgg_codesync_tick();
   v_migration := private.tgg_refresh_migration_hygiene_runtime_inventory();
+  v_idea_recovery := public.tgg_game_idea_recover_stale(interval '2 hours');
   v_detect := public.tgg_autobuilder_detect_state();
   v_ideas := public.tgg_game_idea_pipeline_state();
 
@@ -206,15 +302,11 @@ begin
   end if;
 
   return jsonb_build_object(
-    'ok',true,
-    'checked_at',now(),
-    'game_ideas',v_ideas,
-    'codesync',v_codesync,
-    'migration_hygiene',v_migration,
-    'detected',v_detect,
-    'cycle',v_cycle,
-    'open_build_failures',v_open_failures,
-    'stale_theme_jobs',v_stale_jobs,
+    'ok',true,'checked_at',now(),
+    'game_idea_recovery',v_idea_recovery,'game_ideas',v_ideas,
+    'codesync',v_codesync,'migration_hygiene',v_migration,
+    'detected',v_detect,'cycle',v_cycle,
+    'open_build_failures',v_open_failures,'stale_theme_jobs',v_stale_jobs,
     'production_auto_claim_blocked',true,
     'high_risk_auto_claim_blocked',true,
     'production_promotion_requires_explicit_approval',true

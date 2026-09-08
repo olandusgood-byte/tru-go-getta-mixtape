@@ -7,8 +7,10 @@ on:
       - 'supabase/migrations/20260908_world_alpha_rc6_rc7_live_catchup.sql'
       - 'supabase/migrations/20260908_world_alpha_rc8_rc9_live_catchup.sql'
       - 'supabase/migrations/20260908_game_idea_autobuilder_pipeline.sql'
+      - 'supabase/migrations/20260908_tgg_brain_v1_reflection.sql'
       - 'supabase/tests/autobuilder_continuous_watchdog_safety.sql'
       - 'supabase/tests/game_idea_autobuilder_pipeline_safety.sql'
+      - 'supabase/tests/tgg_brain_v1_reflection_safety.sql'
       - '.github/workflows/tgg-autobuilder-safety.yml'
   pull_request:
     paths:
@@ -16,8 +18,10 @@ on:
       - 'supabase/migrations/20260908_world_alpha_rc6_rc7_live_catchup.sql'
       - 'supabase/migrations/20260908_world_alpha_rc8_rc9_live_catchup.sql'
       - 'supabase/migrations/20260908_game_idea_autobuilder_pipeline.sql'
+      - 'supabase/migrations/20260908_tgg_brain_v1_reflection.sql'
       - 'supabase/tests/autobuilder_continuous_watchdog_safety.sql'
       - 'supabase/tests/game_idea_autobuilder_pipeline_safety.sql'
+      - 'supabase/tests/tgg_brain_v1_reflection_safety.sql'
       - '.github/workflows/tgg-autobuilder-safety.yml'
 
 permissions:
@@ -78,6 +82,9 @@ jobs:
           grep -q "security invoker" "$f"
           grep -q "on conflict(owner_user_id,idea_hash)" "$f"
           grep -q "function public.tgg_game_idea_claim_batch" "$f"
+          grep -q "function public.tgg_game_idea_recover_stale" "$f"
+          grep -q "last_heartbeat_at" "$f"
+          grep -q "retry_count" "$f"
           grep -q "grant execute on function public.tgg_game_idea_claim_batch(text,integer) to postgres" "$f"
           grep -q "production_auto_publish.*false" "$f"
           grep -q "high_risk_auto_execute.*false" "$f"
@@ -91,6 +98,38 @@ jobs:
           grep -q "high_risk_auto_execute = false" "$t"
 
           echo "Game Idea pipeline safety contract passed"
+
+      - name: Validate TGG Brain memory and reflection
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_tgg_brain_v1_reflection.sql"
+          t="supabase/tests/tgg_brain_v1_reflection_safety.sql"
+          test -s "$f"
+          test -s "$t"
+
+          grep -q "tgg_brain_memory" "$f"
+          grep -q "tgg_brain_decisions" "$f"
+          grep -q "tgg_brain_priorities" "$f"
+          grep -q "tgg_brain_learning_events" "$f"
+          grep -q "function public.tgg_brain_reflect" "$f"
+          grep -q "function public.tgg_brain_next_actions" "$f"
+          grep -q "TGG-BRAIN-1.0" "$f"
+          grep -q "production_auto_publish.*false" "$f"
+          grep -q "high_risk_auto_execute.*false" "$f"
+          grep -q "canonical_boundary.*AB-006" "$f"
+          grep -q "canonical_source_version.*V223" "$f"
+
+          if grep -Eq "grant execute on function public\.tgg_brain_.*to (authenticated|anon)" "$f"; then
+            echo "Brain controls must remain internal-only"
+            exit 1
+          fi
+
+          grep -q "dedupes_learning_events" "$t"
+          grep -q "blocks_high_risk" "$t"
+          grep -q "blocks_production" "$t"
+
+          echo "TGG Brain safety contract passed"
 
       - name: Validate World Alpha catch-up safety boundaries
         shell: bash

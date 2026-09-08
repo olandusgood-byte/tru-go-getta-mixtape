@@ -119,3 +119,37 @@ where jobname='tgg-brain-periodic-evaluation' and active=true;
 -- canonical_boundary = AB-006
 -- canonical_source_version = V223
 -- active_scorecard_jobs = 1
+
+
+-- Brain checkpoint recovery safety
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname in (
+    'tgg_brain_checkpoint_create',
+    'tgg_brain_checkpoint_preview_restore',
+    'tgg_brain_checkpoint_restore',
+    'tgg_brain_auto_recover_if_unsafe'
+  )
+order by p.proname;
+
+select public.tgg_brain_checkpoint_preview_restore('TGG-BRAIN-1.0-BASELINE') as baseline_restore_preview;
+
+select
+  position('safety_contract_mismatch_restore_blocked' in pg_get_functiondef(p.oid)) > 0 as blocks_safety_contract_mismatch,
+  position('production_touched' in pg_get_functiondef(p.oid)) > 0 as exposes_production_touched_flag,
+  position('false' in lower(pg_get_functiondef(p.oid))) > 0 as production_touched_false_present
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='tgg_brain_checkpoint_restore';
+
+-- Expected:
+-- authenticated_can_execute = false
+-- anon_can_execute = false
+-- restore_allowed = true only when safety contracts match
+-- safety_contract_changed = false
+-- production_touched = false

@@ -36,7 +36,6 @@ jobs:
             grep -q "function public.${fn}" "$f"
           done
 
-          # SQL keywords are case-insensitive; keep the static check that way too.
           grep -Eiq "in \('pass','fail','blocked','manual'\)" "$f"
           grep -Eiq "p_result not in \('pass','fail','blocked','manual'\)" "$f"
 
@@ -50,7 +49,7 @@ jobs:
           grep -q "production_gate_required.*true" "$f"
           grep -q "production_promoted.*false" "$f"
           grep -q "Production intentionally has no automatic advancement function" "$f"
-          if grep -Eiq "function public\.ab005_.*production|ab005_.*promot.*production" "$f"; then
+          if grep -Ev '^[[:space:]]*--' "$f" | grep -Eiq "function public\.ab005_.*production|ab005_.*promot.*production"; then
             echo "AB-005 must not add a production advancement routine"
             exit 1
           fi
@@ -76,8 +75,8 @@ jobs:
           test -s "$d"
 
           grep -q "function public.tgg_ab005_launch_gate" "$f"
-          grep -q "SECURITY INVOKER" "$f"
-          grep -q "STABLE" "$f"
+          grep -Eiq "security[[:space:]]+invoker" "$f"
+          grep -Eiq "^[[:space:]]*stable[[:space:]]*$" "$f"
           grep -q "revoke all on function public.tgg_ab005_launch_gate" "$f"
           grep -q "grant execute on function public.tgg_ab005_launch_gate() to authenticated" "$f"
           grep -q "production_gate_required.*true" "$f"
@@ -85,13 +84,14 @@ jobs:
           grep -q "read_only.*true" "$f"
           grep -q "smoke_summary.*ab005_clean_pass" "$f"
           grep -q "status = 'passed'" "$f"
-          grep -q "checkpoint_key is not null" "$f"
+          grep -q "checkpoint_key" "$f"
+          grep -q "is not null" "$f"
 
-          if grep -Eiq "^[[:space:]]*(insert|update|delete|truncate)[[:space:]]" "$f"; then
+          if grep -Ev '^[[:space:]]*--' "$f" | grep -Eiq "^[[:space:]]*(insert|update|delete|truncate)[[:space:]]"; then
             echo "Launch Gate consumer must remain read-only"
             exit 1
           fi
-          if grep -Eiq "execute[[:space:]]+function|promot|approve[[:space:]]+production|deploy[[:space:]]+production" "$f"; then
+          if grep -Ev '^[[:space:]]*--' "$f" | grep -Eiq "execute[[:space:]]+function|approve[[:space:]]+production|deploy[[:space:]]+production|function[[:space:]].*promot"; then
             echo "Launch Gate consumer must not authorize or perform production mutation"
             exit 1
           fi

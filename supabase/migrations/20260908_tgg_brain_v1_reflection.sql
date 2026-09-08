@@ -1723,3 +1723,131 @@ end $$;
 
 revoke all on function public.tgg_brain_execution_trace_record(text,uuid,uuid,uuid,uuid,uuid,uuid,jsonb,jsonb,jsonb,jsonb,boolean,boolean) from public,anon,authenticated;
 grant execute on function public.tgg_brain_execution_trace_record(text,uuid,uuid,uuid,uuid,uuid,uuid,jsonb,jsonb,jsonb,jsonb,boolean,boolean) to postgres;
+
+
+-- TGG Brain uncertainty gate
+create table if not exists public.tgg_brain_uncertainty_checks (
+  id uuid primary key default gen_random_uuid(),
+  check_key text not null unique,
+  source_component_key text not null,
+  prediction_id uuid references public.tgg_brain_change_predictions(id) on delete set null,
+  step_id uuid references public.tgg_brain_goal_steps(id) on delete set null,
+  architecture_score integer not null default 0 check (architecture_score between 0 and 100),
+  lineage_score integer not null default 0 check (lineage_score between 0 and 100),
+  prediction_score integer not null default 0 check (prediction_score between 0 and 100),
+  calibration_score integer not null default 0 check (calibration_score between 0 and 100),
+  simulation_score integer not null default 0 check (simulation_score between 0 and 100),
+  evidence_quality integer not null default 0 check (evidence_quality between 0 and 100),
+  action text not null check (action in ('proceed','expanded_qa','narrow_scope','research_required','approval_required')),
+  blockers jsonb not null default '[]'::jsonb,
+  rationale jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.tgg_brain_uncertainty_checks enable row level security;
+revoke all on public.tgg_brain_uncertainty_checks from anon,authenticated;
+
+create or replace function public.tgg_brain_uncertainty_gate(
+  p_source_component_key text,p_prediction_id uuid default null,p_step_id uuid default null
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare
+  v_arch jsonb; v_pred public.tgg_brain_change_predictions%rowtype;
+  v_sim public.tgg_brain_simulations%rowtype; v_component public.tgg_brain_components%rowtype;
+  v_lineage_count integer:=0; v_arch_score integer:=100; v_lineage_score integer:=0;
+  v_pred_score integer:=50; v_cal_score integer:=50; v_sim_score integer:=50;
+  v_quality integer:=0; v_action text:='proceed'; v_blockers jsonb:='[]'::jsonb;
+  v_accuracy jsonb; v_usable integer:=0; v_key text; v_id uuid;
+begin
+  select * into v_component from public.tgg_brain_components
+  where component_key=p_source_component_key and active=true;
+  if not found then raise exception 'source_component_not_found'; end if;
+
+  v_arch:=public.tgg_brain_architecture_latest();
+  if v_arch is null then
+    v_arch_score:=20; v_blockers:=v_blockers||jsonb_build_array('architecture_state_missing');
+  elsif coalesce(v_arch->>'drift_status','warning')='warning'
+     or coalesce((v_arch->>'stale_components')::integer,0)>0
+     or coalesce((v_arch->>'missing_since_previous')::integer,0)>0 then
+    v_arch_score:=40; v_blockers:=v_blockers||jsonb_build_array('architecture_not_clean');
+  elsif coalesce(v_arch->>'drift_status','clean')='changed' then v_arch_score:=85;
+  else v_arch_score:=100; end if;
+
+  select count(*) into v_lineage_count
+  from public.tgg_brain_lineage_evidence e
+  join public.tgg_brain_components c1 on c1.id=e.from_component_id
+  join public.tgg_brain_components c2 on c2.id=e.to_component_id
+  where e.active=true
+    and (c1.component_key=p_source_component_key or c2.component_key=p_source_component_key);
+
+  v_lineage_score:=least(100,20+v_lineage_count*10);
+
+  if p_prediction_id is not null then
+    select * into v_pred from public.tgg_brain_change_predictions where id=p_prediction_id;
+    if found then
+      v_pred_score:=v_pred.confidence;
+      if v_pred.approval_required then v_blockers:=v_blockers||jsonb_build_array('prediction_requires_approval'); end if;
+      if v_pred.production_affected then v_blockers:=v_blockers||jsonb_build_array('production_affected'); end if;
+      if v_pred.high_risk_affected then v_blockers:=v_blockers||jsonb_build_array('high_risk_affected'); end if;
+      if v_pred.canonical_affected then v_blockers:=v_blockers||jsonb_build_array('canonical_affected'); end if;
+    else
+      v_pred_score:=20; v_blockers:=v_blockers||jsonb_build_array('prediction_missing');
+    end if;
+  else v_pred_score:=35; end if;
+
+  v_accuracy:=public.tgg_brain_prediction_accuracy();
+  v_usable:=coalesce((v_accuracy->>'usable_calibrations')::integer,0);
+  if v_usable=0 then v_cal_score:=50;
+  else v_cal_score:=least(100,greatest(0,round((v_accuracy->>'average_calibration_score')::numeric)::integer)); end if;
+
+  if p_step_id is not null then
+    select * into v_sim from public.tgg_brain_simulations
+    where step_id=p_step_id order by updated_at desc limit 1;
+    if found then
+      v_sim_score:=v_sim.confidence;
+      if v_sim.status='blocked' then v_blockers:=v_blockers||jsonb_build_array('simulation_blocked'); end if;
+    else
+      v_sim_score:=30; v_blockers:=v_blockers||jsonb_build_array('simulation_missing');
+    end if;
+  end if;
+
+  v_quality:=round(v_arch_score*0.25+v_lineage_score*0.20+v_pred_score*0.25+v_cal_score*0.15+v_sim_score*0.15)::integer;
+
+  if v_component.risk_level='high' or v_component.canonical or coalesce(v_pred.approval_required,false) then
+    v_action:='approval_required';
+  elsif v_arch_score<60 or v_quality<55 then v_action:='research_required';
+  elsif v_quality<70 then v_action:='narrow_scope';
+  elsif v_quality<85 then v_action:='expanded_qa';
+  else v_action:='proceed'; end if;
+
+  v_key:='uncertainty:'||p_source_component_key||':'||coalesce(p_prediction_id::text,'none')||':'||coalesce(p_step_id::text,'none');
+
+  insert into public.tgg_brain_uncertainty_checks(
+    check_key,source_component_key,prediction_id,step_id,
+    architecture_score,lineage_score,prediction_score,calibration_score,simulation_score,
+    evidence_quality,action,blockers,rationale
+  )
+  values(v_key,p_source_component_key,p_prediction_id,p_step_id,
+    v_arch_score,v_lineage_score,v_pred_score,v_cal_score,v_sim_score,
+    v_quality,v_action,v_blockers,
+    jsonb_build_object('lineage_evidence_count',v_lineage_count,
+      'usable_prediction_calibrations',v_usable,'component_risk_level',v_component.risk_level,
+      'component_canonical',v_component.canonical,'production_auto_publish',false,'high_risk_auto_execute',false))
+  on conflict(check_key) do update
+  set architecture_score=excluded.architecture_score,lineage_score=excluded.lineage_score,
+      prediction_score=excluded.prediction_score,calibration_score=excluded.calibration_score,
+      simulation_score=excluded.simulation_score,evidence_quality=excluded.evidence_quality,
+      action=excluded.action,blockers=excluded.blockers,rationale=excluded.rationale,updated_at=now()
+  returning id into v_id;
+
+  return jsonb_build_object('ok',true,'check_id',v_id,'source_component_key',p_source_component_key,
+    'evidence_quality',v_quality,'action',v_action,
+    'scores',jsonb_build_object('architecture',v_arch_score,'lineage',v_lineage_score,
+      'prediction',v_pred_score,'calibration',v_cal_score,'simulation',v_sim_score),
+    'blockers',v_blockers);
+end $$;
+
+revoke all on function public.tgg_brain_uncertainty_gate(text,uuid,uuid) from public,anon,authenticated;
+grant execute on function public.tgg_brain_uncertainty_gate(text,uuid,uuid) to postgres;

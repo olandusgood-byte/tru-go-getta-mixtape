@@ -8,6 +8,7 @@ on:
       - 'supabase/tests/**'
       - 'docs/AB-005-CONTINUOUS-STAGING.md'
       - 'docs/AB-005-LAUNCH-GATE-READ-ONLY.md'
+      - 'docs/AB-006-PRODUCTION-AUTHORIZATION-BOUNDARY.md'
       - '.github/workflows/ab005-static-check.yml'
   pull_request:
     paths:
@@ -15,6 +16,7 @@ on:
       - 'supabase/tests/**'
       - 'docs/AB-005-CONTINUOUS-STAGING.md'
       - 'docs/AB-005-LAUNCH-GATE-READ-ONLY.md'
+      - 'docs/AB-006-PRODUCTION-AUTHORIZATION-BOUNDARY.md'
       - '.github/workflows/ab005-static-check.yml'
 
 permissions:
@@ -31,51 +33,23 @@ jobs:
           set -euo pipefail
           f="supabase/migrations/20260908_ab005_continuous_staging.sql"
           test -s "$f"
-
-          # Required routines.
-          for fn in \
-            ab005_prepare_staging \
-            ab005_record_smoke \
-            ab005_rollback_staging \
-            ab005_checkpoint \
-            ab005_advance_after_clean_pass; do
+          for fn in ab005_prepare_staging ab005_record_smoke ab005_rollback_staging ab005_checkpoint ab005_advance_after_clean_pass; do
             grep -q "function public.${fn}" "$f"
           done
-
-          # Exact existing smoke vocabulary; no replacement contract is allowed.
           grep -q "IN ('pass','fail','blocked','manual')" "$f"
           grep -q "p_result not in ('pass','fail','blocked','manual')" "$f"
-
-          # Rollback/clean-retest isolation contract.
           grep -q "rollback_cutoff" "$f"
           grep -q "checked_at > v_after" "$f"
           grep -q "coalesce(" "$f"
           grep -q "cannot advance without a checkpoint" "$f"
           grep -q "status in ('fail','blocked','manual')" "$f"
           grep -q "v_pass <> v_total" "$f"
-
-          # Staging may advance only after a clean pass, while production remains gated.
           grep -q "production_gate_required.*true" "$f"
           grep -q "production_promoted.*false" "$f"
           grep -q "Production intentionally has no automatic advancement function" "$f"
-          if grep -Eiq "function public\.ab005_.*production|ab005_.*promot.*production" "$f"; then
-            echo "AB-005 must not add a production advancement routine"
-            exit 1
-          fi
-
-          # Existing table contracts must be reused; no duplicate staging/checkpoint tables.
-          if grep -Eiq "create[[:space:]]+table[^;]*(release_staging_records|release_staging_smoke_results|release_checkpoints)" "$f"; then
-            echo "AB-005 must not introduce duplicate staging/checkpoint tables"
-            exit 1
-          fi
-
-          # Client-facing access remains closed; these are internal gate controls.
-          for fn in \
-            ab005_prepare_staging \
-            ab005_record_smoke \
-            ab005_rollback_staging \
-            ab005_checkpoint \
-            ab005_advance_after_clean_pass; do
+          if grep -Eiq "function public\.ab005_.*production|ab005_.*promot.*production" "$f"; then exit 1; fi
+          if grep -Eiq "create[[:space:]]+table[^;]*(release_staging_records|release_staging_smoke_results|release_checkpoints)" "$f"; then exit 1; fi
+          for fn in ab005_prepare_staging ab005_record_smoke ab005_rollback_staging ab005_checkpoint ab005_advance_after_clean_pass; do
             grep -q "revoke all on function public.${fn}" "$f"
           done
 
@@ -86,11 +60,7 @@ jobs:
           f="supabase/migrations/20260908_ab005_launch_gate_read_only_consumer.sql"
           t="supabase/tests/ab005_launch_gate_read_only.sql"
           d="docs/AB-005-LAUNCH-GATE-READ-ONLY.md"
-          test -s "$f"
-          test -s "$t"
-          test -s "$d"
-
-          # Canonical read-only consumer and security boundary.
+          test -s "$f"; test -s "$t"; test -s "$d"
           grep -q "function public.tgg_ab005_launch_gate" "$f"
           grep -q "SECURITY INVOKER" "$f"
           grep -q "STABLE" "$f"
@@ -102,25 +72,36 @@ jobs:
           grep -q "smoke_summary.*ab005_clean_pass" "$f"
           grep -q "status = 'passed'" "$f"
           grep -q "checkpoint_key is not null" "$f"
+          if grep -Eiq "^[[:space:]]*(insert|update|delete|truncate)[[:space:]]" "$f"; then exit 1; fi
+          if grep -Eiq "execute[[:space:]]+function|promot|approve[[:space:]]+production|deploy[[:space:]]+production" "$f"; then exit 1; fi
+          for marker in tgg_ab005_launch_gate "SECURITY INVOKER" authenticated production_promoted production_gate_required read_only ab005_clean_pass ab005_advance_after_clean_pass; do
+            grep -q "$marker" "$t"
+          done
 
-          # Read-only consumer must not contain write or production-authorization operations.
-          if grep -Eiq "^[[:space:]]*(insert|update|delete|truncate)[[:space:]]" "$f"; then
-            echo "Launch Gate consumer must remain read-only"
-            exit 1
-          fi
-          if grep -Eiq "execute[[:space:]]+function|promot|approve[[:space:]]+production|deploy[[:space:]]+production" "$f"; then
-            echo "Launch Gate consumer must not authorize or perform production mutation"
-            exit 1
-          fi
-
-          # Regression test must document the same security and production invariants.
-          grep -q "tgg_ab005_launch_gate" "$t"
-          grep -q "SECURITY INVOKER" "$t"
-          grep -q "authenticated" "$t"
+      - name: Validate AB-006 production authorization boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_ab006_production_authorization_boundary.sql"
+          t="supabase/tests/ab006_production_authorization_boundary.sql"
+          d="docs/AB-006-PRODUCTION-AUTHORIZATION-BOUNDARY.md"
+          test -s "$f"; test -s "$t"; test -s "$d"
+          grep -q "create table if not exists public.tgg_production_authorizations" "$f"
+          grep -q "function public.ab006_authorize_production" "$f"
+          grep -q "SECURITY INVOKER" "$f"
+          grep -q "volatile" "$f"
+          grep -q "p.role = 'admin'" "$f"
+          grep -q "ab005_clean_pass" "$f"
+          grep -q "checkpoint_key" "$f"
+          grep -q "production_authorized.*true" "$f"
+          grep -q "production_promoted.*false" "$f"
+          grep -q "production_deploy_performed.*false" "$f"
+          grep -q "revoke all on function public.ab006_authorize_production" "$f"
+          grep -q "grant execute on function public.ab006_authorize_production(uuid, text, text) to authenticated" "$f"
+          if grep -Eiq "ab006_.*promot.*production|ab006_.*deploy.*production" "$f"; then exit 1; fi
+          grep -q "ab006_authorize_production" "$t"
+          grep -q "admin role" "$t"
           grep -q "production_promoted" "$t"
-          grep -q "production_gate_required" "$t"
-          grep -q "read_only" "$t"
-          grep -q "ab005_clean_pass" "$t"
-          grep -q "ab005_advance_after_clean_pass" "$t"
+          grep -q "production_deploy_performed" "$t"
 
-          echo "AB-005 Launch Gate read-only static contract gate passed"
+          echo "AB-006 production authorization boundary static contract gate passed"

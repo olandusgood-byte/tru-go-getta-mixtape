@@ -387,3 +387,61 @@ where n.nspname='public' and p.proname='tgg_brain_uncertainty_gate';
 -- anon_can_execute = false
 -- high-risk/canonical components resolve to approval_required
 -- uncertainty never weakens production/high-risk boundaries
+
+
+-- Structured guardrail + conflict safety
+select c.relname,c.relrowsecurity
+from pg_class c
+join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public'
+  and c.relname in ('tgg_brain_guardrails','tgg_brain_conflicts')
+order by c.relname;
+
+select p.proname,
+       has_function_privilege('postgres',p.oid,'EXECUTE') as postgres_can_execute,
+       has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_can_execute,
+       has_function_privilege('anon',p.oid,'EXECUTE') as anon_can_execute
+from pg_proc p
+join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public'
+  and p.proname in ('tgg_brain_guardrail_check','tgg_brain_conflict_state')
+order by p.proname;
+
+select
+  count(*) as active_guardrails,
+  count(*) filter(where immutable=true) as immutable_guardrails,
+  count(*) filter(where guardrail_key='guardrail:no-auto-production-publish') as production_publish_guard,
+  count(*) filter(where guardrail_key='guardrail:no-high-risk-auto-execute') as high_risk_guard,
+  count(*) filter(where guardrail_key='guardrail:preserve-ab006-v223') as canonical_guard
+from public.tgg_brain_guardrails
+where active=true;
+
+select public.tgg_brain_guardrail_check(
+  'action',
+  'ci:safe-staging-probe',
+  jsonb_build_object(
+    'production_auto_publish',false,
+    'production_promotion',false,
+    'high_risk_auto_execute',false,
+    'canonical_boundary_change',false,
+    'destructive',false,
+    'real_money_or_payment_action',false,
+    'rights_legal_action',false,
+    'secret_credential_action',false
+  )
+) as safe_guardrail_probe;
+
+update public.tgg_brain_conflicts
+set status='resolved',resolved_at=now()
+where subject_key='ci:safe-staging-probe' and status='open';
+
+select public.tgg_brain_conflict_state() as conflict_state;
+
+-- Expected:
+-- RLS enabled on both tables
+-- authenticated_can_execute = false
+-- anon_can_execute = false
+-- active_guardrails = immutable_guardrails = 8
+-- production/high-risk/canonical guard counts = 1 each
+-- safe_guardrail_probe.allow_autonomous_execution = true
+-- open_conflicts = 0 in healthy baseline

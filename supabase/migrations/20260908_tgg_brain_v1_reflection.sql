@@ -2194,3 +2194,193 @@ revoke all on function public.tgg_brain_recall(text,integer) from public,anon,au
 revoke all on function public.tgg_brain_context_pack(text,integer) from public,anon,authenticated;
 grant execute on function public.tgg_brain_recall(text,integer) to postgres;
 grant execute on function public.tgg_brain_context_pack(text,integer) to postgres;
+
+
+-- TGG Brain structured specification compiler
+create table if not exists public.tgg_brain_specs (
+  id uuid primary key default gen_random_uuid(),
+  spec_key text not null unique,
+  idea_id uuid references public.tgg_game_idea_inbox(id) on delete set null,
+  goal_id uuid references public.tgg_brain_goals(id) on delete set null,
+  title text not null,
+  objective text not null,
+  summary jsonb not null default '{}'::jsonb,
+  status text not null default 'draft' check (status in ('draft','ready','blocked','superseded','complete')),
+  risk_level text not null default 'medium' check (risk_level in ('low','medium','high')),
+  development_only boolean not null default true,
+  production_allowed boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.tgg_brain_spec_requirements (
+  id uuid primary key default gen_random_uuid(),
+  spec_id uuid not null references public.tgg_brain_specs(id) on delete cascade,
+  requirement_key text not null,
+  requirement_type text not null check (requirement_type in ('functional','nonfunctional','security','performance','ux','data','integration','qa')),
+  priority text not null default 'must' check (priority in ('must','should','could')),
+  statement text not null,
+  acceptance jsonb not null default '[]'::jsonb,
+  owner_domain text,
+  risk_level text not null default 'medium' check (risk_level in ('low','medium','high')),
+  scope_status text not null default 'in_scope' check (scope_status in ('in_scope','out_of_scope','approval_required')),
+  source_ref text,
+  status text not null default 'planned' check (status in ('planned','implemented','verified','blocked','skipped')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(spec_id,requirement_key)
+);
+
+create table if not exists public.tgg_brain_spec_scope (
+  id uuid primary key default gen_random_uuid(),
+  spec_id uuid not null references public.tgg_brain_specs(id) on delete cascade,
+  scope_key text not null,
+  scope_type text not null check (scope_type in ('in_scope','out_of_scope','constraint','assumption')),
+  description text not null,
+  immutable boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique(spec_id,scope_key)
+);
+
+alter table public.tgg_brain_specs enable row level security;
+alter table public.tgg_brain_spec_requirements enable row level security;
+alter table public.tgg_brain_spec_scope enable row level security;
+revoke all on public.tgg_brain_specs from anon,authenticated;
+revoke all on public.tgg_brain_spec_requirements from anon,authenticated;
+revoke all on public.tgg_brain_spec_scope from anon,authenticated;
+
+create or replace function public.tgg_brain_spec_create(
+  p_spec_key text,p_title text,p_objective text,p_idea_id uuid default null,p_goal_id uuid default null,
+  p_risk_level text default 'medium',p_summary jsonb default '{}'::jsonb
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_id uuid;
+begin
+  if p_risk_level not in ('low','medium','high') then raise exception 'invalid_risk_level'; end if;
+  insert into public.tgg_brain_specs(
+    spec_key,idea_id,goal_id,title,objective,summary,status,risk_level,development_only,production_allowed
+  ) values(
+    trim(p_spec_key),p_idea_id,p_goal_id,trim(p_title),trim(p_objective),coalesce(p_summary,'{}'::jsonb),
+    'draft',p_risk_level,true,false
+  )
+  on conflict(spec_key) do update set
+    idea_id=coalesce(excluded.idea_id,public.tgg_brain_specs.idea_id),
+    goal_id=coalesce(excluded.goal_id,public.tgg_brain_specs.goal_id),
+    title=excluded.title,objective=excluded.objective,summary=excluded.summary,
+    risk_level=excluded.risk_level,development_only=true,production_allowed=false,updated_at=now()
+  returning id into v_id;
+  return jsonb_build_object('ok',true,'spec_id',v_id,'spec_key',p_spec_key);
+end $$;
+
+create or replace function public.tgg_brain_spec_add_requirement(
+  p_spec_id uuid,p_requirement_key text,p_requirement_type text,p_priority text,p_statement text,
+  p_acceptance jsonb,p_owner_domain text default null,p_risk_level text default 'medium',
+  p_scope_status text default 'in_scope',p_source_ref text default null
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare v_id uuid;
+begin
+  if p_requirement_type not in ('functional','nonfunctional','security','performance','ux','data','integration','qa') then
+    raise exception 'invalid_requirement_type';
+  end if;
+  if p_priority not in ('must','should','could') then raise exception 'invalid_priority'; end if;
+  if p_risk_level not in ('low','medium','high') then raise exception 'invalid_risk_level'; end if;
+  if p_scope_status not in ('in_scope','out_of_scope','approval_required') then raise exception 'invalid_scope_status'; end if;
+
+  insert into public.tgg_brain_spec_requirements(
+    spec_id,requirement_key,requirement_type,priority,statement,acceptance,owner_domain,
+    risk_level,scope_status,source_ref,status
+  ) values(
+    p_spec_id,trim(p_requirement_key),p_requirement_type,p_priority,trim(p_statement),
+    coalesce(p_acceptance,'[]'::jsonb),p_owner_domain,p_risk_level,p_scope_status,p_source_ref,'planned'
+  )
+  on conflict(spec_id,requirement_key) do update set
+    requirement_type=excluded.requirement_type,priority=excluded.priority,statement=excluded.statement,
+    acceptance=excluded.acceptance,owner_domain=excluded.owner_domain,risk_level=excluded.risk_level,
+    scope_status=excluded.scope_status,source_ref=excluded.source_ref,updated_at=now()
+  returning id into v_id;
+  return jsonb_build_object('ok',true,'requirement_id',v_id,'requirement_key',p_requirement_key);
+end $$;
+
+create or replace function public.tgg_brain_spec_add_scope(
+  p_spec_id uuid,p_scope_key text,p_scope_type text,p_description text,p_immutable boolean default false
+) returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+begin
+  if p_scope_type not in ('in_scope','out_of_scope','constraint','assumption') then raise exception 'invalid_scope_type'; end if;
+  insert into public.tgg_brain_spec_scope(spec_id,scope_key,scope_type,description,immutable)
+  values(p_spec_id,trim(p_scope_key),p_scope_type,trim(p_description),coalesce(p_immutable,false))
+  on conflict(spec_id,scope_key) do update set
+    scope_type=excluded.scope_type,description=excluded.description,immutable=excluded.immutable;
+  return jsonb_build_object('ok',true,'scope_key',p_scope_key);
+end $$;
+
+create or replace function public.tgg_brain_spec_validate(p_spec_id uuid)
+returns jsonb
+language plpgsql security definer set search_path=''
+as $$
+declare
+  v_spec public.tgg_brain_specs%rowtype;
+  v_must integer:=0; v_missing_acceptance integer:=0; v_missing_owner integer:=0;
+  v_high integer:=0; v_approval integer:=0; v_scope integer:=0;
+  v_ready boolean:=false; v_status text:='draft';
+begin
+  select * into v_spec from public.tgg_brain_specs where id=p_spec_id;
+  if not found then raise exception 'spec_not_found'; end if;
+
+  select
+    count(*) filter(where priority='must' and scope_status='in_scope'),
+    count(*) filter(where priority='must' and scope_status='in_scope' and jsonb_array_length(coalesce(acceptance,'[]'::jsonb))=0),
+    count(*) filter(where priority='must' and scope_status='in_scope' and nullif(trim(coalesce(owner_domain,'')),'') is null),
+    count(*) filter(where risk_level='high' and scope_status='in_scope'),
+    count(*) filter(where scope_status='approval_required')
+  into v_must,v_missing_acceptance,v_missing_owner,v_high,v_approval
+  from public.tgg_brain_spec_requirements where spec_id=p_spec_id;
+
+  select count(*) into v_scope from public.tgg_brain_spec_scope where spec_id=p_spec_id;
+
+  v_ready:=v_must>0 and v_missing_acceptance=0 and v_missing_owner=0 and v_high=0 and v_approval=0
+    and v_scope>0 and v_spec.development_only=true and v_spec.production_allowed=false;
+
+  if v_high>0 or v_approval>0 then v_status:='blocked';
+  elsif v_ready then v_status:='ready';
+  else v_status:='draft'; end if;
+
+  update public.tgg_brain_specs set status=v_status,updated_at=now(),
+    summary=coalesce(summary,'{}'::jsonb)||jsonb_build_object('validation',jsonb_build_object(
+      'must_requirements',v_must,'missing_acceptance',v_missing_acceptance,'missing_owner_domain',v_missing_owner,
+      'high_risk_in_scope',v_high,'approval_required',v_approval,'scope_items',v_scope,'ready',v_ready,'validated_at',now()
+    ))
+  where id=p_spec_id;
+
+  return jsonb_build_object('ok',true,'spec_id',p_spec_id,'status',v_status,'ready',v_ready,
+    'must_requirements',v_must,'missing_acceptance',v_missing_acceptance,'missing_owner_domain',v_missing_owner,
+    'high_risk_in_scope',v_high,'approval_required',v_approval,'scope_items',v_scope);
+end $$;
+
+create or replace function public.tgg_brain_spec_state()
+returns jsonb
+language sql security definer set search_path=''
+as $$
+  select jsonb_build_object(
+    'total',count(*),'draft',count(*) filter(where status='draft'),'ready',count(*) filter(where status='ready'),
+    'blocked',count(*) filter(where status='blocked'),'complete',count(*) filter(where status='complete'),
+    'production_allowed',count(*) filter(where production_allowed=true),
+    'high_risk_specs',count(*) filter(where risk_level='high')
+  )
+  from public.tgg_brain_specs
+$$;
+
+revoke all on function public.tgg_brain_spec_create(text,text,text,uuid,uuid,text,jsonb) from public,anon,authenticated;
+revoke all on function public.tgg_brain_spec_add_requirement(uuid,text,text,text,text,jsonb,text,text,text,text) from public,anon,authenticated;
+revoke all on function public.tgg_brain_spec_add_scope(uuid,text,text,text,boolean) from public,anon,authenticated;
+revoke all on function public.tgg_brain_spec_validate(uuid) from public,anon,authenticated;
+revoke all on function public.tgg_brain_spec_state() from public,anon,authenticated;
+grant execute on function public.tgg_brain_spec_create(text,text,text,uuid,uuid,text,jsonb) to postgres;
+grant execute on function public.tgg_brain_spec_add_requirement(uuid,text,text,text,text,jsonb,text,text,text,text) to postgres;
+grant execute on function public.tgg_brain_spec_add_scope(uuid,text,text,text,boolean) to postgres;
+grant execute on function public.tgg_brain_spec_validate(uuid) to postgres;
+grant execute on function public.tgg_brain_spec_state() to postgres;

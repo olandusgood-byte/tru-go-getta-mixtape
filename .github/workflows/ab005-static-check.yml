@@ -27,17 +27,50 @@ jobs:
           set -euo pipefail
           f="supabase/migrations/20260908_ab005_continuous_staging.sql"
           test -s "$f"
-          grep -q "ab005_prepare_staging" "$f"
-          grep -q "ab005_record_smoke" "$f"
-          grep -q "ab005_rollback_staging" "$f"
-          grep -q "ab005_checkpoint" "$f"
-          grep -q "ab005_advance_after_clean_pass" "$f"
-          grep -q "pass.*fail.*blocked.*manual\|pass.*fail.*blocked.*manual" "$f" || grep -q "IN ('pass','fail','blocked','manual')" "$f"
-          grep -q "production_gate_required" "$f"
-          grep -q "production_promoted" "$f"
+
+          # Required routines.
+          for fn in \
+            ab005_prepare_staging \
+            ab005_record_smoke \
+            ab005_rollback_staging \
+            ab005_checkpoint \
+            ab005_advance_after_clean_pass; do
+            grep -q "function public.${fn}" "$f"
+          done
+
+          # Exact existing smoke vocabulary; no replacement contract is allowed.
+          grep -q "IN ('pass','fail','blocked','manual')" "$f"
+          grep -q "p_result not in ('pass','fail','blocked','manual')" "$f"
+
+          # Rollback/clean-retest isolation contract.
           grep -q "rollback_cutoff" "$f"
-          if grep -Eq "create table[^;]*(release_staging_records|release_staging_smoke_results|release_checkpoints)" "$f"; then
+          grep -q "checked_at > v_after" "$f"
+          grep -q "coalesce(" "$f"
+          grep -q "rollback_cutoff" "$f"
+          grep -q "cannot advance without a checkpoint" "$f"
+          grep -q "status in ('fail','blocked','manual')" "$f"
+          grep -q "v_pass <> v_total" "$f"
+
+          # Staging may advance only after a clean pass, while production remains gated.
+          grep -q "production_gate_required.*true" "$f"
+          grep -q "production_promoted.*false" "$f"
+          grep -q "Production intentionally has no automatic advancement function" "$f"
+          if grep -Eiq "function public\.ab005_.*production|ab005_.*promot.*production" "$f"; then
+            echo "AB-005 must not add a production advancement routine"
+            exit 1
+          fi
+
+          # Existing table contracts must be reused; no duplicate staging/checkpoint tables.
+          if grep -Eiq "create[[:space:]]+table[^;]*(release_staging_records|release_staging_smoke_results|release_checkpoints)" "$f"; then
             echo "AB-005 must not introduce duplicate staging/checkpoint tables"
             exit 1
           fi
-          echo "AB-005 static contract gate passed"
+
+          # Client-facing access remains closed; these are internal gate controls.
+          grep -q "revoke all on function public.ab005_prepare_staging" "$f"
+          grep -q "revoke all on function public.ab005_record_smoke" "$f"
+          grep -q "revoke all on function public.ab005_rollback_staging" "$f"
+          grep -q "revoke all on function public.ab005_checkpoint" "$f"
+          grep -q "revoke all on function public.ab005_advance_after_clean_pass" "$f"
+
+          echo "AB-005 repeat-cycle static contract gate passed"

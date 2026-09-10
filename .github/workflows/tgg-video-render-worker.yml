@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: tgg-video-render-worker
@@ -23,24 +24,14 @@ jobs:
     timeout-minutes: 55
     env:
       SUPABASE_URL: https://xsofowzvwetamhyuvlpj.supabase.co
-      SUPABASE_SECRET_KEY: ${{ secrets.TGG_SUPABASE_SECRET_KEY }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check render-worker credential
-        id: gate
+      - name: Verify worker source
         shell: bash
-        run: |
-          if [ -n "${SUPABASE_SECRET_KEY:-}" ]; then
-            echo "active=true" >> "$GITHUB_OUTPUT"
-            echo "TGG render worker credential is configured."
-          else
-            echo "active=false" >> "$GITHUB_OUTPUT"
-            echo "TGG render worker is dormant: TGG_SUPABASE_SECRET_KEY is not configured."
-          fi
+        run: node --check scripts/tgg-video-render-worker.mjs
 
       - name: Ensure FFmpeg
-        if: steps.gate.outputs.active == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -50,12 +41,10 @@ jobs:
           fi
           ffmpeg -version | head -n 1
 
-      - name: Install Supabase worker client
-        if: steps.gate.outputs.active == 'true'
+      - name: Install pinned TUS client
         shell: bash
-        run: npm install --no-save --package-lock=false --ignore-scripts @supabase/supabase-js@2.57.4
+        run: npm install --no-save --package-lock=false --ignore-scripts tus-js-client@4.3.1
 
       - name: Process one queued master transcode
-        if: steps.gate.outputs.active == 'true'
         shell: bash
         run: node scripts/tgg-video-render-worker.mjs

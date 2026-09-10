@@ -1,0 +1,56 @@
+name: TGG Video Render Worker
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgg-video-render-worker
+  cancel-in-progress: false
+
+jobs:
+  render-one-master:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      SUPABASE_URL: https://xsofowzvwetamhyuvlpj.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.TGG_SUPABASE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check render-worker credential
+        id: gate
+        shell: bash
+        run: |
+          if [ -n "${SUPABASE_SECRET_KEY:-}" ]; then
+            echo "active=true" >> "$GITHUB_OUTPUT"
+            echo "TGG render worker credential is configured."
+          else
+            echo "active=false" >> "$GITHUB_OUTPUT"
+            echo "TGG render worker is dormant: TGG_SUPABASE_SECRET_KEY is not configured."
+          fi
+
+      - name: Ensure FFmpeg
+        if: steps.gate.outputs.active == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -version | head -n 1
+
+      - name: Install Supabase worker client
+        if: steps.gate.outputs.active == 'true'
+        shell: bash
+        run: npm install --no-save --package-lock=false --ignore-scripts @supabase/supabase-js@2.57.4
+
+      - name: Process one queued master transcode
+        if: steps.gate.outputs.active == 'true'
+        shell: bash
+        run: node scripts/tgg-video-render-worker.mjs

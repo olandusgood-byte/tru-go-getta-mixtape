@@ -96,11 +96,19 @@ async function probe(file) {
   });
 }
 
-function targetHeight(preset) {
+function targetEdge(preset) {
   if (preset === '720p') return 720;
   if (preset === '1080p') return 1080;
   if (preset === '2160p') return 2160;
   return null;
+}
+
+function scaleFilter(preset, width, height) {
+  const edge = targetEdge(preset);
+  if (!edge) return null;
+  if (width && height && width < height) return `scale=${edge}:-2:flags=lanczos`;
+  if (width && height && width === height) return `scale=${edge}:${edge}:flags=lanczos`;
+  return `scale=-2:${edge}:flags=lanczos`;
 }
 
 function aspectRatio(projectAspect, width, height) {
@@ -123,10 +131,10 @@ async function heartbeat() {
   if (r?.lease_valid === false) fail('Render lease expired or was revoked.');
 }
 
-async function transcode(inputFile, outputFile, preset, duration) {
+async function transcode(inputFile, outputFile, preset, duration, sourceWidth, sourceHeight) {
   const args = ['-y', '-hide_banner', '-loglevel', 'warning', '-i', inputFile, '-map', '0:v:0', '-map', '0:a:0?'];
-  const h = targetHeight(preset);
-  if (h) args.push('-vf', `scale=-2:${h}:flags=lanczos`);
+  const vf = scaleFilter(preset, sourceWidth, sourceHeight);
+  if (vf) args.push('-vf', vf);
   args.push(
     '-c:v', 'libx264',
     '-preset', 'medium',
@@ -223,7 +231,7 @@ async function main() {
   const duration = Number(payload.source_duration_seconds) || sourceProbe.duration || null;
   heartbeatTimer = setInterval(() => { heartbeat().catch(e => console.warn('Heartbeat warning:', e?.message || String(e))); }, 60_000);
   await heartbeat();
-  await transcode(inputFile, outputFile, preset, duration);
+  await transcode(inputFile, outputFile, preset, duration, sourceProbe.width, sourceProbe.height);
   latestProgress = 95;
   await heartbeat();
 

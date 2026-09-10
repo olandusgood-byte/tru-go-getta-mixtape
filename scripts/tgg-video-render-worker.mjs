@@ -10,6 +10,7 @@ const STORAGE_TUS_URL = 'https://xsofowzvwetamhyuvlpj.storage.supabase.co/storag
 const OIDC_AUDIENCE = 'tgg-video-render-worker';
 const oidcRequestUrl = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
 const oidcRequestToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+const preclaimedManifestFile = process.env.TGG_RENDER_MANIFEST_FILE || '';
 
 if (!oidcRequestUrl || !oidcRequestToken) {
   console.error('GitHub OIDC runtime is unavailable. This worker must run in GitHub Actions with id-token: write.');
@@ -197,10 +198,24 @@ async function tusUpload(fileBuffer, ticket) {
   });
 }
 
+async function loadManifest() {
+  if (!preclaimedManifestFile) {
+    const claim = await broker('render_worker_claim');
+    return claim?.manifest || null;
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(await readFile(preclaimedManifestFile, 'utf8'));
+  } catch (e) {
+    fail(`Preclaimed render manifest could not be read: ${e?.message || String(e)}`);
+  }
+  if (!parsed?.job?.id || !parsed?.lease_token) fail('Preclaimed render manifest is invalid.');
+  return parsed;
+}
+
 async function main() {
-  await registerWorker({ phase: 'starting' });
-  const claim = await broker('render_worker_claim');
-  const manifest = claim?.manifest;
+  await registerWorker({ phase: preclaimedManifestFile ? 'resuming' : 'starting' });
+  const manifest = await loadManifest();
   if (!manifest) {
     await registerWorker({ phase: 'idle' });
     console.log('TGG render worker: no queued server transcode jobs.');

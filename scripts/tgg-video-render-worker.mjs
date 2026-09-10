@@ -16,6 +16,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SECRET_KEY, {
 });
 
 const workerId = `github:${process.env.GITHUB_RUN_ID || 'manual'}:${process.env.GITHUB_RUN_ATTEMPT || '1'}`;
+const providerKey = 'github.ffmpeg.v1';
 let jobId = null;
 let leaseToken = null;
 let tempDir = null;
@@ -30,6 +31,31 @@ async function rpc(name, args = {}) {
   const { data, error } = await supabase.rpc(name, args);
   if (error) throw error;
   return data;
+}
+
+async function registerWorker(extra = {}) {
+  return rpc('tgg_video_render_worker_register', {
+    p_worker_key: workerId,
+    p_provider_key: providerKey,
+    p_capabilities: {
+      mp4: true,
+      h264: true,
+      aac: true,
+      ffmpeg: true,
+      presets: ['720p', '1080p', '2160p', 'source'],
+      mode: 'master_transcode',
+      request_schema_version: 7,
+      manifest_schema_version: 6,
+    },
+    p_metadata: {
+      github_run_id: process.env.GITHUB_RUN_ID || null,
+      github_run_attempt: process.env.GITHUB_RUN_ATTEMPT || null,
+      github_sha: process.env.GITHUB_SHA || null,
+      job_id: jobId,
+      progress: latestProgress,
+      ...extra,
+    },
+  });
 }
 
 async function probe(file) {
@@ -85,8 +111,9 @@ function aspectRatio(projectAspect, width, height) {
 }
 
 async function heartbeat() {
-  if (!jobId || !leaseToken) return;
   try {
+    await registerWorker({ phase: jobId ? 'processing' : 'idle' });
+    if (!jobId || !leaseToken) return;
     const r = await rpc('tgg_video_render_worker_heartbeat', {
       p_job_id: jobId,
       p_lease_token: leaseToken,
@@ -139,13 +166,15 @@ async function transcode(inputFile, outputFile, preset, duration) {
 }
 
 async function main() {
+  await registerWorker({ phase: 'starting' });
   const claim = await rpc('tgg_video_render_worker_claim', {
     p_worker_id: workerId,
-    p_provider_key: 'github.ffmpeg.v1',
+    p_provider_key: providerKey,
     p_lease_seconds: 900,
   });
   const manifest = claim?.manifest;
   if (!manifest) {
+    await registerWorker({ phase: 'idle' });
     console.log('TGG render worker: no queued server transcode jobs.');
     return;
   }
@@ -167,6 +196,7 @@ async function main() {
   const outputFile = join(tempDir, `master-${preset}.mp4`);
 
   console.log(`Claimed ${jobId} · ${preset} · revision ${job.source_revision}`);
+  await registerWorker({ phase: 'downloading', preset });
   const dl = await supabase.storage.from(bucket).download(payload.source_storage_path);
   if (dl.error || !dl.data) throw dl.error || new Error('Source master download failed.');
   await writeFile(inputFile, Buffer.from(await dl.data.arrayBuffer()));
@@ -175,6 +205,7 @@ async function main() {
   const duration = Number(payload.source_duration_seconds) || sourceProbe.duration || null;
   heartbeatTimer = setInterval(() => { heartbeat().catch(() => {}); }, 60_000);
   await heartbeat();
+  await registerWorker({ phase: 'transcoding', preset });
   await transcode(inputFile, outputFile, preset, duration);
   latestProgress = 99;
   await heartbeat();
@@ -185,6 +216,7 @@ async function main() {
   if (!outputPrefix) fail('Render output storage prefix is missing.');
   const outputPath = `${outputPrefix}master-${preset}-${Date.now()}.mp4`;
   const bytes = await readFile(outputFile);
+  await registerWorker({ phase: 'uploading', preset });
   const up = await supabase.storage.from(bucket).upload(outputPath, bytes, {
     contentType: 'video/mp4',
     cacheControl: '3600',
@@ -211,13 +243,17 @@ async function main() {
       height,
       file_size_bytes: outputStat.size,
       preset,
-      worker: 'github.ffmpeg.v1',
+      worker: providerKey,
       source_asset_id: payload.source_asset_id || null,
       source_storage_path: payload.source_storage_path,
     },
   });
   if (!completion?.ok) fail(`Render completion rejected: ${JSON.stringify(completion)}`);
-  console.log(`Completed ${jobId} -> ${outputPath}`);
+  jobId = null;
+  leaseToken = null;
+  latestProgress = 100;
+  await registerWorker({ phase: 'idle', last_completed_job: job.id, last_output_path: outputPath });
+  console.log(`Completed ${job.id} -> ${outputPath}`);
 }
 
 try {
@@ -237,6 +273,7 @@ try {
       console.error('Could not record worker failure:', failError?.message || String(failError));
     }
   }
+  try { await registerWorker({ phase: 'error', error: message.slice(0, 500) }); } catch {}
   process.exitCode = 1;
 } finally {
   if (heartbeatTimer) clearInterval(heartbeatTimer);

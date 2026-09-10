@@ -4,6 +4,11 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '*/5 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/tgg-video-render-worker.mjs'
+      - '.github/workflows/tgg-video-render-worker.yml'
 
 permissions:
   contents: read

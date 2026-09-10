@@ -27,9 +27,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify worker source
+      - name: Verify worker source and secretless boundary
         shell: bash
-        run: node --check scripts/tgg-video-render-worker.mjs
+        run: |
+          set -euo pipefail
+          node --check scripts/tgg-video-render-worker.mjs
+          grep -q "OIDC_AUDIENCE = 'tgg-video-render-worker'" scripts/tgg-video-render-worker.mjs
+          grep -q "render_worker_claim" scripts/tgg-video-render-worker.mjs
+          grep -q "render_worker_complete" scripts/tgg-video-render-worker.mjs
+          grep -q "scale=\${edge}:-2:flags=lanczos" scripts/tgg-video-render-worker.mjs
+          grep -q "scale=-2:\${edge}:flags=lanczos" scripts/tgg-video-render-worker.mjs
+          if grep -Eq 'SUPABASE_(SERVICE_ROLE|SECRET)_KEY' scripts/tgg-video-render-worker.mjs; then
+            echo "Worker must remain GitHub-OIDC based; static Supabase server keys are forbidden."
+            exit 1
+          fi
 
       - name: Ensure FFmpeg
         shell: bash
@@ -40,6 +51,40 @@ jobs:
             sudo apt-get install -y ffmpeg
           fi
           ffmpeg -version | head -n 1
+
+      - name: Smoke H264 AAC and orientation scaling
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="${RUNNER_TEMP}/tgg-render-smoke"
+          mkdir -p "$work"
+
+          ffmpeg -y -hide_banner -loglevel error \
+            -f lavfi -i "testsrc2=size=640x360:rate=24:duration=0.5" \
+            -f lavfi -i "sine=frequency=440:sample_rate=48000:duration=0.5" \
+            -shortest -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 128k \
+            "$work/landscape-source.mp4"
+          ffmpeg -y -hide_banner -loglevel error -i "$work/landscape-source.mp4" \
+            -map 0:v:0 -map 0:a:0? -vf "scale=-2:1080:flags=lanczos" \
+            -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart \
+            "$work/landscape-1080.mp4"
+
+          ffmpeg -y -hide_banner -loglevel error \
+            -f lavfi -i "testsrc2=size=360x640:rate=24:duration=0.5" \
+            -f lavfi -i "sine=frequency=660:sample_rate=48000:duration=0.5" \
+            -shortest -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 128k \
+            "$work/portrait-source.mp4"
+          ffmpeg -y -hide_banner -loglevel error -i "$work/portrait-source.mp4" \
+            -map 0:v:0 -map 0:a:0? -vf "scale=1080:-2:flags=lanczos" \
+            -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart \
+            "$work/portrait-1080.mp4"
+
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$work/landscape-1080.mp4")" = "1920x1080"
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$work/portrait-1080.mp4")" = "1080x1920"
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 "$work/landscape-1080.mp4")" = "h264"
+          test "$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "$work/landscape-1080.mp4")" = "aac"
+          test "$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 "$work/portrait-1080.mp4")" = "aac"
+          echo "TGG FFmpeg smoke passed: H.264/AAC, landscape 1920x1080, portrait 1080x1920."
 
       - name: Install pinned TUS client
         shell: bash

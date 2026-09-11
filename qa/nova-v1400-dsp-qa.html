@@ -49,40 +49,61 @@
     src.connect(node).connect(ctx.destination); src.start();
     return await ctx.startRendering();
   }
-  try{
-    if(!isSecureContext) throw new Error('not a secure context');
-    const AC=window.AudioContext||window.webkitAudioContext;
-    if(!AC) throw new Error('AudioContext unavailable');
-    const liveCtx=new AC({sampleRate:48000});
-    result.audioWorklet=!!liveCtx.audioWorklet;
-    if(!liveCtx.audioWorklet) throw new Error('AudioWorklet unavailable');
-    await liveCtx.audioWorklet.addModule('./nova-pitch-formant-processor.js');
-    const osc=liveCtx.createOscillator(), g=liveCtx.createGain(); g.gain.value=0.12;
-    const node=new AudioWorkletNode(liveCtx,'nova-pitch-formant-processor',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1]});
-    node.parameters.get('pitchSemitones').value=3; node.parameters.get('formantStrength').value=1;
-    let metric=null; node.port.onmessage=(e)=>{if(e.data?.type==='metrics') metric=e.data;};
-    osc.frequency.value=220; osc.connect(g).connect(node).connect(liveCtx.destination); osc.start();
-    if(liveCtx.state!=='running') await liveCtx.resume();
-    for(let i=0;i<50 && !metric;i++) await wait(100);
-    osc.stop(); await wait(100); await liveCtx.close();
-    result.live={gotMetrics:!!metric,metric,pass:!!metric && metric.blocks>=32 && metric.peak>0 && metric.rms>0};
-    if(!result.live.pass) throw new Error('live AudioWorklet produced no nonzero render metrics');
+  if(!isSecureContext) result.errors.push('not a secure context');
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC) result.errors.push('AudioContext unavailable');
 
-    const pitchBuf=await offlineRender('tone',1);
-    const pd=pitchBuf.getChannelData(0), measured=dominantFreq(pd,pitchBuf.sampleRate,0.45,1.25), target=220*Math.pow(2,5/12);
-    const pitchRms=rms(pd,Math.floor(.45*pitchBuf.sampleRate),Math.floor(1.25*pitchBuf.sampleRate));
-    result.offlinePitch={measuredHz:measured,targetHz:target,rms:pitchRms,errorHz:Math.abs(measured-target),pass:pitchRms>0.003 && Math.abs(measured-target)<35};
-    if(!result.offlinePitch.pass) throw new Error('offline pitch render outside tolerance');
+  if(isSecureContext && AC){
+    try{
+      const liveCtx=new AC({sampleRate:48000,latencyHint:'interactive'});
+      result.audioWorklet=!!liveCtx.audioWorklet;
+      if(!liveCtx.audioWorklet) throw new Error('AudioWorklet unavailable');
+      await liveCtx.audioWorklet.addModule('./nova-pitch-formant-processor.js');
+      const osc=liveCtx.createOscillator(), g=liveCtx.createGain(); g.gain.value=0.12;
+      const node=new AudioWorkletNode(liveCtx,'nova-pitch-formant-processor',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1]});
+      node.parameters.get('pitchSemitones').value=3; node.parameters.get('formantStrength').value=1;
+      let metric=null,processorErrors=0,recorderChunks=0;
+      node.port.onmessage=(e)=>{if(e.data?.type==='metrics') metric=e.data;};
+      node.onprocessorerror=()=>{processorErrors++;};
+      const streamDest=liveCtx.createMediaStreamDestination();
+      node.connect(streamDest);
+      node.connect(liveCtx.destination);
+      let recorder=null;
+      if(typeof MediaRecorder!=='undefined'){
+        recorder=new MediaRecorder(streamDest.stream);
+        recorder.ondataavailable=e=>{if(e.data?.size) recorderChunks++;};
+        recorder.start(100);
+      }
+      const t0=liveCtx.currentTime;
+      osc.frequency.value=220; osc.connect(g).connect(node); osc.start();
+      if(liveCtx.state!=='running') await liveCtx.resume();
+      for(let i=0;i<80 && !metric;i++) await wait(100);
+      const t1=liveCtx.currentTime, state=liveCtx.state;
+      osc.stop();
+      if(recorder?.state==='recording') recorder.stop();
+      await wait(200); await liveCtx.close();
+      result.live={gotMetrics:!!metric,metric,processorErrors,recorderChunks,state,currentTimeStart:t0,currentTimeEnd:t1,timeAdvanced:t1-t0,pass:!!metric && metric.blocks>=32 && metric.peak>0 && metric.rms>0 && processorErrors===0};
+      if(!result.live.pass) result.errors.push('live AudioWorklet produced no nonzero render metrics');
+    }catch(e){fail(e);}
 
-    const dryBuf=await offlineRender('vowel',0), formBuf=await offlineRender('vowel',1);
-    const a=dryBuf.getChannelData(0),b=formBuf.getChannelData(0),start=Math.floor(.45*48000),end=Math.floor(1.25*48000);
-    let diffSq=0,n=0; for(let i=start;i<end;i++){const q=a[i]-b[i];diffSq+=q*q;n++;}
-    const diffRms=Math.sqrt(diffSq/Math.max(1,n)), dryRms=rms(a,start,end), formRms=rms(b,start,end);
-    result.offlineFormant={dryRms,formantRms:formRms,differenceRms:diffRms,pass:dryRms>0.002 && formRms>0.002 && diffRms>0.0002};
-    if(!result.offlineFormant.pass) throw new Error('offline LPC formant A/B produced no meaningful difference');
+    try{
+      const pitchBuf=await offlineRender('tone',1);
+      const pd=pitchBuf.getChannelData(0), measured=dominantFreq(pd,pitchBuf.sampleRate,0.45,1.25), target=220*Math.pow(2,5/12);
+      const pitchRms=rms(pd,Math.floor(.45*pitchBuf.sampleRate),Math.floor(1.25*pitchBuf.sampleRate));
+      result.offlinePitch={measuredHz:measured,targetHz:target,rms:pitchRms,errorHz:Math.abs(measured-target),pass:pitchRms>0.003 && Math.abs(measured-target)<35};
+      if(!result.offlinePitch.pass) result.errors.push('offline pitch render outside tolerance');
+    }catch(e){fail(e);}
 
-    result.pass=result.live.pass&&result.offlinePitch.pass&&result.offlineFormant.pass;
-  }catch(e){fail(e);}
+    try{
+      const dryBuf=await offlineRender('vowel',0), formBuf=await offlineRender('vowel',1);
+      const a=dryBuf.getChannelData(0),b=formBuf.getChannelData(0),start=Math.floor(.45*48000),end=Math.floor(1.25*48000);
+      let diffSq=0,n=0; for(let i=start;i<end;i++){const q=a[i]-b[i];diffSq+=q*q;n++;}
+      const diffRms=Math.sqrt(diffSq/Math.max(1,n)), dryRms=rms(a,start,end), formRms=rms(b,start,end);
+      result.offlineFormant={dryRms,formantRms:formRms,differenceRms:diffRms,pass:dryRms>0.002 && formRms>0.002 && diffRms>0.0002};
+      if(!result.offlineFormant.pass) result.errors.push('offline LPC formant A/B produced no meaningful difference');
+    }catch(e){fail(e);}
+  }
+  result.pass=!!(result.live?.pass && result.offlinePitch?.pass && result.offlineFormant?.pass);
   const prefix=result.pass?'QA_PASS::':'QA_FAIL::';
   out.textContent=prefix+JSON.stringify(result);
   document.title=result.pass?'NOVA V1400 DSP QA PASS':'NOVA V1400 DSP QA FAIL';

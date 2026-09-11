@@ -16,20 +16,17 @@ function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
-let cachedOidc = null;
 async function oidcToken() {
-  if (cachedOidc) return cachedOidc;
   const sep = oidcRequestUrl.includes('?') ? '&' : '?';
   const r = await fetch(`${oidcRequestUrl}${sep}audience=${encodeURIComponent(OIDC_AUDIENCE)}`, {
     headers: { Authorization: `bearer ${oidcRequestToken}` },
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok || !d.value) throw new Error(`OIDC token request failed (${r.status}).`);
-  cachedOidc = String(d.value);
-  return cachedOidc;
+  return String(d.value);
 }
 
-async function broker(operation, payload) {
+async function broker(operation, payload = {}) {
   const r = await fetch(BROKER_URL, {
     method: 'POST',
     headers: {
@@ -51,9 +48,25 @@ async function exportMigrationChunk(afterVersion = null) {
   return data;
 }
 
-async function exportSchemaChunk(afterKey = 0) {
-  const data = await broker('export_schema_chunk', { after_key: afterKey, limit: 50 });
-  if (!Array.isArray(data)) throw new Error('Schema broker returned an invalid payload.');
+async function refreshSchemaSnapshot() {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const data = await broker('refresh_schema_snapshot');
+    if (data?.ok && data?.stable && data?.snapshot_id) return data;
+    if (data?.error !== 'migration_changed_during_snapshot' || attempt === 3) {
+      throw new Error(`Schema snapshot refresh failed: ${data?.error || 'invalid payload'}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  throw new Error('Schema snapshot refresh retry limit reached.');
+}
+
+async function exportSchemaSnapshotChunk(snapshotId, afterKey = 0) {
+  const data = await broker('export_schema_snapshot_chunk', {
+    snapshot_id: snapshotId,
+    after_key: afterKey,
+    limit: 250,
+  });
+  if (!Array.isArray(data)) throw new Error('Schema snapshot broker returned an invalid payload.');
   return data;
 }
 
@@ -135,9 +148,7 @@ for (const [day, rows] of [...byDay.entries()].sort(([a], [b]) => a.localeCompar
     if (m.idempotency_key) chunks.push(`-- idempotency_key: ${m.idempotency_key}`);
     chunks.push(`-- statement_count: ${m.statements.length}`);
     chunks.push('');
-    for (const statement of m.statements) {
-      chunks.push(statement, '');
-    }
+    for (const statement of m.statements) chunks.push(statement, '');
   }
   const fileText = `${chunks.join('\n')}\n`;
   assertSafeText(fileText);
@@ -166,10 +177,17 @@ const historyManifest = {
 await writeFile(join(historyDir, 'manifest.json'), `${JSON.stringify(historyManifest, null, 2)}\n`, 'utf8');
 await writeFile(join(historyDir, 'README.md'), `# TGG Production Migration History\n\nGenerated from the authoritative production \`supabase_migrations.schema_migrations\` ledger through a GitHub OIDC trust path. No static Supabase server secret is stored in GitHub.\n\nThese dated SQL files preserve historical evidence from the point migration tracking began. They are **not a from-zero bootstrap** because the first tracked migration already depended on pre-existing V54/V58 objects. Use \`../production-baseline/current-schema.sql\` for clean recovery and use this history for audit/reconciliation only. Never replay this history against production.\n`, 'utf8');
 
+const snapshot = await refreshSchemaSnapshot();
+const snapshotId = String(snapshot.snapshot_id);
+const expectedSchemaItems = Number(snapshot.item_count || 0);
+const snapshotMigrationVersion = String(snapshot.latest_migration_version || '');
+if (!/^\d{14}$/.test(snapshotMigrationVersion)) throw new Error('Frozen schema snapshot is missing a valid migration version.');
+if (expectedSchemaItems < 3000) throw new Error(`Frozen schema snapshot unexpectedly small: ${expectedSchemaItems}.`);
+
 const schemaItems = [];
 let afterKey = 0;
-for (let page = 0; page < 500; page += 1) {
-  const rows = await exportSchemaChunk(afterKey);
+for (let page = 0; page < 100; page += 1) {
+  const rows = await exportSchemaSnapshotChunk(snapshotId, afterKey);
   if (!rows.length) break;
   for (const row of rows) {
     const key = Number(row.order_key);
@@ -179,13 +197,17 @@ for (let page = 0; page < 500; page += 1) {
     schemaItems.push({ order_key: key, kind: String(row.kind || ''), object_key: String(row.object_key || ''), ddl });
     afterKey = key;
   }
-  if (rows.length < 50) break;
-  if (page === 499) throw new Error('Schema pagination exceeded safety limit.');
+  if (rows.length < 250) break;
+  if (page === 99) throw new Error('Schema snapshot pagination exceeded safety limit.');
+}
+if (schemaItems.length !== expectedSchemaItems) {
+  throw new Error(`Frozen schema item-count mismatch: expected ${expectedSchemaItems}, exported ${schemaItems.length}.`);
 }
 
-if (schemaItems.length < 3000) throw new Error(`Schema baseline unexpectedly small: ${schemaItems.length} objects.`);
 const schemaChunks = [
   '-- TRU GO GETTA current production schema baseline',
+  `-- Frozen snapshot: ${snapshotId}`,
+  `-- Production migration version: ${snapshotMigrationVersion}`,
   '-- Schema-only recovery artifact. Contains no production row data.',
   '-- Generated through the repo-bound GitHub OIDC recovery path.',
   '-- Apply only to a fresh isolated Supabase-compatible database.',
@@ -204,24 +226,28 @@ await rm(baselineDir, { recursive: true, force: true });
 await mkdir(baselineDir, { recursive: true });
 await writeFile(join(baselineDir, 'current-schema.sql'), schemaText, 'utf8');
 const schemaManifest = {
-  format: 'tgg-production-schema-baseline-v1',
+  format: 'tgg-production-schema-baseline-v2',
   generated_at: new Date().toISOString(),
-  source: 'PostgreSQL catalog DDL via service-only RPC and GitHub OIDC broker',
+  source: 'Frozen PostgreSQL catalog DDL snapshot via service-only RPC and GitHub OIDC broker',
+  snapshot_id: snapshotId,
+  snapshot_stable: true,
+  snapshot_migration_version: snapshotMigrationVersion,
   item_count: schemaItems.length,
   kind_counts: kindCounts,
   schema_bytes: Buffer.byteLength(schemaText, 'utf8'),
   schema_sha256: sha256(schemaText),
-  latest_migration_version: migrations.at(-1)?.version || null,
+  history_latest_version_at_export: migrations.at(-1)?.version || null,
   safety: {
     schema_only: true,
     production_row_data_exported: false,
     oidc_only_export: true,
     high_risk_literal_scan_passed: true,
     production_apply_prohibited: true,
+    frozen_snapshot: true,
     clean_environment_replay_required: true,
   },
 };
 await writeFile(join(baselineDir, 'manifest.json'), `${JSON.stringify(schemaManifest, null, 2)}\n`, 'utf8');
-await writeFile(join(baselineDir, 'README.md'), `# TGG Production Schema Baseline\n\n\`current-schema.sql\` is a schema-only recovery snapshot generated from PostgreSQL catalog definitions through the same strict GitHub OIDC path as the migration archive. It contains no production table rows.\n\nThis baseline exists because production migration tracking begins at V58.1 and therefore cannot recreate earlier V54/V58 bootstrap objects from the historical ledger alone. The baseline must pass the isolated replay/fingerprint gate before it is considered recovery-ready. Never apply it to production.\n`, 'utf8');
+await writeFile(join(baselineDir, 'README.md'), `# TGG Production Schema Baseline\n\n\`current-schema.sql\` is a schema-only recovery snapshot generated from a **frozen Supabase snapshot ID** through the same strict GitHub OIDC path as the migration archive. It contains no production table rows.\n\nThe baseline exists because production migration tracking begins at V58.1 and therefore cannot recreate earlier V54/V58 bootstrap objects from the historical ledger alone. The snapshot records the exact migration version used during capture and rejects captures where that version changes while the snapshot is being built. The baseline must pass the isolated replay/fingerprint gate before it is considered recovery-ready. Never apply it to production.\n`, 'utf8');
 
 console.log(JSON.stringify({ history: historyManifest, baseline: schemaManifest }, null, 2));

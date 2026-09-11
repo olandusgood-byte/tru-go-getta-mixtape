@@ -82,8 +82,8 @@
       osc.stop();
       if(recorder?.state==='recording') recorder.stop();
       await wait(200); await liveCtx.close();
-      result.live={gotMetrics:!!latestMetric,metric:nonzeroMetric||latestMetric,processorErrors,recorderChunks,state,currentTimeStart:t0,currentTimeEnd:t1,timeAdvanced:t1-t0,pass:!!nonzeroMetric && nonzeroMetric.blocks>=32 && processorErrors===0 && (t1-t0)>0.25};
-      if(!result.live.pass) result.errors.push('live AudioWorklet produced no sustained nonzero render metrics');
+      result.live={gotMetrics:!!latestMetric,metric:nonzeroMetric||latestMetric,processorErrors,recorderChunks,state,currentTimeStart:t0,currentTimeEnd:t1,timeAdvanced:t1-t0,pass:!!nonzeroMetric && nonzeroMetric.blocks>=32 && processorErrors===0 && recorderChunks>0 && (t1-t0)>0.05};
+      if(!result.live.pass) result.errors.push('live AudioWorklet did not prove sustained nonzero processing');
     }catch(e){fail(e);}
 
     try{

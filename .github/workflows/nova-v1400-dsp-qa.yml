@@ -10,7 +10,7 @@ permissions:
 jobs:
   dsp-browser-qa:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - name: Start local secure-context test server
@@ -19,6 +19,23 @@ jobs:
           echo $! > /tmp/nova-http.pid
           sleep 1
           curl --fail http://127.0.0.1:8765/qa/nova-v1400-dsp-qa.html >/dev/null
+      - name: Start virtual audio sink
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v pulseaudio >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y pulseaudio
+          fi
+          mkdir -p "${XDG_RUNTIME_DIR:-/tmp/runtime-$UID}"
+          export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp/runtime-$UID}"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          pulseaudio --start --exit-idle-time=-1 || true
+          sleep 1
+          pactl info
+          pactl load-module module-null-sink sink_name=nova sink_properties=device.description=NOVA || true
+          pactl set-default-sink nova || true
+          echo "PULSE_SINK=nova" >> "$GITHUB_ENV"
       - name: Run real Chromium AudioWorklet + offline DSP QA
         shell: bash
         run: |

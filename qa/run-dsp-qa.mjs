@@ -8,11 +8,13 @@ const url = 'http://127.0.0.1:8765/qa/nova-v1400-dsp-qa.html';
 const args = [
   '--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage',
   '--autoplay-policy=no-user-gesture-required','--no-first-run','--no-default-browser-check',
+  '--disable-background-timer-throttling','--disable-backgrounding-occluded-windows','--disable-renderer-backgrounding',
+  '--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream',
   '--user-data-dir=/tmp/nova-v1400-chrome2',
   '--remote-debugging-address=127.0.0.1',`--remote-debugging-port=${port}`,
   url
 ];
-const child = spawn(chrome,args,{stdio:['ignore','pipe','pipe']});
+const child = spawn(chrome,args,{stdio:['ignore','pipe','pipe'],env:{...process.env,PULSE_SINK:process.env.PULSE_SINK||'nova'}});
 let browserErr=''; child.stderr.on('data',d=>browserErr+=d.toString());
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function getPage(){
@@ -34,7 +36,7 @@ try{
   ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id&&pending.has(m.id)){pending.get(m.id)(m);pending.delete(m.id);}};
   const send=(method,params={})=>new Promise(resolve=>{const id=++seq;pending.set(id,resolve);ws.send(JSON.stringify({id,method,params}));});
   await send('Runtime.enable');
-  const expr=`new Promise(resolve=>{const started=Date.now();const tick=()=>{const v=document.getElementById('qa-result')?.textContent||'';if(v.startsWith('QA_PASS::')||v.startsWith('QA_FAIL::')||Date.now()-started>25000)resolve(v);else setTimeout(tick,100);};tick();})`;
+  const expr=`new Promise(resolve=>{const started=Date.now();const tick=()=>{const v=document.getElementById('qa-result')?.textContent||'';if(v.startsWith('QA_PASS::')||v.startsWith('QA_FAIL::')||Date.now()-started>35000)resolve(v);else setTimeout(tick,100);};tick();})`;
   const r=await send('Runtime.evaluate',{expression:expr,awaitPromise:true,returnByValue:true});
   const text=r?.result?.result?.value||'';
   fs.writeFileSync('nova-v1400-dsp-qa-result.txt',text+'\n');

@@ -1,7 +1,7 @@
 -- TRU GO GETTA production migration history archive
 -- Date bucket: 20260911
 -- Historical evidence only. Do not replay against production.
--- Preserve the recorded order. Validate in an isolated clean environment before any bootstrap use.
+-- Preserve recorded order. Use the current schema baseline for clean bootstrap.
 
 -- ============================================================
 -- MIGRATION 20260911002753 harden_release_pro_browser_evidence_v2
@@ -1347,4 +1347,790 @@ grant execute on function public.tgg_migration_archive_export_chunk(text,integer
 
 comment on function public.tgg_migration_archive_export_chunk(text,integer) is
 'TGG server-only migration history export, paginated for the GitHub OIDC archive workflow. Not executable by browser roles.';
+
+-- ============================================================
+-- MIGRATION 20260911131544 codesync_ignore_superseded_blogger_failures
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function private.tgg_codesync_detect_and_fix()
+returns jsonb
+language plpgsql
+set search_path to 'private','public','pg_temp'
+as $function$
+declare
+  v_fixed int := 0;
+  v_errors int := 0;
+  v_review int := 0;
+  r record;
+begin
+  for r in
+    select id,status,claimed_at,filename
+    from public.tgg_theme_deploy_jobs
+    where status in ('claimed','processing')
+      and claimed_at is not null
+      and claimed_at < now() - interval '10 minutes'
+  loop
+    update public.tgg_theme_deploy_jobs
+    set status='pending',
+        device_id=null,
+        claimed_at=null,
+        error=coalesce(error,'') || case when coalesce(error,'')='' then '' else E'\n' end ||
+              'Auto-recovered stale deploy claim by Code Sync Controller'
+    where id=r.id;
+
+    insert into private.tgg_code_actions(action_type,component_key,status,details)
+    values ('recover_stale_deploy_job','deploy_job:'||r.id,'completed',
+            jsonb_build_object('filename',r.filename,'previous_status',r.status));
+    v_fixed := v_fixed + 1;
+  end loop;
+
+  -- Resolve stale Blogger failure issues when a newer verified deployment for
+  -- the same resource already exists, or when the failure belongs to the
+  -- intentionally removed World E2E verifier test page.
+  update private.tgg_code_issues i
+  set status='resolved',
+      last_seen_at=now(),
+      auto_fixed_at=coalesce(i.auto_fixed_at,now())
+  from public.v98_blogger_deployments f
+  where i.status='open'
+    and i.issue_key='blogger_deploy_failed:'||f.id::text
+    and f.status='failed'
+    and (
+      f.resource_key='/p/world-e2e-verifier.html'
+      or exists (
+        select 1
+        from public.v98_blogger_deployments s
+        where s.status='verified'
+          and s.resource_type is not distinct from f.resource_type
+          and s.resource_key is not distinct from f.resource_key
+          and s.updated_at > f.updated_at
+      )
+    );
+
+  for r in
+    select f.id,f.resource_type,f.resource_key,f.error_message
+    from public.v98_blogger_deployments f
+    where f.status='failed'
+      and f.updated_at > now() - interval '24 hours'
+      and f.resource_key is distinct from '/p/world-e2e-verifier.html'
+      and not exists (
+        select 1
+        from public.v98_blogger_deployments s
+        where s.status='verified'
+          and s.resource_type is not distinct from f.resource_type
+          and s.resource_key is not distinct from f.resource_key
+          and s.updated_at > f.updated_at
+      )
+  loop
+    perform private.tgg_codesync_upsert_issue(
+      'blogger_deploy_failed:'||r.id,
+      'error',
+      'blogger:'||coalesce(r.resource_type,'unknown')||':'||coalesce(r.resource_key,r.id::text),
+      'Blogger deployment failed',
+      jsonb_build_object('deployment_id',r.id,'error',r.error_message)
+    );
+    v_errors := v_errors + 1;
+  end loop;
+
+  select count(*) into v_review
+  from private.tgg_edge_function_registry
+  where duplicate_candidate and retirement_state='review';
+
+  if v_review > 0 then
+    perform private.tgg_codesync_upsert_issue(
+      'edge_function_version_chain:review_required',
+      'warning',
+      'edge_functions',
+      'One or more duplicate Edge Functions still require dependency review.',
+      jsonb_build_object('needs_review',v_review,'auto_delete',false)
+    );
+  else
+    update private.tgg_code_issues
+    set status='resolved',last_seen_at=now()
+    where issue_key in (
+      'edge_function_version_chain:tgg-creator-os-app',
+      'edge_function_version_chain:review_required'
+    )
+    and status='open';
+  end if;
+
+  return jsonb_build_object('ok',true,'fixed',v_fixed,'issues_seen',v_errors,'needs_review',v_review,'checked_at',now());
+end;
+$function$;
+
+-- ============================================================
+-- MIGRATION 20260911132529 control_room_certification_runs_v51_1
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create table if not exists public.tgg_control_room_certification_runs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  project_id uuid null,
+  status text not null default 'pending' check (status in ('pending','pass','warn','fail')),
+  results jsonb not null default '{}'::jsonb,
+  browser jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.tgg_control_room_certification_runs enable row level security;
+
+revoke all on table public.tgg_control_room_certification_runs from anon;
+grant select, insert, update, delete on table public.tgg_control_room_certification_runs to authenticated;
+
+create policy "cert_runs_select_own"
+on public.tgg_control_room_certification_runs
+for select
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "cert_runs_insert_own"
+on public.tgg_control_room_certification_runs
+for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+create policy "cert_runs_update_own"
+on public.tgg_control_room_certification_runs
+for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "cert_runs_delete_own"
+on public.tgg_control_room_certification_runs
+for delete
+to authenticated
+using (auth.uid() = user_id);
+
+create index if not exists tgg_control_room_certification_runs_user_created_idx
+on public.tgg_control_room_certification_runs (user_id, created_at desc);
+
+create index if not exists tgg_control_room_certification_runs_project_created_idx
+on public.tgg_control_room_certification_runs (project_id, created_at desc);
+
+
+-- ============================================================
+-- MIGRATION 20260911143339 world_v14_browser_playtest_gate
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create table if not exists public.tgg_world_v14_playtest_evidence (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','passed','failed')),
+  build text not null,
+  page_path text not null,
+  moved_distance numeric not null default 0,
+  frame_sample_count integer not null default 0,
+  load_ms integer not null default 0,
+  capture jsonb not null default '{}'::jsonb,
+  observed_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.tgg_world_v14_playtest_evidence enable row level security;
+revoke all on public.tgg_world_v14_playtest_evidence from public, anon;
+grant select, insert, update on public.tgg_world_v14_playtest_evidence to authenticated;
+
+drop policy if exists "world v14 playtest owner read" on public.tgg_world_v14_playtest_evidence;
+create policy "world v14 playtest owner read"
+on public.tgg_world_v14_playtest_evidence for select
+to authenticated
+using ((select auth.uid()) = user_id);
+
+drop policy if exists "world v14 playtest owner insert" on public.tgg_world_v14_playtest_evidence;
+create policy "world v14 playtest owner insert"
+on public.tgg_world_v14_playtest_evidence for insert
+to authenticated
+with check ((select auth.uid()) = user_id);
+
+drop policy if exists "world v14 playtest owner update" on public.tgg_world_v14_playtest_evidence;
+create policy "world v14 playtest owner update"
+on public.tgg_world_v14_playtest_evidence for update
+to authenticated
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
+
+create or replace function public.tgg_world_v14_playtest_observe(p_capture jsonb default '{}'::jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path to 'pg_catalog','public'
+as $function$
+declare
+  v_uid uuid := auth.uid();
+  v_headers jsonb := '{}'::jsonb;
+  v_origin text := '';
+  v_build text := coalesce(p_capture->>'build','');
+  v_path text := coalesce(p_capture->>'page_path','');
+  v_move numeric := greatest(0,least(10000,coalesce((p_capture->>'moved_distance')::numeric,0)));
+  v_frames integer := greatest(0,least(100000,coalesce((p_capture->>'frame_sample_count')::integer,0)));
+  v_load integer := greatest(0,least(120000,coalesce((p_capture->>'load_ms')::integer,0)));
+begin
+  if v_uid is null then raise exception 'AUTH_REQUIRED' using errcode='42501'; end if;
+  begin
+    v_headers := coalesce(nullif(current_setting('request.headers',true),'')::jsonb,'{}'::jsonb);
+  exception when others then
+    v_headers := '{}'::jsonb;
+  end;
+  v_origin := coalesce(v_headers->>'origin','');
+  if not (
+    v_origin='https://trugogettamixtapes.blogspot.com'
+    or v_origin='https://xsofowzvwetamhyuvlpj.supabase.co'
+    or v_origin ~ '^https://([a-z0-9-]+\.)?trugogettamixtapes\.com$'
+  ) then raise exception 'BROWSER_ORIGIN_REQUIRED' using errcode='42501'; end if;
+  if v_build<>'WORLD-V14.9-PLAYTEST-GATE' or v_path<>'/p/artist-world.html' then
+    raise exception 'UNAPPROVED_WORLD_PLAYTEST_BUILD' using errcode='22023';
+  end if;
+  if coalesce((p_capture->>'browser_context')::boolean,false) is not true
+     or coalesce((p_capture->>'auth_present')::boolean,false) is not true
+     or coalesce((p_capture->>'rendered')::boolean,false) is not true
+     or coalesce((p_capture->>'webgl_context')::boolean,false) is not true
+     or coalesce((p_capture->>'avatar_moved')::boolean,false) is not true
+     or coalesce((p_capture->>'all_v14_layers_present')::boolean,false) is not true
+     or coalesce((p_capture->>'blocking_error_count')::integer,1) <> 0
+     or v_move < 2
+     or v_frames < 30
+     or v_load <= 0
+     or coalesce((p_capture->>'renderer_width')::integer,0) < 240
+     or coalesce((p_capture->>'renderer_height')::integer,0) < 160
+  then raise exception 'WORLD_PLAYTEST_EVIDENCE_INCOMPLETE' using errcode='22023'; end if;
+
+  insert into public.tgg_world_v14_playtest_evidence(user_id,status,build,page_path,moved_distance,frame_sample_count,load_ms,capture,observed_at,updated_at)
+  values(v_uid,'passed',v_build,v_path,v_move,v_frames,v_load,(p_capture-'access_token'-'refresh_token'-'user_id'-'email'),now(),now())
+  on conflict(user_id) do update set
+    status='passed',build=excluded.build,page_path=excluded.page_path,moved_distance=greatest(public.tgg_world_v14_playtest_evidence.moved_distance,excluded.moved_distance),
+    frame_sample_count=greatest(public.tgg_world_v14_playtest_evidence.frame_sample_count,excluded.frame_sample_count),load_ms=excluded.load_ms,
+    capture=excluded.capture,observed_at=excluded.observed_at,updated_at=excluded.updated_at;
+
+  return jsonb_build_object('ok',true,'status','passed','build',v_build,'moved_distance',v_move,'frame_sample_count',v_frames,'observed_at',now());
+end;
+$function$;
+
+revoke all on function public.tgg_world_v14_playtest_observe(jsonb) from public, anon;
+grant execute on function public.tgg_world_v14_playtest_observe(jsonb) to authenticated;
+
+create or replace function public.tgg_world_v14_playtest_status()
+returns jsonb
+language sql
+stable
+security invoker
+set search_path to 'pg_catalog','public'
+as $function$
+  select coalesce(
+    (select jsonb_build_object('status',e.status,'build',e.build,'moved_distance',e.moved_distance,'frame_sample_count',e.frame_sample_count,'observed_at',e.observed_at)
+     from public.tgg_world_v14_playtest_evidence e where e.user_id=(select auth.uid())),
+    jsonb_build_object('status','pending')
+  );
+$function$;
+
+revoke all on function public.tgg_world_v14_playtest_status() from public, anon;
+grant execute on function public.tgg_world_v14_playtest_status() to authenticated;
+
+-- ============================================================
+-- MIGRATION 20260911143341 service_schema_baseline_exporter
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_schema_baseline_export_chunk_service(
+  p_after_key bigint default 0,
+  p_limit integer default 25
+)
+returns table(order_key bigint, kind text, object_key text, ddl text)
+language sql
+security definer
+set search_path = ''
+as $$
+with enum_items as (
+  select
+    10000000000::bigint + row_number() over(order by n.nspname,t.typname) as order_key,
+    'enum'::text as kind,
+    format('%I.%I',n.nspname,t.typname) as object_key,
+    format('create type %I.%I as enum (%s);',n.nspname,t.typname,
+      (select string_agg(quote_literal(e.enumlabel),', ' order by e.enumsortorder) from pg_catalog.pg_enum e where e.enumtypid=t.oid)) as ddl
+  from pg_catalog.pg_type t
+  join pg_catalog.pg_namespace n on n.oid=t.typnamespace
+  where n.nspname in ('public','private') and t.typtype='e'
+), table_items as (
+  select
+    30000000000::bigint + row_number() over(order by n.nspname,c.relname) as order_key,
+    'table'::text as kind,
+    format('%I.%I',n.nspname,c.relname) as object_key,
+    format('create table %I.%I (%s%s);',n.nspname,c.relname,E'\n',cols.column_sql || E'\n') as ddl
+  from pg_catalog.pg_class c
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  cross join lateral (
+    select string_agg(
+      '  ' || format('%I %s',a.attname,pg_catalog.format_type(a.atttypid,a.atttypmod)) ||
+      case
+        when a.attidentity='a' then ' generated always as identity'
+        when a.attidentity='d' then ' generated by default as identity'
+        when a.attgenerated='s' then ' generated always as (' || pg_catalog.pg_get_expr(d.adbin,d.adrelid,true) || ') stored'
+        when d.oid is not null then ' default ' || pg_catalog.pg_get_expr(d.adbin,d.adrelid,true)
+        else ''
+      end ||
+      case when a.attnotnull then ' not null' else '' end,
+      E',\n' order by a.attnum
+    ) as column_sql
+    from pg_catalog.pg_attribute a
+    left join pg_catalog.pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+    where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped
+  ) cols
+  where n.nspname in ('public','private') and c.relkind='r'
+), placeholder_view_items as (
+  select
+    35000000000::bigint + row_number() over(order by n.nspname,c.relname) as order_key,
+    'view_placeholder'::text as kind,
+    format('%I.%I',n.nspname,c.relname) as object_key,
+    format('create view %I.%I as select %s where false;',n.nspname,c.relname,cols.column_sql) as ddl
+  from pg_catalog.pg_class c
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  cross join lateral (
+    select string_agg(format('null::%s as %I',pg_catalog.format_type(a.atttypid,a.atttypmod),a.attname),', ' order by a.attnum) as column_sql
+    from pg_catalog.pg_attribute a
+    where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped
+  ) cols
+  where n.nspname in ('public','private') and c.relkind='v'
+), function_items as (
+  select
+    40000000000::bigint + row_number() over(order by n.nspname,p.proname,pg_catalog.pg_get_function_identity_arguments(p.oid)) as order_key,
+    'function'::text as kind,
+    format('%I.%I(%s)',n.nspname,p.proname,pg_catalog.pg_get_function_identity_arguments(p.oid)) as object_key,
+    pg_catalog.pg_get_functiondef(p.oid) as ddl
+  from pg_catalog.pg_proc p
+  join pg_catalog.pg_namespace n on n.oid=p.pronamespace
+  where n.nspname in ('public','private') and p.prokind='f'
+), constraint_items as (
+  select
+    50000000000::bigint + row_number() over(order by n.nspname,c.relname,con.conname) as order_key,
+    'constraint'::text as kind,
+    format('%I.%I:%I',n.nspname,c.relname,con.conname) as object_key,
+    format('alter table %I.%I add constraint %I %s;',n.nspname,c.relname,con.conname,pg_catalog.pg_get_constraintdef(con.oid,true)) as ddl
+  from pg_catalog.pg_constraint con
+  join pg_catalog.pg_class c on c.oid=con.conrelid
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  where n.nspname in ('public','private') and c.relkind='r'
+), index_items as (
+  select
+    60000000000::bigint + row_number() over(order by n.nspname,ic.relname) as order_key,
+    'index'::text as kind,
+    format('%I.%I',n.nspname,ic.relname) as object_key,
+    pg_catalog.pg_get_indexdef(i.indexrelid) || ';' as ddl
+  from pg_catalog.pg_index i
+  join pg_catalog.pg_class c on c.oid=i.indrelid
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  join pg_catalog.pg_class ic on ic.oid=i.indexrelid
+  where n.nspname in ('public','private') and c.relkind='r'
+    and not exists(select 1 from pg_catalog.pg_constraint con where con.conindid=i.indexrelid)
+), view_items as (
+  select
+    70000000000::bigint + row_number() over(order by n.nspname,c.relname) as order_key,
+    'view'::text as kind,
+    format('%I.%I',n.nspname,c.relname) as object_key,
+    format('create or replace view %I.%I as %s%s;',n.nspname,c.relname,pg_catalog.pg_get_viewdef(c.oid,true),
+      case when c.reloptions is null then '' else E';\nalter view '||format('%I.%I',n.nspname,c.relname)||' set ('||array_to_string(c.reloptions,', ')||')' end) as ddl
+  from pg_catalog.pg_class c
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  where n.nspname in ('public','private') and c.relkind='v'
+), rls_items as (
+  select
+    80000000000::bigint + row_number() over(order by n.nspname,c.relname) as order_key,
+    'rls'::text as kind,
+    format('%I.%I',n.nspname,c.relname) as object_key,
+    (case when c.relrowsecurity then format('alter table %I.%I enable row level security;',n.nspname,c.relname) else '' end) ||
+    (case when c.relforcerowsecurity then E'\n'||format('alter table %I.%I force row level security;',n.nspname,c.relname) else '' end) as ddl
+  from pg_catalog.pg_class c
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  where n.nspname in ('public','private') and c.relkind='r' and (c.relrowsecurity or c.relforcerowsecurity)
+), policy_items as (
+  select
+    90000000000::bigint + row_number() over(order by p.schemaname,p.tablename,p.policyname) as order_key,
+    'policy'::text as kind,
+    format('%I.%I:%I',p.schemaname,p.tablename,p.policyname) as object_key,
+    format('create policy %I on %I.%I as %s for %s to %s%s%s;',p.policyname,p.schemaname,p.tablename,
+      p.permissive,p.cmd,
+      (select string_agg(case when r='public' then 'public' else quote_ident(r) end,', ' order by r) from unnest(p.roles) r),
+      case when p.qual is null then '' else ' using ('||p.qual||')' end,
+      case when p.with_check is null then '' else ' with check ('||p.with_check||')' end) as ddl
+  from pg_catalog.pg_policies p
+  where p.schemaname in ('public','private')
+), trigger_items as (
+  select
+    100000000000::bigint + row_number() over(order by n.nspname,c.relname,t.tgname) as order_key,
+    'trigger'::text as kind,
+    format('%I.%I:%I',n.nspname,c.relname,t.tgname) as object_key,
+    pg_catalog.pg_get_triggerdef(t.oid,true) || ';' as ddl
+  from pg_catalog.pg_trigger t
+  join pg_catalog.pg_class c on c.oid=t.tgrelid
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  where not t.tgisinternal and n.nspname in ('public','private')
+), items as (
+  select 1::bigint as order_key,'prelude'::text as kind,'bootstrap'::text as object_key,
+         E'create schema if not exists private;\nset check_function_bodies = off;'::text as ddl
+  union all select * from enum_items
+  union all select * from table_items
+  union all select * from placeholder_view_items
+  union all select * from function_items
+  union all select * from constraint_items
+  union all select * from index_items
+  union all select * from view_items
+  union all select * from rls_items
+  union all select * from policy_items
+  union all select * from trigger_items
+  union all select 110000000000::bigint,'postlude','bootstrap',E'set check_function_bodies = on;'::text
+)
+select i.order_key,i.kind,i.object_key,i.ddl
+from items i
+where i.order_key > greatest(coalesce(p_after_key,0),0)
+order by i.order_key
+limit least(greatest(coalesce(p_limit,25),1),50);
+$$;
+revoke all on function public.tgg_schema_baseline_export_chunk_service(bigint,integer) from public, anon, authenticated;
+grant execute on function public.tgg_schema_baseline_export_chunk_service(bigint,integer) to service_role;
+
+-- ============================================================
+-- MIGRATION 20260911143812 signup_password_approval_guard_shadow
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create schema if not exists private;
+
+create table if not exists private.tgg_signup_password_guard_config (
+  id smallint primary key default 1 check (id=1),
+  enforcement_enabled boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+insert into private.tgg_signup_password_guard_config(id,enforcement_enabled)
+values (1,false)
+on conflict (id) do nothing;
+
+create table if not exists private.tgg_signup_password_approvals (
+  token uuid primary key,
+  email_hash text not null,
+  purpose text not null check (purpose in ('creator_os_direct','call_validation_invite')),
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+revoke all on private.tgg_signup_password_guard_config from public, anon, authenticated;
+revoke all on private.tgg_signup_password_approvals from public, anon, authenticated;
+
+create or replace function public.tgg_signup_approval_issue_service(
+  p_token uuid,
+  p_email_hash text,
+  p_purpose text
+) returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, private
+as $$
+begin
+  if p_token is null or coalesce(length(p_email_hash),0) <> 64 then
+    raise exception 'invalid signup approval payload';
+  end if;
+  if p_purpose not in ('creator_os_direct','call_validation_invite') then
+    raise exception 'invalid signup approval purpose';
+  end if;
+  delete from private.tgg_signup_password_approvals where expires_at <= now();
+  insert into private.tgg_signup_password_approvals(token,email_hash,purpose,expires_at)
+  values (p_token,lower(p_email_hash),p_purpose,now()+interval '5 minutes')
+  on conflict (token) do update set
+    email_hash=excluded.email_hash,
+    purpose=excluded.purpose,
+    expires_at=excluded.expires_at,
+    created_at=now();
+  return jsonb_build_object('ok',true,'expires_in_seconds',300);
+end;
+$$;
+revoke all on function public.tgg_signup_approval_issue_service(uuid,text,text) from public, anon, authenticated;
+grant execute on function public.tgg_signup_approval_issue_service(uuid,text,text) to service_role;
+
+create or replace function public.tgg_signup_approval_revoke_service(p_token uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, private
+as $$
+declare n integer;
+begin
+  delete from private.tgg_signup_password_approvals where token=p_token;
+  get diagnostics n = row_count;
+  return jsonb_build_object('ok',true,'deleted',n);
+end;
+$$;
+revoke all on function public.tgg_signup_approval_revoke_service(uuid) from public, anon, authenticated;
+grant execute on function public.tgg_signup_approval_revoke_service(uuid) to service_role;
+
+create or replace function private.tgg_signup_password_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, private, extensions
+as $$
+declare
+  v_enforce boolean := false;
+  v_token_text text;
+  v_token uuid;
+  v_expected_hash text;
+  v_purpose text;
+  v_found boolean := false;
+begin
+  if tg_op='INSERT' then
+    if coalesce(new.encrypted_password,'')='' then
+      return new;
+    end if;
+  elsif tg_op='UPDATE' then
+    if not (
+      old.encrypted_password is distinct from new.encrypted_password
+      and coalesce(new.raw_user_meta_data->>'repaired_unconfirmed_account','false')='true'
+      and coalesce(old.raw_user_meta_data->>'repaired_unconfirmed_account','false')<>'true'
+    ) then
+      return new;
+    end if;
+  else
+    return new;
+  end if;
+
+  select enforcement_enabled into v_enforce
+  from private.tgg_signup_password_guard_config where id=1;
+
+  v_token_text := coalesce(new.raw_user_meta_data->>'tgg_signup_approval','');
+  v_purpose := coalesce(new.raw_user_meta_data->>'signup_source','creator_os_direct');
+
+  if v_token_text <> '' then
+    begin
+      v_token := v_token_text::uuid;
+      v_expected_hash := encode(extensions.digest(lower(coalesce(new.email,'')),'sha256'),'hex');
+      delete from private.tgg_signup_password_approvals
+      where token=v_token
+        and email_hash=v_expected_hash
+        and purpose=v_purpose
+        and expires_at>now()
+      returning true into v_found;
+    exception when others then
+      v_found := false;
+    end;
+  end if;
+
+  if v_found then
+    new.raw_user_meta_data := coalesce(new.raw_user_meta_data,'{}'::jsonb) - 'tgg_signup_approval';
+    return new;
+  end if;
+
+  if coalesce(v_enforce,false) then
+    raise exception using errcode='P0001', message='TGG_PASSWORD_APPROVAL_REQUIRED';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function private.tgg_signup_password_guard() from public, anon, authenticated;
+
+drop trigger if exists tgg_signup_password_approval_guard on auth.users;
+create trigger tgg_signup_password_approval_guard
+before insert or update on auth.users
+for each row execute function private.tgg_signup_password_guard();
+
+-- ============================================================
+-- MIGRATION 20260911143858 freeze_schema_baseline_snapshot_service
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+alter function public.tgg_schema_baseline_export_chunk_service(bigint,integer) rename to tgg_schema_baseline_export_live_chunk_service;
+
+create table if not exists private.tgg_schema_baseline_snapshots (
+  snapshot_id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  latest_migration_version text,
+  item_count integer not null default 0,
+  stable boolean not null default false
+);
+create table if not exists private.tgg_schema_baseline_snapshot_items (
+  snapshot_id uuid not null references private.tgg_schema_baseline_snapshots(snapshot_id) on delete cascade,
+  order_key bigint not null,
+  kind text not null,
+  object_key text not null,
+  ddl text not null,
+  primary key(snapshot_id,order_key)
+);
+revoke all on private.tgg_schema_baseline_snapshots from public, anon, authenticated;
+revoke all on private.tgg_schema_baseline_snapshot_items from public, anon, authenticated;
+
+create or replace function public.tgg_refresh_schema_baseline_snapshot_service()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_before text;
+  v_after text;
+  v_count integer;
+begin
+  delete from private.tgg_schema_baseline_snapshots where created_at < now() - interval '1 day';
+  select max(version) into v_before from supabase_migrations.schema_migrations;
+  insert into private.tgg_schema_baseline_snapshots(snapshot_id,latest_migration_version,stable) values(v_id,v_before,false);
+
+  insert into private.tgg_schema_baseline_snapshot_items(snapshot_id,order_key,kind,object_key,ddl)
+  select v_id,x.order_key,x.kind,x.object_key,x.ddl
+  from public.tgg_schema_baseline_export_live_chunk_service(0,20000) x;
+
+  get diagnostics v_count = row_count;
+  select max(version) into v_after from supabase_migrations.schema_migrations;
+  if v_after is distinct from v_before then
+    delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+    return jsonb_build_object('ok',false,'error','migration_changed_during_snapshot','before_version',v_before,'after_version',v_after);
+  end if;
+
+  update private.tgg_schema_baseline_snapshots set item_count=v_count,stable=true where snapshot_id=v_id;
+  return jsonb_build_object('ok',true,'snapshot_id',v_id,'latest_migration_version',v_before,'item_count',v_count,'stable',true);
+end;
+$$;
+revoke all on function public.tgg_refresh_schema_baseline_snapshot_service() from public, anon, authenticated;
+grant execute on function public.tgg_refresh_schema_baseline_snapshot_service() to service_role;
+
+create or replace function public.tgg_schema_baseline_snapshot_chunk_service(
+  p_snapshot_id uuid,
+  p_after_key bigint default 0,
+  p_limit integer default 100
+)
+returns table(order_key bigint,kind text,object_key text,ddl text)
+language sql
+security definer
+set search_path = ''
+as $$
+  select i.order_key,i.kind,i.object_key,i.ddl
+  from private.tgg_schema_baseline_snapshot_items i
+  join private.tgg_schema_baseline_snapshots s on s.snapshot_id=i.snapshot_id
+  where i.snapshot_id=p_snapshot_id and s.stable=true and i.order_key>greatest(coalesce(p_after_key,0),0)
+  order by i.order_key
+  limit least(greatest(coalesce(p_limit,100),1),250);
+$$;
+revoke all on function public.tgg_schema_baseline_snapshot_chunk_service(uuid,bigint,integer) from public, anon, authenticated;
+grant execute on function public.tgg_schema_baseline_snapshot_chunk_service(uuid,bigint,integer) to service_role;
+
+-- ============================================================
+-- MIGRATION 20260911143917 page_full_schema_snapshot_refresh
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_refresh_schema_baseline_snapshot_service()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_before text;
+  v_after text;
+  v_after_key bigint := 0;
+  v_batch integer;
+  v_count integer := 0;
+  v_next bigint;
+begin
+  delete from private.tgg_schema_baseline_snapshots where created_at < now() - interval '1 day';
+  select max(version) into v_before from supabase_migrations.schema_migrations;
+  insert into private.tgg_schema_baseline_snapshots(snapshot_id,latest_migration_version,stable) values(v_id,v_before,false);
+
+  loop
+    insert into private.tgg_schema_baseline_snapshot_items(snapshot_id,order_key,kind,object_key,ddl)
+    select v_id,x.order_key,x.kind,x.object_key,x.ddl
+    from public.tgg_schema_baseline_export_live_chunk_service(v_after_key,50) x;
+    get diagnostics v_batch = row_count;
+    exit when v_batch=0;
+    v_count := v_count + v_batch;
+    select max(order_key) into v_next from private.tgg_schema_baseline_snapshot_items where snapshot_id=v_id;
+    if v_next is null or v_next<=v_after_key then
+      delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+      return jsonb_build_object('ok',false,'error','snapshot_pagination_stalled','after_key',v_after_key);
+    end if;
+    v_after_key := v_next;
+    exit when v_batch<50;
+    if v_count>20000 then
+      delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+      return jsonb_build_object('ok',false,'error','snapshot_object_limit_exceeded','item_count',v_count);
+    end if;
+  end loop;
+
+  select max(version) into v_after from supabase_migrations.schema_migrations;
+  if v_after is distinct from v_before then
+    delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+    return jsonb_build_object('ok',false,'error','migration_changed_during_snapshot','before_version',v_before,'after_version',v_after,'item_count',v_count);
+  end if;
+  if v_count<3000 then
+    delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+    return jsonb_build_object('ok',false,'error','snapshot_too_small','item_count',v_count);
+  end if;
+
+  update private.tgg_schema_baseline_snapshots set item_count=v_count,stable=true where snapshot_id=v_id;
+  return jsonb_build_object('ok',true,'snapshot_id',v_id,'latest_migration_version',v_before,'item_count',v_count,'stable',true);
+end;
+$$;
+revoke all on function public.tgg_refresh_schema_baseline_snapshot_service() from public, anon, authenticated;
+grant execute on function public.tgg_refresh_schema_baseline_snapshot_service() to service_role;
+
+-- ============================================================
+-- MIGRATION 20260911144513 optimize_schema_snapshot_single_pass
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+do $$
+declare
+  v_def text;
+  v_new text;
+begin
+  select pg_get_functiondef('public.tgg_schema_baseline_export_live_chunk_service(bigint,integer)'::regprocedure) into v_def;
+  v_new := replace(v_def,
+    'limit least(greatest(coalesce(p_limit,25),1),50);',
+    'limit least(greatest(coalesce(p_limit,25),1),20000);');
+  if v_new = v_def then
+    raise exception 'schema exporter limit clause not found';
+  end if;
+  execute v_new;
+end
+$$;
+
+create or replace function public.tgg_refresh_schema_baseline_snapshot_service()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_before text;
+  v_after text;
+  v_count integer := 0;
+begin
+  delete from private.tgg_schema_baseline_snapshots where created_at < now() - interval '1 day';
+  select max(version) into v_before from supabase_migrations.schema_migrations;
+  insert into private.tgg_schema_baseline_snapshots(snapshot_id,latest_migration_version,stable)
+  values(v_id,v_before,false);
+
+  insert into private.tgg_schema_baseline_snapshot_items(snapshot_id,order_key,kind,object_key,ddl)
+  select v_id,x.order_key,x.kind,x.object_key,x.ddl
+  from public.tgg_schema_baseline_export_live_chunk_service(0,20000) x;
+  get diagnostics v_count = row_count;
+
+  select max(version) into v_after from supabase_migrations.schema_migrations;
+  if v_after is distinct from v_before then
+    delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+    return jsonb_build_object('ok',false,'error','migration_changed_during_snapshot','before_version',v_before,'after_version',v_after,'item_count',v_count);
+  end if;
+  if v_count<3000 then
+    delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+    return jsonb_build_object('ok',false,'error','snapshot_too_small','item_count',v_count);
+  end if;
+
+  update private.tgg_schema_baseline_snapshots set item_count=v_count,stable=true where snapshot_id=v_id;
+  return jsonb_build_object('ok',true,'snapshot_id',v_id,'latest_migration_version',v_before,'item_count',v_count,'stable',true);
+end;
+$$;
+revoke all on function public.tgg_refresh_schema_baseline_snapshot_service() from public, anon, authenticated;
+grant execute on function public.tgg_refresh_schema_baseline_snapshot_service() to service_role;
 

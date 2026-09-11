@@ -1,4 +1,4 @@
-name: TGG Production Migration Archive
+name: TGG Production Recovery Export
 
 on:
   workflow_dispatch:
@@ -10,15 +10,14 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
   id-token: write
 
 concurrency:
-  group: tgg-production-migration-archive
+  group: tgg-production-recovery-export
   cancel-in-progress: false
 
 jobs:
-  export-production-history:
+  export-production-recovery:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -28,56 +27,57 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify secretless archive client
+      - name: Verify secretless recovery client
         shell: bash
         run: |
           set -euo pipefail
           node --check scripts/tgg-production-migration-archive.mjs
           grep -q "OIDC_AUDIENCE = 'tgg-migration-archive'" scripts/tgg-production-migration-archive.mjs
           if grep -Eq 'SUPABASE_(SERVICE_ROLE|SECRET)_KEY' scripts/tgg-production-migration-archive.mjs; then
-            echo "Static Supabase server keys are forbidden in the migration archive client."
+            echo "Static Supabase server keys are forbidden in the recovery client."
             exit 1
           fi
 
-      - name: Export authoritative production migration history through OIDC
+      - name: Export migration history and current schema baseline through OIDC
         shell: bash
         run: node scripts/tgg-production-migration-archive.mjs
 
-      - name: Validate generated archive
+      - name: Validate generated recovery artifacts
         shell: bash
         run: |
           set -euo pipefail
           test -f supabase/production-history/manifest.json
           test -f supabase/production-history/README.md
-          count="$(node -e "const m=require('./supabase/production-history/manifest.json'); process.stdout.write(String(m.migration_count))")"
-          if [ "$count" -lt 1000 ]; then
-            echo "Archive migration count unexpectedly small: $count"
+          test -f supabase/production-baseline/current-schema.sql
+          test -f supabase/production-baseline/manifest.json
+          history_count="$(node -e "const m=require('./supabase/production-history/manifest.json'); process.stdout.write(String(m.migration_count))")"
+          schema_count="$(node -e "const m=require('./supabase/production-baseline/manifest.json'); process.stdout.write(String(m.item_count))")"
+          if [ "$history_count" -lt 1000 ]; then
+            echo "Archive migration count unexpectedly small: $history_count"
             exit 1
           fi
-          if grep -REn 'sk_live_[A-Za-z0-9]|whsec_[A-Za-z0-9]|sb_secret_[A-Za-z0-9]|AKIA[0-9A-Z]{16}|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' supabase/production-history; then
-            echo "High-risk secret literal detected in generated archive."
+          if [ "$schema_count" -lt 3000 ]; then
+            echo "Schema baseline object count unexpectedly small: $schema_count"
+            exit 1
+          fi
+          if grep -REn 'sk_live_[A-Za-z0-9]|whsec_[A-Za-z0-9]|sb_secret_[A-Za-z0-9]|AKIA[0-9A-Z]{16}|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY' supabase/production-history supabase/production-baseline; then
+            echo "High-risk secret literal detected in generated recovery artifacts."
             exit 1
           fi
 
-      - name: Open archive update pull request
+      - name: Push recovery update review branch
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          branch="automation/production-migration-archive-${GITHUB_RUN_ID}"
+          branch="automation/production-recovery-export-${GITHUB_RUN_ID}"
           git config user.name "tgg-production-bot"
           git config user.email "tgg-production-bot@users.noreply.github.com"
           git switch -c "$branch"
-          git add supabase/production-history
+          git add supabase/production-history supabase/production-baseline
           if git diff --cached --quiet; then
-            echo "No archive changes to commit."
+            echo "No recovery artifact changes to commit."
             exit 0
           fi
-          git commit -m "Archive authoritative production migration history"
+          git commit -m "Refresh authoritative production recovery artifacts"
           git push origin "HEAD:$branch"
-          gh pr create \
-            --base main \
-            --head "$branch" \
-            --title "Archive authoritative production migration history" \
-            --body "Generated automatically from the production Supabase migration ledger through GitHub OIDC. Includes grouped historical SQL, manifest hashes, and secret-scan gates. Historical evidence only; direct production replay is prohibited."
+          echo "Review branch pushed: $branch"

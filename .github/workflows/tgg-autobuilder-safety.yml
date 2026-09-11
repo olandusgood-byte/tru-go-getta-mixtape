@@ -1,0 +1,219 @@
+name: TGG Auto Builder Safety
+
+on:
+  push:
+    paths:
+      - 'supabase/migrations/20260908_autobuilder_continuous_watchdog.sql'
+      - 'supabase/migrations/20260908_world_alpha_rc6_rc7_live_catchup.sql'
+      - 'supabase/migrations/20260908_world_alpha_rc8_rc9_live_catchup.sql'
+      - 'supabase/migrations/20260908_game_idea_autobuilder_pipeline.sql'
+      - 'supabase/migrations/20260908_tgg_brain_v1_reflection.sql'
+      - 'supabase/migrations/20260908_tgg_brain_goal_decomposition.sql'
+      - 'supabase/migrations/20260908_tgg_brain_sandbox_trials.sql'
+      - 'supabase/tests/autobuilder_continuous_watchdog_safety.sql'
+      - 'supabase/tests/game_idea_autobuilder_pipeline_safety.sql'
+      - 'supabase/tests/tgg_brain_v1_reflection_safety.sql'
+      - 'supabase/tests/tgg_brain_goal_decomposition_safety.sql'
+      - 'supabase/tests/tgg_brain_sandbox_trials_safety.sql'
+      - '.github/workflows/tgg-autobuilder-safety.yml'
+  pull_request:
+    paths:
+      - 'supabase/migrations/20260908_autobuilder_continuous_watchdog.sql'
+      - 'supabase/migrations/20260908_world_alpha_rc6_rc7_live_catchup.sql'
+      - 'supabase/migrations/20260908_world_alpha_rc8_rc9_live_catchup.sql'
+      - 'supabase/migrations/20260908_game_idea_autobuilder_pipeline.sql'
+      - 'supabase/migrations/20260908_tgg_brain_goal_decomposition.sql'
+      - 'supabase/migrations/20260908_tgg_brain_sandbox_trials.sql'
+      - 'supabase/migrations/20260908_tgg_brain_v1_reflection.sql'
+      - 'supabase/tests/autobuilder_continuous_watchdog_safety.sql'
+      - 'supabase/tests/game_idea_autobuilder_pipeline_safety.sql'
+      - 'supabase/tests/tgg_brain_v1_reflection_safety.sql'
+      - 'supabase/tests/tgg_brain_goal_decomposition_safety.sql'
+      - 'supabase/tests/tgg_brain_sandbox_trials_safety.sql'
+      - '.github/workflows/tgg-autobuilder-safety.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate continuous Auto Builder guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_autobuilder_continuous_watchdog.sql"
+          t="supabase/tests/autobuilder_continuous_watchdog_safety.sql"
+          test -s "$f"
+          test -s "$t"
+
+          grep -q "function public.tgg_build_claim_ready_batch" "$f"
+          grep -q "target_environment" "$f"
+          grep -q "production" "$f"
+          grep -q "risk_level <> 'high'" "$f"
+          grep -q "historical_only" "$f"
+          grep -q "auto_builder_claim_allowed" "$f"
+          grep -q "function public.tgg_autobuilder_watchdog" "$f"
+          grep -q "production_auto_claim_blocked" "$f"
+          grep -q "high_risk_auto_claim_blocked" "$f"
+          grep -q "production_promotion_requires_explicit_approval" "$f"
+          grep -q "tgg-autobuilder-continuous-watchdog" "$f"
+
+          grep -q "production_auto_claim_candidates" "$t"
+          grep -q "blocks_high_risk" "$t"
+          grep -q "blocks_production" "$t"
+          grep -q "authenticated_can_execute" "$t"
+          grep -q "anon_can_execute" "$t"
+
+          if grep -Eq "grant execute on function public\.tgg_autobuilder_watchdog\(\) to (authenticated|anon)" "$f"; then
+            echo "Auto Builder watchdog must remain internal-only"
+            exit 1
+          fi
+
+          echo "Auto Builder safety contract passed"
+
+      - name: Validate Game Idea reader-writer pipeline
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_game_idea_autobuilder_pipeline.sql"
+          t="supabase/tests/game_idea_autobuilder_pipeline_safety.sql"
+          test -s "$f"
+          test -s "$t"
+
+          grep -q "tgg_game_idea_inbox" "$f"
+          grep -q "enable row level security" "$f"
+          grep -q "function public.tgg_game_idea_submit" "$f"
+          grep -q "security invoker" "$f"
+          grep -q "on conflict(owner_user_id,idea_hash)" "$f"
+          grep -q "function public.tgg_game_idea_claim_batch" "$f"
+          grep -q "function public.tgg_game_idea_recover_stale" "$f"
+          grep -q "last_heartbeat_at" "$f"
+          grep -q "retry_count" "$f"
+          grep -q "grant execute on function public.tgg_game_idea_claim_batch(text,integer) to postgres" "$f"
+          grep -q "production_auto_publish.*false" "$f"
+          grep -q "high_risk_auto_execute.*false" "$f"
+
+          if grep -Eq "grant execute on function public\.tgg_game_idea_claim_batch.*to (authenticated|anon)" "$f"; then
+            echo "Idea claiming must remain internal-only"
+            exit 1
+          fi
+
+          grep -q "production_auto_publish = false" "$t"
+          grep -q "high_risk_auto_execute = false" "$t"
+
+          echo "Game Idea pipeline safety contract passed"
+
+      - name: Validate TGG Brain memory and reflection
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_tgg_brain_v1_reflection.sql"
+          t="supabase/tests/tgg_brain_v1_reflection_safety.sql"
+          test -s "$f"
+          test -s "$t"
+
+          grep -q "tgg_brain_memory" "$f"
+          grep -q "tgg_brain_decisions" "$f"
+          grep -q "tgg_brain_priorities" "$f"
+          grep -q "tgg_brain_learning_events" "$f"
+          grep -q "function public.tgg_brain_reflect" "$f"
+          grep -q "function public.tgg_brain_next_actions" "$f"
+          grep -q "TGG-BRAIN-1.0" "$f"
+          grep -q "production_auto_publish.*false" "$f"
+          grep -q "high_risk_auto_execute.*false" "$f"
+          grep -q "canonical_boundary.*AB-006" "$f"
+          grep -q "canonical_source_version.*V223" "$f"
+
+          if grep -Eq "grant execute on function public\.tgg_brain_.*to (authenticated|anon)" "$f"; then
+            echo "Brain controls must remain internal-only"
+            exit 1
+          fi
+
+          grep -q "dedupes_learning_events" "$t"
+          grep -q "blocks_high_risk" "$t"
+          grep -q "blocks_production" "$t"
+
+          echo "TGG Brain safety contract passed"
+
+      - name: Validate TGG Brain goal decomposition
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_tgg_brain_goal_decomposition.sql"
+          t="supabase/tests/tgg_brain_goal_decomposition_safety.sql"
+          test -s "$f"
+          test -s "$t"
+
+          grep -q "tgg_brain_goals" "$f"
+          grep -q "tgg_brain_goal_steps" "$f"
+          grep -q "tgg_brain_goal_dependencies" "$f"
+          grep -q "cyclic_dependency_forbidden" "$f"
+          grep -q "self_dependency_forbidden" "$f"
+          grep -q "production_allowed=false" "$f"
+          grep -q "risk_level<>'high'" "$f"
+
+          if grep -Eq "grant execute on function public\.tgg_brain_goal_.*to (authenticated|anon)" "$f"; then
+            echo "Goal orchestration must remain internal-only"
+            exit 1
+          fi
+
+          grep -q "rejects_cycles" "$t"
+          grep -q "blocks_production" "$t"
+          grep -q "excludes_high_risk_goals" "$t"
+
+          echo "TGG Brain goal decomposition safety contract passed"
+
+      - name: Validate TGG Brain sandbox trials
+        shell: bash
+        run: |
+          set -euo pipefail
+          f="supabase/migrations/20260908_tgg_brain_sandbox_trials.sql"
+          t="supabase/tests/tgg_brain_sandbox_trials_safety.sql"
+          test -s "$f"
+          test -s "$t"
+
+          grep -q "tgg_brain_trials" "$f"
+          grep -q "tgg_brain_trial_checks" "$f"
+          grep -q "production_touched boolean not null default false" "$f"
+          grep -q "environment.*sandbox" "$f"
+
+          grep -q "blocks_high_risk" "$t"
+          grep -q "requires_dev_only" "$t"
+          grep -q "has_safe_verdict" "$t"
+          grep -q "has_block_verdict" "$t"
+
+          echo "TGG Brain sandbox trial safety contract passed"
+
+      - name: Validate World Alpha catch-up safety boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          rc67="supabase/migrations/20260908_world_alpha_rc6_rc7_live_catchup.sql"
+          rc89="supabase/migrations/20260908_world_alpha_rc8_rc9_live_catchup.sql"
+          test -s "$rc67"
+          test -s "$rc89"
+
+          grep -q "rights_transfer.*false" "$rc67"
+          grep -q "real_money.*false" "$rc67"
+          grep -q "virtual_reward_only" "$rc67"
+          grep -q "tgg_world_studio_open" "$rc67"
+          grep -q "tgg_world_open_mic_finish" "$rc67"
+
+          grep -q "tgg_credits" "$rc89"
+          grep -q "virtual_currency" "$rc89"
+          grep -q "real_money.*false" "$rc89"
+          grep -q "tgg_world_purchase" "$rc89"
+          grep -q "idempotency_key" "$rc89"
+          grep -q "tgg_world_workout_finish" "$rc89"
+          grep -q "tgg_world_crew_set_role" "$rc89"
+
+          if grep -Ev '^[[:space:]]*--' "$rc67" "$rc89" | grep -Eiq "stripe_secret|cash.?out|promot.*production|deploy.*production"; then
+            echo "World Alpha catch-up must remain virtual/development-only"
+            exit 1
+          fi
+
+          echo "World Alpha catch-up safety contract passed"

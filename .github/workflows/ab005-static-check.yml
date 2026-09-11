@@ -43,15 +43,16 @@ jobs:
           done
 
           # Exact existing smoke vocabulary; no replacement contract is allowed.
-          grep -q "IN ('pass','fail','blocked','manual')" "$f"
-          grep -q "p_result not in ('pass','fail','blocked','manual')" "$f"
+          # SQL keywords are case-insensitive, so the static gate must be too.
+          grep -qi "in ('pass','fail','blocked','manual')" "$f"
+          grep -qi "p_result not in ('pass','fail','blocked','manual')" "$f"
 
           # Rollback/clean-retest isolation contract.
           grep -q "rollback_cutoff" "$f"
           grep -q "checked_at > v_after" "$f"
           grep -q "coalesce(" "$f"
           grep -q "cannot advance without a checkpoint" "$f"
-          grep -q "status in ('fail','blocked','manual')" "$f"
+          grep -qi "status in ('fail','blocked','manual')" "$f"
           grep -q "v_pass <> v_total" "$f"
 
           # Staging may advance only after a clean pass, while production remains gated.

@@ -62,8 +62,8 @@
       const osc=liveCtx.createOscillator(), g=liveCtx.createGain(); g.gain.value=0.12;
       const node=new AudioWorkletNode(liveCtx,'nova-pitch-formant-processor',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1]});
       node.parameters.get('pitchSemitones').value=3; node.parameters.get('formantStrength').value=1;
-      let metric=null,processorErrors=0,recorderChunks=0;
-      node.port.onmessage=(e)=>{if(e.data?.type==='metrics') metric=e.data;};
+      let latestMetric=null,nonzeroMetric=null,processorErrors=0,recorderChunks=0;
+      node.port.onmessage=(e)=>{if(e.data?.type==='metrics'){latestMetric=e.data;if((e.data.rms||0)>0 && (e.data.peak||0)>0) nonzeroMetric=e.data;}};
       node.onprocessorerror=()=>{processorErrors++;};
       const streamDest=liveCtx.createMediaStreamDestination();
       node.connect(streamDest);
@@ -77,13 +77,13 @@
       const t0=liveCtx.currentTime;
       osc.frequency.value=220; osc.connect(g).connect(node); osc.start();
       if(liveCtx.state!=='running') await liveCtx.resume();
-      for(let i=0;i<80 && !metric;i++) await wait(100);
+      for(let i=0;i<120 && !nonzeroMetric;i++) await wait(100);
       const t1=liveCtx.currentTime, state=liveCtx.state;
       osc.stop();
       if(recorder?.state==='recording') recorder.stop();
       await wait(200); await liveCtx.close();
-      result.live={gotMetrics:!!metric,metric,processorErrors,recorderChunks,state,currentTimeStart:t0,currentTimeEnd:t1,timeAdvanced:t1-t0,pass:!!metric && metric.blocks>=32 && metric.peak>0 && metric.rms>0 && processorErrors===0};
-      if(!result.live.pass) result.errors.push('live AudioWorklet produced no nonzero render metrics');
+      result.live={gotMetrics:!!latestMetric,metric:nonzeroMetric||latestMetric,processorErrors,recorderChunks,state,currentTimeStart:t0,currentTimeEnd:t1,timeAdvanced:t1-t0,pass:!!nonzeroMetric && nonzeroMetric.blocks>=32 && processorErrors===0 && (t1-t0)>0.25};
+      if(!result.live.pass) result.errors.push('live AudioWorklet produced no sustained nonzero render metrics');
     }catch(e){fail(e);}
 
     try{

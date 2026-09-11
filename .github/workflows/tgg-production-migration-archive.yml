@@ -2,6 +2,11 @@ name: TGG Production Migration Archive
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/tgg-production-migration-archive.mjs'
+      - '.github/workflows/tgg-production-migration-archive.yml'
 
 permissions:
   contents: write

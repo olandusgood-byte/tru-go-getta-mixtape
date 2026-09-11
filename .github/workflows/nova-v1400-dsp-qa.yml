@@ -1,0 +1,54 @@
+name: NOVA V1400 DSP QA
+on:
+  push:
+    branches: [nova-v1400-dsp-qa]
+    paths:
+      - 'qa/**'
+      - '.github/workflows/nova-v1400-dsp-qa.yml'
+permissions:
+  contents: read
+jobs:
+  dsp-browser-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start local secure-context test server
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/nova-http.log 2>&1 &
+          echo $! > /tmp/nova-http.pid
+          sleep 1
+          curl --fail http://127.0.0.1:8765/qa/nova-v1400-dsp-qa.html >/dev/null
+      - name: Run real Chromium AudioWorklet + offline DSP QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$CHROME" ]; then
+            echo "No Chromium/Chrome binary found on runner" >&2
+            exit 2
+          fi
+          echo "Using $CHROME"
+          "$CHROME" \
+            --headless=new \
+            --no-sandbox \
+            --disable-gpu \
+            --disable-dev-shm-usage \
+            --autoplay-policy=no-user-gesture-required \
+            --mute-audio \
+            --user-data-dir=/tmp/nova-v1400-chrome \
+            --virtual-time-budget=18000 \
+            --dump-dom \
+            http://127.0.0.1:8765/qa/nova-v1400-dsp-qa.html \
+            > nova-v1400-dsp-qa-output.html
+          cat nova-v1400-dsp-qa-output.html
+          grep -q 'QA_PASS::' nova-v1400-dsp-qa-output.html
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-v1400-dsp-qa-evidence
+          path: |
+            nova-v1400-dsp-qa-output.html
+            /tmp/nova-http.log
+          if-no-files-found: warn

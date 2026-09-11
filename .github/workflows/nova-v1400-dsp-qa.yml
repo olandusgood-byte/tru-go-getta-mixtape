@@ -29,26 +29,15 @@ jobs:
             exit 2
           fi
           echo "Using $CHROME"
-          "$CHROME" \
-            --headless=new \
-            --no-sandbox \
-            --disable-gpu \
-            --disable-dev-shm-usage \
-            --autoplay-policy=no-user-gesture-required \
-            --mute-audio \
-            --user-data-dir=/tmp/nova-v1400-chrome \
-            --virtual-time-budget=18000 \
-            --dump-dom \
-            http://127.0.0.1:8765/qa/nova-v1400-dsp-qa.html \
-            > nova-v1400-dsp-qa-output.html
-          cat nova-v1400-dsp-qa-output.html
-          grep -q 'QA_PASS::' nova-v1400-dsp-qa-output.html
+          CHROME_BIN="$CHROME" node qa/run-dsp-qa.mjs
+          cat nova-v1400-dsp-qa-result.txt
+          grep -q '^QA_PASS::' nova-v1400-dsp-qa-result.txt
       - name: Upload QA evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: nova-v1400-dsp-qa-evidence
           path: |
-            nova-v1400-dsp-qa-output.html
+            nova-v1400-dsp-qa-result.txt
             /tmp/nova-http.log
           if-no-files-found: warn

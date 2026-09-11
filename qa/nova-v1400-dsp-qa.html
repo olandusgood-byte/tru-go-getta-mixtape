@@ -1,0 +1,90 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>NOVA V1400 DSP QA RUNNING</title></head>
+<body><pre id="qa-result">QA_RUNNING</pre>
+<script>
+(async()=>{
+  const result={version:'V1400',secureContext:isSecureContext,audioWorklet:false,live:null,offlinePitch:null,offlineFormant:null,pass:false,errors:[]};
+  const out=document.getElementById('qa-result');
+  const fail=(e)=>{result.errors.push(String(e?.stack||e));};
+  const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
+  const rms=(a,start=0,end=a.length)=>{let s=0,n=0;for(let i=start;i<end;i++){const v=a[i];s+=v*v;n++;}return Math.sqrt(s/Math.max(1,n));};
+  function dominantFreq(a,sr,startSec,endSec,minF=140,maxF=420){
+    const start=Math.max(0,Math.floor(startSec*sr)), end=Math.min(a.length,Math.floor(endSec*sr));
+    let bestF=0,bestP=-1;
+    for(let f=minF;f<=maxF;f+=1){
+      let re=0,im=0; const w=2*Math.PI*f/sr;
+      for(let i=start;i<end;i++){const x=a[i]; const ph=w*(i-start); re+=x*Math.cos(ph); im-=x*Math.sin(ph);}
+      const p=re*re+im*im; if(p>bestP){bestP=p;bestF=f;}
+    }
+    return bestF;
+  }
+  function makeToneBuffer(ctx,freq=220,dur=1.6){
+    const n=Math.floor(ctx.sampleRate*dur), b=ctx.createBuffer(1,n,ctx.sampleRate), d=b.getChannelData(0);
+    for(let i=0;i<n;i++){const t=i/ctx.sampleRate; d[i]=0.20*Math.sin(2*Math.PI*freq*t);}
+    return b;
+  }
+  function makeVowelBuffer(ctx,f0=110,dur=1.6){
+    const n=Math.floor(ctx.sampleRate*dur), b=ctx.createBuffer(1,n,ctx.sampleRate), d=b.getChannelData(0);
+    const formants=[700,1200,2500], widths=[180,220,320];
+    for(let i=0;i<n;i++){
+      const t=i/ctx.sampleRate; let y=0;
+      for(let h=1;h<=28;h++){
+        const f=f0*h; let amp=0.015;
+        for(let k=0;k<formants.length;k++){const z=(f-formants[k])/widths[k]; amp += 0.12*Math.exp(-0.5*z*z)/(1+0.03*h);}
+        y += amp*Math.sin(2*Math.PI*f*t + 0.13*h);
+      }
+      d[i]=Math.max(-0.7,Math.min(0.7,y));
+    }
+    return b;
+  }
+  async function offlineRender(sourceKind,formantStrength){
+    const sr=48000,dur=1.6,frames=Math.floor(sr*dur);
+    const ctx=new OfflineAudioContext(1,frames,sr);
+    await ctx.audioWorklet.addModule('./nova-pitch-formant-processor.js');
+    const src=ctx.createBufferSource();
+    src.buffer=sourceKind==='tone'?makeToneBuffer(ctx,220,dur):makeVowelBuffer(ctx,110,dur);
+    const node=new AudioWorkletNode(ctx,'nova-pitch-formant-processor',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1]});
+    node.parameters.get('pitchSemitones').value=5;
+    node.parameters.get('formantStrength').value=formantStrength;
+    src.connect(node).connect(ctx.destination); src.start();
+    return await ctx.startRendering();
+  }
+  try{
+    if(!isSecureContext) throw new Error('not a secure context');
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC) throw new Error('AudioContext unavailable');
+    const liveCtx=new AC({sampleRate:48000});
+    result.audioWorklet=!!liveCtx.audioWorklet;
+    if(!liveCtx.audioWorklet) throw new Error('AudioWorklet unavailable');
+    await liveCtx.audioWorklet.addModule('./nova-pitch-formant-processor.js');
+    const osc=liveCtx.createOscillator(), g=liveCtx.createGain(); g.gain.value=0.12;
+    const node=new AudioWorkletNode(liveCtx,'nova-pitch-formant-processor',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[1]});
+    node.parameters.get('pitchSemitones').value=3; node.parameters.get('formantStrength').value=1;
+    let metric=null; node.port.onmessage=(e)=>{if(e.data?.type==='metrics') metric=e.data;};
+    osc.frequency.value=220; osc.connect(g).connect(node).connect(liveCtx.destination); osc.start();
+    if(liveCtx.state!=='running') await liveCtx.resume();
+    for(let i=0;i<50 && !metric;i++) await wait(100);
+    osc.stop(); await wait(100); await liveCtx.close();
+    result.live={gotMetrics:!!metric,metric,pass:!!metric && metric.blocks>=32 && metric.peak>0 && metric.rms>0};
+    if(!result.live.pass) throw new Error('live AudioWorklet produced no nonzero render metrics');
+
+    const pitchBuf=await offlineRender('tone',1);
+    const pd=pitchBuf.getChannelData(0), measured=dominantFreq(pd,pitchBuf.sampleRate,0.45,1.25), target=220*Math.pow(2,5/12);
+    const pitchRms=rms(pd,Math.floor(.45*pitchBuf.sampleRate),Math.floor(1.25*pitchBuf.sampleRate));
+    result.offlinePitch={measuredHz:measured,targetHz:target,rms:pitchRms,errorHz:Math.abs(measured-target),pass:pitchRms>0.003 && Math.abs(measured-target)<35};
+    if(!result.offlinePitch.pass) throw new Error('offline pitch render outside tolerance');
+
+    const dryBuf=await offlineRender('vowel',0), formBuf=await offlineRender('vowel',1);
+    const a=dryBuf.getChannelData(0),b=formBuf.getChannelData(0),start=Math.floor(.45*48000),end=Math.floor(1.25*48000);
+    let diffSq=0,n=0; for(let i=start;i<end;i++){const q=a[i]-b[i];diffSq+=q*q;n++;}
+    const diffRms=Math.sqrt(diffSq/Math.max(1,n)), dryRms=rms(a,start,end), formRms=rms(b,start,end);
+    result.offlineFormant={dryRms,formantRms:formRms,differenceRms:diffRms,pass:dryRms>0.002 && formRms>0.002 && diffRms>0.0002};
+    if(!result.offlineFormant.pass) throw new Error('offline LPC formant A/B produced no meaningful difference');
+
+    result.pass=result.live.pass&&result.offlinePitch.pass&&result.offlineFormant.pass;
+  }catch(e){fail(e);}
+  const prefix=result.pass?'QA_PASS::':'QA_FAIL::';
+  out.textContent=prefix+JSON.stringify(result);
+  document.title=result.pass?'NOVA V1400 DSP QA PASS':'NOVA V1400 DSP QA FAIL';
+})();
+</script></body></html>

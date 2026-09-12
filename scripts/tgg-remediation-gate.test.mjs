@@ -18,6 +18,7 @@ function item(status = 'OPEN') {
     affected_routes: ['/p/messages.html'],
     repair_action: 'Scope global widgets away from application pages.',
     acceptance_test: 'Application route renders once without homepage leakage.',
+    repair_asset: status === 'READY' ? 'patches/v5670/blogger-shell-isolation.js' : '',
     patch_ref: status === 'FIXED' ? 'commit://abc123' : '',
     test_ref: status === 'FIXED' ? 'run://browser/123' : '',
     verified_at: status === 'FIXED' ? '2026-09-12T21:00:00Z' : '',
@@ -59,6 +60,14 @@ test('fixed work still requires human approval', () => {
   const result = evaluateRemediationGate(manifest('FIXED'));
   assert.equal(result.decision, 'HOLD');
   assert.equal(result.human_approval_valid, false);
+});
+
+test('ready work requires a concrete repair asset', () => {
+  const input = manifest('READY');
+  input.work_items[0].repair_asset = '';
+  const result = evaluateRemediationGate(input);
+  assert.equal(result.decision, 'HOLD');
+  assert.match(result.reasons.join(' '), /READY requires repair_asset/);
 });
 
 test('approval is invalidated when remediation evidence changes', () => {

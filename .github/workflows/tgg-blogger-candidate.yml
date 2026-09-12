@@ -1,0 +1,22 @@
+name: TGG Blogger Candidate Builder
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/tgg-blogger-candidate.mjs'
+      - 'scripts/tgg-blogger-candidate.test.mjs'
+      - 'integration/v5680-integration-readiness.json'
+      - 'docs/V5680_INTEGRATION_READINESS.md'
+      - '.github/workflows/tgg-blogger-candidate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-builder:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test hash-locked candidate builder
+        run: node --test scripts/tgg-blogger-candidate.test.mjs

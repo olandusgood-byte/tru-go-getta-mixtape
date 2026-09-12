@@ -52,6 +52,13 @@
       "executed_at": "2026-09-12T20:10:29Z",
       "evidence_ref": "browser://trugogettamixtapes.blogspot.com/p/artist-dashboard_0633467215.html",
       "notes": "Unauthenticated shell check rendered Blogger post chrome plus duplicated homepage sections below Artist HQ. It displayed permission denied for artists and logged missing Supabase settings, a null oninput target, duplicate GoTrue clients, and the CDATA parse error. This does not satisfy the authenticated Creator Profile requirement."
+    },
+    {
+      "id": "authenticated_evidence_session",
+      "status": "UNVERIFIED",
+      "executed_at": "2026-09-12T20:14:02Z",
+      "evidence_ref": "browser://trugogettamixtapes.blogspot.com/p/login.html",
+      "notes": "Secure sign-in reached Supabase but returned Invalid login credentials. No credential values were inspected or recorded, no retry was attempted, and no authenticated requirement was marked executed."
     }
   ]
 }

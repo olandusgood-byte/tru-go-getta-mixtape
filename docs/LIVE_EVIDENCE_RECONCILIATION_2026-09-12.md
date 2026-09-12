@@ -32,6 +32,9 @@ labels are not backed by the required validation records.
   multiple auth clients sharing one storage key, and the CDATA parse failure.
   The session was unauthenticated, so this is a shell-integrity FAIL and does
   not count as authenticated Creator Profile evidence.
+- A secure sign-in attempt reached the configured Supabase project but returned
+  `Invalid login credentials`. No retry was attempted and all authenticated
+  requirements remain UNVERIFIED.
 
 ## Reconciliation rule
 

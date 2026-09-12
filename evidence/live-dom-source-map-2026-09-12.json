@@ -1,0 +1,43 @@
+{
+  "schema": "tgg-live-dom-source-map-v1",
+  "captured_at": "2026-09-12T20:48:00Z",
+  "authenticated": false,
+  "production_writes": false,
+  "findings": [
+    {
+      "id": "homepage_widget_leak",
+      "route": "/p/command-center.html",
+      "selector": "#HTML6.widget.HTML",
+      "ancestor": "#main.main.section",
+      "evidence": "The widget contains the homepage hero, features, release sections, and legacy player on a custom application page."
+    },
+    {
+      "id": "duplicate_player_ids",
+      "route": "/p/command-center.html",
+      "ids": ["tggAudio", "tggNowPlaying", "tggClosePlayer"],
+      "count_per_id": 2,
+      "evidence": "One player is owned by #tgg-live-player and another by .tgg-player-inner."
+    },
+    {
+      "id": "homepage_direct_join",
+      "route": "/p/creator-store.html",
+      "widget": "HTML6",
+      "signature": "db.from('mixtapes').select(...artists(...),tracks(...))",
+      "evidence": "The shared homepage loader still joins artists directly from the anonymous browser client."
+    },
+    {
+      "id": "creator_store_boundary_corruption",
+      "route": "/p/creator-store.html",
+      "post_body_id": "post-body-5314838052015597889",
+      "signature": "<div class=\"shopprice\">var r=await db.rpc('tgg_creator_store_bundle')",
+      "evidence": "The public product template loses its price expression and closing markup before the creator loader begins."
+    },
+    {
+      "id": "static_online_labels",
+      "route": "/p/command-center.html",
+      "selector": ".tgg-system strong.tgg-green",
+      "count": 8,
+      "evidence": "Eight modules display ONLINE while protected readiness RPCs on the same page return permission denied."
+    }
+  ]
+}

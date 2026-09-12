@@ -1,0 +1,64 @@
+{
+  "schema": "tgg-production-evidence-input-v1",
+  "captured_at": "2026-09-12T20:03:16Z",
+  "requirements": [
+    "command_center_runtime",
+    "creator_profile_runtime",
+    "expansion_runtime",
+    "growth_runtime",
+    "messenger_runtime",
+    "music_library_runtime",
+    "notifications_runtime",
+    "protected_audio_runtime",
+    "release_pro_runtime",
+    "session_recovery_runtime",
+    "supporters_runtime"
+  ],
+  "evidence": [
+    {"id":"command_center_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Matrix says passed, but no validation event or durable evidence reference exists."},
+    {"id":"creator_profile_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Matrix says passed, but no validation event or durable evidence reference exists."},
+    {"id":"expansion_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Matrix says passed, but no validation event or durable evidence reference exists."},
+    {"id":"growth_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Matrix says passed, but no validation event or durable evidence reference exists."},
+    {"id":"messenger_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Matrix says passed, but no validation event or durable evidence reference exists."},
+    {"id":"music_library_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Matrix says passed, but no validation event or durable evidence reference exists."},
+    {"id":"notifications_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Matrix says passed, but no validation event or durable evidence reference exists."},
+    {"id":"protected_audio_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Live matrix remains pending and browser_verified=false."},
+    {"id":"release_pro_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Matrix says passed, but no validation event or durable evidence reference exists."},
+    {"id":"session_recovery_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Matrix says passed, but no validation event or durable evidence reference exists."},
+    {"id":"supporters_runtime","status":"UNVERIFIED","executed_at":"","evidence_ref":"","notes":"Matrix says passed, but no validation event or durable evidence reference exists."}
+  ],
+  "controls": {
+    "fail_closed": true,
+    "destructive_actions": false,
+    "auto_remediation": false
+  },
+  "human_approval": {
+    "decision": "HOLD",
+    "approved_by": "",
+    "approved_at": "",
+    "evidence_sha256": ""
+  },
+  "observations": [
+    {
+      "id": "public_homepage_release_loading",
+      "status": "FAIL",
+      "executed_at": "2026-09-12T20:03:16Z",
+      "evidence_ref": "browser://trugogettamixtapes.blogspot.com/",
+      "notes": "After load completion, the live page displayed 'Unable to load releases.' The exact release query returned HTTP 401 / PostgreSQL 42501 because anon lacks SELECT on artists. A separate protected-audio script failed parsing because it begins with raw <![CDATA[. The existing public discovery RPC returned HTTP 200 with 2 releases, confirming a safe read contract already exists."
+    },
+    {
+      "id": "artist_hq_shell_integrity",
+      "status": "FAIL",
+      "executed_at": "2026-09-12T20:10:29Z",
+      "evidence_ref": "browser://trugogettamixtapes.blogspot.com/p/artist-dashboard_0633467215.html",
+      "notes": "Unauthenticated shell check rendered Blogger post chrome plus duplicated homepage sections below Artist HQ. It displayed permission denied for artists and logged missing Supabase settings, a null oninput target, duplicate GoTrue clients, and the CDATA parse error. This does not satisfy the authenticated Creator Profile requirement."
+    },
+    {
+      "id": "authenticated_evidence_session",
+      "status": "UNVERIFIED",
+      "executed_at": "2026-09-12T20:14:02Z",
+      "evidence_ref": "browser://trugogettamixtapes.blogspot.com/p/login.html",
+      "notes": "Secure sign-in reached Supabase but returned Invalid login credentials. No credential values were inspected or recorded, no retry was attempted, and no authenticated requirement was marked executed."
+    }
+  ]
+}

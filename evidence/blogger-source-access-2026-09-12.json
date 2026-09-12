@@ -1,0 +1,15 @@
+{
+  "schema": "tgg-blogger-source-access-v1",
+  "captured_at": "2026-09-12T21:05:00Z",
+  "target": "https://www.blogger.com/",
+  "redirected_to": "https://www.blogger.com/about/?bpli=1",
+  "authenticated": false,
+  "canonical_theme_exported": false,
+  "source_substitution_performed": false,
+  "production_writes": false,
+  "notes": [
+    "The existing browser session displayed Blogger's public landing page with a SIGN IN action.",
+    "No sign-in retry, dashboard action, backup, download, upload, theme edit, or publish action was attempted.",
+    "Rendered production HTML is evidence only and is not treated as canonical Blogger XML source."
+  ]
+}

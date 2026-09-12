@@ -1,0 +1,172 @@
+{
+  "schema": "tgg-public-shell-evidence-v1",
+  "captured_at": "2026-09-12T20:27:09Z",
+  "authenticated": false,
+  "results": [
+    {
+      "id": "messages_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/messages.html",
+      "observed": [
+        "Protected communications RPC was invoked before authentication and displayed permission denied.",
+        "Blogger post chrome and homepage sections were duplicated beneath the Messages app."
+      ]
+    },
+    {
+      "id": "music_hub_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/music-hub.html",
+      "observed": [
+        "Distribution, smart-link, and release-option RPC calls displayed permission denied before authentication.",
+        "Blogger post chrome and homepage sections were duplicated beneath Music Hub."
+      ]
+    },
+    {
+      "id": "notifications_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/notifications.html",
+      "observed": [
+        "The page remained on Loading Notifications after the observation window.",
+        "Blogger post chrome and homepage sections were duplicated beneath Notifications."
+      ]
+    },
+    {
+      "id": "backstage_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/backstage.html",
+      "observed": [
+        "Collaboration and Fan CRM RPC calls displayed permission denied before authentication.",
+        "Blogger post chrome and homepage sections were duplicated beneath Backstage."
+      ]
+    },
+    {
+      "id": "create_hub_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/create-hub.html",
+      "observed": [
+        "The social bundle RPC displayed permission denied before authentication.",
+        "The page title was duplicated and Blogger post chrome plus homepage sections leaked beneath Create Hub."
+      ]
+    },
+    {
+      "id": "recording_studio_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/recording-studio.html",
+      "observed": [
+        "The cloud-recording bundle RPC displayed permission denied before authentication.",
+        "The page title and global shell were duplicated, and numeric HTML entities rendered as literal text."
+      ]
+    },
+    {
+      "id": "beat_studio_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/beat-studio.html",
+      "observed": [
+        "The beatmaker bundle RPC displayed permission denied before authentication.",
+        "Blogger post chrome and homepage sections were duplicated beneath Beat Studio."
+      ]
+    },
+    {
+      "id": "video_studio_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/video-studio.html",
+      "observed": [
+        "A protected creator RPC displayed permission denied before authentication.",
+        "The page title was duplicated and Blogger post chrome plus homepage sections leaked beneath Video Studio."
+      ]
+    },
+    {
+      "id": "vault_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/vault.html",
+      "observed": [
+        "The supporters bundle RPC displayed permission denied before authentication.",
+        "Membership and Stripe-readiness controls appeared inside the duplicated Blogger/homepage shell."
+      ]
+    },
+    {
+      "id": "career_os_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/career-os.html",
+      "observed": [
+        "The career bundle RPC displayed permission denied before authentication.",
+        "Blogger post chrome and homepage sections were duplicated beneath Career OS."
+      ]
+    },
+    {
+      "id": "tgg_world_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/tgg-world.html",
+      "observed": [
+        "The intended app body was effectively absent in the unauthenticated execution.",
+        "Blogger post chrome and the failing homepage shell rendered in its place."
+      ]
+    },
+    {
+      "id": "games_tv_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/games-tv.html",
+      "observed": [
+        "The route rendered its empty-state UI inside Blogger post chrome.",
+        "The broken homepage shell was duplicated below it and displayed the global artists permission failure."
+      ]
+    },
+    {
+      "id": "creator_store_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/creator-store.html",
+      "observed": [
+        "Executable JavaScript source rendered visibly in the product-management area.",
+        "Blogger post chrome and the failing homepage shell were duplicated beneath Creator Store."
+      ]
+    },
+    {
+      "id": "upload_mixtape_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/upload-mixtape.html",
+      "observed": [
+        "The upload bootstrap RPC displayed permission denied before authentication.",
+        "Blogger post chrome and homepage sections were duplicated beneath Upload Mixtape."
+      ]
+    },
+    {
+      "id": "artist_world_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/artist-world.html",
+      "observed": [
+        "The world client rendered literal numeric HTML entities and claimed a 9/10 completion state without authenticated evidence.",
+        "Blogger post chrome and the failing homepage shell were duplicated beneath Artist World."
+      ]
+    },
+    {
+      "id": "command_center_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/command-center.html",
+      "observed": [
+        "Launch readiness, infrastructure, and creator-phone RPCs displayed permission denied before authentication.",
+        "The page labeled multiple modules ONLINE despite the observable permission failures and duplicated broken homepage shell."
+      ]
+    },
+    {
+      "id": "creator_os_unauthenticated_route",
+      "status": "UNVERIFIED",
+      "url": "https://xsofowzvwetamhyuvlpj.supabase.co/functions/v1/tgg-creator-os-app-v17?app=1",
+      "observed": [
+        "The unauthenticated route redirected to Artist HQ.",
+        "The redirect target rendered the known mixed shell and runtime errors.",
+        "This redirect does not satisfy any authenticated Creator OS requirement."
+      ]
+    }
+  ],
+  "summary": {
+    "pass": 0,
+    "fail": 16,
+    "unverified": 1,
+    "authenticated_requirement_credit": 0
+  },
+  "controls": {
+    "production_writes": false,
+    "destructive_actions": false,
+    "auto_remediation": false
+  }
+}

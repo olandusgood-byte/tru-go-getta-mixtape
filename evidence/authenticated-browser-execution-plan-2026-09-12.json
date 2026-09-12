@@ -1,0 +1,25 @@
+{
+  "schema": "tgg-authenticated-browser-execution-plan-v1",
+  "created_at": "2026-09-12T20:14:02Z",
+  "authentication_state": "BLOCKED_INVALID_CREDENTIALS",
+  "evidence_rule": "Do not mark PASS without an authenticated execution timestamp, observed pass criteria, and durable evidence reference.",
+  "requirements": [
+    {"id":"command_center_runtime","target":"/p/command-center.html","route_state":"registry_inactive_verify_current_creator_os_target","steps":["Authenticate","Open Command Center","Load dashboard data","Verify controls respond"],"pass_criteria":["Authenticated view loads","Expected data renders","No blocking runtime error"]},
+    {"id":"creator_profile_runtime","target":"creator_profile_workspace","route_state":"resolve_after_authentication","steps":["Authenticate","Open creator profile","Load profile data","Verify profile actions"],"pass_criteria":["Profile renders","Owner data is correct","Actions respond"]},
+    {"id":"expansion_runtime","target":"https://xsofowzvwetamhyuvlpj.supabase.co/functions/v1/tgg-creator-os-app-v17?app=1#expansion","route_state":"active_registry_route","steps":["Authenticate","Open expansion","Load modules","Verify navigation"],"pass_criteria":["Modules render","Navigation works","No blocking runtime error"]},
+    {"id":"growth_runtime","target":"https://xsofowzvwetamhyuvlpj.supabase.co/functions/v1/tgg-creator-os-app-v17?app=1#growth","route_state":"active_registry_route","steps":["Authenticate","Open Growth","Load analytics","Verify actions"],"pass_criteria":["Analytics render","Controls respond","No blocking runtime error"]},
+    {"id":"messenger_runtime","target":"/p/messages.html","route_state":"active_registry_route","steps":["Authenticate","Open Messenger","Load conversations","Verify message controls"],"pass_criteria":["Conversations load","Controls respond","No blocking runtime error"]},
+    {"id":"music_library_runtime","target":"/p/music-hub.html","route_state":"active_registry_route","steps":["Authenticate","Open Music Library","Load library","Verify playback controls"],"pass_criteria":["Library renders","Expected items load","Controls respond"]},
+    {"id":"notifications_runtime","target":"/p/notifications.html","route_state":"active_registry_route","steps":["Authenticate","Open Notifications","Load activity","Verify navigation"],"pass_criteria":["Notifications render","Unread state behaves","No blocking runtime error"]},
+    {"id":"protected_audio_runtime","target":"authorized_published_release","route_state":"resolve_after_authentication","steps":["Authenticate","Open permitted audio","Request playback","Verify protected access"],"pass_criteria":["Authorized playback works","No public audio URL exposed","Unauthorized path is denied"]},
+    {"id":"release_pro_runtime","target":"release_pro_workspace","route_state":"registry_route_inactive_resolve_after_authentication","steps":["Authenticate","Open Release Pro","Load release workflow","Verify submit/status controls"],"pass_criteria":["Workflow renders","Status is accurate","Controls respond"]},
+    {"id":"session_recovery_runtime","target":"authenticated_creator_os_route","route_state":"resolve_after_authentication","steps":["Authenticate","Refresh/recover session","Return to protected page","Verify session state"],"pass_criteria":["Session persists or recovers","Protected route remains authorized","No auth loop"]},
+    {"id":"supporters_runtime","target":"/p/backstage.html","route_state":"active_registry_route","steps":["Authenticate","Open Supporters","Load supporter data","Verify controls"],"pass_criteria":["Supporter view renders","Data access is authorized","Controls respond"]}
+  ],
+  "controls": {
+    "fail_closed": true,
+    "destructive_actions": false,
+    "auto_remediation": false,
+    "credential_values_recorded": false
+  }
+}

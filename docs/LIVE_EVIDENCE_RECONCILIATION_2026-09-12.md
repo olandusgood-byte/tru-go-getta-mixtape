@@ -35,11 +35,21 @@ labels are not backed by the required validation records.
 - A secure sign-in attempt reached the configured Supabase project but returned
   `Invalid login credentials`. No retry was attempted and all authenticated
   requirements remain UNVERIFIED.
-- A five-route unauthenticated shell pass produced 0 PASS, 4 FAIL, and 1
-  UNVERIFIED: Messages, Music Hub, Notifications, and Backstage all failed
-  shell isolation or error-handling checks; the canonical Creator OS route
-  redirected to the already-failing Artist HQ shell and therefore remains
-  unverified. None of these results receives authenticated requirement credit.
+- The expanded unauthenticated shell pass now covers 17 executions and produced
+  0 PASS, 16 FAIL, and 1 UNVERIFIED. Messages, Music Hub, Notifications,
+  Backstage, Create Hub, Recording Studio, Beat Studio, Video Studio, Vault,
+  Career OS, TGG World, Games + TV, Creator Store, Upload Mixtape, Artist World,
+  and Command Center failed shell isolation, authentication gating, rendering,
+  or error-handling checks. The canonical Creator OS route redirected to the
+  already-failing Artist HQ shell and therefore remains unverified. None of
+  these results receives authenticated requirement credit.
+- The dominant cross-route defect is page isolation: Blogger post controls and
+  the failing homepage are appended beneath custom applications. Protected RPCs
+  are also commonly invoked before an authenticated session is established.
+- Route-specific defects include visible JavaScript source in Creator Store,
+  literal numeric HTML entities in Recording Studio and Artist World, a missing
+  TGG World app body, and optimistic ONLINE/completion labels in Command Center
+  and Artist World that are not supported by runtime evidence.
 
 ## Reconciliation rule
 
@@ -55,7 +65,10 @@ Update the Blogger homepage loader to call
 public fields instead of joining `mixtapes`, `artists`, and `tracks` directly.
 Correct the protected-audio wrapper to `//<![CDATA[` / `//]]>`. These changes
 must go through the existing human-controlled Blogger deployment path because
-auto-remediation remains disabled.
+auto-remediation remains disabled. In the same controlled patch, scope the
+homepage and Blogger post widgets away from custom app pages, delay protected
+RPC calls until authentication is confirmed, and correct the malformed
+Creator Store and numeric-entity rendering paths.
 
 No database writes, production changes, destructive actions, or automated
 remediation were performed during this reconciliation.

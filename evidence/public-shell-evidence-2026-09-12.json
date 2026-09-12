@@ -1,0 +1,64 @@
+{
+  "schema": "tgg-public-shell-evidence-v1",
+  "captured_at": "2026-09-12T20:20:36Z",
+  "authenticated": false,
+  "results": [
+    {
+      "id": "messages_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/messages.html",
+      "observed": [
+        "Protected communications RPC was invoked before authentication and displayed permission denied.",
+        "Blogger post chrome and homepage sections were duplicated beneath the Messages app."
+      ]
+    },
+    {
+      "id": "music_hub_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/music-hub.html",
+      "observed": [
+        "Distribution, smart-link, and release-option RPC calls displayed permission denied before authentication.",
+        "Blogger post chrome and homepage sections were duplicated beneath Music Hub."
+      ]
+    },
+    {
+      "id": "notifications_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/notifications.html",
+      "observed": [
+        "The page remained on Loading Notifications after the observation window.",
+        "Blogger post chrome and homepage sections were duplicated beneath Notifications."
+      ]
+    },
+    {
+      "id": "backstage_public_shell",
+      "status": "FAIL",
+      "url": "https://trugogettamixtapes.blogspot.com/p/backstage.html",
+      "observed": [
+        "Collaboration and Fan CRM RPC calls displayed permission denied before authentication.",
+        "Blogger post chrome and homepage sections were duplicated beneath Backstage."
+      ]
+    },
+    {
+      "id": "creator_os_unauthenticated_route",
+      "status": "UNVERIFIED",
+      "url": "https://xsofowzvwetamhyuvlpj.supabase.co/functions/v1/tgg-creator-os-app-v17?app=1",
+      "observed": [
+        "The unauthenticated route redirected to Artist HQ.",
+        "The redirect target rendered the known mixed shell and runtime errors.",
+        "This redirect does not satisfy any authenticated Creator OS requirement."
+      ]
+    }
+  ],
+  "summary": {
+    "pass": 0,
+    "fail": 4,
+    "unverified": 1,
+    "authenticated_requirement_credit": 0
+  },
+  "controls": {
+    "production_writes": false,
+    "destructive_actions": false,
+    "auto_remediation": false
+  }
+}

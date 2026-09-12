@@ -7,11 +7,12 @@
     {
       "id": "shell_isolation",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "READY",
       "evidence_refs": ["evidence://public-shell/2026-09-12#all-custom-pages"],
       "affected_routes": ["/p/messages.html", "/p/music-hub.html", "/p/notifications.html", "/p/backstage.html", "/p/create-hub.html", "/p/recording-studio.html", "/p/beat-studio.html", "/p/video-studio.html", "/p/vault.html", "/p/career-os.html", "/p/tgg-world.html", "/p/games-tv.html", "/p/creator-store.html", "/p/upload-mixtape.html", "/p/artist-world.html", "/p/command-center.html"],
       "repair_action": "Scope Blogger post chrome, homepage release widgets, and legacy player sections away from custom application pages.",
       "acceptance_test": "Each custom application renders exactly one application shell and no homepage or Blogger post chrome beneath it.",
+      "repair_asset": "patches/v5670/blogger-shell-isolation.js",
       "patch_ref": "",
       "test_ref": "",
       "verified_at": ""
@@ -19,11 +20,12 @@
     {
       "id": "authentication_first_rpc_gate",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "READY",
       "evidence_refs": ["evidence://public-shell/2026-09-12#protected-rpc-permissions"],
       "affected_routes": ["/p/messages.html", "/p/music-hub.html", "/p/backstage.html", "/p/create-hub.html", "/p/recording-studio.html", "/p/beat-studio.html", "/p/video-studio.html", "/p/vault.html", "/p/career-os.html", "/p/upload-mixtape.html", "/p/command-center.html"],
       "repair_action": "Resolve the auth session before protected RPC calls and render a stable sign-in state when no authenticated session exists.",
       "acceptance_test": "An anonymous browser run makes zero protected creator RPC calls and displays no database permission error.",
+      "repair_asset": "patches/v5670/auth-first-rpc-gate.js",
       "patch_ref": "",
       "test_ref": "",
       "verified_at": ""
@@ -36,6 +38,7 @@
       "affected_routes": ["/", "/p/homepage.html"],
       "repair_action": "Replace the anonymous direct artists join with the existing tgg_public_discovery_growth_feed RPC and map its public fields.",
       "acceptance_test": "The homepage returns release cards without an artists permission error and without granting anonymous table-wide SELECT.",
+      "repair_asset": "patches/v5670/homepage-discovery-adapter.js",
       "patch_ref": "",
       "test_ref": "",
       "verified_at": ""
@@ -43,11 +46,12 @@
     {
       "id": "creator_store_script_integrity",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "READY",
       "evidence_refs": ["evidence://public-shell/2026-09-12#creator_store_public_shell"],
       "affected_routes": ["/p/creator-store.html"],
       "repair_action": "Repair the malformed script or markup boundary that exposes JavaScript source in the rendered product list.",
       "acceptance_test": "No executable source text is visible and the store initialization completes without a parser error.",
+      "repair_asset": "patches/v5670/creator-store-loader-repair.js",
       "patch_ref": "",
       "test_ref": "",
       "verified_at": ""
@@ -55,11 +59,12 @@
     {
       "id": "xml_script_and_entity_integrity",
       "priority": "P1",
-      "status": "OPEN",
+      "status": "READY",
       "evidence_refs": ["docs://live-evidence-reconciliation/2026-09-12#protected-audio", "evidence://public-shell/2026-09-12#entity-rendering"],
       "affected_routes": ["/p/recording-studio.html", "/p/artist-world.html", "protected-audio-runtime"],
       "repair_action": "Use JavaScript-safe CDATA wrappers and convert literal numeric entities to valid characters or DOM text.",
       "acceptance_test": "Scripts parse successfully and the browser renders symbols instead of numeric entity source text.",
+      "repair_asset": "scripts/tgg-predeploy-lint.mjs",
       "patch_ref": "",
       "test_ref": "",
       "verified_at": ""
@@ -67,11 +72,12 @@
     {
       "id": "truthful_runtime_status",
       "priority": "P1",
-      "status": "OPEN",
+      "status": "READY",
       "evidence_refs": ["evidence://public-shell/2026-09-12#command_center_public_shell", "evidence://public-shell/2026-09-12#artist_world_public_shell"],
       "affected_routes": ["/p/command-center.html", "/p/artist-world.html"],
       "repair_action": "Derive ONLINE and completion labels from verified runtime evidence instead of static optimistic copy.",
       "acceptance_test": "Missing or failed runtime evidence displays HOLD or UNVERIFIED; ONLINE appears only after a verified successful check.",
+      "repair_asset": "patches/v5670/truthful-runtime-status.js",
       "patch_ref": "",
       "test_ref": "",
       "verified_at": ""

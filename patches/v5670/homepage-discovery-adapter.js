@@ -10,6 +10,13 @@
     }
 
     var tracks = Array.isArray(row && row.tracks) ? row.tracks : [];
+    if (!tracks.length && row && row.first_track_id) {
+      tracks = [{
+        id: row.first_track_id,
+        title: row.first_track_title || 'Track 1',
+        track_number: 1
+      }];
+    }
     return {
       id: row && (row.id || row.mixtape_id || row.release_id),
       title: row && (row.title || row.release_title) || 'Untitled Release',
@@ -32,20 +39,33 @@
     if (result.error) throw result.error;
 
     var payload = result.data;
-    var rows = Array.isArray(payload)
-      ? payload
-      : payload && Array.isArray(payload.releases)
-        ? payload.releases
-        : [];
+    if (!payload || payload.ok !== true || !Array.isArray(payload.items)) {
+      throw new Error('Unexpected tgg_public_discovery_growth_feed response contract.');
+    }
+    var rows = payload.items;
     return rows.map(normalizeRelease).filter(function hasId(item) { return Boolean(item.id); });
+  }
+
+  async function loadFeaturedReleases(db, limit) {
+    var result = await db.rpc('tgg_public_launch_mix', {
+      p_release_limit: Number.isFinite(limit) ? limit : 10
+    });
+    if (result.error) throw result.error;
+    var payload = result.data;
+    if (!payload || payload.ok !== true || !Array.isArray(payload.releases)) {
+      throw new Error('Unexpected tgg_public_launch_mix response contract.');
+    }
+    return payload.releases
+      .filter(function featured(row) { return row.featured === true; })
+      .map(normalizeRelease)
+      .filter(function hasId(item) { return Boolean(item.id); });
   }
 
   async function queryPublicReleases(db, limit, query, options) {
     try {
-      var rows = await loadPublicReleases(db, limit, query);
-      if (options && options.featuredOnly) {
-        rows = rows.filter(function featured(item) { return item.featured === true; });
-      }
+      var rows = options && options.featuredOnly
+        ? await loadFeaturedReleases(db, limit)
+        : await loadPublicReleases(db, limit, query);
       return { data: rows, error: null };
     } catch (error) {
       return { data: null, error: error };
@@ -54,6 +74,7 @@
 
   window.TGGPublicDiscovery = Object.freeze({
     loadPublicReleases: loadPublicReleases,
+    loadFeaturedReleases: loadFeaturedReleases,
     queryPublicReleases: queryPublicReleases,
     normalizeRelease: normalizeRelease
   });

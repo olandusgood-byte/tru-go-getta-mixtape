@@ -44,7 +44,7 @@
       "status": "FAIL",
       "executed_at": "2026-09-12T20:03:16Z",
       "evidence_ref": "browser://trugogettamixtapes.blogspot.com/",
-      "notes": "After load completion, the live page displayed 'Unable to load releases.' and logged SyntaxError: Unexpected token '<'."
+      "notes": "After load completion, the live page displayed 'Unable to load releases.' The exact release query returned HTTP 401 / PostgreSQL 42501 because anon lacks SELECT on artists. A separate protected-audio script failed parsing because it begins with raw <![CDATA[. The existing public discovery RPC returned HTTP 200 with 2 releases, confirming a safe read contract already exists."
     }
   ]
 }

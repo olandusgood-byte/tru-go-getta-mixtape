@@ -40,8 +40,21 @@
     return rows.map(normalizeRelease).filter(function hasId(item) { return Boolean(item.id); });
   }
 
+  async function queryPublicReleases(db, limit, query, options) {
+    try {
+      var rows = await loadPublicReleases(db, limit, query);
+      if (options && options.featuredOnly) {
+        rows = rows.filter(function featured(item) { return item.featured === true; });
+      }
+      return { data: rows, error: null };
+    } catch (error) {
+      return { data: null, error: error };
+    }
+  }
+
   window.TGGPublicDiscovery = Object.freeze({
     loadPublicReleases: loadPublicReleases,
+    queryPublicReleases: queryPublicReleases,
     normalizeRelease: normalizeRelease
   });
 })();

@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
-export const REQUIRED_EVIDENCE_COUNT = 10;
 const STATUS = new Set(['PASS', 'FAIL', 'UNVERIFIED']);
 const PLACEHOLDER = /^(?:n\/?a|none|null|todo|tbd|pending|unknown|example|test)$/i;
 
@@ -27,20 +26,35 @@ function stableEvidence(items) {
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export function evidenceHash(items) {
-  return createHash('sha256').update(JSON.stringify(stableEvidence(items))).digest('hex');
+export function evidenceHash(items, requirements = [], controls = {}) {
+  const payload = {
+    requirements: [...requirements].map(clean).sort(),
+    evidence: stableEvidence(items),
+    controls: {
+      fail_closed: controls.fail_closed === true,
+      destructive_actions: controls.destructive_actions === true,
+      auto_remediation: controls.auto_remediation === true,
+    },
+  };
+  return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
 }
 
 export function evaluateEvidenceGate(input) {
   const reasons = [];
   const items = Array.isArray(input?.evidence) ? input.evidence : [];
+  const requirements = Array.isArray(input?.requirements) ? input.requirements.map(clean) : [];
   const controls = input?.controls && typeof input.controls === 'object' ? input.controls : {};
   const approval = input?.human_approval && typeof input.human_approval === 'object'
     ? input.human_approval
     : {};
 
-  if (items.length !== REQUIRED_EVIDENCE_COUNT) {
-    reasons.push(`Expected exactly ${REQUIRED_EVIDENCE_COUNT} evidence records; received ${items.length}.`);
+  const requirementSet = new Set(requirements);
+  if (!requirements.length) reasons.push('An explicit requirements manifest is required.');
+  if (requirementSet.size !== requirements.length || requirements.some((id) => !id)) {
+    reasons.push('Requirement ids must be non-empty and unique.');
+  }
+  if (items.length !== requirements.length) {
+    reasons.push(`Expected ${requirements.length} evidence records; received ${items.length}.`);
   }
 
   const ids = new Set();
@@ -52,6 +66,7 @@ export function evaluateEvidenceGate(input) {
 
     if (!id) reasons.push(`Evidence record ${index + 1} is missing an id.`);
     if (ids.has(id)) reasons.push(`${prefix}: duplicate evidence id.`);
+    if (!requirementSet.has(id)) reasons.push(`${prefix}: id is not present in the requirements manifest.`);
     ids.add(id);
     if (!STATUS.has(status)) reasons.push(`${prefix}: status must be PASS, FAIL, or UNVERIFIED.`);
 
@@ -65,19 +80,24 @@ export function evaluateEvidenceGate(input) {
     }
   }
 
+  for (const id of requirements) {
+    if (!ids.has(id)) reasons.push(`${id}: required evidence record is missing.`);
+  }
+
   if (controls.fail_closed !== true) reasons.push('controls.fail_closed must remain true.');
   if (controls.destructive_actions !== false) reasons.push('controls.destructive_actions must remain false.');
   if (controls.auto_remediation !== false) reasons.push('controls.auto_remediation must remain false.');
 
-  const hash = evidenceHash(items);
-  const allPassed = items.length === REQUIRED_EVIDENCE_COUNT
+  const hash = evidenceHash(items, requirements, controls);
+  const allPassed = requirements.length > 0
+    && items.length === requirements.length
     && items.every((item) => clean(item?.status).toUpperCase() === 'PASS');
   const approvalValid = clean(approval.decision).toUpperCase() === 'GO'
     && Boolean(clean(approval.approved_by))
     && validDate(approval.approved_at)
     && clean(approval.evidence_sha256) === hash;
 
-  if (!allPassed) reasons.push('All 10 production evidence requirements must be PASS.');
+  if (!allPassed) reasons.push('Every declared production evidence requirement must be PASS.');
   if (!approvalValid) reasons.push('A human GO approval bound to the current evidence SHA-256 is required.');
 
   const counts = { PASS: 0, FAIL: 0, UNVERIFIED: 0, INVALID: 0 };
@@ -91,6 +111,7 @@ export function evaluateEvidenceGate(input) {
     schema: 'tgg-production-evidence-decision-v1',
     evaluated_at: new Date().toISOString(),
     decision: reasons.length === 0 ? 'GO' : 'HOLD',
+    requirement_count: requirements.length,
     evidence_sha256: hash,
     evidence_counts: counts,
     human_approval_valid: approvalValid,

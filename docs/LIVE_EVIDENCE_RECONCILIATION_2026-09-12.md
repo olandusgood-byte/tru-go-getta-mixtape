@@ -35,6 +35,11 @@ labels are not backed by the required validation records.
 - A secure sign-in attempt reached the configured Supabase project but returned
   `Invalid login credentials`. No retry was attempted and all authenticated
   requirements remain UNVERIFIED.
+- A five-route unauthenticated shell pass produced 0 PASS, 4 FAIL, and 1
+  UNVERIFIED: Messages, Music Hub, Notifications, and Backstage all failed
+  shell isolation or error-handling checks; the canonical Creator OS route
+  redirected to the already-failing Artist HQ shell and therefore remains
+  unverified. None of these results receives authenticated requirement credit.
 
 ## Reconciliation rule
 

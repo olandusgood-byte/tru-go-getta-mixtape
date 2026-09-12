@@ -18,8 +18,14 @@ labels are not backed by the required validation records.
 - Browser evidence integrity audit: 0/11 verified, 11 missing, status blocked.
 - Latest platform-readiness decision: blocked on browser QA evidence.
 - Production release gate has a release timestamp but no approver identity.
-- A fresh public homepage browser run ended with `Unable to load releases.` and
-  a JavaScript `SyntaxError: Unexpected token '<'`.
+- A fresh public homepage browser run ended with `Unable to load releases.`
+- The exact homepage query returned HTTP 401 / PostgreSQL 42501 because it joins
+  `artists`, while `anon` has no SELECT privilege on that table.
+- The current public discovery RPC returned HTTP 200 with two releases. This is
+  the safer existing homepage data contract; opening the whole `artists` table
+  to anonymous access is unnecessary.
+- The protected-audio script has a separate parse failure: it starts with raw
+  `<![CDATA[` instead of a JavaScript-safe CDATA wrapper.
 
 ## Reconciliation rule
 
@@ -27,6 +33,15 @@ The integrity audit and durable evidence ledgers outrank a mutable matrix status
 flag. Therefore all 11 authenticated-browser flows remain `UNVERIFIED` until an
 actual browser execution produces a timestamped result and durable reference.
 The separately observed homepage release-loading failure is recorded as FAIL.
+
+## Repair candidate — not executed
+
+Update the Blogger homepage loader to call
+`tgg_public_discovery_growth_feed(p_limit := 10, p_query := null)` and map its
+public fields instead of joining `mixtapes`, `artists`, and `tracks` directly.
+Correct the protected-audio wrapper to `//<![CDATA[` / `//]]>`. These changes
+must go through the existing human-controlled Blogger deployment path because
+auto-remediation remains disabled.
 
 No database writes, production changes, destructive actions, or automated
 remediation were performed during this reconciliation.

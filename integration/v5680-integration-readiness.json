@@ -1,0 +1,38 @@
+{
+  "schema": "tgg-integration-readiness-v1",
+  "version": "V5680",
+  "evaluated_at": "2026-09-12T21:05:00Z",
+  "decision": "HOLD",
+  "canonical_source": {
+    "available": false,
+    "repository_search": "NOT_FOUND",
+    "blogger_connector": "NOT_AVAILABLE",
+    "browser_session": "SIGNED_OUT",
+    "rendered_html_substitution_allowed": false
+  },
+  "candidate_builder": {
+    "path": "scripts/tgg-blogger-candidate.mjs",
+    "source_hash_required": true,
+    "source_overwrite_allowed": false,
+    "records_candidate_hash": true,
+    "runs_predeploy_lint": true,
+    "human_review_required": true
+  },
+  "required_modules": [
+    "patches/v5670/blogger-shell-isolation.js",
+    "patches/v5670/auth-first-rpc-gate.js",
+    "patches/v5670/homepage-discovery-adapter.js",
+    "patches/v5670/creator-store-loader-repair.js",
+    "patches/v5670/truthful-runtime-status.js"
+  ],
+  "blockers": [
+    "The canonical Blogger XML source and its SHA-256 are not available in the review workspace.",
+    "A generated candidate cannot be classified READY_FOR_HUMAN_REVIEW until it passes the predeployment lint rules."
+  ],
+  "controls": {
+    "production_writes": false,
+    "destructive_actions": false,
+    "auto_remediation": false,
+    "fail_closed": true
+  }
+}

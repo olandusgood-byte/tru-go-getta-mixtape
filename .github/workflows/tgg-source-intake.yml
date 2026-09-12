@@ -1,0 +1,78 @@
+name: TGG Canonical Source Intake
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'source/blogger/**'
+      - 'scripts/tgg-source-intake.mjs'
+      - 'scripts/tgg-source-intake.test.mjs'
+      - 'scripts/tgg_xml_wellformed.py'
+      - 'scripts/tgg_xml_wellformed_test.py'
+      - 'integration/v5690-source-intake-readiness.json'
+      - 'docs/V5690_CANONICAL_SOURCE_INTAKE.md'
+      - '.github/workflows/tgg-source-intake.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-intake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test source-intake contract
+        run: node --test scripts/tgg-source-intake.test.mjs
+
+      - name: Test XML validator
+        run: python3 -m unittest scripts/tgg_xml_wellformed_test.py
+
+      - name: Detect canonical source
+        id: source
+        shell: bash
+        run: |
+          if test -f source/blogger/TRU_GO_GETTA_CANONICAL.xml && \
+             test -f source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256; then
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo 'Canonical source not submitted; integration remains HOLD.'
+          fi
+
+      - name: Validate source identity
+        if: steps.source.outputs.available == 'true'
+        run: |
+          mkdir -p build
+          node scripts/tgg-source-intake.mjs \
+            source/blogger/TRU_GO_GETTA_CANONICAL.xml \
+            source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256 \
+            --manifest build/source-intake.json
+
+      - name: Validate XML structure
+        if: steps.source.outputs.available == 'true'
+        run: python3 scripts/tgg_xml_wellformed.py source/blogger/TRU_GO_GETTA_CANONICAL.xml
+
+      - name: Build separate review candidate
+        if: steps.source.outputs.available == 'true'
+        shell: bash
+        run: |
+          expected="$(cut -d ' ' -f 1 source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256)"
+          node scripts/tgg-blogger-candidate.mjs \
+            source/blogger/TRU_GO_GETTA_CANONICAL.xml \
+            build/TRU_GO_GETTA_CANDIDATE.xml \
+            --manifest build/candidate-manifest.json \
+            --expected-sha256 "$expected" \
+            --module patches/v5670/blogger-shell-isolation.js \
+            --module patches/v5670/auth-first-rpc-gate.js \
+            --module patches/v5670/homepage-discovery-adapter.js \
+            --module patches/v5670/creator-store-loader-repair.js \
+            --module patches/v5670/truthful-runtime-status.js
+
+      - name: Upload review artifacts
+        if: steps.source.outputs.available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tgg-blogger-review-candidate
+          path: build/
+          if-no-files-found: error

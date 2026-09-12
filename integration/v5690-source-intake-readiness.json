@@ -1,0 +1,26 @@
+{
+  "schema": "tgg-source-intake-readiness-v1",
+  "version": "V5690",
+  "decision": "HOLD",
+  "canonical_source_received": false,
+  "required_files": [
+    "source/blogger/TRU_GO_GETTA_CANONICAL.xml",
+    "source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256"
+  ],
+  "automated_checks": [
+    "companion filename and SHA-256 match",
+    "canonical size between 650000 and 2000000 bytes",
+    "required Blogger XML markers",
+    "no server-side secret patterns",
+    "well-formed XML without DTD or entity declarations",
+    "V5670 Blogger regression lint",
+    "V5680 separate-output candidate generation"
+  ],
+  "controls": {
+    "production_writes": false,
+    "source_overwrite": false,
+    "destructive_actions": false,
+    "auto_remediation": false,
+    "human_approval_required": true
+  }
+}

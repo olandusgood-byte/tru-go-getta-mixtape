@@ -26,6 +26,12 @@ labels are not backed by the required validation records.
   to anonymous access is unnecessary.
 - The protected-audio script has a separate parse failure: it starts with raw
   `<![CDATA[` instead of a JavaScript-safe CDATA wrapper.
+- A fresh Artist HQ shell check rendered Blogger post chrome and duplicated
+  homepage content beneath the dashboard. It also exposed missing Supabase
+  settings, repeated `artists` permission failures, a null `oninput` target,
+  multiple auth clients sharing one storage key, and the CDATA parse failure.
+  The session was unauthenticated, so this is a shell-integrity FAIL and does
+  not count as authenticated Creator Profile evidence.
 
 ## Reconciliation rule
 

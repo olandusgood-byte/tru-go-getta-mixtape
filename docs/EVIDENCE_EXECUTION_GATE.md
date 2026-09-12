@@ -6,7 +6,10 @@ failures. It is intentionally fail-closed.
 
 ## Input contract
 
-The input JSON must contain exactly 10 unique evidence records. Each record has:
+The input JSON must contain an explicit `requirements` array and one unique
+evidence record for every listed id. The evaluator does not hardcode a count;
+this prevents a stale 10-check summary from hiding the live 11th requirement.
+Each record has:
 
 - `id`: stable requirement identifier
 - `status`: `PASS`, `FAIL`, or `UNVERIFIED`
@@ -36,7 +39,7 @@ The process exits `0` only for `GO`; every `HOLD` or invalid input exits `2`.
 
 ## Human approval binding
 
-Even when all 10 checks pass, the decision remains `HOLD` until the release
+Even when every declared check passes, the decision remains `HOLD` until the release
 owner adds a human approval containing `decision: GO`, their identity, an
 approval timestamp, and the exact `evidence_sha256` emitted by the evaluator.
 Changing any evidence record changes the hash and invalidates the approval.

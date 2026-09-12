@@ -24,6 +24,7 @@ function stableItems(items) {
       affected_routes: Array.isArray(item.affected_routes) ? [...item.affected_routes].map(clean).sort() : [],
       repair_action: clean(item.repair_action),
       acceptance_test: clean(item.acceptance_test),
+      repair_asset: clean(item.repair_asset),
       patch_ref: clean(item.patch_ref),
       test_ref: clean(item.test_ref),
       verified_at: clean(item.verified_at),
@@ -75,6 +76,10 @@ export function evaluateRemediationGate(input) {
     if (!routes.length) reasons.push(`${prefix}: at least one affected route is required.`);
     if (!clean(item?.repair_action)) reasons.push(`${prefix}: repair_action is required.`);
     if (!clean(item?.acceptance_test)) reasons.push(`${prefix}: acceptance_test is required.`);
+
+    if (status === 'READY' && !clean(item?.repair_asset)) {
+      reasons.push(`${prefix}: READY requires repair_asset.`);
+    }
 
     if (status === 'FIXED') {
       if (!clean(item?.patch_ref)) reasons.push(`${prefix}: FIXED requires patch_ref.`);

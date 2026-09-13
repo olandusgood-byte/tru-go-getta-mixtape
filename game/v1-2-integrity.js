@@ -6,8 +6,9 @@
     const chains=window.TGGChains?.chains||[];
     const districts=window.TGGDistricts?.districts||[];
     const result={missing,apis:missing.length===0,saveValid:!!save.valid,chains:chains.length>=2,districts:districts.length>=3,passed:missing.length===0&&!!save.valid&&chains.length>=2&&districts.length>=3};
-    window.TGGV12Integrity=result;
+    window.TGGV12IntegrityResult=result;
     return result;
   }
   window.TGGV12Integrity={run};
+  window.TGGV12Integrity.run();
 })();

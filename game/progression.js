@@ -7,6 +7,8 @@
     {id:'first-mixtape',name:'Tape Season',detail:'Release your first mixtape.',test:(p,c)=>c.mixtapes>=1},
     {id:'first-upgrade',name:'Studio Upgrade',detail:'Upgrade your studio for the first time.',test:(p,c)=>c.upgrades>=1},
     {id:'studio-level-two',name:'Professional',detail:'Reach studio level 2.',test:(p,c)=>c.studioLevel>=2},
+    {id:'studio-row-unlocked',name:'Studio Row',detail:'Unlock Studio Row.',test:(p,c,content,exp,crew,events,districts)=>districts.unlocked.includes('studio-row')},
+    {id:'mixtape-ave-unlocked',name:'Mixtape Avenue',detail:'Unlock Mixtape Ave.',test:(p,c,content,exp,crew,events,districts)=>districts.unlocked.includes('mixtape-ave')},
     {id:'first-job',name:'City Worker',detail:'Complete your first city job.',test:(p,c,content)=>content.completed.length>=1},
     {id:'first-expansion',name:'Outside The Block',detail:'Complete your first expansion activity.',test:(p,c,content,exp)=>exp.completed.length>=1},
     {id:'big-bag',name:'Five Hundred',detail:'Hold $500 cash.',test:p=>p.cash>=500},
@@ -20,13 +22,14 @@
   function save(){state.updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(state))}
   function sync(){
     const p=window.TGGGame?.getState?.()||{};
-    const c=window.TGGCareer?.career||{};
+    const c=window.TGCCareer?.career||{};
     const content=window.TGGContent?.state||{completed:[]};
     const expansion=window.TGGExpansion?.state||{completed:[]};
     const crew=window.TGGCrew?.state||{members:[]};
     const events=window.TGGEvents?.state||{completed:[]};
+    const districts=window.TGGDistricts?.state||{unlocked:[]};
     let changed=false;
-    achievements.forEach(a=>{if(!state.unlocked.includes(a.id)&&a.test(p,c,content,expansion,crew,events)){state.unlocked.push(a.id);changed=true;window.__tggToast?.('ACHIEVEMENT UNLOCKED — '+a.name)}});
+    achievements.forEach(a=>{if(!state.unlocked.includes(a.id)&&a.test(p,c,content,expansion,crew,events,districts)){state.unlocked.push(a.id);changed=true;window.__tggToast?.('ACHIEVEMENT UNLOCKED — '+a.name)}});
     if(changed)save();
     render();
     return state;
@@ -34,7 +37,7 @@
   function render(){
     const el=document.getElementById('progressionStats'); if(!el)return;
     const p=window.TGGGame?.getState?.()||{};
-    const c=window.TGGCareer?.career||{};
+    const c=window.TGCCareer?.career||{};
     const content=window.TGGContent?.state||{completed:[]};
     const expansion=window.TGGExpansion?.state||{completed:[]};
     const crew=window.TGGCrew?.state||{members:[]};

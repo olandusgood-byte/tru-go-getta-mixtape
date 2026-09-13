@@ -7,6 +7,8 @@ on:
       - 'source/blogger/**'
       - 'scripts/tgg-source-intake.mjs'
       - 'scripts/tgg-source-intake.test.mjs'
+      - 'scripts/tgg-source-review-summary.mjs'
+      - 'scripts/tgg-source-review-summary.test.mjs'
       - 'scripts/tgg_xml_wellformed.py'
       - 'scripts/tgg_xml_wellformed_test.py'
       - 'integration/v5690-source-intake-readiness.json'
@@ -23,7 +25,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Test source-intake contract
-        run: node --test scripts/tgg-source-intake.test.mjs
+        run: |
+          node --test \
+            scripts/tgg-source-intake.test.mjs \
+            scripts/tgg-source-review-summary.test.mjs
 
       - name: Test XML validator
         run: python3 -m unittest scripts/tgg_xml_wellformed_test.py
@@ -40,39 +45,60 @@ jobs:
             echo 'Canonical source not submitted; integration remains HOLD.'
           fi
 
-      - name: Validate source identity
+      - name: Build complete source-review diagnostics
         if: steps.source.outputs.available == 'true'
+        id: review
+        shell: bash
         run: |
           mkdir -p build
+          set +e
           node scripts/tgg-source-intake.mjs \
             source/blogger/TRU_GO_GETTA_CANONICAL.xml \
             source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256 \
             --manifest build/source-intake.json
-
-      - name: Validate XML structure
-        if: steps.source.outputs.available == 'true'
-        run: python3 scripts/tgg_xml_wellformed.py source/blogger/TRU_GO_GETTA_CANONICAL.xml
-
-      - name: Build separate review candidate
-        if: steps.source.outputs.available == 'true'
-        shell: bash
-        run: |
-          expected="$(cut -d ' ' -f 1 source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256)"
-          node scripts/tgg-blogger-candidate.mjs \
+          intake_code=$?
+          python3 scripts/tgg_xml_wellformed.py \
             source/blogger/TRU_GO_GETTA_CANONICAL.xml \
-            build/TRU_GO_GETTA_CANDIDATE.xml \
-            --manifest build/candidate-manifest.json \
-            --expected-sha256 "$expected" \
-            --module patches/v5670/blogger-shell-isolation.js \
-            --module patches/v5670/auth-first-rpc-gate.js \
-            --module patches/v5670/homepage-discovery-adapter.js \
-            --module patches/v5670/creator-store-loader-repair.js \
-            --module patches/v5670/truthful-runtime-status.js
+            > build/xml-wellformed.json
+          xml_code=$?
+          candidate_code=2
+          expected="$(cut -d ' ' -f 1 source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256)"
+          if test "$intake_code" -eq 0 && test "$xml_code" -eq 0; then
+            node scripts/tgg-blogger-candidate.mjs \
+              source/blogger/TRU_GO_GETTA_CANONICAL.xml \
+              build/TRU_GO_GETTA_CANDIDATE.xml \
+              --manifest build/candidate-manifest.json \
+              --expected-sha256 "$expected" \
+              --module patches/v5670/blogger-shell-isolation.js \
+              --module patches/v5670/auth-first-rpc-gate.js \
+              --module patches/v5670/homepage-discovery-adapter.js \
+              --module patches/v5670/creator-store-loader-repair.js \
+              --module patches/v5670/truthful-runtime-status.js
+            candidate_code=$?
+          fi
+          set -e
+          node scripts/tgg-source-review-summary.mjs \
+            --source-available true \
+            --intake-code "$intake_code" \
+            --xml-code "$xml_code" \
+            --candidate-code "$candidate_code" \
+            --candidate-manifest build/candidate-manifest.json \
+            --artifact build/source-intake.json \
+            --artifact build/xml-wellformed.json \
+            --artifact build/TRU_GO_GETTA_CANDIDATE.xml \
+            --artifact build/candidate-manifest.json \
+            --output build/review-summary.json
 
       - name: Upload review artifacts
-        if: steps.source.outputs.available == 'true'
+        if: always() && steps.source.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: tgg-blogger-review-candidate
           path: build/
           if-no-files-found: error
+
+      - name: Enforce source-review decision after artifact upload
+        if: steps.source.outputs.available == 'true'
+        run: |
+          test "$(node -p "require('./build/review-summary.json').decision")" = \
+            'READY_FOR_HUMAN_REVIEW'

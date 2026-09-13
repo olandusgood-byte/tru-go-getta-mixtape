@@ -19,14 +19,20 @@
     activities.forEach(a=>{if(p.level>=a.unlock&&!state.unlocked.includes(a.id))state.unlocked.push(a.id)});
     save();
   }
+  function districtReady(a){
+    const districts=window.TGGDistricts;
+    if(!districts?.canEnter)return true;
+    return districts.canEnter(a.district);
+  }
   function run(id){
     const a=activities.find(x=>x.id===id); if(!a)return false;
     const p=player(); if(p.level<a.unlock){window.__tggToast?.('LEVEL '+a.unlock+' REQUIRED');return false}
+    if(!districtReady(a)){window.__tggToast?.(a.district.toUpperCase()+' LOCKED');return false}
     if(p.cash<a.cost){window.__tggToast?.('NOT ENOUGH CASH');return false}
     if(a.cost&&window.TGGGame?.spend&&!window.TGGGame.spend(a.cost))return false;
     const reward=window.TGGEconomy?.apply
       ? window.TGGEconomy.apply({cash:a.reward,xp:a.xp,rep:a.rep})
-      : (window.TGGGame?.reward?.(a.reward,a.xp),window.TGGCareer?.addRep?.(a.rep),{cash:a.reward,xp:a.xp,rep:a.rep,crew:{cash:0,xp:0,rep:0}});
+      : (window.TGGGame?.reward?.(a.reward,a.xp),window.TGCCareer?.addRep?.(a.rep),{cash:a.reward,xp:a.xp,rep:a.rep,crew:{cash:0,xp:0,rep:0}});
     if(!state.completed.includes(id))state.completed.push(id);
     const after=player();
     activities.forEach(x=>{if(after.level>=x.unlock&&!state.unlocked.includes(x.id))state.unlocked.push(x.id)});

@@ -23,7 +23,6 @@ jobs:
           set -e
           for f in game/*.json; do
             node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$f"
-          done
       - name: Validate script references
         run: |
           set -e
@@ -44,7 +43,7 @@ jobs:
           import re
           html=Path('game/index.html').read_text()
           ids=re.findall(r'id=[\"\']([^\"\']+)[\"\']', html)
-          required={'menu','creator','game','career','contentBoard','expansionBoard','progressionBoard','bridge','pause','hud','newGame','continueGame','startGame','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','bridgeBtn','chainBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
+          required={'menu','creator','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','bridge','pause','hud','newGame','continueGame','startGame','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','bridgeBtn','chainBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
           missing=sorted(required-set(ids))
           assert not missing, 'missing required IDs: '+', '.join(missing)
           assert len(ids)==len(set(ids)), 'duplicate DOM ids detected'
@@ -72,12 +71,18 @@ jobs:
             const q=window.TGGQA?.run?.();
             const r=window.TGGReleaseQA?.run?.();
             const i=window.TGGV12Integrity?.run?.();
-            return {q,r,i,apis:!!window.TGGGame&&!!window.TGGCareer&&!!window.TGGContent&&!!window.TGGExpansion&&!!window.TGGProgression&&!!window.TGGChains&&!!window.TGGDistricts&&!!window.TGGSave};
+            return {q,r,i,apis:!!window.TGGGame&&!!window.TGGCareer&&!!window.TGGContent&&!!window.TGGExpansion&&!!window.TGGProgression&&!!window.TGGChains&&!!window.TGGDistricts&&!!window.TGGSave&&!!window.TGGInventory};
           });
           if(!result.apis||!result.q?.passed||!result.r?.passed||!result.i?.passed)throw new Error('QA gate failed: '+JSON.stringify(result));
           await page.click('#newGame');
           await page.fill('#stageName','Smoke Test');
           await page.click('#startGame');
+          await page.click('#inventoryBtn');
+          const inventory=await page.evaluate(()=>({api:!!window.TGGInventory,items:{...window.TGGInventory.state.items},screen:document.getElementById('inventoryBoard')?.classList.contains('active')}));
+          if(!inventory.api||!inventory.screen||inventory.items.mic!==1||inventory.items['beat-pack']!==1)throw new Error('inventory starter pack failed: '+JSON.stringify(inventory));
+          await page.click('[data-inventory-add="promo-flyers"]');
+          const inventorySaved=await page.evaluate(()=>JSON.parse(localStorage.getItem('tgg-inventory-v1')));
+          if(inventorySaved.items['promo-flyers']!==2)throw new Error('inventory persistence failed: '+JSON.stringify(inventorySaved));
           await page.click('#contentBtn');
           await page.click('#chainBtn');
           const chain=await page.evaluate(()=>window.TGGChains?.state?.active);
@@ -102,7 +107,7 @@ jobs:
           const repaired=await page.evaluate(()=>JSON.parse(localStorage.getItem('tgg-game-v1')));
           if(!(repaired.level>=1&&repaired.cash>=0&&repaired.xp>=0&&Number.isFinite(repaired.x)&&Number.isFinite(repaired.y)))throw new Error('save repair failed: '+JSON.stringify(repaired));
           if(errors.length)throw new Error(errors.join('\n'));
-          console.log('V1.2 browser smoke + progression hardening PASS');
+          console.log('V1.3 inventory + V1.2 browser smoke PASS');
           await browser.close();
           JS
           node game/browser-smoke.mjs

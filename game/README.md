@@ -2,26 +2,23 @@
 
 Clean browser-based foundation for the TRU GO GETTA game.
 
+## Current modules
+- GAME-001 Foundation
+- GAME-002 Career System
+- GAME-003 Content System
+- GAME-004 QA and Auto Repair
+
 ## Playable loop
 
-CREATE PLAYER → ENTER CITY → MOVE → TALK TO M → TAKE MISSION → MOVE TO M → COMPLETE → CASH/XP → LEVEL UP → SAVE/LOAD
-
-## Files
-
-- `index.html` — game shell and screens
-- `style.css` — responsive visual system
-- `game.js` — game state, movement, mission, progression, persistence
+CREATE PLAYER → ENTER CITY → MOVE → TAKE MISSION → COMPLETE → CASH/XP → LEVEL UP → SAVE/LOAD
 
 ## Automatic Builder loop
 
-1. BUILD — add one coherent module.
-2. TEST — verify required DOM/state behavior.
-3. REPAIR — fix failures before advancing.
-4. VERIFY — run the smoke gate.
-5. CHECKPOINT — record a clean milestone.
-6. ADVANCE — only after the gate passes.
+BUILD → TEST → REPAIR → VERIFY → CHECKPOINT → ADVANCE
 
-## V1.0 Foundation checklist
+`qa.js` performs lightweight runtime checks for persistence, public APIs, required screens, and core controls. The QA policy is intentionally conservative: repair only a verified missing/disconnected guard and never duplicate active systems.
+
+## Current checklist
 
 - [x] Main menu
 - [x] Player creation
@@ -33,7 +30,10 @@ CREATE PLAYER → ENTER CITY → MOVE → TALK TO M → TAKE MISSION → MOVE TO
 - [x] Cash rewards
 - [x] XP and levels
 - [x] Save/load via localStorage
-- [ ] Automated browser smoke test
+- [x] Career system
+- [x] Content/mission system
+- [x] QA manifest and runtime checks
+- [ ] Full browser interaction test
 - [ ] Release checkpoint
 
 No external libraries are required for the foundation.

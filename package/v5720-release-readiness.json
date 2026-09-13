@@ -1,9 +1,9 @@
 {
   "schema": "tgg-release-readiness-package-v1",
   "version": "V5720",
-  "generated_at": "2026-09-13T03:56:54.741Z",
+  "generated_at": "2026-09-13T04:00:43.656Z",
   "active_production_baseline": "V5640",
-  "current_review_checkpoint": "V5730",
+  "current_review_checkpoint": "V5740",
   "release_decision": "HOLD",
   "files": [
     {
@@ -64,7 +64,7 @@
       "path": "status/master-status-2026-09-13.json",
       "role": "master-status",
       "bytes": 1451,
-      "sha256": "1fb092683bd2f927fa9150cd2af4aba686c24d380b5796748787ba3e8010b6b5"
+      "sha256": "8bbbbfd10b811de0a2a883cbad18e48ebd673f73399249e8d689665587b53237"
     },
     {
       "path": "patches/v5670/blogger-shell-isolation.js",
@@ -112,13 +112,19 @@
       "path": "scripts/tgg-master-status.mjs",
       "role": "control-executable",
       "bytes": 7926,
-      "sha256": "89bc32cf60256c642dc2a22386fa94d3d9324b15185d5ddf8a0d2cf3bdf7fd9b"
+      "sha256": "1b61dbd5598895df99e9040b2ef189c046af37e578bd949bc904d2e811ce2800"
     },
     {
       "path": "scripts/tgg-readiness-runner.mjs",
       "role": "control-executable",
       "bytes": 4556,
-      "sha256": "91f7c1394b0c58f94683252fa5e660561cf0030f50b6145eee36a1ef1b956e1d"
+      "sha256": "fa294922528879754dadd187f85797149a941527111f39f85de0b63a52aabfb1"
+    },
+    {
+      "path": "scripts/tgg-source-review-summary.mjs",
+      "role": "control-executable",
+      "bytes": 3699,
+      "sha256": "0a2270d85465a8a8466b390102eaf370e1451cc0fd99a8c095c7b89711604585"
     },
     {
       "path": "scripts/tgg-predeploy-lint.mjs",

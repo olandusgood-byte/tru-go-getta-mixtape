@@ -2,7 +2,7 @@ name: Game Static Gate
 
 on:
   push:
-    branches: [game/v1-foundation]
+    branches: [game/v1-foundation, game/v1-2-build]
     paths: ['game/**']
   pull_request:
     paths: ['game/**']
@@ -44,9 +44,51 @@ jobs:
           import re
           html=Path('game/index.html').read_text()
           ids=re.findall(r'id=[\"\']([^\"\']+)[\"\']', html)
-          required={'menu','creator','game','career','contentBoard','expansionBoard','bridge','pause','hud','newGame','continueGame','startGame','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','bridgeBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
+          required={'menu','creator','game','career','contentBoard','expansionBoard','progressionBoard','bridge','pause','hud','newGame','continueGame','startGame','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','bridgeBtn','chainBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
           missing=sorted(required-set(ids))
           assert not missing, 'missing required IDs: '+', '.join(missing)
           assert len(ids)==len(set(ids)), 'duplicate DOM ids detected'
           print('Required controls and unique IDs verified.')
           PY
+      - name: Browser smoke gate
+        run: |
+          set -e
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+          python3 -m http.server 8765 --directory game >/tmp/tgg-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 2
+          cat > game/browser-smoke.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage();
+          const errors=[];
+          page.on('pageerror',e=>errors.push('pageerror: '+e.message));
+          page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});
+          await page.goto('http://127.0.0.1:8765/index.html',{waitUntil:'networkidle'});
+          const result=await page.evaluate(()=>{
+            const q=window.TGGQA?.run?.();
+            const r=window.TGGReleaseQA?.run?.();
+            const i=window.TGGV12Integrity?.run?.();
+            return {q,r,i,apis:!!window.TGGGame&&!!window.TGGCareer&&!!window.TGGContent&&!!window.TGGExpansion&&!!window.TGGProgression&&!!window.TGGChains&&!!window.TGGDistricts&&!!window.TGGSave};
+          });
+          if(!result.apis||!result.q?.passed||!result.r?.passed||!result.i?.passed)throw new Error('QA gate failed: '+JSON.stringify(result));
+          await page.click('#newGame');
+          await page.fill('#stageName','Smoke Test');
+          await page.click('#startGame');
+          await page.click('#contentBtn');
+          await page.click('#chainBtn');
+          const chain=await page.evaluate(()=>window.TGGChains?.state?.active);
+          if(chain!=='first-move')throw new Error('mission chain did not start');
+          await page.click('[data-mission="flyer-run"]');
+          await page.click('#advanceContentBtn');
+          const saved=await page.evaluate(()=>localStorage.getItem('tgg-content-v1'));
+          if(!saved)throw new Error('content state was not saved');
+          if(errors.length)throw new Error(errors.join('\n'));
+          console.log('V1.2 browser smoke PASS');
+          await browser.close();
+          JS
+          node game/browser-smoke.mjs
+          rm -f game/browser-smoke.mjs

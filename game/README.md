@@ -1,22 +1,25 @@
-# TRU GO GETTA Game V1.0
+# TRU GO GETTA Game V1.2
 
-Clean browser-based foundation for the TRU GO GETTA game.
-
-## Current modules
-- GAME-001 Foundation
-- GAME-002 Career System
-- GAME-003 Content System
-- GAME-004 QA and Auto Repair
+Browser-based TRU GO GETTA game with a city progression loop, career system, missions, expansion activities, progression achievements, mission chains, district unlocks, persistence validation, QA, and a website bridge.
 
 ## Playable loop
 
-CREATE PLAYER → ENTER CITY → MOVE → TAKE MISSION → COMPLETE → CASH/XP → LEVEL UP → SAVE/LOAD
+CREATE PLAYER → ENTER CITY → MOVE → TAKE MISSION → COMPLETE → CASH/XP → LEVEL UP → UNLOCK DISTRICTS → SAVE/LOAD
+
+## V1.2 additions
+
+- Mission Chains: FIRST MOVE and CITY RUN
+- District progression: Downtown L1, Studio Row L2, Mixtape Ave L3
+- Save-state validation for game and career data
+- V1.2 integrity gate
+- Expanded runtime/release QA
+- Automated browser smoke gate through GitHub Actions
 
 ## Automatic Builder loop
 
 BUILD → TEST → REPAIR → VERIFY → CHECKPOINT → ADVANCE
 
-`qa.js` performs lightweight runtime checks for persistence, public APIs, required screens, and core controls. The QA policy is intentionally conservative: repair only a verified missing/disconnected guard and never duplicate active systems.
+The QA policy is conservative: repair verified missing/disconnected guards and avoid duplicating active systems.
 
 ## Current checklist
 
@@ -32,8 +35,20 @@ BUILD → TEST → REPAIR → VERIFY → CHECKPOINT → ADVANCE
 - [x] Save/load via localStorage
 - [x] Career system
 - [x] Content/mission system
-- [x] QA manifest and runtime checks
-- [ ] Full browser interaction test
-- [ ] Release checkpoint
+- [x] Expansion activities
+- [x] Progression achievements
+- [x] Mission chains
+- [x] District progression
+- [x] Save validator
+- [x] V1.2 integrity gate
+- [x] Expanded QA/release QA
+- [x] Automated browser smoke workflow configured
+- [ ] Fresh V1.2 browser smoke run passed
+- [ ] V1.2 release checkpoint
+- [ ] Production release
 
-No external libraries are required for the foundation.
+## Release status
+
+V1.2 is **gated pending a fresh successful browser smoke run**. Production remains gated until an explicit release decision is made.
+
+No external libraries are required by the game itself; the automated browser gate installs Playwright only inside CI.

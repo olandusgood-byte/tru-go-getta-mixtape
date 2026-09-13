@@ -82,6 +82,7 @@ jobs:
           await page.click('#newGame');
           await page.fill('#stageName','Smoke Test');
           await page.click('#startGame');
+          await page.evaluate(()=>window.TGGInventory?.starterPack?.());
           await page.click('#inventoryBtn');
           const inventory=await page.evaluate(()=>({api:!!window.TGGInventory,items:{...window.TGGInventory.state.items},screen:document.getElementById('inventoryBoard')?.classList.contains('active')}));
           if(!inventory.api||!inventory.screen||inventory.items.mic!==1||inventory.items['beat-pack']!==1)throw new Error('inventory starter pack failed: '+JSON.stringify(inventory));
@@ -92,10 +93,10 @@ jobs:
           await page.click('#crewBtn');
           const crewScreen=await page.evaluate(()=>document.getElementById('crewBoard')?.classList.contains('active'));
           if(!crewScreen)throw new Error('crew screen did not open');
-          const crewResult=await page.evaluate(()=>{const before=window.TGGGame.getState().cash;const ok=window.TGGCrew.recruit('dj-v');return {ok,before,after:window.TGGGame.getState().cash,bonus:window.TGGCrew.bonus('xp')}});
-          if(!crewResult.ok||crewResult.after!==crewResult.before-150||crewResult.bonus!==10)throw new Error('crew recruitment/bonus failed: '+JSON.stringify(crewResult));
-          const crewAll=await page.evaluate(()=>{const kane=window.TGGCrew.recruit('kane');const manager=window.TGGCrew.recruit('manager');return {kane,manager,cash:window.TGGCrew.bonus('cash'),xp:window.TGGCrew.bonus('xp'),rep:window.TGGCrew.bonus('rep')}});
-          if(!crewAll.kane||!crewAll.manager||crewAll.cash!==25||crewAll.xp!==10||crewAll.rep!==10)throw new Error('crew bonus catalog coverage failed: '+JSON.stringify(crewAll));
+          const crewResult=await page.evaluate(()=>{const before=window.TGGGame.getState().cash;const ok=window.TGGCrew.recruit('dj-v');return {ok,before,after:window.TGGGame.getState().cash,bonus:window.TGGCrew.bonus('xp'),first:window.TGGProgression.state.unlocked.includes('first-crew')}});
+          if(!crewResult.ok||crewResult.after!==crewResult.before-150||crewResult.bonus!==10||!crewResult.first)throw new Error('first crew progression/bonus failed: '+JSON.stringify(crewResult));
+          const crewAll=await page.evaluate(()=>{const kane=window.TGGCrew.recruit('kane');const manager=window.TGGCrew.recruit('manager');return {kane,manager,cash:window.TGGCrew.bonus('cash'),xp:window.TGGCrew.bonus('xp'),rep:window.TGGCrew.bonus('rep'),full:window.TGGProgression.state.unlocked.includes('full-crew')}});
+          if(!crewAll.kane||!crewAll.manager||crewAll.cash!==25||crewAll.xp!==10||crewAll.rep!==10||!crewAll.full)throw new Error('crew bonus/milestone coverage failed: '+JSON.stringify(crewAll));
           const economyAll=await page.evaluate(()=>{const r=window.TGGEconomy.reward({cash:100,xp:20,rep:5});return {cash:r.cash,xp:r.xp,rep:r.rep,crew:r.crew}});
           if(economyAll.cash!==125||economyAll.xp!==30||economyAll.rep!==15)throw new Error('economy all-bonus normalization failed: '+JSON.stringify(economyAll));
           await page.evaluate(()=>window.TGGGame.show('game'));
@@ -122,7 +123,7 @@ jobs:
           const repaired=await page.evaluate(()=>JSON.parse(localStorage.getItem('tgg-game-v1')));
           if(!(repaired.level>=1&&repaired.cash>=0&&repaired.xp>=0&&Number.isFinite(repaired.x)&&Number.isFinite(repaired.y)))throw new Error('save repair failed: '+JSON.stringify(repaired));
           if(errors.length)throw new Error(errors.join('\n'));
-          console.log('V1.3 all crew bonuses + expansion + events + inventory + V1.2 browser smoke PASS');
+          console.log('V1.4 crew + inventory + events + economy + progression browser smoke PASS');
           await browser.close();
           JS
           node game/browser-smoke.mjs

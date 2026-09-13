@@ -2,7 +2,7 @@
   "schema": "tgg-master-status-v1",
   "generated_at": "2026-09-13T03:44:15Z",
   "active_production_baseline": "V5640",
-  "current_review_checkpoint": "V5720",
+  "current_review_checkpoint": "V5730",
   "decision": "HOLD",
   "progress": {
     "authenticated_evidence": {

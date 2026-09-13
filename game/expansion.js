@@ -24,11 +24,13 @@
     const p=player(); if(p.level<a.unlock){window.__tggToast?.('LEVEL '+a.unlock+' REQUIRED');return false}
     if(p.cash<a.cost){window.__tggToast?.('NOT ENOUGH CASH');return false}
     if(a.cost&&window.TGGGame?.spend&&!window.TGGGame.spend(a.cost))return false;
-    window.TGGGame?.reward?.(a.reward,a.xp);
+    const reward=window.TGGEconomy?.apply
+      ? window.TGGEconomy.apply({cash:a.reward,xp:a.xp,rep:a.rep})
+      : (window.TGGGame?.reward?.(a.reward,a.xp),window.TGGCareer?.addRep?.(a.rep),{cash:a.reward,xp:a.xp,rep:a.rep,crew:{cash:0,xp:0,rep:0}});
     if(!state.completed.includes(id))state.completed.push(id);
     const after=player();
     activities.forEach(x=>{if(after.level>=x.unlock&&!state.unlocked.includes(x.id))state.unlocked.push(x.id)});
-    save(); window.TGGCareer?.addRep?.(a.rep); window.__tggToast?.(a.name+' COMPLETE — +$'+a.reward+' / +'+a.xp+' XP'); return true;
+    save(); window.__tggToast?.(a.name+' COMPLETE — +$'+reward.cash+' / +'+reward.xp+' XP / +'+reward.rep+' REP'); return true;
   }
   window.TGGExpansion={activities,npcs,state,run,load,save,syncUnlocks}; load(); syncUnlocks();
 })();

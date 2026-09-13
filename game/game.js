@@ -1,8 +1,8 @@
 (() => {
   const KEY='tgg-game-v1'; const $=id=>document.getElementById(id);
   let state={name:'PLAYER',style:'Artist',x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false};
-  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','bridge'];
-  function show(id){screens.forEach(s=>$(s)?.classList.toggle('active',s===id));$('hud')?.classList.toggle('hidden',!['game','career','contentBoard','expansionBoard','progressionBoard','bridge'].includes(id));window.TGGCareer?.render?.();window.TGGBridge?.render?.();window.TGGProgression?.render?.();}
+  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge'];
+  function show(id){screens.forEach(s=>$(s)?.classList.toggle('active',s===id));$('hud')?.classList.toggle('hidden',!['game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge'].includes(id));window.TGGCareer?.render?.();window.TGGBridge?.render?.();window.TGGProgression?.render?.();}
   function toast(t){const el=$('toast');if(!el)return;el.textContent=t;el.classList.add('show');clearTimeout(window.__tggToastTimer);window.__tggToastTimer=setTimeout(()=>el.classList.remove('show'),1800)}
   function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x)state={...state,...x}}catch(e){} update();window.TGGProgression?.sync?.()}
   function save(){localStorage.setItem(KEY,JSON.stringify(state));toast('GAME SAVED');window.TGGProgression?.sync?.()}

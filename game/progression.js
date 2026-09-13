@@ -5,6 +5,8 @@
     {id:'level-two',name:'On The Rise',detail:'Reach level 2.',test:p=>p.level>=2},
     {id:'first-track',name:'First Track',detail:'Record your first track.',test:(p,c)=>c.recordings>=1},
     {id:'first-mixtape',name:'Tape Season',detail:'Release your first mixtape.',test:(p,c)=>c.mixtapes>=1},
+    {id:'first-upgrade',name:'Studio Upgrade',detail:'Upgrade your studio for the first time.',test:(p,c)=>c.upgrades>=1},
+    {id:'studio-level-two',name:'Professional',detail:'Reach studio level 2.',test:(p,c)=>c.studioLevel>=2},
     {id:'first-job',name:'City Worker',detail:'Complete your first city job.',test:(p,c,content)=>content.completed.length>=1},
     {id:'first-expansion',name:'Outside The Block',detail:'Complete your first expansion activity.',test:(p,c,content,exp)=>exp.completed.length>=1},
     {id:'big-bag',name:'Five Hundred',detail:'Hold $500 cash.',test:p=>p.cash>=500}
@@ -29,7 +31,7 @@
     const c=window.TGGCareer?.career||{};
     const content=window.TGGContent?.state||{completed:[]};
     const expansion=window.TGGExpansion?.state||{completed:[]};
-    el.innerHTML=`<div><b>LEVEL</b><span>${p.level||1}</span></div><div><b>CASH</b><span>$${p.cash||0}</span></div><div><b>REP</b><span>${c.reputation||0}</span></div><div><b>TRACKS</b><span>${c.recordings||0}</span></div><div><b>MIXTAPES</b><span>${c.mixtapes||0}</span></div><div><b>CITY JOBS</b><span>${content.completed?.length||0}</span></div><div><b>EXPANSION</b><span>${expansion.completed?.length||0}</span></div>`;
+    el.innerHTML=`<div><b>LEVEL</b><span>${p.level||1}</span></div><div><b>CASH</b><span>$${p.cash||0}</span></div><div><b>REP</b><span>${c.reputation||0}</span></div><div><b>TRACKS</b><span>${c.recordings||0}</span></div><div><b>MIXTAPES</b><span>${c.mixtapes||0}</span></div><div><b>UPGRADES</b><span>${c.upgrades||0}</span></div><div><b>STUDIO</b><span>${c.studioLevel||1}</span></div><div><b>CITY JOBS</b><span>${content.completed?.length||0}</span></div><div><b>EXPANSION</b><span>${expansion.completed?.length||0}</span></div>`;
     const list=document.getElementById('achievementList');
     if(list)list.innerHTML=achievements.map(a=>`<div class="mission-card"><b>${state.unlocked.includes(a.id)?'✓':'○'} ${a.name}</b><span>${a.detail}</span></div>`).join('');
   }

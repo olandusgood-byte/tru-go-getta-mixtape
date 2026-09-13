@@ -1,9 +1,9 @@
 {
   "schema": "tgg-release-readiness-package-v1",
   "version": "V5720",
-  "generated_at": "2026-09-13T04:04:42.764Z",
+  "generated_at": "2026-09-13T04:09:33.195Z",
   "active_production_baseline": "V5640",
-  "current_review_checkpoint": "V5750",
+  "current_review_checkpoint": "V5760",
   "release_decision": "HOLD",
   "files": [
     {
@@ -64,7 +64,7 @@
       "path": "status/master-status-2026-09-13.json",
       "role": "master-status",
       "bytes": 1451,
-      "sha256": "3023c24c0ca5e0163c924a0bfff648c81830b1194ff2ebbb328a77926eca668a"
+      "sha256": "e8e72d2da9ab8b78f195efc375cc23e10cf0201bcdda738a9d769c33efc97d42"
     },
     {
       "path": "patches/v5670/blogger-shell-isolation.js",
@@ -103,6 +103,12 @@
       "sha256": "5ff60169c00a7aecc719bfc788ec5c252d9805bef8103e2b9f6333465416596b"
     },
     {
+      "path": "scripts/tgg-approval-envelope.mjs",
+      "role": "control-executable",
+      "bytes": 4422,
+      "sha256": "e5f73e54c200ce903f4ad67b906e5ac33ed3b038e1dd6ecb37b6165a34425d18"
+    },
+    {
       "path": "scripts/tgg-remediation-gate.mjs",
       "role": "control-executable",
       "bytes": 6423,
@@ -112,13 +118,13 @@
       "path": "scripts/tgg-master-status.mjs",
       "role": "control-executable",
       "bytes": 7926,
-      "sha256": "9a096bf86f09999cc2068b3b912d9e550754b4e98e0a75fc261dbe3b3a62e2b4"
+      "sha256": "362409c6a2965789473feea861dd2e1a8013a5f3690a9b3f6186c127cd58fc8d"
     },
     {
       "path": "scripts/tgg-readiness-runner.mjs",
       "role": "control-executable",
       "bytes": 4556,
-      "sha256": "29cf56cb2bd6d20d88a478c1c3477d389c208234eb71bf5868116fe50b90dc6d"
+      "sha256": "e7530e91af0326f7b063530c41b7d60797039cf22d3683ff82ec2996c7faedf5"
     },
     {
       "path": "scripts/tgg-result-intake.mjs",

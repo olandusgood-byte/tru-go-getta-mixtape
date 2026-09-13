@@ -10,10 +10,11 @@ CREATE PLAYER → ENTER CITY → MOVE → TAKE MISSION → COMPLETE → CASH/XP 
 
 - Mission Chains: FIRST MOVE and CITY RUN
 - District progression: Downtown L1, Studio Row L2, Mixtape Ave L3
-- Save-state validation for game and career data
+- Save-state validation and repair for game and career data
 - V1.2 integrity gate
 - Expanded runtime/release QA
 - Automated browser smoke gate through GitHub Actions
+- Progression hardening for district unlocks, corrupted saves, mission-chain completion, and career upgrade counting
 
 ## Automatic Builder loop
 
@@ -43,12 +44,14 @@ The QA policy is conservative: repair verified missing/disconnected guards and a
 - [x] V1.2 integrity gate
 - [x] Expanded QA/release QA
 - [x] Automated browser smoke workflow configured
-- [ ] Fresh V1.2 browser smoke run passed
+- [x] Fresh V1.2 browser smoke run passed
+- [x] Progression hardening browser coverage passed
+- [x] Career upgrade regression fix verified
 - [ ] V1.2 release checkpoint
 - [ ] Production release
 
 ## Release status
 
-V1.2 is **gated pending a fresh successful browser smoke run**. Production remains gated until an explicit release decision is made.
+V1.2 has passed the fresh automated browser smoke and progression hardening gates. The release checkpoint is the remaining pre-production gate. Production remains gated until an explicit release decision is made.
 
 No external libraries are required by the game itself; the automated browser gate installs Playwright only inside CI.

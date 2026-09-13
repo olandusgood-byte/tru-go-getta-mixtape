@@ -10,15 +10,18 @@
     check('career-api',!!window.TGGCareer,'career API available');
     check('content-api',!!window.TGGContent,'content API available');
     check('expansion-api',!!window.TGGExpansion,'city expansion API available');
+    check('progression-api',!!window.TGGProgression,'progression API available');
     check('bridge-api',!!window.TGGBridge,'website bridge API available');
-    ['menu','creator','game','career','contentBoard','expansionBoard','bridge','pause','hud'].forEach(id=>check(id,!!document.getElementById(id),'required screen/control host exists'));
-    ['missionBtn','saveBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','bridgeBtn'].forEach(id=>check(id,!!document.getElementById(id),'required action exists'));
+    ['menu','creator','game','career','contentBoard','expansionBoard','progressionBoard','bridge','pause','hud'].forEach(id=>check(id,!!document.getElementById(id),'required screen/control host exists'));
+    ['missionBtn','saveBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','bridgeBtn'].forEach(id=>check(id,!!document.getElementById(id),'required action exists'));
     check('content-start',typeof window.TGGContent?.start==='function','content start API available');
     check('content-advance',typeof window.TGGContent?.advance==='function','content advance API available');
     check('expansion-run',typeof window.TGGExpansion?.run==='function','expansion run API available');
+    check('progression-sync',typeof window.TGGProgression?.sync==='function','progression sync API available');
+    check('progression-achievements',Array.isArray(window.TGGProgression?.achievements)&&window.TGGProgression.achievements.length>=7,'achievement catalog available');
     check('bridge-snapshot',typeof window.TGGBridge?.snapshot==='function','bridge snapshot API available');
     const bad=report.filter(x=>x.status==='FAIL');
-    window.TGGQA={report,passed:bad.length===0,repair(){return !!document.getElementById('hud')&&!!window.TGGGame}};
+    window.TGGQA={report,passed:bad.length===0,repair(){return !!document.getElementById('hud')&&!!window.TGGGame&&!!window.TGGProgression}};
     return window.TGGQA;
   }
   window.TGGQA={run};

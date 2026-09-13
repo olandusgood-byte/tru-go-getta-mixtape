@@ -3,7 +3,7 @@
 ## Current truth
 
 - Active production baseline: `V5640`
-- Review checkpoint: `V5720`
+- Review checkpoint: `V5730`
 - Decision: `HOLD`
 - Integrity inconsistencies: `0`
 
@@ -34,3 +34,7 @@ It does not convert READY work into FIXED work.
 V5720 additionally binds every release-readiness input and executable repair
 asset into a SHA-256 manifest. Package integrity may pass while the release
 decision remains HOLD; the two states are deliberately not interchangeable.
+
+V5730 provides a single read-only command that runs the evidence, remediation,
+master-status, package-integrity, and canonical-source checks together and
+returns one truthful operator result.

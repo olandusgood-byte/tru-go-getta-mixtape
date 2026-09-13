@@ -98,7 +98,7 @@ export function reconcileMasterStatus(inputs, now = new Date().toISOString()) {
     schema: 'tgg-master-status-v1',
     generated_at: now,
     active_production_baseline: 'V5640',
-    current_review_checkpoint: 'V5750',
+    current_review_checkpoint: 'V5760',
     decision: integrityErrors.length || reasons.length ? 'HOLD' : 'GO',
     progress: {
       authenticated_evidence: {

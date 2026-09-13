@@ -3,9 +3,13 @@ name: Game Static Gate
 on:
   push:
     branches: [game/v1-foundation, game/v1-2-build]
-    paths: ['game/**']
+    paths:
+      - 'game/**'
+      - '.github/workflows/game-static-gate.yml'
   pull_request:
-    paths: ['game/**']
+    paths:
+      - 'game/**'
+      - '.github/workflows/game-static-gate.yml'
 
 jobs:
   static-gate:

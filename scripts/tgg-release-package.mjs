@@ -23,6 +23,7 @@ export const RELEASE_FILES = [
   ['scripts/tgg-remediation-gate.mjs', 'control-executable'],
   ['scripts/tgg-master-status.mjs', 'control-executable'],
   ['scripts/tgg-readiness-runner.mjs', 'control-executable'],
+  ['scripts/tgg-result-intake.mjs', 'control-executable'],
   ['scripts/tgg-source-review-summary.mjs', 'control-executable'],
   ['scripts/tgg-predeploy-lint.mjs', 'control-executable'],
   ['scripts/tgg-blogger-candidate.mjs', 'control-executable'],

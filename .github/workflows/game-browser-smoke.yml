@@ -42,7 +42,7 @@ jobs:
 
       - name: Run browser smoke
         run: |
-          cat > /tmp/tgg-browser-smoke.mjs <<'EOF'
+          cat > game/browser-smoke.mjs <<'EOF'
           import { chromium } from 'playwright';
 
           const browser = await chromium.launch({headless:true});
@@ -52,7 +52,7 @@ jobs:
           page.on('console', msg => { if (msg.type() === 'error') errors.push(`console: ${msg.text()}`); });
 
           await page.goto('http://127.0.0.1:8765/index.html', {waitUntil:'networkidle'});
-          await page.waitForFunction(() => window.TGGGame && window.TGGCareer && window.TGGContent && window.TGGExpansion && window.TGGBridge);
+          await page.waitForFunction(() => window.TGGGame && window.TGGCareer && window.TGGContent && window.TGGExpansion && window.TGGBridge && window.TGGQA && window.TGGReleaseQA);
 
           const result = await page.evaluate(async () => {
             const ids = ['menu','creator','game','career','contentBoard','expansionBoard','bridge','pause','hud','newGame','continueGame','startGame','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','bridgeBtn','saveBtn','pauseBtn','resumeBtn','menuBtn','recordBtn','mixtapeBtn','upgradeBtn'];
@@ -70,6 +70,7 @@ jobs:
               qaPassed: qa?.passed ?? false,
               releasePassed: release?.passed ?? false,
               missionStarted: !!start,
+              advanceReturned: !!advanced,
               progressAdvanced: after === before + 1 || after === 0,
               localStorageSaved: stored,
               currentScreen: [...document.querySelectorAll('.screen')].find(el => !el.classList.contains('hidden'))?.id || null
@@ -82,13 +83,14 @@ jobs:
             console.error(errors.join('\n'));
             process.exit(1);
           }
-          if (result.missing.length || !result.qaPassed || !result.releasePassed || !result.missionStarted || !result.progressAdvanced || !result.localStorageSaved) {
+          if (result.missing.length || !result.qaPassed || !result.releasePassed || !result.missionStarted || !result.advanceReturned || !result.progressAdvanced || !result.localStorageSaved) {
             console.error(JSON.stringify(result, null, 2));
             process.exit(1);
           }
           console.log(JSON.stringify(result, null, 2));
           EOF
-          node /tmp/tgg-browser-smoke.mjs
+          node ./game/browser-smoke.mjs
+          rm -f game/browser-smoke.mjs
 
       - name: Stop local game server
         if: always()

@@ -1,10 +1,10 @@
 {
   "project":"TRU GO GETTA Game",
-  "version":"1.3",
-  "module":"V1.3-CITY-EVENTS",
-  "name":"City Events",
-  "events":3,
-  "systems":["repeatable_events","district_access","cash_rewards","xp_rewards","reputation_rewards","crew_bonuses","persistence"],
+  "version":"1.4",
+  "module":"V1.4-CITY-LIFE-FEEDBACK",
+  "name":"City Life + Player Feedback",
+  "events":5,
+  "systems":["repeatable_events","district_access","cash_rewards","xp_rewards","reputation_rewards","crew_bonuses","inventory_gating","run_tracking","last_reward_feedback","persistence"],
   "workflow":["BUILD","TEST","REPAIR","VERIFY","CHECKPOINT","ADVANCE"],
   "production":"gated"
 }

@@ -1,9 +1,9 @@
 {
   "schema": "tgg-release-readiness-package-v1",
   "version": "V5720",
-  "generated_at": "2026-09-13T03:51:03.698Z",
+  "generated_at": "2026-09-13T03:56:54.741Z",
   "active_production_baseline": "V5640",
-  "current_review_checkpoint": "V5720",
+  "current_review_checkpoint": "V5730",
   "release_decision": "HOLD",
   "files": [
     {
@@ -33,8 +33,8 @@
     {
       "path": "evidence/blogger-source-access-2026-09-12.json",
       "role": "source-access-evidence",
-      "bytes": 654,
-      "sha256": "f5458681a44bf09196d01572a20b84108ed9d6dc032ab59291df8c77759d6845"
+      "bytes": 663,
+      "sha256": "7d3b329d9f4852f2bfa16e8698c89ff2b3f342e059f915b055eb37fca3f09dd4"
     },
     {
       "path": "evidence/live-dom-source-map-2026-09-12.json",
@@ -64,7 +64,7 @@
       "path": "status/master-status-2026-09-13.json",
       "role": "master-status",
       "bytes": 1451,
-      "sha256": "b3bd8073ef4481f01c8be41613bfe1777975dc7582472743c56e340e753d27a2"
+      "sha256": "1fb092683bd2f927fa9150cd2af4aba686c24d380b5796748787ba3e8010b6b5"
     },
     {
       "path": "patches/v5670/blogger-shell-isolation.js",
@@ -112,7 +112,13 @@
       "path": "scripts/tgg-master-status.mjs",
       "role": "control-executable",
       "bytes": 7926,
-      "sha256": "f3dab36db63a11fbb807ac8baebbf8d5714b0dd0ad9d6a77dc9792126b2a8c77"
+      "sha256": "89bc32cf60256c642dc2a22386fa94d3d9324b15185d5ddf8a0d2cf3bdf7fd9b"
+    },
+    {
+      "path": "scripts/tgg-readiness-runner.mjs",
+      "role": "control-executable",
+      "bytes": 4556,
+      "sha256": "91f7c1394b0c58f94683252fa5e660561cf0030f50b6145eee36a1ef1b956e1d"
     },
     {
       "path": "scripts/tgg-predeploy-lint.mjs",

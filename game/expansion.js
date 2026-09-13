@@ -38,5 +38,5 @@
     activities.forEach(x=>{if(after.level>=x.unlock&&!state.unlocked.includes(x.id))state.unlocked.push(x.id)});
     save(); window.__tggToast?.(a.name+' COMPLETE — +$'+reward.cash+' / +'+reward.xp+' XP / +'+reward.rep+' REP'); return true;
   }
-  window.TGGExpansion={activities,npcs,state,run,load,save,syncUnlocks}; load(); syncUnlocks();
+  window.TGGExpansion={activities,npcs,state,run,load,save,syncUnlocks,districtReady}; load(); syncUnlocks();
 })();

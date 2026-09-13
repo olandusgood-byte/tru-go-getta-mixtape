@@ -15,7 +15,7 @@ function state(decision = 'HOLD') {
 test('current incomplete gates produce one HOLD', () => {
   const result = summarizeReadiness(state());
   assert.equal(result.decision, 'HOLD');
-  assert.equal(result.current_review_checkpoint, 'V5730');
+  assert.equal(result.current_review_checkpoint, 'V5740');
   assert.equal(result.blockers.length, 5);
 });
 

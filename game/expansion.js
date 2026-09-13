@@ -14,15 +14,21 @@
   function load(){try{Object.assign(state,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){}}
   function save(){localStorage.setItem(KEY,JSON.stringify(state))}
   function player(){return window.TGGGame?.getState?.()||{level:1,cash:0,xp:0}}
+  function syncUnlocks(){
+    const p=player();
+    activities.forEach(a=>{if(p.level>=a.unlock&&!state.unlocked.includes(a.id))state.unlocked.push(a.id)});
+    save();
+  }
   function run(id){
     const a=activities.find(x=>x.id===id); if(!a)return false;
     const p=player(); if(p.level<a.unlock){window.__tggToast?.('LEVEL '+a.unlock+' REQUIRED');return false}
     if(p.cash<a.cost){window.__tggToast?.('NOT ENOUGH CASH');return false}
-    if(a.cost&&window.TGGGame?.spend)window.TGGGame.spend(a.cost);
+    if(a.cost&&window.TGGGame?.spend&&!window.TGGGame.spend(a.cost))return false;
     window.TGGGame?.reward?.(a.reward,a.xp);
-    state.completed.push(id);
-    const next=activities.find(x=>x.unlock===p.level+1); if(next&&!state.unlocked.includes(next.id))state.unlocked.push(next.id);
+    if(!state.completed.includes(id))state.completed.push(id);
+    const after=player();
+    activities.forEach(x=>{if(after.level>=x.unlock&&!state.unlocked.includes(x.id))state.unlocked.push(x.id)});
     save(); window.TGGCareer?.addRep?.(a.rep); window.__tggToast?.(a.name+' COMPLETE — +$'+a.reward+' / +'+a.xp+' XP'); return true;
   }
-  window.TGGExpansion={activities,npcs,state,run,load,save}; load();
+  window.TGGExpansion={activities,npcs,state,run,load,save,syncUnlocks}; load(); syncUnlocks();
 })();

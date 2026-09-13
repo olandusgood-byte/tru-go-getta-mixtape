@@ -1,0 +1,52 @@
+name: Game Static Gate
+
+on:
+  push:
+    branches: [game/v1-foundation]
+    paths: ['game/**']
+  pull_request:
+    paths: ['game/**']
+
+jobs:
+  static-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JavaScript syntax
+        run: |
+          set -e
+          for f in game/*.js; do
+            node --check "$f"
+          done
+      - name: Validate JSON manifests
+        run: |
+          set -e
+          for f in game/*.json; do
+            node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$f"
+          done
+      - name: Validate script references
+        run: |
+          set -e
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          html=Path('game/index.html').read_text()
+          for src in re.findall(r'<script[^>]+src=[\"\']([^\"\']+)[\"\']', html):
+              p=Path('game')/src
+              assert p.is_file(), f'missing script: {src}'
+          print('All game script references exist.')
+          PY
+      - name: Validate required release controls
+        run: |
+          set -e
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('game/index.html').read_text()
+          ids=re.findall(r'id=[\"\']([^\"\']+)[\"\']', html)
+          required={'menu','creator','game','career','contentBoard','expansionBoard','bridge','pause','hud','newGame','continueGame','startGame','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','bridgeBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
+          missing=sorted(required-set(ids))
+          assert not missing, 'missing required IDs: '+', '.join(missing)
+          assert len(ids)==len(set(ids)), 'duplicate DOM ids detected'
+          print('Required controls and unique IDs verified.')
+          PY

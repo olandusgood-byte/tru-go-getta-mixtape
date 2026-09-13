@@ -16,5 +16,6 @@
   function starterPack(){if(localStorage.getItem(KEY))return false;catalog.forEach(x=>state.items[x.id]=1);save();return true}
   function render(){const el=document.getElementById('inventoryList');if(!el)return;el.innerHTML=catalog.map(x=>`<div class="mission-card"><b>${x.name}</b><span>${x.detail} • ${get(x.id)} owned</span><button class="secondary" data-inventory-add="${x.id}">ADD</button></div>`).join('');el.querySelectorAll('[data-inventory-add]').forEach(b=>b.onclick=()=>add(b.dataset.inventoryAdd,1))}
   load();
+  starterPack();
   window.TGGInventory={catalog,state,load,save,get,add,remove,has,starterPack,render};
 })();

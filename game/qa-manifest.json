@@ -1,0 +1,10 @@
+{
+  "project":"TRU GO GETTA Game",
+  "version":"1.0",
+  "module":"GAME-004",
+  "name":"QA and Auto Repair",
+  "checks":["storage","game_api","career_api","content_api","screen_presence","core_controls"],
+  "workflow":["BUILD","TEST","REPAIR","VERIFY","CHECKPOINT","ADVANCE"],
+  "repairPolicy":"repair only verified missing or disconnected runtime guards; never duplicate active systems",
+  "next":"GAME-005 Expansion"
+}

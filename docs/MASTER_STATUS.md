@@ -3,7 +3,7 @@
 ## Current truth
 
 - Active production baseline: `V5640`
-- Review checkpoint: `V5740`
+- Review checkpoint: `V5750`
 - Decision: `HOLD`
 - Integrity inconsistencies: `0`
 
@@ -41,3 +41,7 @@ returns one truthful operator result.
 
 V5740 guarantees that canonical-source review diagnostics are uploaded as one
 bundle before CI enforces the final candidate decision, including HOLD cases.
+
+V5750 adds atomic batch intake for executed evidence and verified remediation
+results. It creates new review candidates and invalidates stale approvals
+without editing the active ledgers.

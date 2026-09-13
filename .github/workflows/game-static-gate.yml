@@ -27,7 +27,6 @@ jobs:
           set -e
           for f in game/*.json; do
             node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$f"
-          done
       - name: Validate script references
         run: |
           set -e
@@ -101,10 +100,10 @@ jobs:
           if(economyAll.cash!==125||economyAll.xp!==30||economyAll.rep!==15)throw new Error('economy all-bonus normalization failed: '+JSON.stringify(economyAll));
           await page.evaluate(()=>window.TGGGame.show('game'));
           await page.click('#eventsBtn');
-          const eventsScreen=await page.evaluate(()=>({active:document.getElementById('eventsBoard')?.classList.contains('active'),cards:document.querySelectorAll('#eventsList [data-event-run]').length}));
-          if(!eventsScreen.active||eventsScreen.cards<1)throw new Error('events screen did not render: '+JSON.stringify(eventsScreen));
-          const eventResult=await page.evaluate(()=>{const before=window.TGGGame.getState();const beforeCash=before.cash;const beforeXp=before.xp;const beforeRep=window.TGGCareer.career.reputation;const ok=window.TGGEvents.run('street-cypher');const after=window.TGGGame.getState();return {ok,beforeCash,afterCash:after.cash,xpGain:after.xp-beforeXp,repGain:window.TGGCareer.career.reputation-beforeRep,runs:window.TGGEvents.state.runs['street-cypher']||0}});
-          if(!eventResult.ok||eventResult.runs!==1||eventResult.afterCash<=eventResult.beforeCash||eventResult.xpGain!==45||eventResult.repGain!==20)throw new Error('city event crew reward failed: '+JSON.stringify(eventResult));
+          const eventsScreen=await page.evaluate(()=>({active:document.getElementById('eventsBoard')?.classList.contains('active'),cards:document.querySelectorAll('#eventsList [data-event-run]').length,total:window.TGGEvents?.summary?.().total||0,ready:window.TGGEvents?.summary?.().ready||0}));
+          if(!eventsScreen.active||eventsScreen.cards<1||eventsScreen.total!==5)throw new Error('V1.4 events screen did not render five events: '+JSON.stringify(eventsScreen));
+          const eventResult=await page.evaluate(()=>{const before=window.TGGGame.getState();const beforeCash=before.cash;const beforeXp=before.xp;const beforeRep=window.TGGCareer.career.reputation;const ok=window.TGGEvents.run('night-market');const after=window.TGGGame.getState();const summary=window.TGGEvents.summary();return {ok,beforeCash,afterCash:after.cash,xpGain:after.xp-beforeXp,repGain:window.TGGCareer.career.reputation-beforeRep,runs:window.TGGEvents.state.runs['night-market']||0,last:window.TGGEvents.state.lastReward,summary}});
+          if(!eventResult.ok||eventResult.runs!==1||eventResult.afterCash!==eventResult.beforeCash+245||eventResult.xpGain!==55||eventResult.repGain!==22||eventResult.last?.id!=='night-market'||eventResult.last?.name!=='Night Market Promo'||eventResult.summary.total!==5)throw new Error('V1.4 city life feedback/reward failed: '+JSON.stringify(eventResult));
           await page.evaluate(()=>window.TGGGame.show('game'));
           const expansionResult=await page.evaluate(()=>{const before=window.TGGGame.getState().cash;const ok=window.TGGExpansion.run('open-mic');return {ok,before,after:window.TGGGame.getState().cash,completed:window.TGGExpansion.state.completed.includes('open-mic')}});
           if(!expansionResult.ok||!expansionResult.completed||expansionResult.after<=expansionResult.before)throw new Error('expansion economy reward failed: '+JSON.stringify(expansionResult));
@@ -123,7 +122,7 @@ jobs:
           const repaired=await page.evaluate(()=>JSON.parse(localStorage.getItem('tgg-game-v1')));
           if(!(repaired.level>=1&&repaired.cash>=0&&repaired.xp>=0&&Number.isFinite(repaired.x)&&Number.isFinite(repaired.y)))throw new Error('save repair failed: '+JSON.stringify(repaired));
           if(errors.length)throw new Error(errors.join('\n'));
-          console.log('V1.4 crew + inventory + events + economy + progression browser smoke PASS');
+          console.log('V1.4 city life + feedback + crew + inventory + economy + progression browser smoke PASS');
           await browser.close();
           JS
           node game/browser-smoke.mjs

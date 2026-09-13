@@ -11,6 +11,19 @@
   function save(){localStorage.setItem(KEY,JSON.stringify(state))}
   function notify(t){if(window.__tggToast)window.__tggToast(t);else console.log(t)}
   function current(){return missions.find(m=>m.id===state.active)}
-  window.TGGContent={content,state,start(id){const m=missions.find(x=>x.id===id);if(!m)return false;state.active=id;state.progress=0;save();notify('MISSION STARTED — '+m.name);return true},advance(){const m=current();if(!m)return false;state.progress++;if(state.progress>=m.goal){state.completed.push(m.id);state.active=null;state.progress=0;if(window.TGGGame?.reward)window.TGGGame.reward(m.reward,m.xp);if(window.TGGCareer?.career){window.TGGCareer.career.reputation+=m.rep;localStorage.setItem('tgg-career-v1',JSON.stringify(window.TGGCareer.career))}notify('CONTENT MISSION COMPLETE — +$'+m.reward);save();return true}notify(m.name+': '+state.progress+'/'+m.goal);save();return false},load,save,current};
+  function start(id){const m=missions.find(x=>x.id===id);if(!m)return false;if(state.active===id)return true;state.active=id;state.progress=0;save();notify('MISSION STARTED — '+m.name);return true}
+  function advance(){
+    const m=current(); if(!m)return false;
+    state.progress++;
+    if(state.progress>=m.goal){
+      state.completed.push(m.id); state.active=null; state.progress=0;
+      window.TGGGame?.reward?.(m.reward,m.xp);
+      window.TGGCareer?.addRep?.(m.rep);
+      notify('CONTENT MISSION COMPLETE — +$'+m.reward+' / +'+m.rep+' REP');
+      save(); return true;
+    }
+    notify(m.name+': '+state.progress+'/'+m.goal); save(); return false;
+  }
+  window.TGGContent={content,state,start,advance,load,save,current};
   load();
 })();

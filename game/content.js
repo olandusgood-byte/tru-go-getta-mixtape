@@ -17,9 +17,13 @@
     state.progress++;
     if(state.progress>=m.goal){
       state.completed.push(m.id); state.active=null; state.progress=0;
-      window.TGGGame?.reward?.(m.reward,m.xp);
-      window.TGGCareer?.addRep?.(m.rep);
-      notify('CONTENT MISSION COMPLETE — +$'+m.reward+' / +'+m.rep+' REP');
+      const base={cash:m.reward,xp:m.xp,rep:m.rep};
+      const applied=window.TGGEconomy?.apply?.(base);
+      if(!applied){window.TGGGame?.reward?.(m.reward,m.xp);window.TGGCareer?.addRep?.(m.rep)}
+      const cash=applied?.cash??m.reward;
+      const xp=applied?.xp??m.xp;
+      const rep=applied?.rep??m.rep;
+      notify('CONTENT MISSION COMPLETE — +$'+cash+' / +'+xp+' XP / +'+rep+' REP');
       save(); return true;
     }
     notify(m.name+': '+state.progress+'/'+m.goal); save(); return false;

@@ -3,7 +3,7 @@
 ## Current truth
 
 - Active production baseline: `V5640`
-- Review checkpoint: `V5710`
+- Review checkpoint: `V5720`
 - Decision: `HOLD`
 - Integrity inconsistencies: `0`
 
@@ -30,3 +30,7 @@
 The master-status reconciler derives all counts from the underlying evidence
 and fails closed if schemas, summaries, controls, or requirement counts drift.
 It does not convert READY work into FIXED work.
+
+V5720 additionally binds every release-readiness input and executable repair
+asset into a SHA-256 manifest. Package integrity may pass while the release
+decision remains HOLD; the two states are deliberately not interchangeable.

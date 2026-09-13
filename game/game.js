@@ -1,14 +1,14 @@
 (() => {
   const KEY='tgg-game-v1'; const $=id=>document.getElementById(id);
   let state={name:'PLAYER',style:'Artist',x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false};
-  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','bridge'];
-  function show(id){screens.forEach(s=>$(s)?.classList.toggle('active',s===id));$('hud')?.classList.toggle('hidden',!['game','career','contentBoard','expansionBoard','bridge'].includes(id));window.TGGCareer?.render?.();window.TGGBridge?.render?.();}
+  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','bridge'];
+  function show(id){screens.forEach(s=>$(s)?.classList.toggle('active',s===id));$('hud')?.classList.toggle('hidden',!['game','career','contentBoard','expansionBoard','progressionBoard','bridge'].includes(id));window.TGGCareer?.render?.();window.TGGBridge?.render?.();window.TGGProgression?.render?.();}
   function toast(t){const el=$('toast');if(!el)return;el.textContent=t;el.classList.add('show');clearTimeout(window.__tggToastTimer);window.__tggToastTimer=setTimeout(()=>el.classList.remove('show'),1800)}
-  function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x)state={...state,...x}}catch(e){} update()}
-  function save(){localStorage.setItem(KEY,JSON.stringify(state));toast('GAME SAVED')}
+  function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(x)state={...state,...x}}catch(e){} update();window.TGGProgression?.sync?.()}
+  function save(){localStorage.setItem(KEY,JSON.stringify(state));toast('GAME SAVED');window.TGGProgression?.sync?.()}
   function spend(amount){amount=Math.max(0,Number(amount)||0);if(state.cash<amount){toast('NOT ENOUGH CASH');return false}state.cash-=amount;update();save();return true}
   function update(){ $('hudName').textContent=state.name;$('hudLevel').textContent=state.level;$('hudCash').textContent=state.cash;$('hudXp').textContent=state.xp;$('hudNext').textContent=state.level*100;$('player').style.left=state.x+'%';$('player').style.top=state.y+'%';$('missionStatus').textContent=state.accepted?'Mission active — finish the job.':'Find M and start a mission.';$('missionBtn').textContent=state.mission?(state.accepted?'COMPLETE MISSION':'TAKE MISSION'):'TALK TO M'}
-  function addXp(n){state.xp+=Math.max(0,Number(n)||0);while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;toast('LEVEL UP — LEVEL '+state.level)}update()}
+  function addXp(n){state.xp+=Math.max(0,Number(n)||0);while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;toast('LEVEL UP — LEVEL '+state.level)}update();window.TGGProgression?.sync?.()}
   function reward(cash,xp){state.cash+=Math.max(0,Number(cash)||0);addXp(xp);save()}
   function move(dx,dy){state.x=Math.max(3,Math.min(94,state.x+dx));state.y=Math.max(8,Math.min(88,state.y+dy));update();if(state.accepted&&Math.abs(state.x-72)<5&&Math.abs(state.y-36)<6)toast('You found the mission spot — hit COMPLETE MISSION')}
   function mission(){if(!state.mission){state.mission='studio-run';state.accepted=false;toast('M has a job for you.')}else if(!state.accepted){state.accepted=true;toast('MISSION ACCEPTED — get to the marked spot')}else if(Math.abs(state.x-72)<10&&Math.abs(state.y-36)<10){reward(250,50);state.mission=null;state.accepted=false;toast('MISSION COMPLETE +$250 +50 XP')}else toast('Move closer to M to finish the mission');update()}

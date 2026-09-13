@@ -86,8 +86,23 @@ jobs:
           await page.click('#advanceContentBtn');
           const saved=await page.evaluate(()=>localStorage.getItem('tgg-content-v1'));
           if(!saved)throw new Error('content state was not saved');
+          await page.evaluate(()=>{
+            const s=window.TGGGame.getState();
+            s.level=3;
+            s.xp=0;
+            window.TGGGame.refresh();
+            window.TGGDistricts.sync();
+          });
+          const districts=await page.evaluate(()=>window.TGGDistricts.state.unlocked.slice().sort());
+          if(JSON.stringify(districts)!==JSON.stringify(['downtown','mixtape-ave','studio-row']))throw new Error('district unlock progression failed: '+JSON.stringify(districts));
+          await page.evaluate(()=>{
+            localStorage.setItem('tgg-game-v1',JSON.stringify({level:-4,cash:-99,xp:'bad',x:'bad',y:null}));
+            window.TGGSave.repair();
+          });
+          const repaired=await page.evaluate(()=>JSON.parse(localStorage.getItem('tgg-game-v1')));
+          if(!(repaired.level>=1&&repaired.cash>=0&&repaired.xp>=0&&Number.isFinite(repaired.x)&&Number.isFinite(repaired.y)))throw new Error('save repair failed: '+JSON.stringify(repaired));
           if(errors.length)throw new Error(errors.join('\n'));
-          console.log('V1.2 browser smoke PASS');
+          console.log('V1.2 browser smoke + progression hardening PASS');
           await browser.close();
           JS
           node game/browser-smoke.mjs

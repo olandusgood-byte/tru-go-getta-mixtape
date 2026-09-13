@@ -3,7 +3,7 @@
 ## Current truth
 
 - Active production baseline: `V5640`
-- Review checkpoint: `V5750`
+- Review checkpoint: `V5760`
 - Decision: `HOLD`
 - Integrity inconsistencies: `0`
 
@@ -45,3 +45,6 @@ bundle before CI enforces the final candidate decision, including HOLD cases.
 V5750 adds atomic batch intake for executed evidence and verified remediation
 results. It creates new review candidates and invalidates stale approvals
 without editing the active ledgers.
+
+V5760 adds a non-signing human-approval envelope. It exposes the exact hashes
+and prerequisite state but cannot create, infer, or apply an approval.

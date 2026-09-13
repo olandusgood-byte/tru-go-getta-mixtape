@@ -1,0 +1,1 @@
+(() => { document.querySelectorAll('[data-mission]').forEach(b=>b.onclick=()=>{if(window.TGGContent?.start(b.dataset.mission)){window.TGGGame?.show?.('game')}}); document.getElementById('contentBtn').onclick=()=>window.TGGGame?.show?.('contentBoard'); document.getElementById('contentBack').onclick=()=>window.TGGGame?.show?.('game'); })();

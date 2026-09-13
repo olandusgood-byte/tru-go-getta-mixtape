@@ -1,0 +1,89 @@
+# TRU GO GETTA Production Migration Parity Checkpoint — 2026-09-13
+
+Historical/read-only evidence. This file records the authoritative live migration ledger observed directly in production. It does not replay or alter production.
+
+## Live checkpoint
+
+- Supabase project: `xsofowzvwetamhyuvlpj`
+- Live migration count at capture: **1,106**
+- First migration: `20260831124800`
+- Latest migration: `20260913225916`
+- Latest migration name: `harden_public_discovery_audio_exposure`
+- Migrations added since the 2026-09-11 repository fingerprint: **55**
+- Post-2026-09-11 ledger SHA-256: `ba0a05a2ad319ea609d2271f3971474fdf3ebd6527796fc9908f74157595c4b5`
+- Post-2026-09-11 ordered statements SHA-256: `07e8aae696bdab64dfd2476f83fa354ffd61639a9698745d5e5610e1639343ab`
+
+## Newly observed live migrations
+
+```text
+20260912002305 allow_authenticated_published_secure_audio_read
+20260912154150 v58_auto_builder_runtime_repair
+20260912154253 v58_auto_builder_runtime_execution_bridge
+20260912154432 v58_auto_builder_execution_engine_bridge
+20260912164031 revoke_anon_v58_workflow_secdef
+20260912180256 fix_operational_exposure_audit_delegated_guards
+20260913024415 optimize_v58_rls_auth_uid_initplans
+20260913051107 reconcile_verified_blogger_patch_hashes_in_live_monitor
+20260913051129 use_effective_blogger_hashes_in_baseline_drift_core
+20260913051334 clear_stale_completed_call_invite_alert
+20260913051534 reconcile_schema_attestation_after_approved_runtime_watch_fix
+20260913135256 fix_architecture_stale_component_retirement
+20260913140435 canonicalize_artist_dashboard_login_route
+20260913140545 make_artist_dashboard_trigger_canonical
+20260913140558 finalize_artist_dashboard_route_state
+20260913141456 repair_one_final_legacy_dashboard_guard_v2
+20260913144421 harden_v58_release_launch_owner_boundary
+20260913150853 tgg_media_vault_tracker_v1
+20260913151448 tgg_media_vault_intake_pipeline_v1
+20260913151552 tgg_media_vault_classification_versioning_v1
+20260913151603 tgg_media_vault_classification_priority_fix_v1
+20260913151616 tgg_media_vault_classification_xml_priority_v1
+20260913151751 tgg_media_vault_reconciliation_v1
+20260913151759 tgg_media_vault_reconciliation_reports_v1
+20260913151914 tgg_media_vault_links_only_v1
+20260913151922 tgg_media_vault_readiness_view_v1
+20260913152218 tgg_media_vault_provider_manifest_v1
+20260913155911 harden_media_vault_security_invoker_and_search_path
+20260913194954 add_render_job_request_key_idempotency
+20260913203536 add_tgg_broadcast_media_health_control
+20260913203629 add_broadcast_media_health_gate
+20260913203655 add_broadcast_media_health_transition
+20260913204936 wire_broadcast_health_into_live_lifecycle
+20260913205049 add_broadcast_recording_replay_gate
+20260913205524 add_broadcast_provider_adapter_contract
+20260913205620 add_broadcast_telemetry_event_contract
+20260913205750 add_broadcast_media_state_matrix
+20260913205904 add_live_recording_replay_transition
+20260913205931 add_live_verified_clip_gate
+20260913210000 add_live_clip_render_queue
+20260913210113 harden_live_clip_render_dispatch
+20260913210252 wire_live_clip_queue_to_render_jobs
+20260913210348 tgg_live_clip_playback_verification_gate
+20260913210455 tgg_live_clip_playback_verification_bridge
+20260913210540 bridge_live_clip_verified_publish
+20260913210721 auto_live_clip_worker_bridge
+20260913210821 tgg_live_clip_full_auto_builder
+20260913210829 tgg_live_clip_auto_pipeline_entrypoint
+20260913210928 unify_live_auto_builder_orchestration
+20260913210936 add_live_clip_auto_completion_bridge
+20260913210945 add_live_auto_continuation_queue
+20260913211121 add_live_clip_auto_continuation_state
+20260913211159 wire_live_clip_auto_continuation_triggers
+20260913212048 harden_live_trigger_rpc_exposure_and_broadcast_touch_search_path
+20260913225916 harden_public_discovery_audio_exposure
+```
+
+## Reconciliation status
+
+**IMPROVED / TRACKED — NOT CERTIFIED AS FULL PARITY.**
+
+The repository now contains a current live-ledger checkpoint instead of relying on the stale 2026-09-11 fingerprint. The exact live version/name ledger and statement digest for the 55 migrations added after that checkpoint are recorded above.
+
+Full source-control parity is still intentionally not certified until the retained SQL for the complete live history is exported/reviewed and checked into a recovery-safe archive, then a clean-environment bootstrap is validated. No production schema was changed to manufacture parity.
+
+## Safety
+
+- Do not replay this manifest against production.
+- Do not invent migration SQL.
+- Do not rewrite production solely to match repository history.
+- Use an isolated clean environment for bootstrap validation.

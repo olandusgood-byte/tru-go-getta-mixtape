@@ -20,6 +20,7 @@ export const RELEASE_FILES = [
   ['patches/v5670/creator-store-loader-repair.js', 'repair-asset'],
   ['patches/v5670/truthful-runtime-status.js', 'repair-asset'],
   ['scripts/tgg-evidence-gate.mjs', 'control-executable'],
+  ['scripts/tgg-approval-envelope.mjs', 'control-executable'],
   ['scripts/tgg-remediation-gate.mjs', 'control-executable'],
   ['scripts/tgg-master-status.mjs', 'control-executable'],
   ['scripts/tgg-readiness-runner.mjs', 'control-executable'],

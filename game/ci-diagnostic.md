@@ -1,0 +1,1 @@
+Browser smoke diagnostic: verify Career API readiness before QA and print full QA/release reports when the gate fails.

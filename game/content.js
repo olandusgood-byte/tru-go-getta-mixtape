@@ -13,9 +13,21 @@
   function current(){return missions.find(m=>m.id===state.active)}
   function requirementsMet(m){return (m.requires||[]).every(r=>window.TGGInventory?.has?.(r.id,r.qty))}
   function requirementText(m){return (m.requires||[]).map(r=>{const item=window.TGGInventory?.catalog?.find(x=>x.id===r.id);return (item?.name||r.id)+' x'+r.qty}).join(' + ')}
-  function start(id){const m=missions.find(x=>x.id===id);if(!m)return false;if(!requirementsMet(m)){notify('NEED INVENTORY — '+requirementText(m));return false}if(state.active===id)return true;state.active=id;state.progress=0;save();notify('MISSION STARTED — '+m.name);return true}
+  function districtReady(m){
+    const districts=window.TGGDistricts;
+    if(!districts?.canEnter)return true;
+    return districts.canEnter(m.district);
+  }
+  function start(id){
+    const m=missions.find(x=>x.id===id);if(!m)return false;
+    if(!districtReady(m)){notify(m.district.toUpperCase()+' LOCKED');return false}
+    if(!requirementsMet(m)){notify('NEED INVENTORY — '+requirementText(m));return false}
+    if(state.active===id)return true;
+    state.active=id;state.progress=0;save();notify('MISSION STARTED — '+m.name);return true
+  }
   function advance(){
     const m=current(); if(!m)return false;
+    if(!districtReady(m)){state.active=null;state.progress=0;save();notify('MISSION BLOCKED — '+m.district.toUpperCase()+' LOCKED');return false}
     if(!requirementsMet(m)){state.active=null;state.progress=0;save();notify('MISSION BLOCKED — '+requirementText(m));return false}
     state.progress++;
     if(state.progress>=m.goal){

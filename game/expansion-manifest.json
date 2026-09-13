@@ -1,0 +1,9 @@
+{
+  "project":"TRU GO GETTA Game",
+  "version":"1.0",
+  "module":"GAME-005",
+  "name":"City Expansion",
+  "systems":["activities","npc_network","level_unlocks","cash_costs","xp_rewards","reputation_rewards"],
+  "workflow":["BUILD","TEST","REPAIR","VERIFY","CHECKPOINT","ADVANCE"],
+  "next":"GAME-006 Website Bridge"
+}

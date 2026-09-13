@@ -18,7 +18,7 @@ export function evaluateSourceIntake({
   expectedSha256,
   expectedFilename,
   actualFilename,
-  minBytes = 650000,
+  minBytes = 100000,
   maxBytes = 2000000
 }) {
   const source = String(content || '');

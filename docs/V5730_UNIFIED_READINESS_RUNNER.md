@@ -18,8 +18,9 @@ It returns `GO` only when every gate is green at the same time. Package
 integrity alone cannot override a HOLD release, and the existence of an XML file
 alone cannot bypass its checksum, size, Blogger-marker, or secret checks.
 
-The current result remains HOLD because the browser session is signed out, the
-canonical XML and checksum are absent, remediation is not verified, the 11
+The canonical XML and checksum are now accepted and the integration candidate
+is READY_FOR_HUMAN_REVIEW. The overall result remains HOLD because remediation
+is not verified, the public-shell failures are unresolved in production, the 11
 authenticated requirements are not PASS, and human approvals are absent.
 
 The runner performs no network call, sign-in, production write, deployment,

@@ -1,9 +1,9 @@
 {
   "schema": "tgg-release-readiness-package-v1",
   "version": "V5720",
-  "generated_at": "2026-09-13T04:09:33.195Z",
+  "generated_at": "2026-09-13T04:47:47.352Z",
   "active_production_baseline": "V5640",
-  "current_review_checkpoint": "V5760",
+  "current_review_checkpoint": "V5770",
   "release_decision": "HOLD",
   "files": [
     {
@@ -33,8 +33,8 @@
     {
       "path": "evidence/blogger-source-access-2026-09-12.json",
       "role": "source-access-evidence",
-      "bytes": 663,
-      "sha256": "7d3b329d9f4852f2bfa16e8698c89ff2b3f342e059f915b055eb37fca3f09dd4"
+      "bytes": 1400,
+      "sha256": "8e10c8e2ad572b141f8fe4321155c271f3a72d708b03d12191a1700b31964a9e"
     },
     {
       "path": "evidence/live-dom-source-map-2026-09-12.json",
@@ -51,20 +51,32 @@
     {
       "path": "integration/v5680-integration-readiness.json",
       "role": "integration-readiness",
-      "bytes": 1257,
-      "sha256": "cdbc660cc3c914d10a838cd6df431ea9dcef789bbdc8c60eb1f14137d2795421"
+      "bytes": 1837,
+      "sha256": "dd532f069edf8c167e70f497f90e15e63f61b8254cfa87f8ba31c2d097399e20"
     },
     {
       "path": "integration/v5690-source-intake-readiness.json",
       "role": "source-intake-readiness",
-      "bytes": 793,
-      "sha256": "0ffd6b88b6894d07a85126d5429cf3d5f626d8591c7449553e0bcc7e20b4c084"
+      "bytes": 1166,
+      "sha256": "679f3c272e2d27ab85eede5b318a1b82b23d53a2424afd849f80e775b22470d8"
+    },
+    {
+      "path": "source/blogger/TRU_GO_GETTA_CANONICAL.xml",
+      "role": "canonical-source",
+      "bytes": 133986,
+      "sha256": "89ac812961eac6fc401a02852e83fe1e5411d2f1f7dae9fc2b4ec8f0236963d7"
+    },
+    {
+      "path": "source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256",
+      "role": "canonical-source-checksum",
+      "bytes": 93,
+      "sha256": "12f9d77eb806cd91c20ea5d105e9e1748a22376fab0b04a92fc2f5c638a8cd44"
     },
     {
       "path": "status/master-status-2026-09-13.json",
       "role": "master-status",
-      "bytes": 1451,
-      "sha256": "e8e72d2da9ab8b78f195efc375cc23e10cf0201bcdda738a9d769c33efc97d42"
+      "bytes": 1346,
+      "sha256": "7c49369b6625a1a28291177894226ee6c779ab894f49c7db16bcee808de62e35"
     },
     {
       "path": "patches/v5670/blogger-shell-isolation.js",
@@ -105,8 +117,8 @@
     {
       "path": "scripts/tgg-approval-envelope.mjs",
       "role": "control-executable",
-      "bytes": 4422,
-      "sha256": "e5f73e54c200ce903f4ad67b906e5ac33ed3b038e1dd6ecb37b6165a34425d18"
+      "bytes": 4467,
+      "sha256": "30eacbc089bcdb65cb262b272b19fa2335353f7eb462b92e9e3b692f1be6e193"
     },
     {
       "path": "scripts/tgg-remediation-gate.mjs",
@@ -118,13 +130,13 @@
       "path": "scripts/tgg-master-status.mjs",
       "role": "control-executable",
       "bytes": 7926,
-      "sha256": "362409c6a2965789473feea861dd2e1a8013a5f3690a9b3f6186c127cd58fc8d"
+      "sha256": "f33b834a39afedab15d1612ae297cce8a29057c8c58ea5075539840dc0387553"
     },
     {
       "path": "scripts/tgg-readiness-runner.mjs",
       "role": "control-executable",
       "bytes": 4556,
-      "sha256": "e7530e91af0326f7b063530c41b7d60797039cf22d3683ff82ec2996c7faedf5"
+      "sha256": "18fef9b06104c5be808f56a49cc55cbe7f8744330a4487f2568cc302fb53282b"
     },
     {
       "path": "scripts/tgg-result-intake.mjs",
@@ -135,8 +147,8 @@
     {
       "path": "scripts/tgg-source-review-summary.mjs",
       "role": "control-executable",
-      "bytes": 3699,
-      "sha256": "0a2270d85465a8a8466b390102eaf370e1451cc0fd99a8c095c7b89711604585"
+      "bytes": 4109,
+      "sha256": "e4cca6fad5185f2aed4eeeae678a7311f96935e8900dd3cdd28370c67f827236"
     },
     {
       "path": "scripts/tgg-predeploy-lint.mjs",
@@ -147,20 +159,20 @@
     {
       "path": "scripts/tgg-blogger-candidate.mjs",
       "role": "control-executable",
-      "bytes": 5046,
-      "sha256": "3d197e6de096d6b0224ff580a8542d5b66f9cc2c6d5e7b0f1e93444dc2e14265"
+      "bytes": 7684,
+      "sha256": "3f852219892dbf1c603cc7b3d65efa9e60e49bada3ce2ae89fac8dd7a5954205"
     },
     {
       "path": "scripts/tgg-source-intake.mjs",
       "role": "control-executable",
       "bytes": 3887,
-      "sha256": "3723fff21bc4faaf88a76a0d4e05d4a4a970f7feb15883cfe2824fb97162772d"
+      "sha256": "63445933202996db91993b853eeb316308c7c02dfa87a6446679649d1c5b19fb"
     },
     {
       "path": "scripts/tgg_xml_wellformed.py",
       "role": "control-executable",
-      "bytes": 1541,
-      "sha256": "e23abca4a4729d7737a13556ebabd523e31204a17eb3046d6acaffc995f9222c"
+      "bytes": 1744,
+      "sha256": "f3cf54115095dadafb4f4d1109a149a36f0b71e8e1c95a71aa421e5cf80b677d"
     }
   ],
   "controls": {

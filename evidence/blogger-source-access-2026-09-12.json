@@ -1,15 +1,28 @@
 {
   "schema": "tgg-blogger-source-access-v1",
-  "captured_at": "2026-09-13T03:55:35Z",
+  "captured_at": "2026-09-13T04:45:03Z",
   "target": "https://www.blogger.com/",
-  "redirected_to": "https://www.blogger.com/about/?bpli=1",
-  "authenticated": false,
-  "canonical_theme_exported": false,
+  "redirected_to": "https://www.blogger.com/blog/settings/5694915993010036896",
+  "authenticated": true,
+  "account_role": "ADMIN_CONFIRMED_BY_PRIVILEGED_THEME_ACCESS",
+  "theme_access": true,
+  "admin_permission_controls_visible": false,
+  "theme_backup_control_visible": true,
+  "canonical_theme_exported": true,
+  "canonical_theme": {
+    "path": "source/blogger/TRU_GO_GETTA_CANONICAL.xml",
+    "bytes": 133986,
+    "sha256": "89ac812961eac6fc401a02852e83fe1e5411d2f1f7dae9fc2b4ec8f0236963d7",
+    "xml_wellformed": true
+  },
   "source_substitution_performed": false,
   "production_writes": false,
   "notes": [
-    "A fresh read-only browser check again displayed Blogger's public landing page with a SIGN IN action.",
-    "No sign-in retry, dashboard action, backup, download, upload, theme edit, or publish action was attempted.",
+    "Secure Google authentication completed and the target Blogger dashboard loaded.",
+    "The account initially had author-only access and was then promoted by the user.",
+    "After reload, the target blog menu exposed Stats, Comments, Earnings, Pages, Layout, Theme, and Settings in addition to Posts.",
+    "Blogger Theme > Backup produced the canonical theme export; its exact byte count and SHA-256 are recorded above.",
+    "No backup upload, restore, theme edit, permission change by automation, deployment, or publish action was attempted.",
     "Rendered production HTML is evidence only and is not treated as canonical Blogger XML source."
   ]
 }

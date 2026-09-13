@@ -19,7 +19,7 @@ export function summarizeReadiness({ evidence, remediation, master, packageInteg
     schema: 'tgg-unified-readiness-decision-v1',
     evaluated_at: new Date().toISOString(),
     active_production_baseline: master?.active_production_baseline || 'UNKNOWN',
-    current_review_checkpoint: 'V5760',
+    current_review_checkpoint: 'V5770',
     decision: blockers.length ? 'HOLD' : 'GO',
     gates: {
       authenticated_evidence: evidence?.decision || 'HOLD',

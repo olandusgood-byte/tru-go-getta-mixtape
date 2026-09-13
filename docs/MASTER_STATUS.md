@@ -3,7 +3,7 @@
 ## Current truth
 
 - Active production baseline: `V5640`
-- Review checkpoint: `V5760`
+- Review checkpoint: `V5770`
 - Decision: `HOLD`
 - Integrity inconsistencies: `0`
 
@@ -13,8 +13,8 @@
 |---|---:|---:|---|
 | Public-shell execution | 17/17 | 0 | Complete; 16 FAIL, 1 UNVERIFIED |
 | Repair preparation | 6/6 | 0 | All repair assets READY |
-| Repair verification | 0/6 | 6 | Awaiting canonical-source integration |
-| Canonical source intake | 0/2 files | 2 | XML and SHA-256 missing |
+| Repair verification | 0/6 | 6 | Awaiting approved deployment and retest |
+| Canonical source intake | 2/2 files | 0 | Accepted; candidate ready for human review |
 | Authenticated evidence | 0/11 | 11 | UNVERIFIED |
 | Human approval | 0/1 | 1 | Required after evidence |
 
@@ -48,3 +48,10 @@ without editing the active ledgers.
 
 V5760 adds a non-signing human-approval envelope. It exposes the exact hashes
 and prerequisite state but cannot create, infer, or apply an approval.
+
+V5770 reconciles Blogger source authority and replaces assumptions with the
+authenticated export. Admin-level Theme access is confirmed, the canonical XML
+and checksum are accepted, and the separate candidate passes both XML and
+predeployment lint. The overall decision remains HOLD pending human review,
+controlled deployment, remediation verification, authenticated evidence, and
+final evidence-bound approval.

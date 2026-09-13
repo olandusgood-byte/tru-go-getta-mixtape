@@ -54,7 +54,7 @@ export function buildApprovalEnvelope({ liveEvidence, remediation, masterStatus,
     version: 'V5760',
     generated_at: now,
     active_production_baseline: masterStatus?.active_production_baseline || 'UNKNOWN',
-    current_review_checkpoint: 'V5760',
+    current_review_checkpoint: masterStatus?.current_review_checkpoint || 'UNKNOWN',
     decision: ready ? 'READY_FOR_HUMAN_DECISION' : 'HOLD',
     bindings: {
       evidence_sha256: evidence.hash,

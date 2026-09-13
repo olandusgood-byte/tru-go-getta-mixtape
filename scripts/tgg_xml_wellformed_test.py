@@ -20,15 +20,26 @@ class XmlWellFormedTests(unittest.TestCase):
         )
         self.assertEqual(result["decision"], "PASS")
 
+    def test_standard_html_doctype_passes(self):
+        result = self.validate(
+            '<!DOCTYPE html><html xmlns:b="urn:blogger"><body><b:widget id="HTML6"/></body></html>'
+        )
+        self.assertEqual(result["decision"], "PASS")
+
     def test_unclosed_document_holds(self):
         result = self.validate('<html><body>')
         self.assertEqual(result["decision"], "HOLD")
         self.assertIn("XML parse error", " ".join(result["reasons"]))
 
-    def test_dtd_is_rejected(self):
-        result = self.validate('<!DOCTYPE html><html><body/></html>')
+    def test_custom_dtd_is_rejected(self):
+        result = self.validate('<!DOCTYPE html SYSTEM "theme.dtd"><html><body/></html>')
         self.assertEqual(result["decision"], "HOLD")
-        self.assertIn("DTD", " ".join(result["reasons"]))
+        self.assertIn("custom DTD", " ".join(result["reasons"]))
+
+    def test_entity_declaration_is_rejected(self):
+        result = self.validate('<!DOCTYPE html><!ENTITY x "unsafe"><html><body/></html>')
+        self.assertEqual(result["decision"], "HOLD")
+        self.assertIn("entity", " ".join(result["reasons"]))
 
 
 if __name__ == "__main__":

@@ -62,6 +62,7 @@ jobs:
             > build/xml-wellformed.json
           xml_code=$?
           candidate_code=2
+          candidate_xml_code=2
           expected="$(cut -d ' ' -f 1 source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256)"
           if test "$intake_code" -eq 0 && test "$xml_code" -eq 0; then
             node scripts/tgg-blogger-candidate.mjs \
@@ -76,17 +77,25 @@ jobs:
               --module patches/v5670/truthful-runtime-status.js
             candidate_code=$?
           fi
+          if test -f build/TRU_GO_GETTA_CANDIDATE.xml; then
+            python3 scripts/tgg_xml_wellformed.py \
+              build/TRU_GO_GETTA_CANDIDATE.xml \
+              > build/candidate-xml-wellformed.json
+            candidate_xml_code=$?
+          fi
           set -e
           node scripts/tgg-source-review-summary.mjs \
             --source-available true \
             --intake-code "$intake_code" \
             --xml-code "$xml_code" \
             --candidate-code "$candidate_code" \
+            --candidate-xml-code "$candidate_xml_code" \
             --candidate-manifest build/candidate-manifest.json \
             --artifact build/source-intake.json \
             --artifact build/xml-wellformed.json \
             --artifact build/TRU_GO_GETTA_CANDIDATE.xml \
             --artifact build/candidate-manifest.json \
+            --artifact build/candidate-xml-wellformed.json \
             --output build/review-summary.json
 
       - name: Upload review artifacts

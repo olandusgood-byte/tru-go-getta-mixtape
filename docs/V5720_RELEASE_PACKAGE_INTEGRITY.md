@@ -3,7 +3,8 @@
 V5720 creates one cryptographically bound handoff package for the current
 release-readiness state. It includes the source evidence, authenticated evidence
 plan, remediation queue, integration controls, repair assets, and executable
-gates used to derive the master decision.
+gates used to derive the master decision. The V5770 refresh also binds the
+canonical Blogger XML and its companion checksum, for 28 hash-verified files.
 
 Package integrity and release readiness are separate decisions:
 

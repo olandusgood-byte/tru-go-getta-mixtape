@@ -13,6 +13,8 @@ export const RELEASE_FILES = [
   ['remediation/shell-remediation-2026-09-12.json', 'remediation'],
   ['integration/v5680-integration-readiness.json', 'integration-readiness'],
   ['integration/v5690-source-intake-readiness.json', 'source-intake-readiness'],
+  ['source/blogger/TRU_GO_GETTA_CANONICAL.xml', 'canonical-source'],
+  ['source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256', 'canonical-source-checksum'],
   ['status/master-status-2026-09-13.json', 'master-status'],
   ['patches/v5670/blogger-shell-isolation.js', 'repair-asset'],
   ['patches/v5670/auth-first-rpc-gate.js', 'repair-asset'],

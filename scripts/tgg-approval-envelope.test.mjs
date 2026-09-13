@@ -26,7 +26,7 @@ function readyInputs() {
       human_approval: { decision: 'HOLD', approved_by: '', approved_at: '', remediation_sha256: '' }
     },
     masterStatus: {
-      decision: 'HOLD', active_production_baseline: 'V5640', integrity_errors: [],
+      decision: 'HOLD', active_production_baseline: 'V5640', current_review_checkpoint: 'V5770', integrity_errors: [],
       hold_reasons: ['Final human approval is absent or not evidence-bound.']
     },
     packageIntegrity: { integrity_decision: 'PASS' }
@@ -40,6 +40,7 @@ test('complete prerequisites produce an unsigned human-decision envelope', () =>
   assert.match(result.bindings.remediation_sha256, /^[a-f0-9]{64}$/);
   assert.equal(result.approval_fields.decision, '');
   assert.equal(result.controls.approval_created, false);
+  assert.equal(result.current_review_checkpoint, 'V5770');
 });
 
 test('incomplete evidence holds the approval envelope', () => {

@@ -15,6 +15,7 @@ test('invalid XML remains HOLD and does not become a pass', () => {
     intakeCode: 0,
     xmlCode: 2,
     candidateCode: 2,
+    candidateXmlCode: 2,
     candidateDecision: 'NOT_RUN'
   });
   assert.equal(result.decision, 'HOLD');
@@ -28,6 +29,7 @@ test('a generated HOLD candidate preserves its diagnostic artifacts', () => {
     intakeCode: 0,
     xmlCode: 0,
     candidateCode: 2,
+    candidateXmlCode: 0,
     candidateDecision: 'HOLD',
     artifacts: ['candidate-manifest.json', 'TRU_GO_GETTA_CANDIDATE.xml']
   });
@@ -41,9 +43,23 @@ test('all checks passing produces review readiness, never deployment approval', 
     intakeCode: 0,
     xmlCode: 0,
     candidateCode: 0,
+    candidateXmlCode: 0,
     candidateDecision: 'READY_FOR_HUMAN_REVIEW'
   });
   assert.equal(result.decision, 'READY_FOR_HUMAN_REVIEW');
   assert.equal(result.controls.human_approval_required, true);
   assert.equal(result.controls.production_writes, false);
+});
+
+test('a lint-clean but malformed candidate remains HOLD', () => {
+  const result = summarizeSourceReview({
+    sourceAvailable: true,
+    intakeCode: 0,
+    xmlCode: 0,
+    candidateCode: 0,
+    candidateXmlCode: 2,
+    candidateDecision: 'READY_FOR_HUMAN_REVIEW'
+  });
+  assert.equal(result.decision, 'HOLD');
+  assert.equal(result.checks.candidate_xml_wellformed, 'HOLD');
 });

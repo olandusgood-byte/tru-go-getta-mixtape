@@ -24,8 +24,12 @@ def validate_xml(path: pathlib.Path) -> dict:
         return result
 
     upper = raw.upper()
-    if b"<!DOCTYPE" in upper or b"<!ENTITY" in upper:
-        result["reasons"].append("DTD and entity declarations are not accepted in the canonical source.")
+    doctypes = upper.count(b"<!DOCTYPE")
+    standard_html_doctype = b"<!DOCTYPE HTML>" in upper
+    if b"<!ENTITY" in upper or doctypes > 1 or (doctypes == 1 and not standard_html_doctype):
+        result["reasons"].append(
+            "Only Blogger's standard <!DOCTYPE html> declaration is accepted; custom DTD and entity declarations are rejected."
+        )
         return result
 
     try:

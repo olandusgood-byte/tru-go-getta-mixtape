@@ -3,7 +3,7 @@ import test from 'node:test';
 import { buildCandidate, sha256 } from './tgg-blogger-candidate.mjs';
 
 function source(body = '') {
-  return `<html><body><b:widget id='HTML6' type='HTML'/>${body}</body></html>`;
+  return `<html><head></head><body><b:widget id='HTML6' type='HTML'/>${body}</body></html>`;
 }
 
 test('candidate input is locked to the expected source hash', () => {
@@ -24,6 +24,7 @@ test('candidate scopes HTML6, fixes raw CDATA, and injects modules', () => {
   assert.match(result.candidate, /cond='data:view\.isHomepage'/);
   assert.match(result.candidate, /\/\/<!\[CDATA\[/);
   assert.match(result.candidate, /V5680 review module: patches\/example\.js/);
+  assert.ok(result.candidate.indexOf('V5680 review module') < result.candidate.indexOf('</head>'));
   assert.equal(result.manifest.decision, 'READY_FOR_HUMAN_REVIEW');
   assert.equal(result.manifest.controls.overwrote_source, false);
 });
@@ -53,4 +54,16 @@ test('candidate rejects modules containing a script boundary', () => {
     }),
     /literal <\/script> boundary/
   );
+});
+
+test('candidate replaces a direct public discovery join with the reviewed adapter', () => {
+  const input = source(`<script>async function load(){const {data,error}=await db.from('mixtapes').select(\`id,artists(id,stage_name)\`).eq('status','published').limit(8);}</script>`);
+  const result = buildCandidate({
+    source: input,
+    expectedSha256: sha256(input),
+    modules: [{ path: 'patches/homepage-discovery-adapter.js', content: '(function(){window.TGGPublicDiscovery={queryPublicReleases:function(){}};})();' }]
+  });
+  assert.doesNotMatch(result.candidate, /\.from\(['"]mixtapes['"]\)/);
+  assert.match(result.candidate, /TGGPublicDiscovery\.queryPublicReleases\(db, 8/);
+  assert.equal(result.manifest.changes.direct_discovery_queries_replaced, 1);
 });

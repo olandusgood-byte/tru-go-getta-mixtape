@@ -11,6 +11,7 @@ export function summarizeSourceReview({
   intakeCode = 2,
   xmlCode = 2,
   candidateCode = 2,
+  candidateXmlCode = 2,
   candidateDecision = 'NOT_RUN',
   artifacts = []
 }) {
@@ -19,12 +20,14 @@ export function summarizeSourceReview({
   if (sourceAvailable && intakeCode !== 0) reasons.push('Canonical source identity or safety intake failed.');
   if (sourceAvailable && xmlCode !== 0) reasons.push('Canonical source XML validation failed.');
   if (sourceAvailable && candidateCode !== 0) reasons.push('Candidate generation or regression lint remains HOLD.');
+  if (sourceAvailable && candidateXmlCode !== 0) reasons.push('Generated candidate XML validation failed or was not run.');
   if (sourceAvailable && candidateDecision !== 'READY_FOR_HUMAN_REVIEW') reasons.push('Candidate is not READY_FOR_HUMAN_REVIEW.');
 
   const ready = sourceAvailable
     && intakeCode === 0
     && xmlCode === 0
     && candidateCode === 0
+    && candidateXmlCode === 0
     && candidateDecision === 'READY_FOR_HUMAN_REVIEW';
 
   return {
@@ -36,11 +39,13 @@ export function summarizeSourceReview({
     checks: {
       source_intake: intakeCode === 0 ? 'PASS' : sourceAvailable ? 'HOLD' : 'NOT_RUN',
       xml_wellformed: xmlCode === 0 ? 'PASS' : sourceAvailable ? 'HOLD' : 'NOT_RUN',
+      candidate_xml_wellformed: candidateXmlCode === 0 ? 'PASS' : sourceAvailable ? 'HOLD' : 'NOT_RUN',
       candidate: candidateDecision
     },
     exit_codes: {
       source_intake: integer(intakeCode),
       xml_wellformed: integer(xmlCode),
+      candidate_xml_wellformed: integer(candidateXmlCode),
       candidate: integer(candidateCode)
     },
     artifacts: [...artifacts].sort(),
@@ -90,6 +95,7 @@ async function main() {
     intakeCode: integer(option(args, '--intake-code')),
     xmlCode: integer(option(args, '--xml-code')),
     candidateCode: integer(option(args, '--candidate-code')),
+    candidateXmlCode: integer(option(args, '--candidate-xml-code')),
     candidateDecision,
     artifacts: artifactValues
   });

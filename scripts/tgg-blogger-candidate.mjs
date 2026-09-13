@@ -8,13 +8,22 @@ export function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
-function scopeHomepageWidget(source) {
-  const widgetPattern = /<b:widget\b[^>]*\bid=(['"])HTML6\1[^>]*>/i;
-  const match = source.match(widgetPattern);
-  if (!match) throw new Error('Required Blogger homepage widget HTML6 was not found.');
-  if (/\bcond=/.test(match[0])) return { source, changed: false };
-  const replacement = match[0].replace(/<b:widget\b/, "<b:widget cond='data:view.isHomepage'");
-  return { source: source.replace(match[0], replacement), changed: true };
+function scopeHomepageWidgets(source) {
+  let output = source;
+  const scoped = [];
+  let html6Found = false;
+  for (const id of ['HTML4', 'HTML5', 'HTML6']) {
+    const widgetPattern = new RegExp(`<b:widget\\b[^>]*\\bid=(['"])${id}\\1[^>]*>`, 'i');
+    const match = output.match(widgetPattern);
+    if (!match) continue;
+    if (id === 'HTML6') html6Found = true;
+    if (/\bcond=/.test(match[0])) continue;
+    const replacement = match[0].replace(/<b:widget\b/, "<b:widget cond='data:view.isHomepage'");
+    output = output.replace(match[0], replacement);
+    scoped.push(id);
+  }
+  if (!html6Found) throw new Error('Required Blogger homepage widget HTML6 was not found.');
+  return { source: output, scoped };
 }
 
 function fixRawScriptCdata(source) {
@@ -27,7 +36,7 @@ function fixRawScriptCdata(source) {
 }
 
 function injectModules(source, modules) {
-  if (!/<\/body\s*>/i.test(source)) throw new Error('Blogger source is missing </body>.');
+  if (!/<\/head\s*>/i.test(source)) throw new Error('Blogger source is missing </head>.');
   if (!modules.length) return { source, count: 0 };
 
   const blocks = modules.map(({ path, content }) => {
@@ -43,9 +52,62 @@ function injectModules(source, modules) {
   }).join('\n');
 
   return {
-    source: source.replace(/<\/body\s*>/i, `${blocks}\n</body>`),
+    source: source.replace(/<\/head\s*>/i, () => `${blocks}\n</head>`),
     count: modules.length
   };
+}
+
+function repairLegacyPlayerIds(source) {
+  const widgetPattern = /<b:widget\b[^>]*\bid=(['"])HTML4\1[^>]*>[\s\S]*?<\/b:widget>/i;
+  const match = source.match(widgetPattern);
+  if (!match) return { source, count: 0 };
+  const replacements = new Map([
+    ['tggAudio', 'tggLegacyAudio'],
+    ['tggNowPlaying', 'tggLegacyNowPlaying'],
+    ['tggClosePlayer', 'tggLegacyClosePlayer']
+  ]);
+  let widget = match[0];
+  let count = 0;
+  for (const [from, to] of replacements) {
+    const pattern = new RegExp(`(['"])${from}\\1`, 'g');
+    widget = widget.replace(pattern, (value, quote) => {
+      count += 1;
+      return `${quote}${to}${quote}`;
+    });
+  }
+  return { source: source.replace(match[0], () => widget), count };
+}
+
+function replaceDirectDiscoveryQueries(source) {
+  let output = source;
+  let count = 0;
+
+  output = output.replace(
+    /const\s*\{\s*data,\s*error\s*\}\s*=\s*await\s+([A-Za-z_$][\w$]*)\s*\.from\(\s*['"]mixtapes['"]\s*\)\s*\.select\(\s*`[\s\S]*?artists\s*\([\s\S]*?`\s*\)([\s\S]*?)\.limit\(\s*(\d+)\s*\)\s*;/g,
+    (_, client, tail, limit) => {
+      count += 1;
+      const featuredOnly = /\.eq\(\s*['"]featured['"]\s*,\s*true\s*\)/.test(tail);
+      return `const { data, error } = await window.TGGPublicDiscovery.queryPublicReleases(${client}, ${limit}, null, { featuredOnly: ${featuredOnly} });`;
+    }
+  );
+
+  output = output.replace(
+    /const\s+result\s*=\s*await\s+([A-Za-z_$][\w$]*)\s*\.from\(\s*['"]mixtapes['"]\s*\)\s*\.select\(\s*`[\s\S]*?artists\s*\([\s\S]*?`\s*\)[\s\S]*?\.order\([\s\S]*?\)\s*;/g,
+    (_, client) => {
+      count += 1;
+      return `const result = await window.TGGPublicDiscovery.queryPublicReleases(${client}, 10, null, { featuredOnly: false });`;
+    }
+  );
+
+  output = output.replace(
+    /([A-Za-z_$][\w$]*)\.from\(\s*['"]mixtapes['"]\s*\)\s*\.select\(\s*['"][^'"]*artists\([^'"]*['"]\s*\)[\s\S]*?\.then\(\s*/g,
+    (_, client) => {
+      count += 1;
+      return `window.TGGPublicDiscovery.queryPublicReleases(${client}, 10, null, { featuredOnly: false }).then(`;
+    }
+  );
+
+  return { source: output, count };
 }
 
 export function buildCandidate({ source, expectedSha256, modules = [] }) {
@@ -56,9 +118,11 @@ export function buildCandidate({ source, expectedSha256, modules = [] }) {
     throw new Error(`Source SHA-256 mismatch: expected ${expectedSha256 || '(missing)'}, received ${sourceHash}.`);
   }
 
-  const scoped = scopeHomepageWidget(input);
+  const scoped = scopeHomepageWidgets(input);
   const cdata = fixRawScriptCdata(scoped.source);
-  const injected = injectModules(cdata.source, modules);
+  const playerIds = repairLegacyPlayerIds(cdata.source);
+  const discovery = replaceDirectDiscoveryQueries(playerIds.source);
+  const injected = injectModules(discovery.source, modules);
   const lint = lintBloggerSource(injected.source);
 
   return {
@@ -69,8 +133,11 @@ export function buildCandidate({ source, expectedSha256, modules = [] }) {
       source_sha256: sourceHash,
       candidate_sha256: sha256(injected.source),
       changes: {
-        homepage_widget_scoped: scoped.changed,
+        homepage_widget_scoped: scoped.scoped.includes('HTML6'),
+        homepage_widgets_scoped: scoped.scoped,
         raw_script_cdata_wrappers_fixed: cdata.count,
+        legacy_player_id_references_renamed: playerIds.count,
+        direct_discovery_queries_replaced: discovery.count,
         review_modules_injected: injected.count,
         module_paths: modules.map((module) => module.path)
       },

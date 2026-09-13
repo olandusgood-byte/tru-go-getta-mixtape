@@ -22,7 +22,7 @@ jobs:
         run: |
           set -e
           for f in game/*.json; do
-            node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$f"
+            node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$f"
           done
       - name: Validate script references
         run: |

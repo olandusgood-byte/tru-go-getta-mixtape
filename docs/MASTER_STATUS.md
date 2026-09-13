@@ -3,7 +3,7 @@
 ## Current truth
 
 - Active production baseline: `V5640`
-- Review checkpoint: `V5730`
+- Review checkpoint: `V5740`
 - Decision: `HOLD`
 - Integrity inconsistencies: `0`
 
@@ -38,3 +38,6 @@ decision remains HOLD; the two states are deliberately not interchangeable.
 V5730 provides a single read-only command that runs the evidence, remediation,
 master-status, package-integrity, and canonical-source checks together and
 returns one truthful operator result.
+
+V5740 guarantees that canonical-source review diagnostics are uploaded as one
+bundle before CI enforces the final candidate decision, including HOLD cases.

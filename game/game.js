@@ -21,10 +21,12 @@
   }
   function spend(amount){amount=Math.max(0,Number(amount)||0);if(state.cash<amount){toast('NOT ENOUGH CASH');return false}state.cash-=amount;update();save();return true}
   function update(){
-    $('hudName')?.textContent=state.name;$('hudLevel')?.textContent=state.level;$('hudCash')?.textContent=state.cash;$('hudXp')?.textContent=state.xp;$('hudNext')?.textContent=state.level*100;
+    const hudName=$('hudName'),hudLevel=$('hudLevel'),hudCash=$('hudCash'),hudXp=$('hudXp'),hudNext=$('hudNext');
+    if(hudName)hudName.textContent=state.name;if(hudLevel)hudLevel.textContent=state.level;if(hudCash)hudCash.textContent=state.cash;if(hudXp)hudXp.textContent=state.xp;if(hudNext)hudNext.textContent=state.level*100;
     if($('player')){$('player').style.left=state.x+'%';$('player').style.top=state.y+'%'}
-    $('missionStatus')?.textContent=state.accepted?'Mission active — finish the job.':'Find M and start a mission.';
-    $('missionBtn')?.textContent=state.mission?(state.accepted?'COMPLETE MISSION':'TAKE MISSION'):'TALK TO M';
+    const missionStatus=$('missionStatus'),missionBtn=$('missionBtn');
+    if(missionStatus)missionStatus.textContent=state.accepted?'Mission active — finish the job.':'Find M and start a mission.';
+    if(missionBtn)missionBtn.textContent=state.mission?(state.accepted?'COMPLETE MISSION':'TAKE MISSION'):'TALK TO M';
     window.TGGQuality?.refresh?.();
   }
   function addXp(n){state.xp+=Math.max(0,Number(n)||0);while(state.xp>=state.level*100){state.xp-=state.level*100;state.level++;toast('LEVEL UP — LEVEL '+state.level)}update();window.TGGProgression?.sync?.()}

@@ -33,6 +33,7 @@
     if(!state.completed.includes(id))state.completed.push(id);
     state.lastReward={id,name:event.name,cash,xp,rep,run:state.runs[id],district:event.district};
     save();
+    window.TGGProgression?.sync?.();
     window.__tggToast?.(event.name+' COMPLETE — +$'+cash+' / +'+xp+' XP / +'+rep+' REP');
     render();return true;
   }

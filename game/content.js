@@ -1,0 +1,16 @@
+(() => {
+  const KEY='tgg-content-v1';
+  const missions=[
+    {id:'flyer-run',name:'Flyer Run',district:'Downtown',goal:1,reward:150,xp:30,rep:10},
+    {id:'studio-session',name:'Studio Session',district:'Studio Row',goal:1,reward:300,xp:60,rep:25},
+    {id:'mixtape-promo',name:'Mixtape Promo',district:'Mixtape Ave',goal:2,reward:500,xp:100,rep:50}
+  ];
+  const content={missions,npcs:[{id:'m',name:'M',role:'Manager'},{id:'dj',name:'DJ V',role:'DJ'},{id:'producer',name:'Kane',role:'Producer'}],locations:['Studio Row','Downtown','Mixtape Ave'],items:['Mic','Notebook','Promo Flyers','Beat Pack'],rewards:['Cash','XP','Reputation','Unlocks']};
+  let state={active:null,progress:0,completed:[]};
+  function load(){try{Object.assign(state,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){}}
+  function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+  function notify(t){if(window.__tggToast)window.__tggToast(t);else console.log(t)}
+  function current(){return missions.find(m=>m.id===state.active)}
+  window.TGGContent={content,state,start(id){const m=missions.find(x=>x.id===id);if(!m)return false;state.active=id;state.progress=0;save();notify('MISSION STARTED — '+m.name);return true},advance(){const m=current();if(!m)return false;state.progress++;if(state.progress>=m.goal){state.completed.push(m.id);state.active=null;state.progress=0;if(window.TGGGame?.reward)window.TGGGame.reward(m.reward,m.xp);if(window.TGGCareer?.career){window.TGGCareer.career.reputation+=m.rep;localStorage.setItem('tgg-career-v1',JSON.stringify(window.TGGCareer.career))}notify('CONTENT MISSION COMPLETE — +$'+m.reward);save();return true}notify(m.name+': '+state.progress+'/'+m.goal);save();return false},load,save,current};
+  load();
+})();

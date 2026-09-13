@@ -84,14 +84,17 @@ jobs:
           await page.click('[data-inventory-add="promo-flyers"]');
           const inventorySaved=await page.evaluate(()=>JSON.parse(localStorage.getItem('tgg-inventory-v1')));
           if(inventorySaved.items['promo-flyers']!==2)throw new Error('inventory persistence failed: '+JSON.stringify(inventorySaved));
+          await page.evaluate(()=>window.TGGGame.show('game'));
           await page.click('#crewBtn');
           const crewScreen=await page.evaluate(()=>document.getElementById('crewBoard')?.classList.contains('active'));
           if(!crewScreen)throw new Error('crew screen did not open');
+          await page.evaluate(()=>window.TGGGame.show('game'));
           await page.click('#eventsBtn');
           const eventsScreen=await page.evaluate(()=>({active:document.getElementById('eventsBoard')?.classList.contains('active'),cards:document.querySelectorAll('#eventsList [data-event-run]').length}));
           if(!eventsScreen.active||eventsScreen.cards<1)throw new Error('events screen did not render: '+JSON.stringify(eventsScreen));
           const eventResult=await page.evaluate(()=>{const before=window.TGGGame.getState().cash;const ok=window.TGGEvents.run('street-cypher');return {ok,before,after:window.TGGGame.getState().cash,runs:window.TGGEvents.state.runs['street-cypher']||0}});
           if(!eventResult.ok||eventResult.runs!==1||eventResult.after<=eventResult.before)throw new Error('city event reward failed: '+JSON.stringify(eventResult));
+          await page.evaluate(()=>window.TGGGame.show('game'));
           await page.click('#contentBtn');
           await page.click('#chainBtn');
           const chain=await page.evaluate(()=>window.TGGChains?.state?.active);

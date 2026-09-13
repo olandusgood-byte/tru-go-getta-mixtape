@@ -14,7 +14,7 @@
     test('chain catalog',Array.isArray(window.TGGChains?.chains)&&window.TGGChains.chains.length>=2);test('chain ui',typeof window.TGGChainUI?.start==='function');
     test('district catalog',Array.isArray(window.TGGDistricts?.districts)&&window.TGGDistricts.districts.length>=3);test('district access',typeof window.TGGDistricts?.canEnter==='function');
     test('save validator',typeof window.TGGSave?.report==='function'&&typeof window.TGGSave?.repair==='function');
-    const integrity=window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
+    const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');
     const passed=checks.every(x=>x.pass);window.TGGReleaseQA={checks,passed,run};return window.TGGReleaseQA;
   }

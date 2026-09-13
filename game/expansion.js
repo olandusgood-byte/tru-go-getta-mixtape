@@ -32,7 +32,7 @@
     if(a.cost&&window.TGGGame?.spend&&!window.TGGGame.spend(a.cost))return false;
     const reward=window.TGGEconomy?.apply
       ? window.TGGEconomy.apply({cash:a.reward,xp:a.xp,rep:a.rep})
-      : (window.TGGGame?.reward?.(a.reward,a.xp),window.TGCCareer?.addRep?.(a.rep),{cash:a.reward,xp:a.xp,rep:a.rep,crew:{cash:0,xp:0,rep:0}});
+      : (window.TGGGame?.reward?.(a.reward,a.xp),window.TGGCareer?.addRep?.(a.rep),{cash:a.reward,xp:a.xp,rep:a.rep,crew:{cash:0,xp:0,rep:0}});
     if(!state.completed.includes(id))state.completed.push(id);
     const after=player();
     activities.forEach(x=>{if(after.level>=x.unlock&&!state.unlocked.includes(x.id))state.unlocked.push(x.id)});

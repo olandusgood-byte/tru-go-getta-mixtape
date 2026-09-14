@@ -11,4 +11,6 @@
   }
   window.TGGV12Integrity={run};
   window.TGGV12Integrity.run();
+  const loadDaily=()=>{if(document.querySelector('script[data-tgg-daily]'))return;const s=document.createElement('script');s.src='daily.js';s.dataset.tggDaily='1';s.onload=()=>window.TGGDaily?.install?.();document.body.appendChild(s)};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadDaily);else loadDaily();
 })();

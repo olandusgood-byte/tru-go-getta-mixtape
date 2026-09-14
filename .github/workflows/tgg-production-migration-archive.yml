@@ -81,3 +81,6 @@ jobs:
           git commit -m "Refresh authoritative production recovery artifacts"
           git push origin "HEAD:$branch"
           echo "Review branch pushed: $branch"
+
+# Automated recovery refresh trigger: keep the existing OIDC-only workflow runnable
+# without introducing Supabase secrets into GitHub Actions.

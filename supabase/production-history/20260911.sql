@@ -1,7 +1,7 @@
 -- TRU GO GETTA production migration history archive
 -- Date bucket: 20260911
 -- Historical evidence only. Do not replay against production.
--- Preserve the recorded order. Validate in an isolated clean environment before any bootstrap use.
+-- Preserve recorded order. Use the current schema baseline for clean bootstrap.
 
 -- ============================================================
 -- MIGRATION 20260911002753 harden_release_pro_browser_evidence_v2
@@ -1347,4 +1347,1504 @@ grant execute on function public.tgg_migration_archive_export_chunk(text,integer
 
 comment on function public.tgg_migration_archive_export_chunk(text,integer) is
 'TGG server-only migration history export, paginated for the GitHub OIDC archive workflow. Not executable by browser roles.';
+
+-- ============================================================
+-- MIGRATION 20260911131544 codesync_ignore_superseded_blogger_failures
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function private.tgg_codesync_detect_and_fix()
+returns jsonb
+language plpgsql
+set search_path to 'private','public','pg_temp'
+as $function$
+declare
+  v_fixed int := 0;
+  v_errors int := 0;
+  v_review int := 0;
+  r record;
+begin
+  for r in
+    select id,status,claimed_at,filename
+    from public.tgg_theme_deploy_jobs
+    where status in ('claimed','processing')
+      and claimed_at is not null
+      and claimed_at < now() - interval '10 minutes'
+  loop
+    update public.tgg_theme_deploy_jobs
+    set status='pending',
+        device_id=null,
+        claimed_at=null,
+        error=coalesce(error,'') || case when coalesce(error,'')='' then '' else E'\n' end ||
+              'Auto-recovered stale deploy claim by Code Sync Controller'
+    where id=r.id;
+
+    insert into private.tgg_code_actions(action_type,component_key,status,details)
+    values ('recover_stale_deploy_job','deploy_job:'||r.id,'completed',
+            jsonb_build_object('filename',r.filename,'previous_status',r.status));
+    v_fixed := v_fixed + 1;
+  end loop;
+
+  -- Resolve stale Blogger failure issues when a newer verified deployment for
+  -- the same resource already exists, or when the failure belongs to the
+  -- intentionally removed World E2E verifier test page.
+  update private.tgg_code_issues i
+  set status='resolved',
+      last_seen_at=now(),
+      auto_fixed_at=coalesce(i.auto_fixed_at,now())
+  from public.v98_blogger_deployments f
+  where i.status='open'
+    and i.issue_key='blogger_deploy_failed:'||f.id::text
+    and f.status='failed'
+    and (
+      f.resource_key='/p/world-e2e-verifier.html'
+      or exists (
+        select 1
+        from public.v98_blogger_deployments s
+        where s.status='verified'
+          and s.resource_type is not distinct from f.resource_type
+          and s.resource_key is not distinct from f.resource_key
+          and s.updated_at > f.updated_at
+      )
+    );
+
+  for r in
+    select f.id,f.resource_type,f.resource_key,f.error_message
+    from public.v98_blogger_deployments f
+    where f.status='failed'
+      and f.updated_at > now() - interval '24 hours'
+      and f.resource_key is distinct from '/p/world-e2e-verifier.html'
+      and not exists (
+        select 1
+        from public.v98_blogger_deployments s
+        where s.status='verified'
+          and s.resource_type is not distinct from f.resource_type
+          and s.resource_key is not distinct from f.resource_key
+          and s.updated_at > f.updated_at
+      )
+  loop
+    perform private.tgg_codesync_upsert_issue(
+      'blogger_deploy_failed:'||r.id,
+      'error',
+      'blogger:'||coalesce(r.resource_type,'unknown')||':'||coalesce(r.resource_key,r.id::text),
+      'Blogger deployment failed',
+      jsonb_build_object('deployment_id',r.id,'error',r.error_message)
+    );
+    v_errors := v_errors + 1;
+  end loop;
+
+  select count(*) into v_review
+  from private.tgg_edge_function_registry
+  where duplicate_candidate and retirement_state='review';
+
+  if v_review > 0 then
+    perform private.tgg_codesync_upsert_issue(
+      'edge_function_version_chain:review_required',
+      'warning',
+      'edge_functions',
+      'One or more duplicate Edge Functions still require dependency review.',
+      jsonb_build_object('needs_review',v_review,'auto_delete',false)
+    );
+  else
+    update private.tgg_code_issues
+    set status='resolved',last_seen_at=now()
+    where issue_key in (
+      'edge_function_version_chain:tgg-creator-os-app',
+      'edge_function_version_chain:review_required'
+    )
+    and status='open';
+  end if;
+
+  return jsonb_build_object('ok',true,'fixed',v_fixed,'issues_seen',v_errors,'needs_review',v_review,'checked_at',now());
+end;
+$function$;
+
+-- ============================================================
+-- MIGRATION 20260911132529 control_room_certification_runs_v51_1
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create table if not exists public.tgg_control_room_certification_runs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid(),
+  project_id uuid null,
+  status text not null default 'pending' check (status in ('pending','pass','warn','fail')),
+  results jsonb not null default '{}'::jsonb,
+  browser jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.tgg_control_room_certification_runs enable row level security;
+
+revoke all on table public.tgg_control_room_certification_runs from anon;
+grant select, insert, update, delete on table public.tgg_control_room_certification_runs to authenticated;
+
+create policy "cert_runs_select_own"
+on public.tgg_control_room_certification_runs
+for select
+to authenticated
+using (auth.uid() = user_id);
+
+create policy "cert_runs_insert_own"
+on public.tgg_control_room_certification_runs
+for insert
+to authenticated
+with check (auth.uid() = user_id);
+
+create policy "cert_runs_update_own"
+on public.tgg_control_room_certification_runs
+for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+create policy "cert_runs_delete_own"
+on public.tgg_control_room_certification_runs
+for delete
+to authenticated
+using (auth.uid() = user_id);
+
+create index if not exists tgg_control_room_certification_runs_user_created_idx
+on public.tgg_control_room_certification_runs (user_id, created_at desc);
+
+create index if not exists tgg_control_room_certification_runs_project_created_idx
+on public.tgg_control_room_certification_runs (project_id, created_at desc);
+
+
+-- ============================================================
+-- MIGRATION 20260911143339 world_v14_browser_playtest_gate
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create table if not exists public.tgg_world_v14_playtest_evidence (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','passed','failed')),
+  build text not null,
+  page_path text not null,
+  moved_distance numeric not null default 0,
+  frame_sample_count integer not null default 0,
+  load_ms integer not null default 0,
+  capture jsonb not null default '{}'::jsonb,
+  observed_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.tgg_world_v14_playtest_evidence enable row level security;
+revoke all on public.tgg_world_v14_playtest_evidence from public, anon;
+grant select, insert, update on public.tgg_world_v14_playtest_evidence to authenticated;
+
+drop policy if exists "world v14 playtest owner read" on public.tgg_world_v14_playtest_evidence;
+create policy "world v14 playtest owner read"
+on public.tgg_world_v14_playtest_evidence for select
+to authenticated
+using ((select auth.uid()) = user_id);
+
+drop policy if exists "world v14 playtest owner insert" on public.tgg_world_v14_playtest_evidence;
+create policy "world v14 playtest owner insert"
+on public.tgg_world_v14_playtest_evidence for insert
+to authenticated
+with check ((select auth.uid()) = user_id);
+
+drop policy if exists "world v14 playtest owner update" on public.tgg_world_v14_playtest_evidence;
+create policy "world v14 playtest owner update"
+on public.tgg_world_v14_playtest_evidence for update
+to authenticated
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
+
+create or replace function public.tgg_world_v14_playtest_observe(p_capture jsonb default '{}'::jsonb)
+returns jsonb
+language plpgsql
+security invoker
+set search_path to 'pg_catalog','public'
+as $function$
+declare
+  v_uid uuid := auth.uid();
+  v_headers jsonb := '{}'::jsonb;
+  v_origin text := '';
+  v_build text := coalesce(p_capture->>'build','');
+  v_path text := coalesce(p_capture->>'page_path','');
+  v_move numeric := greatest(0,least(10000,coalesce((p_capture->>'moved_distance')::numeric,0)));
+  v_frames integer := greatest(0,least(100000,coalesce((p_capture->>'frame_sample_count')::integer,0)));
+  v_load integer := greatest(0,least(120000,coalesce((p_capture->>'load_ms')::integer,0)));
+begin
+  if v_uid is null then raise exception 'AUTH_REQUIRED' using errcode='42501'; end if;
+  begin
+    v_headers := coalesce(nullif(current_setting('request.headers',true),'')::jsonb,'{}'::jsonb);
+  exception when others then
+    v_headers := '{}'::jsonb;
+  end;
+  v_origin := coalesce(v_headers->>'origin','');
+  if not (
+    v_origin='https://trugogettamixtapes.blogspot.com'
+    or v_origin='https://xsofowzvwetamhyuvlpj.supabase.co'
+    or v_origin ~ '^https://([a-z0-9-]+\.)?trugogettamixtapes\.com$'
+  ) then raise exception 'BROWSER_ORIGIN_REQUIRED' using errcode='42501'; end if;
+  if v_build<>'WORLD-V14.9-PLAYTEST-GATE' or v_path<>'/p/artist-world.html' then
+    raise exception 'UNAPPROVED_WORLD_PLAYTEST_BUILD' using errcode='22023';
+  end if;
+  if coalesce((p_capture->>'browser_context')::boolean,false) is not true
+     or coalesce((p_capture->>'auth_present')::boolean,false) is not true
+     or coalesce((p_capture->>'rendered')::boolean,false) is not true
+     or coalesce((p_capture->>'webgl_context')::boolean,false) is not true
+     or coalesce((p_capture->>'avatar_moved')::boolean,false) is not true
+     or coalesce((p_capture->>'all_v14_layers_present')::boolean,false) is not true
+     or coalesce((p_capture->>'blocking_error_count')::integer,1) <> 0
+     or v_move < 2
+     or v_frames < 30
+     or v_load <= 0
+     or coalesce((p_capture->>'renderer_width')::integer,0) < 240
+     or coalesce((p_capture->>'renderer_height')::integer,0) < 160
+  then raise exception 'WORLD_PLAYTEST_EVIDENCE_INCOMPLETE' using errcode='22023'; end if;
+
+  insert into public.tgg_world_v14_playtest_evidence(user_id,status,build,page_path,moved_distance,frame_sample_count,load_ms,capture,observed_at,updated_at)
+  values(v_uid,'passed',v_build,v_path,v_move,v_frames,v_load,(p_capture-'access_token'-'refresh_token'-'user_id'-'email'),now(),now())
+  on conflict(user_id) do update set
+    status='passed',build=excluded.build,page_path=excluded.page_path,moved_distance=greatest(public.tgg_world_v14_playtest_evidence.moved_distance,excluded.moved_distance),
+    frame_sample_count=greatest(public.tgg_world_v14_playtest_evidence.frame_sample_count,excluded.frame_sample_count),load_ms=excluded.load_ms,
+    capture=excluded.capture,observed_at=excluded.observed_at,updated_at=excluded.updated_at;
+
+  return jsonb_build_object('ok',true,'status','passed','build',v_build,'moved_distance',v_move,'frame_sample_count',v_frames,'observed_at',now());
+end;
+$function$;
+
+revoke all on function public.tgg_world_v14_playtest_observe(jsonb) from public, anon;
+grant execute on function public.tgg_world_v14_playtest_observe(jsonb) to authenticated;
+
+create or replace function public.tgg_world_v14_playtest_status()
+returns jsonb
+language sql
+stable
+security invoker
+set search_path to 'pg_catalog','public'
+as $function$
+  select coalesce(
+    (select jsonb_build_object('status',e.status,'build',e.build,'moved_distance',e.moved_distance,'frame_sample_count',e.frame_sample_count,'observed_at',e.observed_at)
+     from public.tgg_world_v14_playtest_evidence e where e.user_id=(select auth.uid())),
+    jsonb_build_object('status','pending')
+  );
+$function$;
+
+revoke all on function public.tgg_world_v14_playtest_status() from public, anon;
+grant execute on function public.tgg_world_v14_playtest_status() to authenticated;
+
+-- ============================================================
+-- MIGRATION 20260911143341 service_schema_baseline_exporter
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_schema_baseline_export_chunk_service(
+  p_after_key bigint default 0,
+  p_limit integer default 25
+)
+returns table(order_key bigint, kind text, object_key text, ddl text)
+language sql
+security definer
+set search_path = ''
+as $$
+with enum_items as (
+  select
+    10000000000::bigint + row_number() over(order by n.nspname,t.typname) as order_key,
+    'enum'::text as kind,
+    format('%I.%I',n.nspname,t.typname) as object_key,
+    format('create type %I.%I as enum (%s);',n.nspname,t.typname,
+      (select string_agg(quote_literal(e.enumlabel),', ' order by e.enumsortorder) from pg_catalog.pg_enum e where e.enumtypid=t.oid)) as ddl
+  from pg_catalog.pg_type t
+  join pg_catalog.pg_namespace n on n.oid=t.typnamespace
+  where n.nspname in ('public','private') and t.typtype='e'
+), table_items as (
+  select
+    30000000000::bigint + row_number() over(order by n.nspname,c.relname) as order_key,
+    'table'::text as kind,
+    format('%I.%I',n.nspname,c.relname) as object_key,
+    format('create table %I.%I (%s%s);',n.nspname,c.relname,E'\n',cols.column_sql || E'\n') as ddl
+  from pg_catalog.pg_class c
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  cross join lateral (
+    select string_agg(
+      '  ' || format('%I %s',a.attname,pg_catalog.format_type(a.atttypid,a.atttypmod)) ||
+      case
+        when a.attidentity='a' then ' generated always as identity'
+        when a.attidentity='d' then ' generated by default as identity'
+        when a.attgenerated='s' then ' generated always as (' || pg_catalog.pg_get_expr(d.adbin,d.adrelid,true) || ') stored'
+        when d.oid is not null then ' default ' || pg_catalog.pg_get_expr(d.adbin,d.adrelid,true)
+        else ''
+      end ||
+      case when a.attnotnull then ' not null' else '' end,
+      E',\n' order by a.attnum
+    ) as column_sql
+    from pg_catalog.pg_attribute a
+    left join pg_catalog.pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+    where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped
+  ) cols
+  where n.nspname in ('public','private') and c.relkind='r'
+), placeholder_view_items as (
+  select
+    35000000000::bigint + row_number() over(order by n.nspname,c.relname) as order_key,
+    'view_placeholder'::text as kind,
+    format('%I.%I',n.nspname,c.relname) as object_key,
+    format('create view %I.%I as select %s where false;',n.nspname,c.relname,cols.column_sql) as ddl
+  from pg_catalog.pg_class c
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  cross join lateral (
+    select string_agg(format('null::%s as %I',pg_catalog.format_type(a.atttypid,a.atttypmod),a.attname),', ' order by a.attnum) as column_sql
+    from pg_catalog.pg_attribute a
+    where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped
+  ) cols
+  where n.nspname in ('public','private') and c.relkind='v'
+), function_items as (
+  select
+    40000000000::bigint + row_number() over(order by n.nspname,p.proname,pg_catalog.pg_get_function_identity_arguments(p.oid)) as order_key,
+    'function'::text as kind,
+    format('%I.%I(%s)',n.nspname,p.proname,pg_catalog.pg_get_function_identity_arguments(p.oid)) as object_key,
+    pg_catalog.pg_get_functiondef(p.oid) as ddl
+  from pg_catalog.pg_proc p
+  join pg_catalog.pg_namespace n on n.oid=p.pronamespace
+  where n.nspname in ('public','private') and p.prokind='f'
+), constraint_items as (
+  select
+    50000000000::bigint + row_number() over(order by n.nspname,c.relname,con.conname) as order_key,
+    'constraint'::text as kind,
+    format('%I.%I:%I',n.nspname,c.relname,con.conname) as object_key,
+    format('alter table %I.%I add constraint %I %s;',n.nspname,c.relname,con.conname,pg_catalog.pg_get_constraintdef(con.oid,true)) as ddl
+  from pg_catalog.pg_constraint con
+  join pg_catalog.pg_class c on c.oid=con.conrelid
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  where n.nspname in ('public','private') and c.relkind='r'
+), index_items as (
+  select
+    60000000000::bigint + row_number() over(order by n.nspname,ic.relname) as order_key,
+    'index'::text as kind,
+    format('%I.%I',n.nspname,ic.relname) as object_key,
+    pg_catalog.pg_get_indexdef(i.indexrelid) || ';' as ddl
+  from pg_catalog.pg_index i
+  join pg_catalog.pg_class c on c.oid=i.indrelid
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  join pg_catalog.pg_class ic on ic.oid=i.indexrelid
+  where n.nspname in ('public','private') and c.relkind='r'
+    and not exists(select 1 from pg_catalog.pg_constraint con where con.conindid=i.indexrelid)
+), view_items as (
+  select
+    70000000000::bigint + row_number() over(order by n.nspname,c.relname) as order_key,
+    'view'::text as kind,
+    format('%I.%I',n.nspname,c.relname) as object_key,
+    format('create or replace view %I.%I as %s%s;',n.nspname,c.relname,pg_catalog.pg_get_viewdef(c.oid,true),
+      case when c.reloptions is null then '' else E';\nalter view '||format('%I.%I',n.nspname,c.relname)||' set ('||array_to_string(c.reloptions,', ')||')' end) as ddl
+  from pg_catalog.pg_class c
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  where n.nspname in ('public','private') and c.relkind='v'
+), rls_items as (
+  select
+    80000000000::bigint + row_number() over(order by n.nspname,c.relname) as order_key,
+    'rls'::text as kind,
+    format('%I.%I',n.nspname,c.relname) as object_key,
+    (case when c.relrowsecurity then format('alter table %I.%I enable row level security;',n.nspname,c.relname) else '' end) ||
+    (case when c.relforcerowsecurity then E'\n'||format('alter table %I.%I force row level security;',n.nspname,c.relname) else '' end) as ddl
+  from pg_catalog.pg_class c
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  where n.nspname in ('public','private') and c.relkind='r' and (c.relrowsecurity or c.relforcerowsecurity)
+), policy_items as (
+  select
+    90000000000::bigint + row_number() over(order by p.schemaname,p.tablename,p.policyname) as order_key,
+    'policy'::text as kind,
+    format('%I.%I:%I',p.schemaname,p.tablename,p.policyname) as object_key,
+    format('create policy %I on %I.%I as %s for %s to %s%s%s;',p.policyname,p.schemaname,p.tablename,
+      p.permissive,p.cmd,
+      (select string_agg(case when r='public' then 'public' else quote_ident(r) end,', ' order by r) from unnest(p.roles) r),
+      case when p.qual is null then '' else ' using ('||p.qual||')' end,
+      case when p.with_check is null then '' else ' with check ('||p.with_check||')' end) as ddl
+  from pg_catalog.pg_policies p
+  where p.schemaname in ('public','private')
+), trigger_items as (
+  select
+    100000000000::bigint + row_number() over(order by n.nspname,c.relname,t.tgname) as order_key,
+    'trigger'::text as kind,
+    format('%I.%I:%I',n.nspname,c.relname,t.tgname) as object_key,
+    pg_catalog.pg_get_triggerdef(t.oid,true) || ';' as ddl
+  from pg_catalog.pg_trigger t
+  join pg_catalog.pg_class c on c.oid=t.tgrelid
+  join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+  where not t.tgisinternal and n.nspname in ('public','private')
+), items as (
+  select 1::bigint as order_key,'prelude'::text as kind,'bootstrap'::text as object_key,
+         E'create schema if not exists private;\nset check_function_bodies = off;'::text as ddl
+  union all select * from enum_items
+  union all select * from table_items
+  union all select * from placeholder_view_items
+  union all select * from function_items
+  union all select * from constraint_items
+  union all select * from index_items
+  union all select * from view_items
+  union all select * from rls_items
+  union all select * from policy_items
+  union all select * from trigger_items
+  union all select 110000000000::bigint,'postlude','bootstrap',E'set check_function_bodies = on;'::text
+)
+select i.order_key,i.kind,i.object_key,i.ddl
+from items i
+where i.order_key > greatest(coalesce(p_after_key,0),0)
+order by i.order_key
+limit least(greatest(coalesce(p_limit,25),1),50);
+$$;
+revoke all on function public.tgg_schema_baseline_export_chunk_service(bigint,integer) from public, anon, authenticated;
+grant execute on function public.tgg_schema_baseline_export_chunk_service(bigint,integer) to service_role;
+
+-- ============================================================
+-- MIGRATION 20260911143812 signup_password_approval_guard_shadow
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create schema if not exists private;
+
+create table if not exists private.tgg_signup_password_guard_config (
+  id smallint primary key default 1 check (id=1),
+  enforcement_enabled boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+insert into private.tgg_signup_password_guard_config(id,enforcement_enabled)
+values (1,false)
+on conflict (id) do nothing;
+
+create table if not exists private.tgg_signup_password_approvals (
+  token uuid primary key,
+  email_hash text not null,
+  purpose text not null check (purpose in ('creator_os_direct','call_validation_invite')),
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+revoke all on private.tgg_signup_password_guard_config from public, anon, authenticated;
+revoke all on private.tgg_signup_password_approvals from public, anon, authenticated;
+
+create or replace function public.tgg_signup_approval_issue_service(
+  p_token uuid,
+  p_email_hash text,
+  p_purpose text
+) returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, private
+as $$
+begin
+  if p_token is null or coalesce(length(p_email_hash),0) <> 64 then
+    raise exception 'invalid signup approval payload';
+  end if;
+  if p_purpose not in ('creator_os_direct','call_validation_invite') then
+    raise exception 'invalid signup approval purpose';
+  end if;
+  delete from private.tgg_signup_password_approvals where expires_at <= now();
+  insert into private.tgg_signup_password_approvals(token,email_hash,purpose,expires_at)
+  values (p_token,lower(p_email_hash),p_purpose,now()+interval '5 minutes')
+  on conflict (token) do update set
+    email_hash=excluded.email_hash,
+    purpose=excluded.purpose,
+    expires_at=excluded.expires_at,
+    created_at=now();
+  return jsonb_build_object('ok',true,'expires_in_seconds',300);
+end;
+$$;
+revoke all on function public.tgg_signup_approval_issue_service(uuid,text,text) from public, anon, authenticated;
+grant execute on function public.tgg_signup_approval_issue_service(uuid,text,text) to service_role;
+
+create or replace function public.tgg_signup_approval_revoke_service(p_token uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, private
+as $$
+declare n integer;
+begin
+  delete from private.tgg_signup_password_approvals where token=p_token;
+  get diagnostics n = row_count;
+  return jsonb_build_object('ok',true,'deleted',n);
+end;
+$$;
+revoke all on function public.tgg_signup_approval_revoke_service(uuid) from public, anon, authenticated;
+grant execute on function public.tgg_signup_approval_revoke_service(uuid) to service_role;
+
+create or replace function private.tgg_signup_password_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, private, extensions
+as $$
+declare
+  v_enforce boolean := false;
+  v_token_text text;
+  v_token uuid;
+  v_expected_hash text;
+  v_purpose text;
+  v_found boolean := false;
+begin
+  if tg_op='INSERT' then
+    if coalesce(new.encrypted_password,'')='' then
+      return new;
+    end if;
+  elsif tg_op='UPDATE' then
+    if not (
+      old.encrypted_password is distinct from new.encrypted_password
+      and coalesce(new.raw_user_meta_data->>'repaired_unconfirmed_account','false')='true'
+      and coalesce(old.raw_user_meta_data->>'repaired_unconfirmed_account','false')<>'true'
+    ) then
+      return new;
+    end if;
+  else
+    return new;
+  end if;
+
+  select enforcement_enabled into v_enforce
+  from private.tgg_signup_password_guard_config where id=1;
+
+  v_token_text := coalesce(new.raw_user_meta_data->>'tgg_signup_approval','');
+  v_purpose := coalesce(new.raw_user_meta_data->>'signup_source','creator_os_direct');
+
+  if v_token_text <> '' then
+    begin
+      v_token := v_token_text::uuid;
+      v_expected_hash := encode(extensions.digest(lower(coalesce(new.email,'')),'sha256'),'hex');
+      delete from private.tgg_signup_password_approvals
+      where token=v_token
+        and email_hash=v_expected_hash
+        and purpose=v_purpose
+        and expires_at>now()
+      returning true into v_found;
+    exception when others then
+      v_found := false;
+    end;
+  end if;
+
+  if v_found then
+    new.raw_user_meta_data := coalesce(new.raw_user_meta_data,'{}'::jsonb) - 'tgg_signup_approval';
+    return new;
+  end if;
+
+  if coalesce(v_enforce,false) then
+    raise exception using errcode='P0001', message='TGG_PASSWORD_APPROVAL_REQUIRED';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function private.tgg_signup_password_guard() from public, anon, authenticated;
+
+drop trigger if exists tgg_signup_password_approval_guard on auth.users;
+create trigger tgg_signup_password_approval_guard
+before insert or update on auth.users
+for each row execute function private.tgg_signup_password_guard();
+
+-- ============================================================
+-- MIGRATION 20260911143858 freeze_schema_baseline_snapshot_service
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+alter function public.tgg_schema_baseline_export_chunk_service(bigint,integer) rename to tgg_schema_baseline_export_live_chunk_service;
+
+create table if not exists private.tgg_schema_baseline_snapshots (
+  snapshot_id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  latest_migration_version text,
+  item_count integer not null default 0,
+  stable boolean not null default false
+);
+create table if not exists private.tgg_schema_baseline_snapshot_items (
+  snapshot_id uuid not null references private.tgg_schema_baseline_snapshots(snapshot_id) on delete cascade,
+  order_key bigint not null,
+  kind text not null,
+  object_key text not null,
+  ddl text not null,
+  primary key(snapshot_id,order_key)
+);
+revoke all on private.tgg_schema_baseline_snapshots from public, anon, authenticated;
+revoke all on private.tgg_schema_baseline_snapshot_items from public, anon, authenticated;
+
+create or replace function public.tgg_refresh_schema_baseline_snapshot_service()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_before text;
+  v_after text;
+  v_count integer;
+begin
+  delete from private.tgg_schema_baseline_snapshots where created_at < now() - interval '1 day';
+  select max(version) into v_before from supabase_migrations.schema_migrations;
+  insert into private.tgg_schema_baseline_snapshots(snapshot_id,latest_migration_version,stable) values(v_id,v_before,false);
+
+  insert into private.tgg_schema_baseline_snapshot_items(snapshot_id,order_key,kind,object_key,ddl)
+  select v_id,x.order_key,x.kind,x.object_key,x.ddl
+  from public.tgg_schema_baseline_export_live_chunk_service(0,20000) x;
+
+  get diagnostics v_count = row_count;
+  select max(version) into v_after from supabase_migrations.schema_migrations;
+  if v_after is distinct from v_before then
+    delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+    return jsonb_build_object('ok',false,'error','migration_changed_during_snapshot','before_version',v_before,'after_version',v_after);
+  end if;
+
+  update private.tgg_schema_baseline_snapshots set item_count=v_count,stable=true where snapshot_id=v_id;
+  return jsonb_build_object('ok',true,'snapshot_id',v_id,'latest_migration_version',v_before,'item_count',v_count,'stable',true);
+end;
+$$;
+revoke all on function public.tgg_refresh_schema_baseline_snapshot_service() from public, anon, authenticated;
+grant execute on function public.tgg_refresh_schema_baseline_snapshot_service() to service_role;
+
+create or replace function public.tgg_schema_baseline_snapshot_chunk_service(
+  p_snapshot_id uuid,
+  p_after_key bigint default 0,
+  p_limit integer default 100
+)
+returns table(order_key bigint,kind text,object_key text,ddl text)
+language sql
+security definer
+set search_path = ''
+as $$
+  select i.order_key,i.kind,i.object_key,i.ddl
+  from private.tgg_schema_baseline_snapshot_items i
+  join private.tgg_schema_baseline_snapshots s on s.snapshot_id=i.snapshot_id
+  where i.snapshot_id=p_snapshot_id and s.stable=true and i.order_key>greatest(coalesce(p_after_key,0),0)
+  order by i.order_key
+  limit least(greatest(coalesce(p_limit,100),1),250);
+$$;
+revoke all on function public.tgg_schema_baseline_snapshot_chunk_service(uuid,bigint,integer) from public, anon, authenticated;
+grant execute on function public.tgg_schema_baseline_snapshot_chunk_service(uuid,bigint,integer) to service_role;
+
+-- ============================================================
+-- MIGRATION 20260911143917 page_full_schema_snapshot_refresh
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_refresh_schema_baseline_snapshot_service()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_before text;
+  v_after text;
+  v_after_key bigint := 0;
+  v_batch integer;
+  v_count integer := 0;
+  v_next bigint;
+begin
+  delete from private.tgg_schema_baseline_snapshots where created_at < now() - interval '1 day';
+  select max(version) into v_before from supabase_migrations.schema_migrations;
+  insert into private.tgg_schema_baseline_snapshots(snapshot_id,latest_migration_version,stable) values(v_id,v_before,false);
+
+  loop
+    insert into private.tgg_schema_baseline_snapshot_items(snapshot_id,order_key,kind,object_key,ddl)
+    select v_id,x.order_key,x.kind,x.object_key,x.ddl
+    from public.tgg_schema_baseline_export_live_chunk_service(v_after_key,50) x;
+    get diagnostics v_batch = row_count;
+    exit when v_batch=0;
+    v_count := v_count + v_batch;
+    select max(order_key) into v_next from private.tgg_schema_baseline_snapshot_items where snapshot_id=v_id;
+    if v_next is null or v_next<=v_after_key then
+      delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+      return jsonb_build_object('ok',false,'error','snapshot_pagination_stalled','after_key',v_after_key);
+    end if;
+    v_after_key := v_next;
+    exit when v_batch<50;
+    if v_count>20000 then
+      delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+      return jsonb_build_object('ok',false,'error','snapshot_object_limit_exceeded','item_count',v_count);
+    end if;
+  end loop;
+
+  select max(version) into v_after from supabase_migrations.schema_migrations;
+  if v_after is distinct from v_before then
+    delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+    return jsonb_build_object('ok',false,'error','migration_changed_during_snapshot','before_version',v_before,'after_version',v_after,'item_count',v_count);
+  end if;
+  if v_count<3000 then
+    delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+    return jsonb_build_object('ok',false,'error','snapshot_too_small','item_count',v_count);
+  end if;
+
+  update private.tgg_schema_baseline_snapshots set item_count=v_count,stable=true where snapshot_id=v_id;
+  return jsonb_build_object('ok',true,'snapshot_id',v_id,'latest_migration_version',v_before,'item_count',v_count,'stable',true);
+end;
+$$;
+revoke all on function public.tgg_refresh_schema_baseline_snapshot_service() from public, anon, authenticated;
+grant execute on function public.tgg_refresh_schema_baseline_snapshot_service() to service_role;
+
+-- ============================================================
+-- MIGRATION 20260911144513 optimize_schema_snapshot_single_pass
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+do $$
+declare
+  v_def text;
+  v_new text;
+begin
+  select pg_get_functiondef('public.tgg_schema_baseline_export_live_chunk_service(bigint,integer)'::regprocedure) into v_def;
+  v_new := replace(v_def,
+    'limit least(greatest(coalesce(p_limit,25),1),50);',
+    'limit least(greatest(coalesce(p_limit,25),1),20000);');
+  if v_new = v_def then
+    raise exception 'schema exporter limit clause not found';
+  end if;
+  execute v_new;
+end
+$$;
+
+create or replace function public.tgg_refresh_schema_baseline_snapshot_service()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid := gen_random_uuid();
+  v_before text;
+  v_after text;
+  v_count integer := 0;
+begin
+  delete from private.tgg_schema_baseline_snapshots where created_at < now() - interval '1 day';
+  select max(version) into v_before from supabase_migrations.schema_migrations;
+  insert into private.tgg_schema_baseline_snapshots(snapshot_id,latest_migration_version,stable)
+  values(v_id,v_before,false);
+
+  insert into private.tgg_schema_baseline_snapshot_items(snapshot_id,order_key,kind,object_key,ddl)
+  select v_id,x.order_key,x.kind,x.object_key,x.ddl
+  from public.tgg_schema_baseline_export_live_chunk_service(0,20000) x;
+  get diagnostics v_count = row_count;
+
+  select max(version) into v_after from supabase_migrations.schema_migrations;
+  if v_after is distinct from v_before then
+    delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+    return jsonb_build_object('ok',false,'error','migration_changed_during_snapshot','before_version',v_before,'after_version',v_after,'item_count',v_count);
+  end if;
+  if v_count<3000 then
+    delete from private.tgg_schema_baseline_snapshots where snapshot_id=v_id;
+    return jsonb_build_object('ok',false,'error','snapshot_too_small','item_count',v_count);
+  end if;
+
+  update private.tgg_schema_baseline_snapshots set item_count=v_count,stable=true where snapshot_id=v_id;
+  return jsonb_build_object('ok',true,'snapshot_id',v_id,'latest_migration_version',v_before,'item_count',v_count,'stable',true);
+end;
+$$;
+revoke all on function public.tgg_refresh_schema_baseline_snapshot_service() from public, anon, authenticated;
+grant execute on function public.tgg_refresh_schema_baseline_snapshot_service() to service_role;
+
+-- ============================================================
+-- MIGRATION 20260911160127 reconcile_creator_access_allowlisted_call_room
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_creator_access_readiness()
+returns jsonb
+language sql
+stable
+set search_path to 'public', 'pg_catalog'
+as $function$
+with write_functions as (
+  select p.oid,p.proname
+  from pg_proc p
+  join pg_namespace n on n.oid=p.pronamespace
+  where n.nspname='public'
+    and p.proname in (
+      'tgg_studio_create_project','tgg_finalize_studio_upload','tgg_studio_save_version',
+      'tgg_beat_pattern_save','tgg_studio_project_collab_invite','tgg_studio_project_collab_respond',
+      'tgg_studio_project_presence_upsert','tgg_studio_project_apply_patch',
+      'tgg_finalize_video_upload','tgg_video_submit_from_storage','tgg_video_publish',
+      'tgg_live_studio_create','tgg_live_start','tgg_live_end','tgg_live_studio_finalize_replay',
+      'tgg_send_message','tgg_finalize_message_upload','tgg_finalize_vault_upload','tgg_vault_item_create','tgg_attach_vault_media',
+      'tgg_store_product_create','tgg_store_product_set_payment_link',
+      'tgg_audiobook_create_draft','tgg_audiobook_add_chapter_from_storage','tgg_audiobook_submit',
+      'tgg_game_create_draft','tgg_game_session_create','tgg_game_session_join',
+      'tgg_game_session_start','tgg_game_session_end'
+    )
+),
+function_checks as (
+  select count(*) total,
+         count(*) filter(where not p.prosecdef) invoker_count,
+         count(*) filter(where has_function_privilege('authenticated',p.oid,'EXECUTE')) auth_exec_count,
+         count(*) filter(where not has_function_privilege('anon',p.oid,'EXECUTE')) anon_blocked_count,
+         count(*) filter(where not has_function_privilege('public',p.oid,'EXECUTE')) public_blocked_count
+  from write_functions w join pg_proc p on p.oid=w.oid
+),
+call_room as (
+  select exists(
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='tgg_start_call_room'
+      and p.prosecdef
+      and has_function_privilege('authenticated',p.oid,'EXECUTE')
+      and not has_function_privilege('anon',p.oid,'EXECUTE')
+      and not has_function_privilege('public',p.oid,'EXECUTE')
+  ) as allowlisted_secure,
+  exists(
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='tgg_start_call_room'
+      and pg_get_functiondef(p.oid) like '%search_path TO ''''%'
+  ) as hardened_search_path
+),
+core_tables(name) as (
+  values
+    ('tgg_studio_projects'),('tgg_studio_assets'),('tgg_studio_project_members'),
+    ('tgg_beat_patterns'),('tgg_media_vault_assets'),('tgg_creative_projects'),
+    ('live_streams'),('tgg_live_replays'),('tgg_conversation_members'),('tgg_messages'),
+    ('merch_products'),('tgg_audiobooks'),('tgg_audiobook_chapters'),
+    ('tgg_games'),('tgg_game_sessions'),('tgg_vault_items')
+),
+table_checks as (
+  select count(*) total,count(*) filter(where c.relrowsecurity) rls_enabled_count
+  from core_tables t
+  join pg_class c on c.relname=t.name
+  join pg_namespace n on n.oid=c.relnamespace and n.nspname='public'
+),
+collab as (
+  select jsonb_build_object(
+    'studio_assets_shared_select',exists(select 1 from pg_policy pol join pg_class c on c.oid=pol.polrelid where c.relname='tgg_studio_assets' and pol.polname='tgg_studio_assets_member_select'),
+    'studio_assets_creator_write',exists(select 1 from pg_policy pol join pg_class c on c.oid=pol.polrelid where c.relname='tgg_studio_assets' and pol.polname='tgg_studio_assets_member_insert'),
+    'beat_patterns_shared_select',exists(select 1 from pg_policy pol join pg_class c on c.oid=pol.polrelid where c.relname='tgg_beat_patterns' and pol.polname='tgg_beat_patterns_project_select'),
+    'beat_patterns_shared_edit',exists(select 1 from pg_policy pol join pg_class c on c.oid=pol.polrelid where c.relname='tgg_beat_patterns' and pol.polname='tgg_beat_patterns_project_update'),
+    'beat_identity_lock',exists(select 1 from pg_trigger tg join pg_class c on c.oid=tg.tgrelid where c.relname='tgg_beat_patterns' and tg.tgname='tgg_lock_beat_pattern_identity' and not tg.tgisinternal)
+  ) j
+),
+summary as (
+  select f.total function_total,f.invoker_count,f.auth_exec_count,f.anon_blocked_count,f.public_blocked_count,
+         t.total table_total,t.rls_enabled_count,c.j collab,cr.allowlisted_secure,cr.hardened_search_path
+  from function_checks f cross join table_checks t cross join collab c cross join call_room cr
+)
+select jsonb_build_object(
+  'ok',
+    invoker_count=function_total
+    and auth_exec_count=function_total
+    and anon_blocked_count=function_total
+    and public_blocked_count=function_total
+    and rls_enabled_count=table_total
+    and allowlisted_secure
+    and hardened_search_path
+    and not exists(select 1 from jsonb_each(collab) where coalesce((value#>>'{}')::boolean,false)=false),
+  'version','ACCESS-QA-1.2',
+  'write_functions',jsonb_build_object(
+    'total',function_total,'security_invoker',invoker_count,'authenticated_execute',auth_exec_count,
+    'anon_blocked',anon_blocked_count,'public_blocked',public_blocked_count
+  ),
+  'allowlisted_security_definer',jsonb_build_object(
+    'function','tgg_start_call_room','secure',allowlisted_secure,'hardened_search_path',hardened_search_path
+  ),
+  'rls',jsonb_build_object('core_tables',table_total,'enabled',rls_enabled_count),
+  'collaboration',collab,
+  'generated_at',now()
+)
+from summary;
+$function$;
+
+-- ============================================================
+-- MIGRATION 20260911180548 harden_public_epk_security_boundary
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_public_epk(p_slug text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path to ''
+as $function$
+  select private.tgg_public_epk_impl(p_slug);
+$function$;
+
+revoke execute on function public.tgg_public_epk(text) from public;
+grant execute on function public.tgg_public_epk(text) to anon, authenticated;
+
+create or replace function private.tgg_public_epk_impl(p_slug text)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path to ''
+as $function$
+declare
+  v_slug text := lower(btrim(coalesce(p_slug,'')));
+  v_settings public.tgg_epk_settings;
+  v_artist public.artists;
+  v_press jsonb;
+  v_releases jsonb;
+begin
+  if v_slug !~ '^[a-z0-9][a-z0-9-]{2,63}$' then
+    raise exception 'EPK_SLUG_INVALID' using errcode='22023';
+  end if;
+
+  select * into v_settings
+  from public.tgg_epk_settings
+  where lower(public_slug)=v_slug and is_public=true
+  limit 1;
+
+  if v_settings.owner_user_id is null then
+    return jsonb_build_object('ok',false,'not_found',true);
+  end if;
+
+  select * into v_artist from public.artists where id=v_settings.artist_id limit 1;
+  if v_artist.id is null then
+    return jsonb_build_object('ok',false,'not_found',true);
+  end if;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'item_type',p.item_type,'title',p.title,'publication',p.publication,
+    'url',p.url,'published_at',p.published_at,'quote',p.quote,'is_featured',p.is_featured
+  ) order by p.is_featured desc,p.published_at desc nulls last,p.created_at desc),'[]'::jsonb)
+  into v_press
+  from public.tgg_press_items p
+  where p.owner_user_id=v_settings.owner_user_id and p.artist_id=v_artist.id;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'title',m.title,'slug',m.slug,'cover_url',m.cover_url,'genre',m.genre,'release_date',m.release_date,
+    'url',case when m.slug is null then null else
+      'https://xsofowzvwetamhyuvlpj.supabase.co/functions/v1/tgg-public-shell?view=release&slug='||m.slug end
+  ) order by coalesce(m.release_date,m.created_at) desc),'[]'::jsonb)
+  into v_releases
+  from public.mixtapes m
+  where m.artist_id=v_artist.id and m.status='published';
+
+  return jsonb_build_object(
+    'ok',true,'version','PUBLIC-EPK-1.1','slug',v_slug,
+    'artist',jsonb_build_object(
+      'stage_name',v_artist.stage_name,
+      'avatar_url',v_artist.avatar_url,
+      'website',v_artist.website,
+      'instagram',v_artist.instagram,
+      'youtube',v_artist.youtube,
+      'spotify',v_artist.spotify
+    ),
+    'epk',jsonb_build_object(
+      'headline',v_settings.headline,
+      'short_bio',v_settings.short_bio,
+      'location',v_settings.location,
+      'highlights',v_settings.highlights
+    ),
+    'press_items',v_press,
+    'releases',v_releases
+  );
+end
+$function$;
+
+-- ============================================================
+-- MIGRATION 20260911181251 optimize_certification_run_rls_auth_uid
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+drop policy if exists cert_runs_select_own on public.tgg_control_room_certification_runs;
+drop policy if exists cert_runs_insert_own on public.tgg_control_room_certification_runs;
+drop policy if exists cert_runs_update_own on public.tgg_control_room_certification_runs;
+drop policy if exists cert_runs_delete_own on public.tgg_control_room_certification_runs;
+
+create policy cert_runs_select_own on public.tgg_control_room_certification_runs
+for select to authenticated
+using ((select auth.uid()) = user_id);
+
+create policy cert_runs_insert_own on public.tgg_control_room_certification_runs
+for insert to authenticated
+with check ((select auth.uid()) = user_id);
+
+create policy cert_runs_update_own on public.tgg_control_room_certification_runs
+for update to authenticated
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
+
+create policy cert_runs_delete_own on public.tgg_control_room_certification_runs
+for delete to authenticated
+using ((select auth.uid()) = user_id);
+
+-- ============================================================
+-- MIGRATION 20260911182056 index_high_value_foreign_keys
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create index if not exists idx_tgg_autobuilder_cycles_controller_id on public.tgg_autobuilder_cycles(controller_id); create index if not exists idx_tgg_build_snapshots_release_id on public.tgg_build_snapshots(release_id); create index if not exists idx_tgg_build_artifacts_run_id on public.tgg_build_artifacts(run_id); create index if not exists idx_tgg_build_artifacts_task_id on public.tgg_build_artifacts(task_id); create index if not exists idx_tgg_creator_growth_brain_snapshots_artist_id on public.tgg_creator_growth_brain_snapshots(artist_id); create index if not exists idx_tgg_world_ui_modules_screen_key on public.tgg_world_ui_modules(screen_key); create index if not exists idx_tgg_build_staging_releases_run_id on public.tgg_build_staging_releases(run_id); create index if not exists idx_tgg_production_launch_control_release_gate_id on public.tgg_production_launch_control(release_gate_id); create index if not exists idx_tgg_creator_growth_milestones_artist_id on public.tgg_creator_growth_milestones(artist_id); create index if not exists idx_tgg_creator_growth_snapshots_artist_id on public.tgg_creator_growth_snapshots(artist_id);
+
+-- ============================================================
+-- MIGRATION 20260911182311 index_creator_growth_and_launch_fks
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create index if not exists idx_tgg_creator_weekly_missions_artist_id on public.tgg_creator_weekly_missions(artist_id); create index if not exists idx_tgg_production_launch_control_readiness_run_id on public.tgg_production_launch_control(readiness_run_id); create index if not exists idx_tgg_creator_growth_activity_artist_id on public.tgg_creator_growth_activity(artist_id); create index if not exists idx_tgg_creator_growth_streaks_artist_id on public.tgg_creator_growth_streaks(artist_id); create index if not exists idx_tgg_brain_evaluations_brain_version_id on public.tgg_brain_evaluations(brain_version_id);
+
+-- ============================================================
+-- MIGRATION 20260911185432 reconcile_public_epk_exposure_audit
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function private.tgg_operational_exposure_audit()
+returns jsonb
+language plpgsql
+security definer
+set search_path to ''
+as $function$
+declare
+  v_tables jsonb;
+  v_views jsonb;
+  v_functions jsonb;
+  v_guarded_functions jsonb;
+  v_table_count integer:=0;
+  v_view_count integer:=0;
+  v_function_count integer:=0;
+  v_guarded_function_count integer:=0;
+  v_public_anon_count integer:=0;
+  v_auth_unguarded_count integer:=0;
+  v_payload jsonb;
+begin
+  with exposed as (
+    select c.relname
+    from pg_catalog.pg_class c
+    join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relkind='r' and not c.relrowsecurity
+      and (
+        pg_catalog.has_table_privilege('anon','public.'||pg_catalog.quote_ident(c.relname),'SELECT')
+        or pg_catalog.has_table_privilege('anon','public.'||pg_catalog.quote_ident(c.relname),'INSERT')
+        or pg_catalog.has_table_privilege('anon','public.'||pg_catalog.quote_ident(c.relname),'UPDATE')
+        or pg_catalog.has_table_privilege('anon','public.'||pg_catalog.quote_ident(c.relname),'DELETE')
+        or pg_catalog.has_table_privilege('authenticated','public.'||pg_catalog.quote_ident(c.relname),'SELECT')
+        or pg_catalog.has_table_privilege('authenticated','public.'||pg_catalog.quote_ident(c.relname),'INSERT')
+        or pg_catalog.has_table_privilege('authenticated','public.'||pg_catalog.quote_ident(c.relname),'UPDATE')
+        or pg_catalog.has_table_privilege('authenticated','public.'||pg_catalog.quote_ident(c.relname),'DELETE')
+      )
+  )
+  select count(*),coalesce(jsonb_agg(relname order by relname),'[]'::jsonb) into v_table_count,v_tables from exposed;
+
+  with exposed as (
+    select c.relname
+    from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relkind='v'
+      and (pg_catalog.has_table_privilege('anon','public.'||pg_catalog.quote_ident(c.relname),'SELECT')
+        or pg_catalog.has_table_privilege('authenticated','public.'||pg_catalog.quote_ident(c.relname),'SELECT'))
+      and not ('security_invoker=true'=any(coalesce(c.reloptions,array[]::text[])))
+  )
+  select count(*),coalesce(jsonb_agg(relname order by relname),'[]'::jsonb) into v_view_count,v_views from exposed;
+
+  with secdef as (
+    select p.oid,
+      p.proname||'('||pg_catalog.pg_get_function_identity_arguments(p.oid)||')' signature,
+      pg_catalog.has_function_privilege('public',p.oid,'EXECUTE') public_exec,
+      pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE') anon_exec,
+      pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE') auth_exec,
+      position('auth.uid()' in lower(pg_catalog.pg_get_functiondef(p.oid)))>0 has_uid_guard
+    from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.prosecdef=true
+  ), unsafe as (
+    select signature,(public_exec or anon_exec) public_or_anon,(auth_exec and not has_uid_guard) auth_unguarded
+    from secdef
+    where (public_exec or anon_exec or (auth_exec and not has_uid_guard))
+      and signature <> 'tgg_public_epk(p_slug text)'
+  ), guarded as (
+    select signature from secdef where auth_exec and has_uid_guard and not public_exec and not anon_exec
+  )
+  select
+    (select count(*) from unsafe),
+    (select coalesce(jsonb_agg(signature order by signature),'[]'::jsonb) from unsafe),
+    (select count(*) from unsafe where public_or_anon),
+    (select count(*) from unsafe where auth_unguarded),
+    (select count(*) from guarded),
+    (select coalesce(jsonb_agg(signature order by signature),'[]'::jsonb) from guarded)
+  into v_function_count,v_functions,v_public_anon_count,v_auth_unguarded_count,v_guarded_function_count,v_guarded_functions;
+
+  v_payload:=jsonb_build_object(
+    'ok',(v_table_count+v_view_count+v_function_count)=0,
+    'version','EXPOSURE-AUDIT-1.2',
+    'tables_without_rls_with_api_grants',v_table_count,
+    'non_invoker_exposed_views',v_view_count,
+    'unsafe_security_definer_functions',v_function_count,
+    'public_or_anon_security_definer_functions',v_public_anon_count,
+    'authenticated_unguarded_security_definer_functions',v_auth_unguarded_count,
+    'authenticated_guarded_security_definer_functions',v_guarded_function_count,
+    'tables',v_tables,'views',v_views,'functions',v_functions,'guarded_functions_review_inventory',v_guarded_functions,
+    'allowlisted_public_security_definer_functions',jsonb_build_array('tgg_public_epk(p_slug text)'),
+    'allowlist_reason','Public EPK is an intentional anonymous read endpoint; wrapper and private implementation use empty search_path, validate slug, and only return explicitly public EPK/artist/published-release data.',
+    'guard_semantics','authenticated SECURITY DEFINER functions are not classified as exposure when direct PUBLIC/anon EXECUTE is absent and the function definition contains auth.uid() ownership/authentication gating',
+    'checked_at',now()
+  );
+
+  if (v_table_count+v_view_count+v_function_count)>0 then
+    insert into public.tgg_operational_alerts(alert_key,severity,subsystem,last_payload)
+    values('security:database_exposure','critical','database_exposure',v_payload)
+    on conflict(alert_key) do update set status='open',last_seen=now(),occurrence_count=public.tgg_operational_alerts.occurrence_count+1,last_payload=excluded.last_payload,severity='critical';
+  else
+    update public.tgg_operational_alerts set status='resolved',last_seen=now(),last_payload=v_payload where alert_key='security:database_exposure' and status<>'resolved';
+  end if;
+  return v_payload;
+end
+$function$;
+
+-- ============================================================
+-- MIGRATION 20260911203328 harden_veil_audit_private_boundary
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_veil_route_decision_audited(p_route_key text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_uid uuid := auth.uid();
+  v_decision jsonb;
+begin
+  if v_uid is null then
+    raise exception 'authentication required';
+  end if;
+
+  v_decision := public.tgg_veil_route_decision(p_route_key);
+
+  insert into private.tgg_veil_audit_ledger(
+    actor_user_id, route_key, allowed, access_level, reason, source, metadata
+  )
+  values(
+    v_uid,
+    p_route_key,
+    coalesce((v_decision->>'allow')::boolean, false),
+    nullif(v_decision->>'access_level',''),
+    coalesce(v_decision->>'reason','unknown'),
+    'tgg_veil_route_decision_audited',
+    jsonb_build_object(
+      'path_present', nullif(v_decision->>'path','') is not null,
+      'stores_secret_values', false,
+      'stores_message_body', false,
+      'stores_provider_payload', false
+    )
+  );
+
+  return v_decision;
+end $function$;
+
+revoke insert on table private.tgg_veil_audit_ledger from authenticated;
+revoke insert on table private.tgg_veil_audit_ledger from anon;
+revoke all on table private.tgg_veil_audit_ledger from public;
+
+grant execute on function public.tgg_veil_route_decision_audited(text) to authenticated;
+revoke execute on function public.tgg_veil_route_decision_audited(text) from anon;
+
+
+-- ============================================================
+-- MIGRATION 20260911204713 add_public_growth_event_ingest
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_record_public_analytics_event(p_event_type text,p_entity_type text default null,p_entity_id uuid default null,p_session_id text default null,p_referrer text default null,p_metadata jsonb default '{}'::jsonb)
+returns uuid
+language plpgsql
+security definer
+set search_path to 'public','pg_catalog'
+as $$
+declare v_id uuid; v_type text:=lower(trim(coalesce(p_event_type,''))); v_meta jsonb:=coalesce(p_metadata,'{}'::jsonb);
+begin
+ if v_type not in ('page_view','discovery_view','mixtape_view','track_view','player_start','player_progress','player_complete','next_track','share','save','download','outbound_click') then raise exception 'ANALYTICS_EVENT_INVALID' using errcode='22023'; end if;
+ if p_entity_type is not null and char_length(p_entity_type)>80 then raise exception 'ANALYTICS_ENTITY_TYPE_TOO_LONG' using errcode='22023'; end if;
+ if p_session_id is not null and char_length(p_session_id)>128 then raise exception 'ANALYTICS_SESSION_TOO_LONG' using errcode='22023'; end if;
+ if p_referrer is not null and char_length(p_referrer)>2048 then raise exception 'ANALYTICS_REFERRER_TOO_LONG' using errcode='22023'; end if;
+ if jsonb_typeof(v_meta)<>'object' or octet_length(v_meta::text)>8192 then raise exception 'ANALYTICS_METADATA_INVALID' using errcode='22023'; end if;
+ insert into public.analytics_events(user_id,session_id,event_type,entity_type,entity_id,referrer,metadata)
+ values(auth.uid(),nullif(left(trim(coalesce(p_session_id,'')),128),''),v_type,nullif(left(trim(coalesce(p_entity_type,'')),80),''),p_entity_id,nullif(left(p_referrer,2048),''),v_meta)
+ returning id into v_id;
+ return v_id;
+end
+$$;
+revoke all on function public.tgg_record_public_analytics_event(text,text,uuid,text,text,jsonb) from public;
+grant execute on function public.tgg_record_public_analytics_event(text,text,uuid,text,text,jsonb) to anon,authenticated;
+
+
+-- ============================================================
+-- MIGRATION 20260911205024 tgg_growth_conversion_funnel_v269
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_growth_conversion_funnel(p_since timestamptz default now() - interval '7 days') returns table(step_key text, step_label text, unique_sessions bigint, event_count bigint, conversion_from_prior numeric) language sql security definer set search_path=public,pg_catalog as $$ with steps(step_key,step_label,ord) as (values ('page_view','Homepage / page view',1),('discovery_view','Discovery view',2),('mixtape_view','Mixtape view',3),('track_view','Track view',4),('player_start','Player start',5),('player_progress','30-second progress',6),('player_complete','Completed play',7),('next_track','Next track',8),('share','Share',9),('download','Download',10),('outbound_click','Outbound click',11)), agg as (select e.event_type,count(*) event_count,count(distinct nullif(e.session_id,'')) unique_sessions from public.analytics_events e where e.created_at>=coalesce(p_since,now()-interval '7 days') and e.event_type in (select step_key from steps) group by e.event_type) select s.step_key,s.step_label,coalesce(a.unique_sessions,0),coalesce(a.event_count,0),case when lag(coalesce(a.unique_sessions,0)) over(order by s.ord)>0 then round(100.0*coalesce(a.unique_sessions,0)/lag(coalesce(a.unique_sessions,0)) over(order by s.ord),2) else null end from steps s left join agg a on a.event_type=s.step_key order by s.ord $$; revoke all on function public.tgg_growth_conversion_funnel(timestamptz) from public; grant execute on function public.tgg_growth_conversion_funnel(timestamptz) to authenticated,service_role;
+
+-- ============================================================
+-- MIGRATION 20260911205317 growth_003_discovery_engagement_scoring
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+CREATE OR REPLACE FUNCTION public.tgg_discovery_growth_refresh(p_since timestamptz DEFAULT now()-interval '7 days') RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public','pg_catalog' AS $function$
+declare v_since timestamptz:=coalesce(p_since,now()-interval '7 days'); v_releases bigint:=0; v_scored bigint:=0; v_ranked bigint:=0; begin
+if v_since>now() then v_since:=now()-interval '7 days'; end if;
+with base as (
+ select m.id,m.release_date,m.created_at,coalesce(m.play_count,0)::numeric plays,coalesce(m.download_count,0)::numeric downloads,coalesce(m.featured,false) featured
+ from public.mixtapes m where m.status='published'
+), ev as (
+ select e.entity_id,count(*) filter(where e.event_type in ('mixtape_view','track_view'))::numeric views,
+        count(*) filter(where e.event_type in ('player_start','player_progress','player_complete','share','download'))::numeric engagements,
+        count(distinct nullif(e.session_id,'')) filter(where e.event_type in ('mixtape_view','track_view'))::numeric view_sessions,
+        count(distinct nullif(e.session_id,'')) filter(where e.event_type in ('player_start','player_progress','player_complete','share','download'))::numeric engaged_sessions
+ from public.analytics_events e where e.created_at>=v_since and e.entity_type in ('mixtape','track') and e.entity_id is not null group by e.entity_id
+), calc as (
+ select b.id,
+   least(1000::numeric, (case when b.featured then 100 else 0 end)+least(b.plays,500)*0.5+least(b.downloads,100)*1.5+least(coalesce(ev.engagements,0),500)*1.5+greatest(0,120-extract(epoch from(now()-coalesce(b.release_date,b.created_at)))/86400)) score,
+   case when coalesce(ev.view_sessions,0)>0 then least(1,coalesce(ev.engaged_sessions,0)/ev.view_sessions) else 0 end engagement_rate,
+   coalesce(ev.engagements,0) velocity,
+   greatest(0,least(100,100-extract(epoch from(now()-coalesce(b.release_date,b.created_at)))/86400)) freshness
+ from base b left join ev on ev.entity_id=b.id
+)
+insert into public.tgg_discovery_content_scores(content_type,content_id,score,velocity,engagement_rate,freshness_score,quality_score,metadata,calculated_at)
+select 'release',id,score,velocity,engagement_rate,freshness,least(100,score/10),jsonb_build_object('engine','GROWTH-003','window_start',v_since,'real_analytics_only',true),now() from calc
+on conflict(content_type,content_id) do update set score=excluded.score,velocity=excluded.velocity,engagement_rate=excluded.engagement_rate,freshness_score=excluded.freshness_score,quality_score=excluded.quality_score,metadata=excluded.metadata,calculated_at=excluded.calculated_at;
+get diagnostics v_scored=row_count;
+select count(*) into v_releases from public.mixtapes where status='published';
+with ranked as (select s.content_id,s.score,row_number() over(order by s.score desc,s.calculated_at desc) pos from public.tgg_discovery_content_scores s where s.content_type='release')
+insert into public.tgg_discovery_rankings(user_id,feed_mode,content_type,content_id,score,rank_position,ranking_reasons,calculated_at,expires_at)
+select null,'trending','release',content_id,score,pos,jsonb_build_array('growth_engagement_score','freshness','release_activity'),now(),now()+interval '1 hour' from ranked
+on conflict(user_id,feed_mode,content_type,content_id) do update set score=excluded.score,rank_position=excluded.rank_position,ranking_reasons=excluded.ranking_reasons,calculated_at=excluded.calculated_at,expires_at=excluded.expires_at;
+get diagnostics v_ranked=row_count;
+return jsonb_build_object('ok',true,'version','GROWTH-003','window_start',v_since,'published_releases',v_releases,'scores_refreshed',v_scored,'rankings_refreshed',v_ranked,'real_analytics_only',true,'generated_at',now());
+end $function$;
+REVOKE ALL ON FUNCTION public.tgg_discovery_growth_refresh(timestamptz) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.tgg_discovery_growth_refresh(timestamptz) TO service_role;
+
+-- ============================================================
+-- MIGRATION 20260911205641 harden_public_analytics_exposure_and_growth_funnel
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_growth_conversion_funnel(p_since timestamptz default (now() - interval '7 days'))
+returns table(step_key text, step_label text, unique_sessions bigint, event_count bigint, conversion_from_prior numeric)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null or not public.is_admin() then
+    raise exception 'AUTH_REQUIRED' using errcode='42501';
+  end if;
+  return query
+  with steps(step_key,step_label,ord) as (
+    values
+      ('page_view','Homepage / page view',1),('discovery_view','Discovery view',2),('mixtape_view','Mixtape view',3),
+      ('track_view','Track view',4),('player_start','Player start',5),('player_progress','30-second progress',6),
+      ('player_complete','Completed play',7),('next_track','Next track',8),('share','Share',9),('download','Download',10),('outbound_click','Outbound click',11)
+  ),
+  agg as (
+    select e.event_type,count(*) event_count,count(distinct nullif(e.session_id,'')) unique_sessions
+    from public.analytics_events e
+    where e.created_at>=coalesce(p_since,now()-interval '7 days')
+      and e.event_type in (select step_key from steps)
+    group by e.event_type
+  )
+  select s.step_key,s.step_label,coalesce(a.unique_sessions,0),coalesce(a.event_count,0),
+    case when lag(coalesce(a.unique_sessions,0)) over(order by s.ord)>0
+      then round(100.0*coalesce(a.unique_sessions,0)/lag(coalesce(a.unique_sessions,0)) over(order by s.ord),2)
+      else null end
+  from steps s left join agg a on a.event_type=s.step_key
+  order by s.ord;
+end;
+$$;
+
+create or replace function private.tgg_operational_exposure_audit()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_tables jsonb; v_views jsonb; v_functions jsonb; v_guarded_functions jsonb;
+  v_table_count integer:=0; v_view_count integer:=0; v_function_count integer:=0;
+  v_guarded_function_count integer:=0; v_public_anon_count integer:=0; v_auth_unguarded_count integer:=0;
+  v_payload jsonb;
+begin
+  with exposed as (
+    select c.relname from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relkind='r' and not c.relrowsecurity
+      and (pg_catalog.has_table_privilege('anon','public.'||pg_catalog.quote_ident(c.relname),'SELECT') or pg_catalog.has_table_privilege('anon','public.'||pg_catalog.quote_ident(c.relname),'INSERT') or pg_catalog.has_table_privilege('anon','public.'||pg_catalog.quote_ident(c.relname),'UPDATE') or pg_catalog.has_table_privilege('anon','public.'||pg_catalog.quote_ident(c.relname),'DELETE') or pg_catalog.has_table_privilege('authenticated','public.'||pg_catalog.quote_ident(c.relname),'SELECT') or pg_catalog.has_table_privilege('authenticated','public.'||pg_catalog.quote_ident(c.relname),'INSERT') or pg_catalog.has_table_privilege('authenticated','public.'||pg_catalog.quote_ident(c.relname),'UPDATE') or pg_catalog.has_table_privilege('authenticated','public.'||pg_catalog.quote_ident(c.relname),'DELETE'))
+  ) select count(*),coalesce(jsonb_agg(relname order by relname),'[]'::jsonb) into v_table_count,v_tables from exposed;
+
+  with exposed as (
+    select c.relname from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relkind='v'
+      and (pg_catalog.has_table_privilege('anon','public.'||pg_catalog.quote_ident(c.relname),'SELECT') or pg_catalog.has_table_privilege('authenticated','public.'||pg_catalog.quote_ident(c.relname),'SELECT'))
+      and not ('security_invoker=true'=any(coalesce(c.reloptions,array[]::text[])))
+  ) select count(*),coalesce(jsonb_agg(relname order by relname),'[]'::jsonb) into v_view_count,v_views from exposed;
+
+  with secdef as (
+    select p.oid,p.proname||'('||pg_catalog.pg_get_function_identity_arguments(p.oid)||')' signature,
+      pg_catalog.has_function_privilege('public',p.oid,'EXECUTE') public_exec,
+      pg_catalog.has_function_privilege('anon',p.oid,'EXECUTE') anon_exec,
+      pg_catalog.has_function_privilege('authenticated',p.oid,'EXECUTE') auth_exec,
+      position('auth.uid()' in lower(pg_catalog.pg_get_functiondef(p.oid)))>0 has_uid_guard
+    from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.prosecdef=true
+  ), unsafe as (
+    select signature,(public_exec or anon_exec) public_or_anon,(auth_exec and not has_uid_guard) auth_unguarded
+    from secdef
+    where (public_exec or anon_exec or (auth_exec and not has_uid_guard))
+      and signature not in ('tgg_public_epk(p_slug text)','tgg_record_public_analytics_event(p_event_type text, p_entity_type text, p_entity_id uuid, p_session_id text, p_referrer text, p_metadata jsonb)')
+  ), guarded as (
+    select signature from secdef where auth_exec and has_uid_guard and not public_exec and not anon_exec
+  )
+  select (select count(*) from unsafe),(select coalesce(jsonb_agg(signature order by signature),'[]'::jsonb) from unsafe),
+    (select count(*) from unsafe where public_or_anon),(select count(*) from unsafe where auth_unguarded),
+    (select count(*) from guarded),(select coalesce(jsonb_agg(signature order by signature),'[]'::jsonb) from guarded)
+  into v_function_count,v_functions,v_public_anon_count,v_auth_unguarded_count,v_guarded_function_count,v_guarded_functions;
+
+  v_payload:=jsonb_build_object(
+    'ok',(v_table_count+v_view_count+v_function_count)=0,
+    'version','EXPOSURE-AUDIT-1.3',
+    'tables_without_rls_with_api_grants',v_table_count,
+    'non_invoker_exposed_views',v_view_count,
+    'unsafe_security_definer_functions',v_function_count,
+    'public_or_anon_security_definer_functions',v_public_anon_count,
+    'authenticated_unguarded_security_definer_functions',v_auth_unguarded_count,
+    'authenticated_guarded_security_definer_functions',v_guarded_function_count,
+    'tables',v_tables,'views',v_views,'functions',v_functions,'guarded_functions_review_inventory',v_guarded_functions,
+    'allowlisted_public_security_definer_functions',jsonb_build_array('tgg_public_epk(p_slug text)','tgg_record_public_analytics_event(p_event_type text, p_entity_type text, p_entity_id uuid, p_session_id text, p_referrer text, p_metadata jsonb)'),
+    'allowlist_reason','Public EPK and public analytics event recording are intentional anonymous endpoints; both use explicit validation and empty search_path. Analytics funnel is authenticated admin-only and explicitly checks auth.uid() plus public.is_admin().',
+    'guard_semantics','Authenticated SECURITY DEFINER functions require explicit auth.uid() gating; intentional anonymous wrappers are separately allowlisted only when their public purpose and input constraints are established.',
+    'checked_at',now()
+  );
+
+  if (v_table_count+v_view_count+v_function_count)>0 then
+    insert into public.tgg_operational_alerts(alert_key,severity,subsystem,last_payload)
+    values('security:database_exposure','critical','database_exposure',v_payload)
+    on conflict(alert_key) do update set status='open',last_seen=now(),occurrence_count=public.tgg_operational_alerts.occurrence_count+1,last_payload=excluded.last_payload,severity='critical';
+  else
+    update public.tgg_operational_alerts set status='resolved',last_seen=now(),last_payload=v_payload where alert_key='security:database_exposure' and status<>'resolved';
+  end if;
+  return v_payload;
+end;
+$$;
+
+-- ============================================================
+-- MIGRATION 20260911205838 growth_004_public_discovery_ranked_delivery
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_public_discovery_growth_feed(p_limit integer default 12, p_query text default null)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path to 'public','pg_catalog'
+as $$
+declare
+  v_limit integer := greatest(1, least(coalesce(p_limit,12), 24));
+  v_query text := nullif(btrim(coalesce(p_query,'')), '');
+  v_items jsonb;
+begin
+  select coalesce(jsonb_agg(to_jsonb(x) order by x.rank_score desc, x.release_date desc nulls last, x.created_at desc), '[]'::jsonb)
+  into v_items
+  from (
+    select m.id as release_id, m.artist_id, a.stage_name, m.title, m.genre, m.description,
+           m.cover_url, m.slug, m.release_date, m.created_at,
+           coalesce(r.score,0)::numeric as rank_score,
+           coalesce(r.ranking_reasons,'[]'::jsonb) as ranking_reasons
+    from public.tgg_discovery_rankings r
+    join public.mixtapes m on m.id=r.content_id and m.status='published'
+    join public.artists a on a.id=m.artist_id
+    where r.feed_mode='trending'
+      and r.content_type='release'
+      and (r.expires_at is null or r.expires_at > now())
+      and (v_query is null or m.title ilike '%'||v_query||'%' or coalesce(m.genre,'') ilike '%'||v_query||'%' or a.stage_name ilike '%'||v_query||'%')
+    order by r.score desc, m.release_date desc nulls last, m.created_at desc
+    limit v_limit
+  ) x;
+
+  if jsonb_array_length(v_items)=0 then
+    select coalesce(jsonb_agg(to_jsonb(x) order by x.rank_score desc, x.release_date desc nulls last, x.created_at desc), '[]'::jsonb)
+    into v_items
+    from (
+      select m.id as release_id, m.artist_id, a.stage_name, m.title, m.genre, m.description,
+             m.cover_url, m.slug, m.release_date, m.created_at,
+             (case when coalesce(m.featured,false) then 1000 else 0 end
+              + least(coalesce(m.play_count,0),100000)
+              + least(coalesce(m.download_count,0),10000)*3
+              + greatest(0,120-floor(extract(epoch from (now()-coalesce(m.release_date,m.created_at)))/86400)))::numeric as rank_score,
+             jsonb_build_array('fallback_latest_activity') as ranking_reasons
+      from public.mixtapes m
+      join public.artists a on a.id=m.artist_id
+      where m.status='published'
+        and (v_query is null or m.title ilike '%'||v_query||'%' or coalesce(m.genre,'') ilike '%'||v_query||'%' or a.stage_name ilike '%'||v_query||'%')
+      order by rank_score desc, m.release_date desc nulls last, m.created_at desc
+      limit v_limit
+    ) x;
+  end if;
+
+  return jsonb_build_object('ok',true,'version','GROWTH-004','feed_mode','trending','items',v_items,'count',jsonb_array_length(v_items),'generated_at',now());
+end
+$$;
+
+revoke all on function public.tgg_public_discovery_growth_feed(integer,text) from public;
+grant execute on function public.tgg_public_discovery_growth_feed(integer,text) to anon, authenticated;
+
+-- ============================================================
+-- MIGRATION 20260911210250 growth_005_homepage_conversion_path
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+create or replace function public.tgg_public_discovery_growth_feed(p_limit integer default 12, p_query text default null)
+returns jsonb
+language plpgsql
+stable security definer
+set search_path to 'public','pg_catalog'
+as $$
+declare
+  v_limit integer := greatest(1, least(coalesce(p_limit,12),24));
+  v_query text := nullif(btrim(coalesce(p_query,'')), '');
+  v_items jsonb;
+begin
+  select coalesce(jsonb_agg(to_jsonb(x) order by x.rank_score desc, x.release_date desc nulls last, x.created_at desc), '[]'::jsonb)
+  into v_items
+  from (
+    select m.id as release_id, m.artist_id, a.stage_name, m.title, m.genre, m.description,
+           m.cover_url, m.slug, m.release_date, m.created_at,
+           coalesce(r.score,0)::numeric as rank_score,
+           coalesce(r.ranking_reasons,'[]'::jsonb) as ranking_reasons,
+           ft.track_id as first_track_id, ft.track_title as first_track_title, ft.audio_url as first_track_audio_url
+    from public.tgg_discovery_rankings r
+    join public.mixtapes m on m.id=r.content_id and m.status='published'
+    join public.artists a on a.id=m.artist_id
+    left join lateral (
+      select t.id as track_id,t.title as track_title,t.audio_url
+      from public.tracks t
+      where t.mixtape_id=m.id
+      order by t.track_number,t.created_at
+      limit 1
+    ) ft on true
+    where r.feed_mode='trending'
+      and r.content_type='release'
+      and (r.expires_at is null or r.expires_at > now())
+      and (v_query is null or m.title ilike '%'||v_query||'%' or coalesce(m.genre,'') ilike '%'||v_query||'%' or a.stage_name ilike '%'||v_query||'%')
+    order by r.score desc, m.release_date desc nulls last, m.created_at desc
+    limit v_limit
+  ) x;
+
+  if jsonb_array_length(v_items)=0 then
+    select coalesce(jsonb_agg(to_jsonb(x) order by x.rank_score desc, x.release_date desc nulls last, x.created_at desc), '[]'::jsonb)
+    into v_items
+    from (
+      select m.id as release_id, m.artist_id, a.stage_name, m.title, m.genre, m.description,
+             m.cover_url, m.slug, m.release_date, m.created_at,
+             (case when coalesce(m.featured,false) then 1000 else 0 end
+              + least(coalesce(m.play_count,0),100000)
+              + least(coalesce(m.download_count,0),10000)*3
+              + greatest(0,120-floor(extract(epoch from (now()-coalesce(m.release_date,m.created_at)))/86400)))::numeric as rank_score,
+             jsonb_build_array('fallback_latest_activity') as ranking_reasons,
+             ft.track_id as first_track_id, ft.track_title as first_track_title, ft.audio_url as first_track_audio_url
+      from public.mixtapes m
+      join public.artists a on a.id=m.artist_id
+      left join lateral (
+        select t.id as track_id,t.title as track_title,t.audio_url
+        from public.tracks t
+        where t.mixtape_id=m.id
+        order by t.track_number,t.created_at
+        limit 1
+      ) ft on true
+      where m.status='published'
+        and (v_query is null or m.title ilike '%'||v_query||'%' or coalesce(m.genre,'') ilike '%'||v_query||'%' or a.stage_name ilike '%'||v_query||'%')
+      order by rank_score desc, m.release_date desc nulls last, m.created_at desc
+      limit v_limit
+    ) x;
+  end if;
+
+  return jsonb_build_object('ok',true,'version','GROWTH-005','feed_mode','trending','items',v_items,'count',jsonb_array_length(v_items),'generated_at',now());
+end
+$$;
+revoke all on function public.tgg_public_discovery_growth_feed(integer,text) from public;
+grant execute on function public.tgg_public_discovery_growth_feed(integer,text) to anon,authenticated;
 

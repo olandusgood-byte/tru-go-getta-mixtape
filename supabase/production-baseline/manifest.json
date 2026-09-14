@@ -1,0 +1,35 @@
+{
+  "format": "tgg-production-schema-baseline-v2",
+  "generated_at": "2026-09-14T03:23:56.383Z",
+  "source": "Frozen PostgreSQL catalog DDL snapshot via service-only RPC and GitHub OIDC broker",
+  "snapshot_id": "1833360b-3597-4f8b-b38e-9819d994f097",
+  "snapshot_stable": true,
+  "snapshot_migration_version": "20260914024035",
+  "item_count": 9251,
+  "kind_counts": {
+    "prelude": 1,
+    "enum": 7,
+    "table": 892,
+    "view_placeholder": 104,
+    "function": 1648,
+    "constraint": 3394,
+    "index": 977,
+    "view": 104,
+    "rls": 843,
+    "policy": 1159,
+    "trigger": 121,
+    "postlude": 1
+  },
+  "schema_bytes": 5346928,
+  "schema_sha256": "efea348d8020407d373be9e564119d215691dc7ca3e12ca7c87569c8adb18bb2",
+  "history_latest_version_at_export": "20260914024035",
+  "safety": {
+    "schema_only": true,
+    "production_row_data_exported": false,
+    "oidc_only_export": true,
+    "high_risk_literal_scan_passed": true,
+    "production_apply_prohibited": true,
+    "frozen_snapshot": true,
+    "clean_environment_replay_required": true
+  }
+}

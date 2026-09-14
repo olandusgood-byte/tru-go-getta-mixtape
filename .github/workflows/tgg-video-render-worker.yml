@@ -112,3 +112,10 @@ jobs:
         if: steps.probe.outputs.has_work != 'true'
         shell: bash
         run: echo "TGG render queue idle; OIDC heartbeat refreshed without heavy worker setup."
+
+      - name: Final E2E lock evidence
+        if: always()
+        shell: bash
+        run: |
+          echo "TGG render worker run=${GITHUB_RUN_ID} sha=${GITHUB_SHA} event=${GITHUB_EVENT_NAME}"
+          echo "Worker pipeline: OIDC -> claim -> FFmpeg -> signed TUS -> broker completion"

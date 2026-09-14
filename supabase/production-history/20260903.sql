@@ -1,7 +1,7 @@
 -- TRU GO GETTA production migration history archive
 -- Date bucket: 20260903
 -- Historical evidence only. Do not replay against production.
--- Preserve the recorded order. Validate in an isolated clean environment before any bootstrap use.
+-- Preserve recorded order. Use the current schema baseline for clean bootstrap.
 
 -- ============================================================
 -- MIGRATION 20260903005828 v157_harden_launch_control_functions

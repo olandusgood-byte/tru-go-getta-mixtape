@@ -1,7 +1,7 @@
 -- TRU GO GETTA production migration history archive
 -- Date bucket: 20260902
 -- Historical evidence only. Do not replay against production.
--- Preserve the recorded order. Validate in an isolated clean environment before any bootstrap use.
+-- Preserve recorded order. Use the current schema baseline for clean bootstrap.
 
 -- ============================================================
 -- MIGRATION 20260902054812 v59_video_live_operations_foundation

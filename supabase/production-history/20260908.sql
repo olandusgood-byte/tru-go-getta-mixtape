@@ -1,7 +1,7 @@
 -- TRU GO GETTA production migration history archive
 -- Date bucket: 20260908
 -- Historical evidence only. Do not replay against production.
--- Preserve the recorded order. Validate in an isolated clean environment before any bootstrap use.
+-- Preserve recorded order. Use the current schema baseline for clean bootstrap.
 
 -- ============================================================
 -- MIGRATION 20260908012027 add_resend_auth_email_provider

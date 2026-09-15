@@ -6,17 +6,19 @@ on:
       archive_name:
         description: Fast-lane archive to execute
         required: false
-        default: TGG_WORLD_UNREAL_FASTLANE_8014d5a.tar.gz
+        default: TGG_WORLD_UNREAL_FASTLANE_e628173.tar.gz
       archive_sha256:
         description: Expected SHA-256 for the checkpoint archive
         required: false
-        default: 8635b2f423e15c8e9233e16d9b0434f62582a09cc77b5e932a014653a5b3b864
+        default: d9873c842d66b0508d0b8e447de8e2cdb95362c5d15e4486e50cbb5e3f51bd58
   push:
     branches:
       - tgg-world-unreal-fastlane
     paths:
       - 'game/unreal-fastlane/TGG_WORLD_UNREAL_FASTLANE_*.tar.gz'
-      - 'game/unreal-fastlane/checkpoints/8014d5a/TGG_WORLD_UNREAL_FASTLANE_8014d5a.tar.gz.b64.part12'
+      - 'game/unreal-fastlane/RELEASE-READINESS-e628173.md'
+      - 'game/unreal-fastlane/WINDOWS-RUNTIME-RUNBOOK-e628173.md'
+      - '.github/workflows/tgg-world-unreal-runtime.yml'
 
 permissions:
   contents: read
@@ -60,29 +62,18 @@ jobs:
         run: |
           $requested = '${{ inputs.archive_name }}'
           if ([string]::IsNullOrWhiteSpace($requested)) {
-            $requested = 'TGG_WORLD_UNREAL_FASTLANE_8014d5a.tar.gz'
+            $requested = 'TGG_WORLD_UNREAL_FASTLANE_e628173.tar.gz'
           }
           $expectedSha = '${{ inputs.archive_sha256 }}'
           if ([string]::IsNullOrWhiteSpace($expectedSha)) {
-            $expectedSha = '8635b2f423e15c8e9233e16d9b0434f62582a09cc77b5e932a014653a5b3b864'
+            $expectedSha = 'd9873c842d66b0508d0b8e447de8e2cdb95362c5d15e4486e50cbb5e3f51bd58'
           }
 
-          $repoArchive = Join-Path 'game/unreal-fastlane' $requested
-          if (Test-Path $repoArchive) {
-            $candidate = Get-Item $repoArchive
-          } else {
-            $chunkDir = 'game/unreal-fastlane/checkpoints/8014d5a'
-            $parts = @(Get-ChildItem $chunkDir -Filter "$requested.b64.part*" | Sort-Object Name)
-            if ($parts.Count -ne 13) {
-              throw "Expected 13 checkpoint chunks, found $($parts.Count)."
-            }
-            $encoded = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
-            $bytes = [Convert]::FromBase64String($encoded)
-            $rebuilt = Join-Path $env:RUNNER_TEMP $requested
-            [IO.File]::WriteAllBytes($rebuilt, $bytes)
-            $candidate = Get-Item $rebuilt
+          $candidatePath = Join-Path 'game/unreal-fastlane' $requested
+          if (-not (Test-Path $candidatePath)) {
+            throw "Checkpoint archive not found: $candidatePath"
           }
-
+          $candidate = Get-Item $candidatePath
           $actualSha = (Get-FileHash $candidate.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actualSha -ne $expectedSha.ToLowerInvariant()) {
             throw "Checkpoint SHA-256 mismatch. expected=$expectedSha actual=$actualSha"

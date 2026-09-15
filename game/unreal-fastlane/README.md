@@ -1,25 +1,25 @@
 # TRU GO GETTA WORLD — Unreal Fast-Lane Snapshot
 
-Canonical source checkpoint for the Unreal Engine 5.8 vertical slice.
+Canonical recoverable source checkpoint for the Unreal Engine 5.8 vertical slice.
 
-- Latest local source commit: `8014d5a`
-- Latest snapshot: `TGG_WORLD_UNREAL_FASTLANE_8014d5a.tar.gz`
-- Latest snapshot SHA-256: `8635b2f423e15c8e9233e16d9b0434f62582a09cc77b5e932a014653a5b3b864`
+- Latest recovered checkpoint: `e628173`
+- Source fingerprint: `e628173668e9`
+- Snapshot: `TGG_WORLD_UNREAL_FASTLANE_e628173.tar.gz`
+- Snapshot SHA-256: `d9873c842d66b0508d0b8e447de8e2cdb95362c5d15e4486e50cbb5e3f51bd58`
+- Recovery base: verified `90457ba` archive + rebuilt two-client EOS/voice proof layer
 - Source readiness: **PASS**
 - Evidence-weighted vertical-slice completion: **70%**
-- Portable core tests: **PASS**
-- Full structural verifier sweep: **41/41 PASS**
-- Client privileged-secret marker scan: **PASS**
+- Structural verifiers: **43/43 PASS**
+- Portable C++ tests: **1/1 PASS**
+- Whitespace + privileged credential literal scans: **PASS**
 - Unreal 5.8 Windows compile/cook/package: **PENDING real Windows UE 5.8 + VS2022 execution**
 
-Implemented fast-lane systems include Creator District generation, third-person movement, drivable proxy vehicle, real Supabase auth/career state, Starter Studio mission handoff, authoritative Creator Session saved bridge, rap battles, Creator Phone/profile, Creator Store economy, gym workout loop, apartment/phone bundle, idempotent Creator Loft property purchase, Creator Hub server-ranked contracts/opportunities, EOS creator lobby host/find/join/leave, EOS lobby voice, explicit EOS identity login, F8 runtime QA, authoritative `MVP_FIRST_SESSION` persistence restore, live World presence, server-observed two-real-user witness proof, packaged boot smoke, authenticated Supabase backend smoke, ephemeral EOS credential staging, staged Sentry crash routing, anonymous PostHog runtime telemetry, evidence-weighted release-readiness reporting, one-command final QA orchestration, Windows preflight, and a real two-client EOS + voice proof harness.
+The recovery replaces the incomplete `8014d5a` chunk path with one complete, SHA-verified archive. The source keeps the existing Creator District/gameplay/backend fast-lane and adds the recovered two-real-client EOS proof path with a unique per-run lobby proof ID, real `IVoiceChatUser` channel observation, per-process environment credentials, and the live Supabase multiplayer witness.
 
-The two-client proof requires two distinct Supabase access tokens and two distinct EOS test identities. It passes only when both packaged clients report joining the same EOS voice room and the live World witness reports a current same-instance authenticated population of at least two. Historical witness state alone cannot pass the gate.
+The two-client proof requires two distinct Supabase access tokens and two distinct EOS test identities. It passes only when both packaged clients join the same fresh EOS proof lobby, each reports a joined EOS voice channel, and the live server witness sees at least two current authenticated users in the same instance.
 
-The connected PostHog project is available for runtime telemetry but its first Unreal runtime event remains a runtime evidence gate rather than a source-completion claim.
+Remaining evidence gates are UE 5.8 package+boot, authenticated backend smoke, real two-user EOS+voice, PostHog+remote Sentry delivery, and packaged Creator District gameplay QA. Runtime gates are never marked PASS from source code alone.
 
-Remaining evidence gates are UE 5.8 compile/package, packaged boot smoke, authenticated backend smoke, the real two-user EOS + voice run, PostHog + remote Sentry delivery, and final packaged gameplay QA. Runtime gates are never marked PASS from source code alone.
+See `WINDOWS-RUNTIME-RUNBOOK-e628173.md` and `RELEASE-READINESS-e628173.md`.
 
-See `WINDOWS-RUNTIME-RUNBOOK-8014d5a.md` for the exact environment-variable contract and one-command runtime evidence run.
-
-The existing `game/` web prototype is intentionally preserved. This folder is additive. Older snapshots remain available as rollback checkpoints.
+The existing `game/` web prototype is intentionally preserved. This folder is additive; older snapshots remain rollback checkpoints.

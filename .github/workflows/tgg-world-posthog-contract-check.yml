@@ -1,0 +1,76 @@
+name: TGG World PostHog Contract Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tgg-world-unreal-fastlane
+    paths:
+      - '.github/workflows/tgg-world-posthog-contract-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  posthog-delivery:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    env:
+      TGG_POSTHOG_PROJECT_TOKEN: phc_t2i5sAzpSE5WL2CRzA3DyLggpeHLpHWkB6bwyJ6K79s6
+    steps:
+      - name: Send personless observability smoke to PostHog Cloud
+        id: capture
+        shell: pwsh
+        run: |
+          $smokeId = "tgg-ph-${{ github.run_id }}-${{ github.run_attempt }}"
+          $payload = @{
+            api_key = $env:TGG_POSTHOG_PROJECT_TOKEN
+            event = 'tgg world observability preflight'
+            distinct_id = "tgg-world-ci-${{ github.run_id }}"
+            properties = @{
+              '$process_person_profile' = $false
+              tgg_smoke_id = $smokeId
+              checkpoint = 'e628173'
+              source = 'github_actions'
+              contract = 'posthog_provider_delivery'
+              test = $true
+            }
+          } | ConvertTo-Json -Depth 5 -Compress
+
+          $hosts = @('https://us.i.posthog.com','https://eu.i.posthog.com')
+          $accepted = @()
+          foreach ($host in $hosts) {
+            $uri = "$host/i/v0/e/"
+            try {
+              $response = Invoke-WebRequest -Method Post -Uri $uri -ContentType 'application/json' -Body $payload -SkipHttpErrorCheck
+              $status = [int]$response.StatusCode
+              Write-Host "POSTHOG_HOST_STATUS host=$host status=$status"
+              if ($status -ge 200 -and $status -lt 300) { $accepted += $host }
+            }
+            catch {
+              Write-Host "POSTHOG_HOST_ERROR host=$host error=$($_.Exception.Message)"
+            }
+          }
+
+          if ($accepted.Count -eq 0) {
+            throw 'Neither official PostHog Cloud ingestion host accepted the personless smoke event.'
+          }
+
+          "smoke_id=$smokeId" >> $env:GITHUB_OUTPUT
+          "accepted_hosts=$($accepted -join ',')" >> $env:GITHUB_OUTPUT
+          Write-Host "TGG_POSTHOG_CAPTURE_ACCEPTED: PASS smoke_id=$smokeId hosts=$($accepted -join ',')"
+          Write-Host 'Provider acceptance alone is not Unreal runtime telemetry evidence.'
+
+      - name: Summarize provider contract
+        shell: pwsh
+        run: |
+          @"
+          # TGG World PostHog Contract
+
+          - Capture request accepted: **yes**
+          - Smoke ID: `${{ steps.capture.outputs.smoke_id }}`
+          - Accepted cloud host(s): `${{ steps.capture.outputs.accepted_hosts }}`
+          - Person profile creation: **disabled for this smoke**
+          - Checkpoint: `e628173`
+          - Runtime observability gate: **still PENDING** until the packaged game emits and verifies its own telemetry plus remote Sentry crash evidence
+          "@ | Add-Content -Path $env:GITHUB_STEP_SUMMARY

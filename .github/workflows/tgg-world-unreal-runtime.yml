@@ -1,0 +1,101 @@
+name: TGG World Unreal Runtime Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      archive_name:
+        description: Fast-lane archive to execute
+        required: false
+        default: TGG_WORLD_UNREAL_FASTLANE_8014d5a.tar.gz
+  push:
+    branches:
+      - tgg-world-unreal-fastlane
+    paths:
+      - 'game/unreal-fastlane/TGG_WORLD_UNREAL_FASTLANE_*.tar.gz'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgg-world-unreal-runtime-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ue58-runtime-evidence:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 180
+    env:
+      TGG_EOS_ARTIFACT_NAME: ${{ secrets.TGG_EOS_ARTIFACT_NAME }}
+      TGG_EOS_PRODUCT_ID: ${{ secrets.TGG_EOS_PRODUCT_ID }}
+      TGG_EOS_SANDBOX_ID: ${{ secrets.TGG_EOS_SANDBOX_ID }}
+      TGG_EOS_DEPLOYMENT_ID: ${{ secrets.TGG_EOS_DEPLOYMENT_ID }}
+      TGG_EOS_CLIENT_ID: ${{ secrets.TGG_EOS_CLIENT_ID }}
+      TGG_EOS_CLIENT_SECRET: ${{ secrets.TGG_EOS_CLIENT_SECRET }}
+      TGG_EOS_CLIENT_ENCRYPTION_KEY: ${{ secrets.TGG_EOS_CLIENT_ENCRYPTION_KEY }}
+      TGG_SUPABASE_URL: ${{ secrets.TGG_SUPABASE_URL }}
+      TGG_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.TGG_SUPABASE_PUBLISHABLE_KEY }}
+      TGG_SUPABASE_TEST_ACCESS_TOKEN: ${{ secrets.TGG_SUPABASE_TEST_ACCESS_TOKEN }}
+      TGG_SUPABASE_TEST_ACCESS_TOKEN_A: ${{ secrets.TGG_SUPABASE_TEST_ACCESS_TOKEN_A }}
+      TGG_SUPABASE_TEST_ACCESS_TOKEN_B: ${{ secrets.TGG_SUPABASE_TEST_ACCESS_TOKEN_B }}
+      TGG_EOS_AUTH_TYPE_A: ${{ secrets.TGG_EOS_AUTH_TYPE_A }}
+      TGG_EOS_AUTH_LOGIN_A: ${{ secrets.TGG_EOS_AUTH_LOGIN_A }}
+      TGG_EOS_AUTH_PASSWORD_A: ${{ secrets.TGG_EOS_AUTH_PASSWORD_A }}
+      TGG_EOS_AUTH_TYPE_B: ${{ secrets.TGG_EOS_AUTH_TYPE_B }}
+      TGG_EOS_AUTH_LOGIN_B: ${{ secrets.TGG_EOS_AUTH_LOGIN_B }}
+      TGG_EOS_AUTH_PASSWORD_B: ${{ secrets.TGG_EOS_AUTH_PASSWORD_B }}
+      TGG_POSTHOG_PROJECT_TOKEN: ${{ secrets.TGG_POSTHOG_PROJECT_TOKEN }}
+      TGG_SENTRY_UNREAL_ENDPOINT: ${{ secrets.TGG_SENTRY_UNREAL_ENDPOINT }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve checkpoint archive
+        id: checkpoint
+        shell: pwsh
+        run: |
+          $requested = '${{ inputs.archive_name }}'
+          if ([string]::IsNullOrWhiteSpace($requested)) {
+            $candidate = Get-ChildItem 'game/unreal-fastlane/TGG_WORLD_UNREAL_FASTLANE_*.tar.gz' |
+              Sort-Object LastWriteTimeUtc -Descending |
+              Select-Object -First 1
+          } else {
+            $candidate = Get-Item (Join-Path 'game/unreal-fastlane' $requested) -ErrorAction Stop
+          }
+          if (-not $candidate) { throw 'No Unreal fast-lane archive found.' }
+          "archive=$($candidate.FullName)" >> $env:GITHUB_OUTPUT
+          "name=$($candidate.Name)" >> $env:GITHUB_OUTPUT
+
+      - name: Extract checkpoint
+        id: extract
+        shell: pwsh
+        run: |
+          $work = Join-Path $env:RUNNER_TEMP 'tgg-world-unreal-runtime'
+          if (Test-Path $work) { Remove-Item -Recurse -Force $work }
+          New-Item -ItemType Directory -Force -Path $work | Out-Null
+          tar -xzf '${{ steps.checkpoint.outputs.archive }}' -C $work
+          $project = Get-ChildItem $work -Filter TGGWorld.uproject -Recurse | Select-Object -First 1
+          if (-not $project) { throw 'TGGWorld.uproject not found after extraction.' }
+          $root = $project.Directory.FullName
+          "root=$root" >> $env:GITHUB_OUTPUT
+
+      - name: UE 5.8 fast-lane preflight
+        shell: pwsh
+        working-directory: ${{ steps.extract.outputs.root }}
+        run: .\scripts\windows\TGG_FASTLANE_PREFLIGHT.ps1
+
+      - name: Compile, package, and collect runtime evidence
+        shell: pwsh
+        working-directory: ${{ steps.extract.outputs.root }}
+        run: .\scripts\windows\TGG_FASTLANE_FINAL_QA.ps1
+
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tgg-world-runtime-evidence-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            ${{ steps.extract.outputs.root }}/Builds/Win64-Development/_smoke/**
+            ${{ steps.extract.outputs.root }}/TGG_FASTLANE_RUNTIME_EVIDENCE.json
+            ${{ steps.extract.outputs.root }}/TGG_FASTLANE_FINAL_QA.md

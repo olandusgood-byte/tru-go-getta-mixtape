@@ -5,6 +5,8 @@ Evidence baseline: **70%**
 Recovery base: verified `90457ba` archive + rebuilt two-client EOS/voice proof layer.
 Goal: earn the final 30% only from real UE 5.8 runtime evidence.
 
+GitHub runtime transport: the checkpoint is stored as **19 ordered base64 text chunks** under `game/unreal-fastlane/checkpoints/e628173/`. The workflow must reconstruct them in lexical order and verify SHA-256 `d9873c842d66b0508d0b8e447de8e2cdb95362c5d15e4486e50cbb5e3f51bd58` before extraction. The old direct `.tar.gz` object is not an execution source.
+
 ## Required local tools
 
 - Unreal Engine 5.8 (`UE_ROOT` may point to a non-default install)

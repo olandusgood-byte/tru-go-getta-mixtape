@@ -2,22 +2,14 @@ name: TGG World Unreal Runtime Evidence
 
 on:
   workflow_dispatch:
-    inputs:
-      archive_name:
-        description: Fast-lane archive to execute
-        required: false
-        default: TGG_WORLD_UNREAL_FASTLANE_e628173.tar.gz
-      archive_sha256:
-        description: Expected SHA-256 for the checkpoint archive
-        required: false
-        default: d9873c842d66b0508d0b8e447de8e2cdb95362c5d15e4486e50cbb5e3f51bd58
   push:
     branches:
       - tgg-world-unreal-fastlane
     paths:
-      - 'game/unreal-fastlane/TGG_WORLD_UNREAL_FASTLANE_*.tar.gz'
+      - 'game/unreal-fastlane/checkpoints/e628173/**'
       - 'game/unreal-fastlane/RELEASE-READINESS-e628173.md'
       - 'game/unreal-fastlane/WINDOWS-RUNTIME-RUNBOOK-e628173.md'
+      - 'game/unreal-fastlane/README.md'
       - '.github/workflows/tgg-world-unreal-runtime.yml'
 
 permissions:
@@ -56,32 +48,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve and verify checkpoint archive
+      - name: Reconstruct and verify checkpoint archive
         id: checkpoint
         shell: pwsh
         run: |
-          $requested = '${{ inputs.archive_name }}'
-          if ([string]::IsNullOrWhiteSpace($requested)) {
-            $requested = 'TGG_WORLD_UNREAL_FASTLANE_e628173.tar.gz'
+          $chunkDir = 'game/unreal-fastlane/checkpoints/e628173'
+          $parts = @(Get-ChildItem $chunkDir -Filter 'TGG_WORLD_UNREAL_FASTLANE_e628173.tar.gz.b64.chunk*' | Sort-Object Name)
+          if ($parts.Count -ne 19) {
+            throw "Expected exactly 19 e628173 checkpoint chunks, found $($parts.Count)."
           }
-          $expectedSha = '${{ inputs.archive_sha256 }}'
-          if ([string]::IsNullOrWhiteSpace($expectedSha)) {
-            $expectedSha = 'd9873c842d66b0508d0b8e447de8e2cdb95362c5d15e4486e50cbb5e3f51bd58'
-          }
-
-          $candidatePath = Join-Path 'game/unreal-fastlane' $requested
-          if (-not (Test-Path $candidatePath)) {
-            throw "Checkpoint archive not found: $candidatePath"
-          }
-          $candidate = Get-Item $candidatePath
-          $actualSha = (Get-FileHash $candidate.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($actualSha -ne $expectedSha.ToLowerInvariant()) {
+          $encoded = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
+          try { $bytes = [Convert]::FromBase64String($encoded) }
+          catch { throw "Checkpoint base64 decode failed: $($_.Exception.Message)" }
+          $rebuilt = Join-Path $env:RUNNER_TEMP 'TGG_WORLD_UNREAL_FASTLANE_e628173.tar.gz'
+          [IO.File]::WriteAllBytes($rebuilt, $bytes)
+          $expectedSha = 'd9873c842d66b0508d0b8e447de8e2cdb95362c5d15e4486e50cbb5e3f51bd58'
+          $actualSha = (Get-FileHash $rebuilt -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualSha -ne $expectedSha) {
             throw "Checkpoint SHA-256 mismatch. expected=$expectedSha actual=$actualSha"
           }
-          "archive=$($candidate.FullName)" >> $env:GITHUB_OUTPUT
-          "name=$($candidate.Name)" >> $env:GITHUB_OUTPUT
+          "archive=$rebuilt" >> $env:GITHUB_OUTPUT
           "sha256=$actualSha" >> $env:GITHUB_OUTPUT
-          Write-Host "Verified checkpoint $($candidate.Name) sha256=$actualSha"
+          Write-Host "Verified e628173 checkpoint sha256=$actualSha"
 
       - name: Extract checkpoint
         id: extract
@@ -93,8 +81,7 @@ jobs:
           tar -xzf '${{ steps.checkpoint.outputs.archive }}' -C $work
           $project = Get-ChildItem $work -Filter TGGWorld.uproject -Recurse | Select-Object -First 1
           if (-not $project) { throw 'TGGWorld.uproject not found after extraction.' }
-          $root = $project.Directory.FullName
-          "root=$root" >> $env:GITHUB_OUTPUT
+          "root=$($project.Directory.FullName)" >> $env:GITHUB_OUTPUT
 
       - name: UE 5.8 fast-lane preflight
         shell: pwsh

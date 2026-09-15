@@ -23,6 +23,11 @@
   "schema_bytes": 5349793,
   "schema_sha256": "584d71d6146f5d89bf0e5842a01e23dfa4adc4fea04a42ca756795f70d3cb40d",
   "history_latest_version_at_export": "20260914074511",
+  "migration_history_reconciled": true,
+  "migration_history_count_at_reconciliation": 1147,
+  "migration_history_latest_version_at_reconciliation": "20260914220956",
+  "migration_history_delta_file": "supabase/production-history/20260914-post-baseline.sql",
+  "history_delta_is_grant_only": true,
   "safety": {
     "schema_only": true,
     "production_row_data_exported": false,

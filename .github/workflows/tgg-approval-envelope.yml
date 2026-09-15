@@ -1,0 +1,39 @@
+name: TGG Human Approval Envelope
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'evidence/**'
+      - 'remediation/**'
+      - 'status/**'
+      - 'package/**'
+      - 'scripts/tgg-approval-envelope.mjs'
+      - 'scripts/tgg-approval-envelope.test.mjs'
+      - 'docs/V5760_HUMAN_APPROVAL_ENVELOPE.md'
+      - '.github/workflows/tgg-approval-envelope.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  approval-envelope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test non-signing approval envelope
+        run: node --test scripts/tgg-approval-envelope.test.mjs
+      - name: Confirm current inputs are not approval-ready
+        shell: bash
+        run: |
+          set +e
+          node scripts/tgg-approval-envelope.mjs \
+            evidence/live-evidence-2026-09-12.json \
+            remediation/shell-remediation-2026-09-12.json \
+            status/master-status-2026-09-13.json \
+            package/v5720-release-readiness.json \
+            approval-envelope.json
+          code=$?
+          set -e
+          test "$code" -eq 2
+          test "$(node -p "require('./approval-envelope.json').decision")" = 'HOLD'

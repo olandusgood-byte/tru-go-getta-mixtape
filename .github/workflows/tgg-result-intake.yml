@@ -1,0 +1,23 @@
+name: TGG Atomic Result Intake
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/tgg-result-intake.mjs'
+      - 'scripts/tgg-result-intake.test.mjs'
+      - 'scripts/tgg-evidence-gate.mjs'
+      - 'scripts/tgg-remediation-gate.mjs'
+      - 'docs/V5750_ATOMIC_RESULT_INTAKE.md'
+      - '.github/workflows/tgg-result-intake.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  result-intake:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test atomic result intake
+        run: node --test scripts/tgg-result-intake.test.mjs

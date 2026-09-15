@@ -1,0 +1,48 @@
+{
+  "schema": "tgg-live-public-rpc-contract-v1",
+  "captured_at": "2026-09-12T20:54:36Z",
+  "project_id": "xsofowzvwetamhyuvlpj",
+  "read_only": true,
+  "contracts": [
+    {
+      "function": "public.tgg_public_discovery_growth_feed",
+      "arguments": "p_limit integer, p_query text",
+      "result_type": "jsonb",
+      "volatility": "STABLE",
+      "security_definer": true,
+      "anon_can_execute": true,
+      "version": "GROWTH-005",
+      "payload_path": "items",
+      "sample_count": 2,
+      "required_item_fields": [
+        "release_id",
+        "title",
+        "stage_name",
+        "cover_url",
+        "first_track_id",
+        "first_track_title"
+      ],
+      "sample_audio_url_non_null": 0,
+      "sample_track_id_non_null": 2,
+      "frontend_policy": "Ignore first_track_audio_url and request protected playback by first_track_id."
+    },
+    {
+      "function": "public.tgg_public_launch_mix",
+      "arguments": "p_release_limit integer",
+      "result_type": "jsonb",
+      "security_definer": false,
+      "anon_can_execute": true,
+      "version": "PUBLIC-LAUNCH-MIX-1.1",
+      "payload_path": "releases",
+      "sample_count": 2,
+      "sample_featured_count": 0,
+      "frontend_policy": "Use only for featured filtering; absence of featured releases is a valid empty state."
+    }
+  ],
+  "controls": {
+    "database_writes": false,
+    "schema_changes": false,
+    "destructive_actions": false,
+    "auto_remediation": false
+  }
+}

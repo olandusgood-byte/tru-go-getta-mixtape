@@ -30,3 +30,15 @@ jobs:
       - name: Run DAMAGE portable tests
         shell: bash
         run: ./damage-tests
+      - name: Compile hit-zone mapping tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror \
+            game/unreal-fastlane/overlays/damage-v1/Tests/TGGHitZoneMapTests.cpp \
+            game/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Private/Combat/TGGHitZoneMap.cpp \
+            -Igame/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Public \
+            -o hit-zone-tests
+      - name: Run hit-zone mapping tests
+        shell: bash
+        run: ./hit-zone-tests

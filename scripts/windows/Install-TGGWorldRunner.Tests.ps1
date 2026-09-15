@@ -5,6 +5,12 @@ if (-not (Test-Path -LiteralPath $scriptPath)) {
   throw "Runner bootstrap script is missing: $scriptPath"
 }
 
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$runtimeWorkflowPath = Join-Path $repoRoot '.github\workflows\tgg-world-unreal-runtime.yml'
+if (-not (Test-Path -LiteralPath $runtimeWorkflowPath)) {
+  throw "Runtime workflow is missing: $runtimeWorkflowPath"
+}
+
 $tokens = $null
 $parseErrors = $null
 [void][System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$tokens, [ref]$parseErrors)
@@ -27,6 +33,8 @@ $requiredFragments = @(
   '--unattended',
   '--url',
   '--token',
+  '--labels',
+  'tgg-ue58',
   'function Get-RunnerRegistrationToken',
   'Get-Command gh',
   'actions/runners/registration-token',
@@ -49,6 +57,11 @@ $validateIndex = $text.IndexOf('if ($ValidateOnly)')
 $tokenResolveIndex = $text.IndexOf('$RegistrationToken = Get-RunnerRegistrationToken')
 if ($validateIndex -lt 0 -or $tokenResolveIndex -lt 0 -or $validateIndex -gt $tokenResolveIndex) {
   throw 'ValidateOnly must exit before any registration-token acquisition is attempted.'
+}
+
+$runtimeText = Get-Content -LiteralPath $runtimeWorkflowPath -Raw
+if (-not $runtimeText.Contains('runs-on: [self-hosted, Windows, X64, tgg-ue58]')) {
+  throw 'UE runtime workflow must target the dedicated tgg-ue58 runner label.'
 }
 
 if ($text -match 'TGG_EOS_CLIENT_SECRET\s*=\s*["''][^"'']+["'']') {

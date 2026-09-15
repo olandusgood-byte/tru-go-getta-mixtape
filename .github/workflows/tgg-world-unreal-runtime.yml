@@ -7,11 +7,16 @@ on:
         description: Fast-lane archive to execute
         required: false
         default: TGG_WORLD_UNREAL_FASTLANE_8014d5a.tar.gz
+      archive_sha256:
+        description: Expected SHA-256 for the checkpoint archive
+        required: false
+        default: 8635b2f423e15c8e9233e16d9b0434f62582a09cc77b5e932a014653a5b3b864
   push:
     branches:
       - tgg-world-unreal-fastlane
     paths:
       - 'game/unreal-fastlane/TGG_WORLD_UNREAL_FASTLANE_*.tar.gz'
+      - 'game/unreal-fastlane/checkpoints/8014d5a/TGG_WORLD_UNREAL_FASTLANE_8014d5a.tar.gz.b64.part12'
 
 permissions:
   contents: read
@@ -49,21 +54,43 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve checkpoint archive
+      - name: Resolve and verify checkpoint archive
         id: checkpoint
         shell: pwsh
         run: |
           $requested = '${{ inputs.archive_name }}'
           if ([string]::IsNullOrWhiteSpace($requested)) {
-            $candidate = Get-ChildItem 'game/unreal-fastlane/TGG_WORLD_UNREAL_FASTLANE_*.tar.gz' |
-              Sort-Object LastWriteTimeUtc -Descending |
-              Select-Object -First 1
-          } else {
-            $candidate = Get-Item (Join-Path 'game/unreal-fastlane' $requested) -ErrorAction Stop
+            $requested = 'TGG_WORLD_UNREAL_FASTLANE_8014d5a.tar.gz'
           }
-          if (-not $candidate) { throw 'No Unreal fast-lane archive found.' }
+          $expectedSha = '${{ inputs.archive_sha256 }}'
+          if ([string]::IsNullOrWhiteSpace($expectedSha)) {
+            $expectedSha = '8635b2f423e15c8e9233e16d9b0434f62582a09cc77b5e932a014653a5b3b864'
+          }
+
+          $repoArchive = Join-Path 'game/unreal-fastlane' $requested
+          if (Test-Path $repoArchive) {
+            $candidate = Get-Item $repoArchive
+          } else {
+            $chunkDir = 'game/unreal-fastlane/checkpoints/8014d5a'
+            $parts = @(Get-ChildItem $chunkDir -Filter "$requested.b64.part*" | Sort-Object Name)
+            if ($parts.Count -ne 13) {
+              throw "Expected 13 checkpoint chunks, found $($parts.Count)."
+            }
+            $encoded = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
+            $bytes = [Convert]::FromBase64String($encoded)
+            $rebuilt = Join-Path $env:RUNNER_TEMP $requested
+            [IO.File]::WriteAllBytes($rebuilt, $bytes)
+            $candidate = Get-Item $rebuilt
+          }
+
+          $actualSha = (Get-FileHash $candidate.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualSha -ne $expectedSha.ToLowerInvariant()) {
+            throw "Checkpoint SHA-256 mismatch. expected=$expectedSha actual=$actualSha"
+          }
           "archive=$($candidate.FullName)" >> $env:GITHUB_OUTPUT
           "name=$($candidate.Name)" >> $env:GITHUB_OUTPUT
+          "sha256=$actualSha" >> $env:GITHUB_OUTPUT
+          Write-Host "Verified checkpoint $($candidate.Name) sha256=$actualSha"
 
       - name: Extract checkpoint
         id: extract

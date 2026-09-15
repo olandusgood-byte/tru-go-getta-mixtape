@@ -30,7 +30,7 @@ $requiredFragments = @(
 )
 
 foreach ($fragment in $requiredFragments) {
-  if ($text -notlike "*$fragment*") {
+  if (-not $text.Contains($fragment)) {
     throw "Runner bootstrap contract missing required fragment: $fragment"
   }
 }

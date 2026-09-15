@@ -1,0 +1,63 @@
+name: TGG World Backend Contract Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tgg-world-unreal-fastlane
+    paths:
+      - '.github/workflows/tgg-world-backend-contract-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  public-contract:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    env:
+      TGG_SUPABASE_URL: https://xsofowzvwetamhyuvlpj.supabase.co
+      TGG_SUPABASE_PUBLISHABLE_KEY: sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv
+    steps:
+      - name: Verify multiplayer witness rejects anonymous callers
+        shell: pwsh
+        run: |
+          $uri = "$env:TGG_SUPABASE_URL/rest/v1/rpc/tgg_world_v11_7_multiplayer_proof"
+          $headers = @{
+            apikey = $env:TGG_SUPABASE_PUBLISHABLE_KEY
+            Authorization = "Bearer $env:TGG_SUPABASE_PUBLISHABLE_KEY"
+            'Content-Type' = 'application/json'
+          }
+
+          try {
+            $response = Invoke-WebRequest -Method Post -Uri $uri -Headers $headers -Body '{}' -SkipHttpErrorCheck
+          } catch {
+            throw "Could not reach the deployed multiplayer witness RPC: $($_.Exception.Message)"
+          }
+
+          $status = [int]$response.StatusCode
+          $body = [string]$response.Content
+          Write-Host "Witness anonymous status: $status"
+
+          if ($status -lt 400 -or $status -ge 500) {
+            throw "Expected a client authorization rejection from the witness RPC, received HTTP $status."
+          }
+          if ($body -notmatch 'AUTH_REQUIRED|42501|permission|auth') {
+            throw 'Witness RPC rejected the request, but the response did not contain the expected authentication/permission signal.'
+          }
+
+          Write-Host 'TGG_WORLD_BACKEND_PUBLIC_CONTRACT: PASS'
+          Write-Host 'This proves reachability + anonymous rejection only; it is not authenticated backend runtime evidence.'
+
+      - name: Write contract summary
+        if: always()
+        shell: pwsh
+        run: |
+          @'
+          # TGG World Backend Contract
+
+          - Public Supabase endpoint: reachable check executed
+          - Multiplayer witness RPC: anonymous rejection required
+          - Authenticated backend runtime gate: **still PENDING** until a real short-lived user token is exercised by the packaged game
+          - Multiplayer witness gate: **still PENDING** until two real authenticated users are server-observed in the same instance
+          '@ | Add-Content -Path $env:GITHUB_STEP_SUMMARY

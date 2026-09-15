@@ -1,0 +1,61 @@
+name: TGG World Auth Readiness
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - tgg-world-unreal-fastlane
+    paths:
+      - '.github/workflows/tgg-world-auth-readiness.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  auth-readiness:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    env:
+      TGG_SUPABASE_URL: https://xsofowzvwetamhyuvlpj.supabase.co
+      TGG_SUPABASE_PUBLISHABLE_KEY: sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv
+    steps:
+      - name: Read deployed Auth settings without creating a user
+        id: auth
+        shell: pwsh
+        run: |
+          $uri = "$env:TGG_SUPABASE_URL/auth/v1/settings"
+          $headers = @{ apikey = $env:TGG_SUPABASE_PUBLISHABLE_KEY }
+          $response = Invoke-WebRequest -Method Get -Uri $uri -Headers $headers -SkipHttpErrorCheck
+          $status = [int]$response.StatusCode
+          if ($status -lt 200 -or $status -ge 300) {
+            throw "Supabase Auth settings endpoint returned HTTP $status."
+          }
+
+          $settings = $response.Content | ConvertFrom-Json
+          $anonymousReady = $false
+          if ($null -ne $settings.external -and $null -ne $settings.external.anonymous_users) {
+            $anonymousReady = [bool]$settings.external.anonymous_users
+          }
+
+          $signupDisabled = [bool]$settings.disable_signup
+          "anonymous_ready=$($anonymousReady.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "signup_disabled=$($signupDisabled.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+          Write-Host "TGG_AUTH_SETTINGS_REACHABLE: PASS"
+          Write-Host "TGG_ANONYMOUS_AUTH_READY: $anonymousReady"
+          Write-Host "TGG_SIGNUP_DISABLED: $signupDisabled"
+          Write-Host 'No user was created by this readiness probe.'
+
+      - name: Summarize QA identity capability
+        shell: pwsh
+        run: |
+          @"
+          # TGG World Auth Readiness
+
+          - Auth settings endpoint: **reachable**
+          - Anonymous QA identities enabled: **${{ steps.auth.outputs.anonymous_ready }}**
+          - Global signup disabled: **${{ steps.auth.outputs.signup_disabled }}**
+          - Mutation performed: **none**
+
+          Anonymous QA identities can be considered for disposable backend smoke tokens only when the runtime flag is true and World RLS remains compatible.
+          "@ | Add-Content -Path $env:GITHUB_STEP_SUMMARY

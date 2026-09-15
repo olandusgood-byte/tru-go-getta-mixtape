@@ -37,18 +37,18 @@ jobs:
             }
           } | ConvertTo-Json -Depth 5 -Compress
 
-          $hosts = @('https://us.i.posthog.com','https://eu.i.posthog.com')
+          $ingestHosts = @('https://us.i.posthog.com','https://eu.i.posthog.com')
           $accepted = @()
-          foreach ($host in $hosts) {
-            $uri = "$host/i/v0/e/"
+          foreach ($ingestHost in $ingestHosts) {
+            $uri = "$ingestHost/i/v0/e/"
             try {
               $response = Invoke-WebRequest -Method Post -Uri $uri -ContentType 'application/json' -Body $payload -SkipHttpErrorCheck
               $status = [int]$response.StatusCode
-              Write-Host "POSTHOG_HOST_STATUS host=$host status=$status"
-              if ($status -ge 200 -and $status -lt 300) { $accepted += $host }
+              Write-Host "POSTHOG_HOST_STATUS host=$ingestHost status=$status"
+              if ($status -ge 200 -and $status -lt 300) { $accepted += $ingestHost }
             }
             catch {
-              Write-Host "POSTHOG_HOST_ERROR host=$host error=$($_.Exception.Message)"
+              Write-Host "POSTHOG_HOST_ERROR host=$ingestHost error=$($_.Exception.Message)"
             }
           }
 

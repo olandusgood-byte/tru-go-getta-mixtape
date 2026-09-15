@@ -1,0 +1,32 @@
+name: TGG World Damage Contract Check
+
+on:
+  push:
+    branches:
+      - tgg-world-damage-system
+    paths:
+      - 'game/unreal-fastlane/overlays/damage-v1/**'
+      - '.github/workflows/tgg-world-damage-contract-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-damage-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile DAMAGE portable tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror \
+            game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageMathTests.cpp \
+            game/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Private/Combat/TGGDamageMath.cpp \
+            -Igame/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Public \
+            -o damage-tests
+      - name: Run DAMAGE portable tests
+        shell: bash
+        run: ./damage-tests

@@ -1,0 +1,56 @@
+name: TGG World Checkpoint Integrity
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [tgg-world-unreal-fastlane]
+    paths:
+      - 'game/unreal-fastlane/checkpoints/e628173/**'
+      - '.github/workflows/tgg-world-checkpoint-integrity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-e628173:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct and verify e628173
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, hashlib, pathlib, tarfile, tempfile
+          d = pathlib.Path('game/unreal-fastlane/checkpoints/e628173')
+          parts = sorted(d.glob('TGG_WORLD_UNREAL_FASTLANE_e628173.tar.gz.b64.chunk*'))
+          if len(parts) != 19:
+              raise SystemExit(f'Expected 19 chunks, found {len(parts)}')
+          encoded = ''.join(p.read_text(encoding='utf-8') for p in parts)
+          archive = base64.b64decode(encoded, validate=True)
+          expected = 'd9873c842d66b0508d0b8e447de8e2cdb95362c5d15e4486e50cbb5e3f51bd58'
+          actual = hashlib.sha256(archive).hexdigest()
+          if actual != expected:
+              raise SystemExit(f'SHA mismatch expected={expected} actual={actual}')
+          with tempfile.TemporaryDirectory() as td:
+              ap = pathlib.Path(td) / 'checkpoint.tar.gz'
+              ap.write_bytes(archive)
+              out = pathlib.Path(td) / 'out'
+              out.mkdir()
+              with tarfile.open(ap, 'r:gz') as tf:
+                  tf.extractall(out, filter='data')
+              projects = list(out.rglob('TGGWorld.uproject'))
+              if len(projects) != 1:
+                  raise SystemExit(f'Expected one TGGWorld.uproject, found {len(projects)}')
+              root = projects[0].parent
+              required = [
+                  root/'scripts/windows/TGG_FASTLANE_PREFLIGHT.ps1',
+                  root/'scripts/windows/TGG_FASTLANE_FINAL_QA.ps1',
+                  root/'Source/TGGWorld/TGGWorld.Build.cs',
+              ]
+              missing = [str(x.relative_to(root)) for x in required if not x.exists()]
+              if missing:
+                  raise SystemExit('Missing: ' + ', '.join(missing))
+          print(f'TGG_CHECKPOINT_INTEGRITY: PASS sha256={actual} bytes={len(archive)} chunks={len(parts)}')
+          PY

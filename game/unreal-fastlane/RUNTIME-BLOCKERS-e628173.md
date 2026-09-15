@@ -11,25 +11,40 @@ Source readiness: **PASS**
 - Portable C++ / CTest: PASS.
 - GitHub-hosted runtime preflight: PASS.
 - Public Supabase runtime URL/key: available.
+- Supabase multiplayer witness endpoint: reachable and correctly rejects anonymous callers with HTTP 401.
 - PostHog project token: available.
+- PostHog provider delivery contract: verified independently with personless smoke `tgg-ph-35032126362-1` for checkpoint `e628173`; the exact event and expected properties were observed in the connected PostHog project.
 - Windows runner bootstrap: `scripts/windows/Install-TGGWorldRunner.ps1`.
 - Runner bootstrap contract test: PASS on GitHub-hosted Windows.
+- Runner validation requires no registration token; full registration can auto-request a short-lived token through authenticated GitHub CLI.
 
 ## Core runtime boundary
 
-The Unreal runtime job requires a compatible GitHub Actions runner with labels:
+The Unreal runtime job requires a compatible GitHub Actions runner with all four labels:
 
 - `self-hosted`
 - `Windows`
 - `X64`
+- `tgg-ue58`
 
-That machine must have Unreal Engine 5.8 and Visual Studio 2022 with the MSVC x64 C++ toolchain. Until such a runner is online, package/boot and packaged gameplay cannot produce real evidence.
+The dedicated `tgg-ue58` label prevents generic self-hosted jobs from accidentally claiming the Unreal workstation. The machine must have Unreal Engine 5.8 and Visual Studio 2022 with the MSVC x64 C++ toolchain. Until such a runner is online, package/boot and packaged gameplay cannot produce real evidence.
+
+Current runtime workflow run `35031348778` has a successful hosted preflight and a queued `ue58-runtime-evidence` job with no steps started yet.
 
 ## Credential-dependent gates
 
 ### Authenticated backend (+6%)
 
 Requires a short-lived test-user access token in `TGG_SUPABASE_TEST_ACCESS_TOKEN`.
+
+Live Auth readiness is known without account mutation:
+
+- anonymous sign-in: disabled
+- email auth: enabled
+- signup: enabled
+- email auto-confirm: disabled
+
+Therefore no disposable anonymous-session shortcut is available, and generated email/password QA users cannot obtain immediate sessions without confirmation. Existing production users remain untouched.
 
 ### Two-user EOS + voice (+6%)
 
@@ -39,7 +54,7 @@ The server witness is `tgg_world_v11_7_multiplayer_proof()`. It passes only when
 
 ### Observability (+6%)
 
-PostHog configuration is available. The remaining external input is `TGG_SENTRY_UNREAL_ENDPOINT`, and the gate remains pending until the Sentry crash ID is observed remotely and a matching proof marker exists.
+PostHog provider delivery is independently verified, but this does **not** earn the runtime gate. The packaged game still must emit its own PostHog runtime marker, and `TGG_SENTRY_UNREAL_ENDPOINT` is still required. The gate remains pending until the unique Sentry crash ID is observed remotely and a matching proof marker exists.
 
 ## Live database readiness
 
@@ -61,4 +76,4 @@ Existing user accounts are intentionally not modified automatically because none
 
 ## Completion rule
 
-Do not advance the percentage from 70% merely because configuration or source code exists. Each of the five remaining gates contributes 6% only after its real runtime evidence marker passes.
+Do not advance the percentage from 70% merely because configuration, provider reachability, or source code exists. Each of the five remaining gates contributes 6% only after its real packaged-runtime evidence marker passes.

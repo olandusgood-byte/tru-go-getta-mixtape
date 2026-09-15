@@ -3,8 +3,7 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$RepositoryUrl,
 
-  [Parameter(Mandatory = $true)]
-  [string]$RegistrationToken,
+  [string]$RegistrationToken = '',
 
   [string]$RunnerRoot = 'C:\tgg-actions-runner',
 
@@ -68,6 +67,50 @@ function Get-LatestRunnerAsset {
     Url = $asset.browser_download_url
     Version = $release.tag_name
   }
+}
+
+function Get-RunnerRegistrationToken {
+  param([Parameter(Mandatory = $true)][string]$Url)
+
+  if (-not [string]::IsNullOrWhiteSpace($RegistrationToken)) {
+    return $RegistrationToken.Trim()
+  }
+
+  $gh = Get-Command gh -ErrorAction SilentlyContinue
+  if (-not $gh) {
+    throw 'RegistrationToken was not provided and GitHub CLI (gh) was not found. Install/login to gh or pass -RegistrationToken explicitly.'
+  }
+
+  & $gh.Source auth status --hostname github.com 1>$null 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    throw 'GitHub CLI is installed but not authenticated. Run gh auth login or pass -RegistrationToken explicitly.'
+  }
+
+  try {
+    $uri = [Uri]$Url
+  }
+  catch {
+    throw "RepositoryUrl is not a valid URL: $Url"
+  }
+
+  if ($uri.Host -ne 'github.com') {
+    throw 'Automatic registration-token acquisition currently supports github.com repository URLs only. Pass -RegistrationToken explicitly for another host.'
+  }
+
+  $parts = @($uri.AbsolutePath.Trim('/').Split('/') | Where-Object { $_ })
+  if ($parts.Count -lt 2) {
+    throw "Could not derive OWNER/REPO from RepositoryUrl: $Url"
+  }
+
+  $owner = $parts[0]
+  $repo = ($parts[1] -replace '\.git$','')
+  $endpoint = "repos/$owner/$repo/actions/runners/registration-token"
+  $token = & $gh.Source api $endpoint --method POST --jq .token
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($token)) {
+    throw 'GitHub CLI could not create a repository runner registration token. The authenticated GitHub identity needs repository Administration write access.'
+  }
+
+  return ([string]$token).Trim()
 }
 
 function Install-GitHubRunnerFiles {
@@ -138,6 +181,7 @@ if ($ValidateOnly) {
   exit 0
 }
 
+$RegistrationToken = Get-RunnerRegistrationToken -Url $RepositoryUrl
 $asset = Get-LatestRunnerAsset
 Write-Host "GitHub Actions runner: $($asset.Version) / $($asset.Name)"
 Install-GitHubRunnerFiles -Asset $asset

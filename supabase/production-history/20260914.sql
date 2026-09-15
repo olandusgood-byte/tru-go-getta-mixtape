@@ -360,3 +360,12 @@ end $$;
 
 drop policy if exists "artists own read" on public.artists;
 
+-- ============================================================
+-- MIGRATION 20260914220956 fix_creator_upload_bootstrap_grants
+-- created_by: trugmusicgroup@gmail.com
+-- statement_count: 1
+
+grant usage on schema public to authenticated;
+grant execute on function public.tgg_creator_upload_bootstrap(text) to authenticated;
+grant select, insert, update on table public.artists to authenticated;
+

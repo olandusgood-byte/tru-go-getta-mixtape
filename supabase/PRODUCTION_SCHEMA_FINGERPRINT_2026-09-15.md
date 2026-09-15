@@ -1,6 +1,6 @@
 # TGG Production Supabase Fingerprint — 2026-09-15
 
-Read-only production fingerprint refreshed directly from `supabase_migrations.schema_migrations`. This file updates the stale 2026-09-11 ledger snapshot without modifying production schema or data.
+Read-only production fingerprint refreshed directly from `supabase_migrations.schema_migrations`. This updates the stale 2026-09-11/09-13 checkpoints without modifying production schema or data.
 
 ## Migration ledger
 
@@ -14,14 +14,32 @@ Read-only production fingerprint refreshed directly from `supabase_migrations.sc
 - Retained statement text bytes: **3,676,580**
 - Stored rollback arrays: **0**
 
-## Interpretation
+## Source-control reconciliation
 
-Production now has 108 migrations beyond the 2026-09-11 snapshot. The live migration ledger and retained SQL are internally complete, but this file is only a fingerprint. It does **not** claim source-control parity until the retained migration SQL itself is exported, reviewed, checked into recovery-safe source control, and validated by a clean-environment bootstrap.
+The previously archived live tail through `20260914001721` is now extended with the next live tail through `20260915061031`:
+
+`supabase/production-history/live-tail-20260915.tsv`
+
+The repository therefore now contains the exact production migration **version/name ledger tail** through the current live migration. This fixes the stale source-control ledger checkpoint.
+
+The repository still does **not** contain the full retained SQL for every production migration. Production retains all 1,164 migration statement payloads and exposes them through the server-only `tgg_migration_archive_export_chunk` function. Full clean-bootstrap/source-SQL parity remains open until that retained SQL is exported, reviewed, checked into a recovery-safe archive, and validated in a clean environment.
+
+## Current status
+
+- [x] Live migration count refreshed
+- [x] Latest live migration identified
+- [x] Current ledger SHA-256 refreshed
+- [x] Current retained-statement SHA-256 refreshed
+- [x] Live tail version/name ledger archived through `20260915061031`
+- [x] Retained SQL availability verified through server-only export function
+- [ ] Full retained SQL archive checked into source control
+- [ ] Clean-environment bootstrap validated
+- [ ] Full migration parity PASS
 
 ## Safety
 
 - No production migration was replayed.
 - No production data was modified.
 - No migration-history rows were altered.
-- The existing 2026-09-11 fingerprint remains historical; this file is the newer production snapshot.
-- Do not run `supabase db reset --linked` against production; Supabase documents that operation as destructive and intended for development/staging environments. 
+- No synthetic purchase, user, or browser evidence was created.
+- Do not run `supabase db reset --linked` against production; Supabase documents that operation as destructive and intended for development/staging environments.

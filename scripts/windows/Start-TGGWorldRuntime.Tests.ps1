@@ -23,6 +23,8 @@ $requiredFragments = @(
   'ue58-runtime-evidence',
   'gh run list',
   'gh run watch',
+  'api repos/olandusgood-byte/tru-go-getta-mixtape/actions/runners',
+  'TGG_RUNNER_HEALTH: ONLINE',
   'TGG_WORLD_RUNTIME_LAUNCHER: READY'
 )
 

@@ -17,7 +17,7 @@ $text = Get-Content -LiteralPath $scriptPath -Raw
 $requiredFragments = @(
   '[Parameter(Mandatory = $true)]',
   '[string]$RepositoryUrl',
-  '[string]$RegistrationToken',
+  '[string]$RegistrationToken = ''''',
   '[switch]$ValidateOnly',
   'UE_5.8',
   'vswhere.exe',
@@ -26,13 +26,29 @@ $requiredFragments = @(
   'svc.cmd',
   '--unattended',
   '--url',
-  '--token'
+  '--token',
+  'function Get-RunnerRegistrationToken',
+  'Get-Command gh',
+  'actions/runners/registration-token',
+  '--method POST',
+  '--jq .token',
+  '$RegistrationToken = Get-RunnerRegistrationToken'
 )
 
 foreach ($fragment in $requiredFragments) {
   if (-not $text.Contains($fragment)) {
     throw "Runner bootstrap contract missing required fragment: $fragment"
   }
+}
+
+if ($text -match '(?s)\[Parameter\(Mandatory\s*=\s*\$true\)\]\s*\r?\n\s*\[string\]\$RegistrationToken') {
+  throw 'RegistrationToken must be optional so -ValidateOnly can run without a token.'
+}
+
+$validateIndex = $text.IndexOf('if ($ValidateOnly)')
+$tokenResolveIndex = $text.IndexOf('$RegistrationToken = Get-RunnerRegistrationToken')
+if ($validateIndex -lt 0 -or $tokenResolveIndex -lt 0 -or $validateIndex -gt $tokenResolveIndex) {
+  throw 'ValidateOnly must exit before any registration-token acquisition is attempted.'
 }
 
 if ($text -match 'TGG_EOS_CLIENT_SECRET\s*=\s*["''][^"'']+["'']') {

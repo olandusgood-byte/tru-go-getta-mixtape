@@ -17,10 +17,97 @@ permissions:
 
 concurrency:
   group: tgg-world-unreal-runtime-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
+  hosted-preflight:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    env:
+      TGG_EOS_ARTIFACT_NAME: ${{ secrets.TGG_EOS_ARTIFACT_NAME }}
+      TGG_EOS_PRODUCT_ID: ${{ secrets.TGG_EOS_PRODUCT_ID }}
+      TGG_EOS_SANDBOX_ID: ${{ secrets.TGG_EOS_SANDBOX_ID }}
+      TGG_EOS_DEPLOYMENT_ID: ${{ secrets.TGG_EOS_DEPLOYMENT_ID }}
+      TGG_EOS_CLIENT_ID: ${{ secrets.TGG_EOS_CLIENT_ID }}
+      TGG_EOS_CLIENT_SECRET: ${{ secrets.TGG_EOS_CLIENT_SECRET }}
+      TGG_EOS_CLIENT_ENCRYPTION_KEY: ${{ secrets.TGG_EOS_CLIENT_ENCRYPTION_KEY }}
+      TGG_SUPABASE_URL: ${{ secrets.TGG_SUPABASE_URL }}
+      TGG_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.TGG_SUPABASE_PUBLISHABLE_KEY }}
+      TGG_SUPABASE_TEST_ACCESS_TOKEN: ${{ secrets.TGG_SUPABASE_TEST_ACCESS_TOKEN }}
+      TGG_SUPABASE_TEST_ACCESS_TOKEN_A: ${{ secrets.TGG_SUPABASE_TEST_ACCESS_TOKEN_A }}
+      TGG_SUPABASE_TEST_ACCESS_TOKEN_B: ${{ secrets.TGG_SUPABASE_TEST_ACCESS_TOKEN_B }}
+      TGG_EOS_AUTH_TYPE_A: ${{ secrets.TGG_EOS_AUTH_TYPE_A }}
+      TGG_EOS_AUTH_LOGIN_A: ${{ secrets.TGG_EOS_AUTH_LOGIN_A }}
+      TGG_EOS_AUTH_PASSWORD_A: ${{ secrets.TGG_EOS_AUTH_PASSWORD_A }}
+      TGG_EOS_AUTH_TYPE_B: ${{ secrets.TGG_EOS_AUTH_TYPE_B }}
+      TGG_EOS_AUTH_LOGIN_B: ${{ secrets.TGG_EOS_AUTH_LOGIN_B }}
+      TGG_EOS_AUTH_PASSWORD_B: ${{ secrets.TGG_EOS_AUTH_PASSWORD_B }}
+      TGG_POSTHOG_PROJECT_TOKEN: ${{ secrets.TGG_POSTHOG_PROJECT_TOKEN }}
+      TGG_SENTRY_UNREAL_ENDPOINT: ${{ secrets.TGG_SENTRY_UNREAL_ENDPOINT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify e628173 checkpoint transport
+        shell: pwsh
+        run: |
+          $chunkDir = 'game/unreal-fastlane/checkpoints/e628173'
+          $parts = @(Get-ChildItem $chunkDir -Filter 'TGG_WORLD_UNREAL_FASTLANE_e628173.tar.gz.b64.chunk*' | Sort-Object Name)
+          if ($parts.Count -ne 19) {
+            throw "Expected exactly 19 e628173 checkpoint chunks, found $($parts.Count)."
+          }
+          $encoded = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ''
+          $bytes = [Convert]::FromBase64String($encoded)
+          $rebuilt = Join-Path $env:RUNNER_TEMP 'TGG_WORLD_UNREAL_FASTLANE_e628173.tar.gz'
+          [IO.File]::WriteAllBytes($rebuilt, $bytes)
+          $expectedSha = 'd9873c842d66b0508d0b8e447de8e2cdb95362c5d15e4486e50cbb5e3f51bd58'
+          $actualSha = (Get-FileHash $rebuilt -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualSha -ne $expectedSha) {
+            throw "Checkpoint SHA-256 mismatch. expected=$expectedSha actual=$actualSha"
+          }
+          Write-Host "TGG_CHECKPOINT_TRANSPORT: PASS sha256=$actualSha"
+
+      - name: Verify runtime secret presence
+        shell: pwsh
+        run: |
+          $required = @(
+            'TGG_EOS_ARTIFACT_NAME',
+            'TGG_EOS_PRODUCT_ID',
+            'TGG_EOS_SANDBOX_ID',
+            'TGG_EOS_DEPLOYMENT_ID',
+            'TGG_EOS_CLIENT_ID',
+            'TGG_EOS_CLIENT_SECRET',
+            'TGG_EOS_CLIENT_ENCRYPTION_KEY',
+            'TGG_SUPABASE_URL',
+            'TGG_SUPABASE_PUBLISHABLE_KEY',
+            'TGG_SUPABASE_TEST_ACCESS_TOKEN',
+            'TGG_SUPABASE_TEST_ACCESS_TOKEN_A',
+            'TGG_SUPABASE_TEST_ACCESS_TOKEN_B',
+            'TGG_EOS_AUTH_TYPE_A',
+            'TGG_EOS_AUTH_LOGIN_A',
+            'TGG_EOS_AUTH_PASSWORD_A',
+            'TGG_EOS_AUTH_TYPE_B',
+            'TGG_EOS_AUTH_LOGIN_B',
+            'TGG_EOS_AUTH_PASSWORD_B',
+            'TGG_POSTHOG_PROJECT_TOKEN',
+            'TGG_SENTRY_UNREAL_ENDPOINT'
+          )
+          $missing = @()
+          foreach ($name in $required) {
+            $value = [Environment]::GetEnvironmentVariable($name)
+            if ([string]::IsNullOrWhiteSpace($value)) {
+              Write-Host "MISSING: $name"
+              $missing += $name
+            } else {
+              Write-Host "SET: $name"
+            }
+          }
+          if ($missing.Count -gt 0) {
+            throw "Runtime evidence is blocked by $($missing.Count) missing GitHub Actions secret(s): $($missing -join ', ')"
+          }
+          Write-Host 'TGG_RUNTIME_SECRETS: PASS'
+
   ue58-runtime-evidence:
+    needs: hosted-preflight
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 180
     env:

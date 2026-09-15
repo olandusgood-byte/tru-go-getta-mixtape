@@ -86,3 +86,4 @@ jobs:
 # without introducing Supabase secrets into GitHub Actions.
 # Refresh requested 2026-09-14 to capture migrations applied after 20260914024035.
 # Refresh requested 2026-09-15 to capture migrations applied after 20260914074511.
+# Refresh requested 2026-09-15 to capture migrations applied after 20260915061031.

@@ -139,7 +139,7 @@ function Register-GitHubRunner {
 
   Push-Location $RunnerRoot
   try {
-    & $config --unattended --url $RepositoryUrl --token $RegistrationToken --name "TGG-UE58-$env:COMPUTERNAME" --work '_work'
+    & $config --unattended --url $RepositoryUrl --token $RegistrationToken --name "TGG-UE58-$env:COMPUTERNAME" --work '_work' --labels 'tgg-ue58'
     if ($LASTEXITCODE -ne 0) { throw "GitHub runner registration failed with exit code $LASTEXITCODE." }
   }
   finally {
@@ -174,7 +174,7 @@ $vsRoot = Assert-VisualStudio2022Cpp
 Write-Host "UE 5.8: $ueRoot"
 Write-Host "Visual Studio 2022: $vsRoot"
 Write-Host "Runner root: $RunnerRoot"
-Write-Host 'Required workflow labels: self-hosted, Windows, X64 (provided automatically by GitHub runner registration).'
+Write-Host 'Required workflow labels: self-hosted, Windows, X64 plus dedicated custom label tgg-ue58.'
 
 if ($ValidateOnly) {
   Write-Host 'TGG_WORLD_RUNNER_VALIDATE: PASS'
@@ -189,4 +189,4 @@ Register-GitHubRunner
 Start-GitHubRunnerService
 
 Write-Host 'TGG_WORLD_RUNNER_BOOTSTRAP: PASS'
-Write-Host 'The existing TGG World Unreal Runtime Evidence workflow can now claim this Windows X64 self-hosted runner.'
+Write-Host 'The existing TGG World Unreal Runtime Evidence workflow can now claim this dedicated Windows X64 tgg-ue58 runner.'

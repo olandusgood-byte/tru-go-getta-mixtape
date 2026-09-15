@@ -7,6 +7,7 @@ on:
     paths:
       - 'scripts/windows/Install-TGGWorldRunner.ps1'
       - 'scripts/windows/Install-TGGWorldRunner.Tests.ps1'
+      - '.github/workflows/tgg-world-unreal-runtime.yml'
       - '.github/workflows/tgg-world-runner-bootstrap-check.yml'
   workflow_dispatch:
 

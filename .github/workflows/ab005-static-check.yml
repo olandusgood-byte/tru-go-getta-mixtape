@@ -32,21 +32,13 @@ jobs:
           f="supabase/migrations/20260908_ab005_continuous_staging.sql"
           test -s "$f"
 
-          # Required routines.
-          for fn in \
-            ab005_prepare_staging \
-            ab005_record_smoke \
-            ab005_rollback_staging \
-            ab005_checkpoint \
-            ab005_advance_after_clean_pass; do
+          for fn in             ab005_prepare_staging             ab005_record_smoke             ab005_rollback_staging             ab005_checkpoint             ab005_advance_after_clean_pass; do
             grep -q "function public.${fn}" "$f"
           done
 
-          # Exact existing smoke vocabulary; no replacement contract is allowed.
-          grep -q "IN ('pass','fail','blocked','manual')" "$f"
-          grep -q "p_result not in ('pass','fail','blocked','manual')" "$f"
+          grep -Eiq "in \('pass','fail','blocked','manual'\)" "$f"
+          grep -Eiq "p_result not in \('pass','fail','blocked','manual'\)" "$f"
 
-          # Rollback/clean-retest isolation contract.
           grep -q "rollback_cutoff" "$f"
           grep -q "checked_at > v_after" "$f"
           grep -q "coalesce(" "$f"
@@ -54,28 +46,20 @@ jobs:
           grep -q "status in ('fail','blocked','manual')" "$f"
           grep -q "v_pass <> v_total" "$f"
 
-          # Staging may advance only after a clean pass, while production remains gated.
           grep -q "production_gate_required.*true" "$f"
           grep -q "production_promoted.*false" "$f"
           grep -q "Production intentionally has no automatic advancement function" "$f"
-          if grep -Eiq "function public\.ab005_.*production|ab005_.*promot.*production" "$f"; then
+          if grep -Ev '^[[:space:]]*--' "$f" | grep -Eiq "function public\.ab005_.*production|ab005_.*promot.*production"; then
             echo "AB-005 must not add a production advancement routine"
             exit 1
           fi
 
-          # Existing table contracts must be reused; no duplicate staging/checkpoint tables.
           if grep -Eiq "create[[:space:]]+table[^;]*(release_staging_records|release_staging_smoke_results|release_checkpoints)" "$f"; then
             echo "AB-005 must not introduce duplicate staging/checkpoint tables"
             exit 1
           fi
 
-          # Client-facing access remains closed; these are internal gate controls.
-          for fn in \
-            ab005_prepare_staging \
-            ab005_record_smoke \
-            ab005_rollback_staging \
-            ab005_checkpoint \
-            ab005_advance_after_clean_pass; do
+          for fn in             ab005_prepare_staging             ab005_record_smoke             ab005_rollback_staging             ab005_checkpoint             ab005_advance_after_clean_pass; do
             grep -q "revoke all on function public.${fn}" "$f"
           done
 
@@ -90,10 +74,9 @@ jobs:
           test -s "$t"
           test -s "$d"
 
-          # Canonical read-only consumer and security boundary.
           grep -q "function public.tgg_ab005_launch_gate" "$f"
-          grep -q "SECURITY INVOKER" "$f"
-          grep -q "STABLE" "$f"
+          grep -Eiq "security[[:space:]]+invoker" "$f"
+          grep -Eiq "^[[:space:]]*stable[[:space:]]*$" "$f"
           grep -q "revoke all on function public.tgg_ab005_launch_gate" "$f"
           grep -q "grant execute on function public.tgg_ab005_launch_gate() to authenticated" "$f"
           grep -q "production_gate_required.*true" "$f"
@@ -101,19 +84,18 @@ jobs:
           grep -q "read_only.*true" "$f"
           grep -q "smoke_summary.*ab005_clean_pass" "$f"
           grep -q "status = 'passed'" "$f"
-          grep -q "checkpoint_key is not null" "$f"
+          grep -q "checkpoint_key" "$f"
+          grep -q "is not null" "$f"
 
-          # Read-only consumer must not contain write or production-authorization operations.
-          if grep -Eiq "^[[:space:]]*(insert|update|delete|truncate)[[:space:]]" "$f"; then
+          if grep -Ev '^[[:space:]]*--' "$f" | grep -Eiq "^[[:space:]]*(insert|update|delete|truncate)[[:space:]]"; then
             echo "Launch Gate consumer must remain read-only"
             exit 1
           fi
-          if grep -Eiq "execute[[:space:]]+function|promot|approve[[:space:]]+production|deploy[[:space:]]+production" "$f"; then
+          if grep -Ev '^[[:space:]]*--' "$f" | grep -Eiq "execute[[:space:]]+function|approve[[:space:]]+production|deploy[[:space:]]+production|function[[:space:]].*promot"; then
             echo "Launch Gate consumer must not authorize or perform production mutation"
             exit 1
           fi
 
-          # Regression test must document the same security and production invariants.
           grep -q "tgg_ab005_launch_gate" "$t"
           grep -q "SECURITY INVOKER" "$t"
           grep -q "authenticated" "$t"

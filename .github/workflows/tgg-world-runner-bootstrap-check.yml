@@ -1,0 +1,24 @@
+name: TGG World Runner Bootstrap Check
+
+on:
+  push:
+    branches:
+      - tgg-world-unreal-fastlane
+    paths:
+      - 'scripts/windows/Install-TGGWorldRunner.ps1'
+      - 'scripts/windows/Install-TGGWorldRunner.Tests.ps1'
+      - '.github/workflows/tgg-world-runner-bootstrap-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate runner bootstrap contract
+        shell: pwsh
+        run: .\scripts\windows\Install-TGGWorldRunner.Tests.ps1

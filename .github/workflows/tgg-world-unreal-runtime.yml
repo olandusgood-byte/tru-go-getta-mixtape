@@ -117,7 +117,7 @@ jobs:
 
   ue58-runtime-evidence:
     needs: hosted-preflight
-    runs-on: [self-hosted, Windows, X64]
+    runs-on: [self-hosted, Windows, X64, tgg-ue58]
     timeout-minutes: 180
     env:
       TGG_EOS_ARTIFACT_NAME: ${{ secrets.TGG_EOS_ARTIFACT_NAME }}

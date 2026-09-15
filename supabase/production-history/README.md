@@ -1,7 +1,5 @@
 # TGG Production Migration History
 
-This directory is generated from the authoritative production `supabase_migrations.schema_migrations` ledger through a short-lived GitHub OIDC trust path. No static Supabase server secret is stored in GitHub.
+Generated from the authoritative production `supabase_migrations.schema_migrations` ledger through a GitHub OIDC trust path. No static Supabase server secret is stored in GitHub.
 
-The SQL files are grouped by migration date and preserve migration order and statement text for recovery review. They are **historical evidence, not a production replay script**. Never apply them back to production. Before using them to bootstrap a clean database, validate the complete sequence in an isolated environment and compare the resulting schema against the production schema fingerprint.
-
-See `manifest.json` for migration count and SHA-256 digests.
+These dated SQL files preserve historical evidence from the point migration tracking began. They are **not a from-zero bootstrap** because the first tracked migration already depended on pre-existing V54/V58 objects. Use `../production-baseline/current-schema.sql` for clean recovery and use this history for audit/reconciliation only. Never replay this history against production.

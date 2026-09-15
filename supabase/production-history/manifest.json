@@ -1,10 +1,10 @@
 {
   "format": "tgg-production-migration-history-v1",
-  "generated_at": "2026-09-11T08:21:07.995Z",
+  "generated_at": "2026-09-14T07:52:39.095Z",
   "source": "supabase_migrations.schema_migrations via GitHub OIDC broker",
-  "migration_count": 1057,
+  "migration_count": 1146,
   "first_version": "20260831124800",
-  "latest_version": "20260911081536",
+  "latest_version": "20260914074511",
   "date_files": [
     "20260831.sql",
     "20260901.sql",
@@ -17,16 +17,19 @@
     "20260908.sql",
     "20260909.sql",
     "20260910.sql",
-    "20260911.sql"
+    "20260911.sql",
+    "20260912.sql",
+    "20260913.sql",
+    "20260914.sql"
   ],
-  "statement_bytes": 3374987,
-  "ledger_sha256": "5be776308991e36d79432c51f756b7a5d61b12a63ffc0e2238d7bbf1dafd0806",
-  "statements_sha256": "04fb8682125812f659464f2f8ce791e3fee9ad4cc3712d43dca4fbe7a2006dca",
+  "statement_bytes": 3624252,
+  "ledger_sha256": "e3fe5df01a235cfb8f9dfca1cdac64947c531f4a40ef7205127675679cad8b8a",
+  "statements_sha256": "7573c45a2bdaf383399dc8795bd2a47dd488ee77a17a4d8be7de8426396b3402",
   "rollback_entries": 0,
   "safety": {
     "oidc_only_export": true,
     "high_risk_literal_scan_passed": true,
     "direct_production_replay_prohibited": true,
-    "clean_environment_validation_required": true
+    "current_schema_baseline_required_for_clean_bootstrap": true
   }
 }

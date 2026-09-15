@@ -14,38 +14,42 @@ The Windows x64 machine must have:
 - Visual Studio 2022 with MSVC x64 C++ tools
 - Git/network access to GitHub
 - Administrator PowerShell for installing the runner service
-- Optional but recommended: GitHub CLI (`gh`) already authenticated to an identity with repository Administration write access. This lets the bootstrap request its own short-lived runner registration token instead of requiring copy/paste.
+- GitHub CLI (`gh`) authenticated to an identity with repository Administration write access for the one-command path
 
-If UE 5.8 is not installed at `C:\Program Files\Epic Games\UE_5.8`, set `UE_ROOT` to the actual UE 5.8 installation directory before running the bootstrap.
+If UE 5.8 is not installed at `C:\Program Files\Epic Games\UE_5.8`, set `UE_ROOT` to the actual UE 5.8 installation directory first.
 
-## 2. Validate the workstation first — no token needed
+## 2. One-command path
 
 From an elevated PowerShell session in the repository checkout:
 
 ```powershell
-.\scripts\windows\Install-TGGWorldRunner.ps1 `
-  -RepositoryUrl 'https://github.com/olandusgood-byte/tru-go-getta-mixtape' `
-  -ValidateOnly
+.\scripts\windows\Start-TGGWorldRuntime.ps1
 ```
 
-`-ValidateOnly` checks Windows, UE 5.8, and the Visual Studio 2022 C++ toolchain. It exits before any runner registration-token lookup, download, registration, or service change.
+This launcher:
 
-## 3. Register and start the runner
+1. verifies authenticated GitHub CLI access;
+2. reuses `Install-TGGWorldRunner.ps1` to validate UE 5.8 + Visual Studio 2022;
+3. automatically requests a short-lived runner registration token through `gh` when needed;
+4. registers/starts the Windows runner with `self-hosted`, `Windows`, `X64`, and dedicated `tgg-ue58` routing;
+5. resolves the existing `TGG World Unreal Runtime Evidence` run on `tgg-world-unreal-fastlane` instead of dispatching a duplicate;
+6. watches that run to completion and returns a non-success exit if the evidence workflow fails.
 
-### Fast path — authenticated GitHub CLI
-
-If `gh auth status` succeeds for an identity with repository Administration write access, run:
+To validate only, without runner registration or workflow watching:
 
 ```powershell
-.\scripts\windows\Install-TGGWorldRunner.ps1 `
-  -RepositoryUrl 'https://github.com/olandusgood-byte/tru-go-getta-mixtape'
+.\scripts\windows\Start-TGGWorldRuntime.ps1 -ValidateOnly
 ```
 
-The bootstrap requests the repository runner registration token with the GitHub API through `gh`, downloads the current GitHub Actions Windows x64 runner, configures it unattended, adds the dedicated `tgg-ue58` label, and starts it as a Windows service. The registration token is short-lived and is never written to the repository.
+To start/repair the runner and resolve the existing run without keeping the console attached:
 
-### Fallback — explicit one-time token
+```powershell
+.\scripts\windows\Start-TGGWorldRuntime.ps1 -NoWatch
+```
 
-If GitHub CLI is unavailable or not authenticated with sufficient permission, pass a fresh repository runner registration token explicitly:
+## 3. Lower-level runner bootstrap
+
+The lower-level bootstrap remains available when an explicit one-time registration token is preferred:
 
 ```powershell
 .\scripts\windows\Install-TGGWorldRunner.ps1 `
@@ -53,20 +57,11 @@ If GitHub CLI is unavailable or not authenticated with sufficient permission, pa
   -RegistrationToken '<ONE_TIME_GITHUB_RUNNER_TOKEN>'
 ```
 
-The runner must expose all four labels expected by the runtime workflow:
-
-- `self-hosted`
-- `Windows`
-- `X64`
-- `tgg-ue58`
-
-The first three are GitHub default labels. The bootstrap explicitly adds `tgg-ue58` so generic self-hosted jobs cannot accidentally claim the dedicated Unreal workstation.
-
-Do not commit registration tokens or private runtime credentials.
+Never commit runner registration tokens or private runtime credentials.
 
 ## 4. Runtime job behavior
 
-The latest runtime workflow already performs a GitHub-hosted preflight before the self-hosted UE job. It verifies the 19-piece checkpoint transport and pinned SHA-256, then reports optional credential capabilities.
+The runtime workflow performs a GitHub-hosted preflight before the self-hosted UE job. It verifies the 19-piece checkpoint transport and pinned SHA-256, then reports optional credential capabilities.
 
 Once a compatible Windows runner with the dedicated `tgg-ue58` label is online, the queued `ue58-runtime-evidence` job can claim it automatically.
 
@@ -76,10 +71,10 @@ The job reconstructs the pinned archive, runs `TGG_FASTLANE_PREFLIGHT.ps1`, runs
 
 The core package/boot and deterministic packaged gameplay gates do not need private EOS/Supabase test-user/Sentry credentials to be attempted.
 
-Authenticated backend requires a short-lived test-user token. Multiplayer/voice requires two distinct Supabase test users plus two distinct EOS test identities and EOS product staging credentials. Observability already has PostHog client configuration; remote Sentry proof still requires the Sentry Unreal endpoint.
+Authenticated backend requires a short-lived test-user token. Multiplayer/voice requires two distinct Supabase test users plus two distinct EOS test identities and EOS product staging credentials.
 
-All private values belong in GitHub Actions secrets or the local runner environment. Never commit them.
+PostHog provider delivery has been independently verified, but the packaged game must still emit its runtime marker. Remote Sentry proof requires `TGG_SENTRY_UNREAL_ENDPOINT`. Use the project client key's dedicated **Unreal ingestion URL** (the `/unreal/.../` endpoint), not a Sentry API bearer token. Store it only as a GitHub Actions secret or local runner environment value.
 
 ## 6. Evidence rule
 
-The project remains at **70% evidence-weighted completion** until actual runtime markers pass. Package/boot and final packaged gameplay can each add 6%. Backend, two-user EOS/voice, and combined PostHog/Sentry can each add another 6% only after their real evidence exists.
+The project remains at **70% evidence-weighted completion** until actual packaged-runtime markers pass. Package/boot and final packaged gameplay can each add 6%. Backend, two-user EOS/voice, and combined PostHog/Sentry can each add another 6% only after their real evidence exists.

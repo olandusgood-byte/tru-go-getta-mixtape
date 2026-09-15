@@ -1,0 +1,10 @@
+{
+  "generated_at": "2026-09-15T07:04:29.977098+00:00",
+  "source": "live Supabase project xsofowzvwetamhyuvlpj",
+  "migration_count": 1170,
+  "first_version": "20260831124800",
+  "latest_version": "20260915065131",
+  "latest_name": "fail_close_launch_readiness_on_browser_evidence",
+  "ledger_sha256": "619f424a3dc23dc637ba8c916efb5faf419bc40eabf0d3e72094346152b3ce85",
+  "note": "Live migration ledger checkpoint captured for source-control reconciliation. This is evidence only and does not claim clean-bootstrap parity until all retained SQL statements are exported and checked in."
+}

@@ -9,6 +9,8 @@ on:
       - 'scripts/windows/Install-TGGWorldRunner.Tests.ps1'
       - 'scripts/windows/Start-TGGWorldRuntime.ps1'
       - 'scripts/windows/Start-TGGWorldRuntime.Tests.ps1'
+      - 'scripts/windows/Bootstrap-TGGWorldMachine.ps1'
+      - 'scripts/windows/Bootstrap-TGGWorldMachine.Tests.ps1'
       - '.github/workflows/tgg-world-unreal-runtime.yml'
       - '.github/workflows/tgg-world-runner-bootstrap-check.yml'
   workflow_dispatch:
@@ -28,3 +30,6 @@ jobs:
       - name: Validate one-command runtime launcher contract
         shell: pwsh
         run: .\scripts\windows\Start-TGGWorldRuntime.Tests.ps1
+      - name: Validate fresh-machine bootstrap contract
+        shell: pwsh
+        run: .\scripts\windows\Bootstrap-TGGWorldMachine.Tests.ps1

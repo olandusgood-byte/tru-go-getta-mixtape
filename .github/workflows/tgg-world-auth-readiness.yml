@@ -37,13 +37,23 @@ jobs:
             $anonymousReady = [bool]$settings.external.anonymous_users
           }
 
+          $emailProviderReady = $false
+          if ($null -ne $settings.external -and $null -ne $settings.external.email) {
+            $emailProviderReady = [bool]$settings.external.email
+          }
+
           $signupDisabled = [bool]$settings.disable_signup
+          $autoConfirm = [bool]$settings.autoconfirm
           "anonymous_ready=$($anonymousReady.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "email_provider_ready=$($emailProviderReady.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
           "signup_disabled=$($signupDisabled.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "autoconfirm=$($autoConfirm.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
           Write-Host "TGG_AUTH_SETTINGS_REACHABLE: PASS"
           Write-Host "TGG_ANONYMOUS_AUTH_READY: $anonymousReady"
+          Write-Host "TGG_EMAIL_AUTH_READY: $emailProviderReady"
           Write-Host "TGG_SIGNUP_DISABLED: $signupDisabled"
+          Write-Host "TGG_EMAIL_AUTOCONFIRM: $autoConfirm"
           Write-Host 'No user was created by this readiness probe.'
 
       - name: Summarize QA identity capability
@@ -54,8 +64,10 @@ jobs:
 
           - Auth settings endpoint: **reachable**
           - Anonymous QA identities enabled: **${{ steps.auth.outputs.anonymous_ready }}**
+          - Email auth enabled: **${{ steps.auth.outputs.email_provider_ready }}**
           - Global signup disabled: **${{ steps.auth.outputs.signup_disabled }}**
+          - Email auto-confirm: **${{ steps.auth.outputs.autoconfirm }}**
           - Mutation performed: **none**
 
-          Anonymous QA identities can be considered for disposable backend smoke tokens only when the runtime flag is true and World RLS remains compatible.
+          A no-email disposable QA path requires anonymous auth. A generated email/password QA session without mailbox interaction requires email auth, signup enabled, and auto-confirm.
           "@ | Add-Content -Path $env:GITHUB_STEP_SUMMARY

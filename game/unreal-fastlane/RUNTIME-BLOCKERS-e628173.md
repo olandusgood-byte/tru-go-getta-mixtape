@@ -14,9 +14,12 @@ Source readiness: **PASS**
 - Supabase multiplayer witness endpoint: reachable and correctly rejects anonymous callers with HTTP 401.
 - PostHog project token: available.
 - PostHog provider delivery contract: verified independently with personless smoke `tgg-ph-35032126362-1` for checkpoint `e628173`; the exact event and expected properties were observed in the connected PostHog project.
-- Windows runner bootstrap: `scripts/windows/Install-TGGWorldRunner.ps1`.
-- Runner bootstrap contract test: PASS on GitHub-hosted Windows.
+- Fresh Windows machine bootstrap: `scripts/windows/Bootstrap-TGGWorldMachine.ps1`.
+- Lower-level runner installer: `scripts/windows/Install-TGGWorldRunner.ps1`.
+- Runtime launcher: `scripts/windows/Start-TGGWorldRuntime.ps1`.
+- Bootstrap/launcher contracts: PASS on GitHub-hosted Windows.
 - Runner validation requires no registration token; full registration can auto-request a short-lived token through authenticated GitHub CLI.
+- Runtime launcher verifies GitHub sees an online runner with all required labels before workflow watch.
 
 ## Core runtime boundary
 
@@ -63,6 +66,9 @@ PostHog provider delivery is independently verified, but this does **not** earn 
 - Users with active World characters: 0
 - Active/draining World instances: 0
 - Fresh presence users: 0
+- World workers present: 11
+- Current World worker condition: healthy/idle; latest worker statuses observed as `ok`
+- Passed `tgg_world_v14_playtest_observe` captures: 0
 
 Existing production RPCs already cover the required lifecycle:
 
@@ -71,6 +77,7 @@ Existing production RPCs already cover the required lifecycle:
 - `tgg_world_presence_heartbeat_full(...)`
 - `tgg_world_instance_roster()`
 - `tgg_world_v11_7_multiplayer_proof()`
+- `tgg_world_v14_playtest_observe(...)`
 
 Existing user accounts are intentionally not modified automatically because none are marked as disposable QA identities.
 

@@ -41,7 +41,7 @@ If `gh auth status` succeeds for an identity with repository Administration writ
   -RepositoryUrl 'https://github.com/olandusgood-byte/tru-go-getta-mixtape'
 ```
 
-The bootstrap requests the repository runner registration token with the GitHub API through `gh`, downloads the current GitHub Actions Windows x64 runner, configures it unattended, and starts it as a Windows service. The registration token is short-lived and is never written to the repository.
+The bootstrap requests the repository runner registration token with the GitHub API through `gh`, downloads the current GitHub Actions Windows x64 runner, configures it unattended, adds the dedicated `tgg-ue58` label, and starts it as a Windows service. The registration token is short-lived and is never written to the repository.
 
 ### Fallback — explicit one-time token
 
@@ -53,11 +53,14 @@ If GitHub CLI is unavailable or not authenticated with sufficient permission, pa
   -RegistrationToken '<ONE_TIME_GITHUB_RUNNER_TOKEN>'
 ```
 
-Standard runner registration supplies the required labels:
+The runner must expose all four labels expected by the runtime workflow:
 
 - `self-hosted`
 - `Windows`
 - `X64`
+- `tgg-ue58`
+
+The first three are GitHub default labels. The bootstrap explicitly adds `tgg-ue58` so generic self-hosted jobs cannot accidentally claim the dedicated Unreal workstation.
 
 Do not commit registration tokens or private runtime credentials.
 
@@ -65,7 +68,7 @@ Do not commit registration tokens or private runtime credentials.
 
 The latest runtime workflow already performs a GitHub-hosted preflight before the self-hosted UE job. It verifies the 19-piece checkpoint transport and pinned SHA-256, then reports optional credential capabilities.
 
-Once the compatible Windows runner is online, the queued `ue58-runtime-evidence` job can claim it automatically.
+Once a compatible Windows runner with the dedicated `tgg-ue58` label is online, the queued `ue58-runtime-evidence` job can claim it automatically.
 
 The job reconstructs the pinned archive, runs `TGG_FASTLANE_PREFLIGHT.ps1`, runs `TGG_FASTLANE_FINAL_QA.ps1`, classifies real smoke markers, and uploads the `_smoke` evidence artifact even when an optional credential-dependent sub-smoke is unavailable.
 

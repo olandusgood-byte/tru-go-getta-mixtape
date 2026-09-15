@@ -14,25 +14,38 @@ The Windows x64 machine must have:
 - Visual Studio 2022 with MSVC x64 C++ tools
 - Git/network access to GitHub
 - Administrator PowerShell for installing the runner service
+- Optional but recommended: GitHub CLI (`gh`) already authenticated to an identity with repository Administration write access. This lets the bootstrap request its own short-lived runner registration token instead of requiring copy/paste.
 
 If UE 5.8 is not installed at `C:\Program Files\Epic Games\UE_5.8`, set `UE_ROOT` to the actual UE 5.8 installation directory before running the bootstrap.
 
-## 2. Validate the workstation first
+## 2. Validate the workstation first — no token needed
 
 From an elevated PowerShell session in the repository checkout:
 
 ```powershell
 .\scripts\windows\Install-TGGWorldRunner.ps1 `
   -RepositoryUrl 'https://github.com/olandusgood-byte/tru-go-getta-mixtape' `
-  -RegistrationToken '<ONE_TIME_GITHUB_RUNNER_TOKEN>' `
   -ValidateOnly
 ```
 
-`-ValidateOnly` checks Windows, UE 5.8, and the Visual Studio 2022 C++ toolchain. It does not register the runner.
+`-ValidateOnly` checks Windows, UE 5.8, and the Visual Studio 2022 C++ toolchain. It exits before any runner registration-token lookup, download, registration, or service change.
 
 ## 3. Register and start the runner
 
-Use a fresh one-time repository runner registration token and run:
+### Fast path — authenticated GitHub CLI
+
+If `gh auth status` succeeds for an identity with repository Administration write access, run:
+
+```powershell
+.\scripts\windows\Install-TGGWorldRunner.ps1 `
+  -RepositoryUrl 'https://github.com/olandusgood-byte/tru-go-getta-mixtape'
+```
+
+The bootstrap requests the repository runner registration token with the GitHub API through `gh`, downloads the current GitHub Actions Windows x64 runner, configures it unattended, and starts it as a Windows service. The registration token is short-lived and is never written to the repository.
+
+### Fallback — explicit one-time token
+
+If GitHub CLI is unavailable or not authenticated with sufficient permission, pass a fresh repository runner registration token explicitly:
 
 ```powershell
 .\scripts\windows\Install-TGGWorldRunner.ps1 `
@@ -40,13 +53,13 @@ Use a fresh one-time repository runner registration token and run:
   -RegistrationToken '<ONE_TIME_GITHUB_RUNNER_TOKEN>'
 ```
 
-The bootstrap downloads the current GitHub Actions Windows x64 runner, configures it unattended, and starts it as a Windows service. Standard runner registration supplies the required labels:
+Standard runner registration supplies the required labels:
 
 - `self-hosted`
 - `Windows`
 - `X64`
 
-Do not commit the one-time registration token.
+Do not commit registration tokens or private runtime credentials.
 
 ## 4. Runtime job behavior
 

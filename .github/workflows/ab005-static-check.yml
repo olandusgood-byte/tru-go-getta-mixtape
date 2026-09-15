@@ -70,13 +70,14 @@ jobs:
           fi
 
           # Client-facing access remains closed; these are internal gate controls.
+          # Match the function signature explicitly because these functions have arguments.
           for fn in \
             ab005_prepare_staging \
             ab005_record_smoke \
             ab005_rollback_staging \
             ab005_checkpoint \
             ab005_advance_after_clean_pass; do
-            grep -q "revoke all on function public.${fn}" "$f"
+            grep -q "revoke all on function public.${fn}(" "$f"
           done
 
       - name: Validate AB-005 read-only launch gate

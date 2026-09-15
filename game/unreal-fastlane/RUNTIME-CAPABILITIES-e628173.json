@@ -5,10 +5,13 @@
   "generated_date": "2026-09-15",
   "source_readiness": "pass",
   "runner": {
-    "required_labels": ["self-hosted", "Windows", "X64"],
+    "required_labels": ["self-hosted", "Windows", "X64", "tgg-ue58"],
     "required_local_tools": ["Unreal Engine 5.8", "Visual Studio 2022 MSVC x64 C++"],
-    "bootstrap_script": "scripts/windows/Install-TGGWorldRunner.ps1",
-    "current_runtime_job_state": "queued_waiting_for_compatible_runner"
+    "fresh_machine_bootstrap_script": "scripts/windows/Bootstrap-TGGWorldMachine.ps1",
+    "runner_installer_script": "scripts/windows/Install-TGGWorldRunner.ps1",
+    "runtime_launcher_script": "scripts/windows/Start-TGGWorldRuntime.ps1",
+    "current_runtime_run_id": 35031348778,
+    "current_runtime_job_state": "queued_waiting_for_online_tgg_ue58_runner"
   },
   "public_runtime_config": {
     "supabase_url_available": true,
@@ -52,9 +55,13 @@
     "users_with_active_world_characters": 0,
     "active_or_draining_world_instances": 0,
     "fresh_presence_users": 0,
+    "world_workers_present": 11,
+    "recent_worker_status": "healthy_idle",
     "multiplayer_proof_rpc": "tgg_world_v11_7_multiplayer_proof",
     "presence_bootstrap_rpc": "tgg_world_v11_6_presence_bootstrap",
     "character_create_rpc": "tgg_world_create_character",
+    "browser_playtest_rpc": "tgg_world_v14_playtest_observe",
+    "browser_playtest_passed_captures": 0,
     "multiplayer_proof_requires": [
       "authenticated caller",
       "two distinct authenticated users",

@@ -25,3 +25,8 @@ Remaining evidence gates are UE 5.8 package+boot, authenticated backend smoke, r
 See `WINDOWS-RUNTIME-RUNBOOK-e628173.md`, `RELEASE-READINESS-e628173.md`, and `checkpoints/e628173/MANIFEST.txt`.
 
 The existing `game/` web prototype is intentionally preserved. This folder is additive; older snapshots remain rollback checkpoints.
+
+## Runtime evidence dispatch
+
+- Dispatch refresh requested: `2026-09-15` via AUTO WORK continuation.
+- This watched-path touch is intentionally non-functional; it exists only to enqueue the existing self-hosted Windows runtime evidence workflow without changing game source or readiness claims.

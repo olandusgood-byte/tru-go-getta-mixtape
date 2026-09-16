@@ -58,3 +58,24 @@ test('labels the network stage when browser fetch fails', async () => {
   assert.equal(result.ok,false);
   assert.match(result.error,/candidate_lookup: Failed to fetch/);
 });
+
+test('anonymous denial failure reports status and backend error code', async () => {
+  const status = { textContent: '' };
+  const audio = {};
+  const documentObj = { getElementById: (id) => id === 'status' ? status : id === 'audio' ? audio : null };
+  const locationObj = { origin:'https://xsofowzvwetamhyuvlpj.supabase.co', pathname:'/functions/v1/tgg-audio-access', search:'?qa=protected_audio' };
+  let call = 0;
+  const fetchFn = async () => {
+    call += 1;
+    if (call === 1) return { ok:true, json:async()=>({track_id:'f75ca67a-95c9-40bb-8dfd-38e729d2d74d'}) };
+    if (call === 2) return { ok:false, status:401, json:async()=>({error:'MISSING_AUTH_HEADER'}) };
+    throw new Error('unexpected fetch');
+  };
+  const result = await protectedAudioBrowserFlow({
+    supabaseUrl:'https://xsofowzvwetamhyuvlpj.supabase.co', apiKey:'publishable', accessToken:'owner',
+    fetchFn, documentObj, locationObj, now:()=>1, timeoutFn:()=>1, clearTimeoutFn:()=>{}
+  });
+  assert.equal(result.ok,false);
+  assert.match(result.error,/status=401/);
+  assert.match(result.error,/MISSING_AUTH_HEADER/);
+});

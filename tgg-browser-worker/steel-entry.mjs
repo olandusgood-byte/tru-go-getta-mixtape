@@ -14,8 +14,7 @@ if (backend === 'steel') {
   if (baseURL) clientOptions.baseURL = baseURL;
   const client = new Steel(clientOptions);
 
-  const originalLaunch = chromium.launch.bind(chromium);
-  chromium.launch = async (...args) => {
+  chromium.launch = async () => {
     const timeout = Number(process.env.TGG_STEEL_SESSION_TIMEOUT_MS || 900000);
     const session = await client.sessions.create({ timeout });
     let remoteBrowser = null;
@@ -33,8 +32,7 @@ if (backend === 'steel') {
         websocketUrl += `${websocketUrl.includes('?') ? '&' : '?'}apiKey=${encodeURIComponent(apiKey)}`;
       }
       remoteBrowser = await chromium.connectOverCDP(websocketUrl);
-      const contexts = remoteBrowser.contexts();
-      const context = contexts[0];
+      const context = remoteBrowser.contexts()[0];
       if (!context) throw new Error('STEEL_CONTEXT_MISSING');
 
       return {
@@ -53,8 +51,6 @@ if (backend === 'steel') {
 
   console.log(`TGG browser backend: Steel${baseURL ? ` (${baseURL})` : ''}`);
 } else {
-  chromium.launch = chromium.launch.bind(chromium);
-  void originalLaunch;
   console.log('TGG browser backend: local Playwright Chromium');
 }
 

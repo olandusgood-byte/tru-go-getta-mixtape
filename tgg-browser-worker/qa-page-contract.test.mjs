@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assessProtectedAudioQaPage, withQaCacheBust } from './qa-page-contract.mjs';
+import { assessProtectedAudioQaPage, shouldHydratePlainTextQaResponse, withQaCacheBust } from './qa-page-contract.mjs';
 
 test('accepts only the real protected-audio QA page contract', () => {
   assert.deepEqual(
@@ -18,6 +18,30 @@ test('rejects an HTML or gateway response that is missing the QA marker or run c
     assessProtectedAudioQaPage({ status: 503, marker: 'protected-audio-browser-v2', hasRunButton: true }),
     { ok: false, reason: 'http_503' }
   );
+});
+
+test('hydrates trusted QA HTML mislabeled as text/plain', () => {
+  assert.equal(shouldHydratePlainTextQaResponse({
+    status: 200,
+    marker: 'protected-audio-browser-v2',
+    contentType: 'text/plain; charset=UTF-8',
+    body: '<!doctype html><html><body><button id="run">Run Protected Audio QA</button></body></html>'
+  }), true);
+});
+
+test('does not hydrate unmarked or non-HTML plain text', () => {
+  assert.equal(shouldHydratePlainTextQaResponse({
+    status: 200,
+    marker: '',
+    contentType: 'text/plain',
+    body: '<html><button id="run">Run</button></html>'
+  }), false);
+  assert.equal(shouldHydratePlainTextQaResponse({
+    status: 200,
+    marker: 'protected-audio-browser-v2',
+    contentType: 'text/plain',
+    body: 'not html'
+  }), false);
 });
 
 test('adds a cache-busting cert navigation token without removing the qa query', () => {

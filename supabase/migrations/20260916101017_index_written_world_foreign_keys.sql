@@ -1,0 +1,2 @@
+create index if not exists tgg_world_wallet_ledger_character_id_idx on public.tgg_world_wallet_ledger(character_id);
+create index if not exists tgg_world_character_season_progress_season_key_idx on public.tgg_world_character_season_progress(season_key);

@@ -1,0 +1,2 @@
+Render service start command must be: cd tgg-browser-worker && node steel-entry.mjs
+This launcher preserves local backend by default and activates Steel only when TGG_BROWSER_BACKEND=steel is explicitly configured.

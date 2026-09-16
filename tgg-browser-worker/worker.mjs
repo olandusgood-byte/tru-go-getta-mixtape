@@ -7,12 +7,13 @@ import { scheduleBootstrapLoop } from './bootstrap-runtime.mjs';
 import { extractClaimJob } from './claim-response.mjs';
 import { buildProtectedAudioCertificateResult } from './protected-audio-proof.mjs';
 import { assessProtectedAudioQaPage, shouldHydratePlainTextQaResponse, withQaCacheBust } from './qa-page-contract.mjs';
+import { buildSessionRestoreInput } from './qa-session.mjs';
 
 const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvlpj.supabase.co';
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || 'sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv';
 const PORT = Number(process.env.PORT || 10000);
 const POLL_MS = Number(process.env.TGG_POLL_MS || 5000);
-const RUNTIME_VERSION = '1.2.5';
+const RUNTIME_VERSION = '1.2.6';
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 let workerId = process.env.TGG_WORKER_ID || '';
@@ -61,6 +62,18 @@ async function complete(job, verdict, result, evidence) {
   return r.data;
 }
 
+async function restoreBrowserOwnerSession(context) {
+  const input = buildSessionRestoreInput(ownerSession);
+  if (!input) throw new Error('OWNER_SESSION_RESTORE_INPUT_MISSING');
+  const authClient = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error } = await authClient.auth.setSession(input);
+  if (error || !data?.session) throw new Error('OWNER_SESSION_RESTORE_FAILED');
+  const ref = new URL(SUPABASE_URL).hostname.split('.')[0];
+  const storageKey = `sb-${ref}-auth-token`;
+  const sessionPayload = data.session;
+  await context.addInitScript(({ key, value }) => { localStorage.setItem(key, JSON.stringify(value)); }, { key: storageKey, value: sessionPayload });
+}
+
 async function navigateProtectedAudioQa(page, baseUrl, job) {
   let lastDiagnostic = null;
   for (let navigationAttempt = 1; navigationAttempt <= 3; navigationAttempt += 1) {
@@ -104,7 +117,7 @@ async function navigateProtectedAudioQa(page, baseUrl, job) {
 }
 
 async function runProtectedAudio(job) {
-  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
+  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox','--disable-dev-shm-usage','--autoplay-policy=no-user-gesture-required'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
   const captures = [];
@@ -115,20 +128,26 @@ async function runProtectedAudio(job) {
   const started = Date.now();
   try {
     const url = job.url || 'https://xsofowzvwetamhyuvlpj.supabase.co/functions/v1/tgg-audio-access?qa=protected_audio';
-    if (ownerSession?.access_token) {
-      const ref = new URL(SUPABASE_URL).hostname.split('.')[0];
-      const storageKey = `sb-${ref}-auth-token`;
-      const sessionPayload = { access_token: ownerSession.access_token, refresh_token: ownerSession.refresh_token, token_type:'bearer' };
-      await context.addInitScript(({ key, value }) => { localStorage.setItem(key, JSON.stringify(value)); }, { key: storageKey, value: sessionPayload });
-    }
+    await restoreBrowserOwnerSession(context);
 
     const navigation = await navigateProtectedAudioQa(page, url, job);
     await capture('page_rendered', { url: page.url(), title: await page.title(), http_status: navigation.status, qa_marker: navigation.marker, content_type: navigation.contentType, hydrated_plain_text: navigation.hydratedPlainText });
+
+    try {
+      await page.waitForFunction(() => {
+        const button = document.getElementById('run');
+        return Boolean(button && !button.disabled);
+      }, null, { timeout: 20000 });
+    } catch {
+      const statusText = await page.locator('#status').innerText().catch(() => '');
+      throw new Error(`PROTECTED_AUDIO_QA_SESSION_NOT_READY:${statusText.slice(0,500)}`);
+    }
+
     const textBefore = await page.locator('body').innerText().catch(()=> '');
-    await capture('authenticated', { session_bootstrapped: Boolean(ownerSession?.access_token), body_excerpt: textBefore.slice(-1200) });
+    await capture('authenticated', { session_bootstrapped: true, body_excerpt: textBefore.slice(-1200) });
 
     await navigation.runButton.click({ timeout: 15000 });
-    await page.waitForFunction(() => /PASS\s*·\s*Protected Audio browser QA recorded\./i.test(document.getElementById('status')?.textContent || ''), null, { timeout: 35000 });
+    await page.waitForFunction(() => /PASS\s*·\s*Protected Audio browser QA recorded\./i.test(document.getElementById('status')?.textContent || ''), null, { timeout: 45000 });
 
     const bodyText = await page.locator('body').innerText();
     const audio = page.locator('audio').first();
@@ -157,8 +176,8 @@ async function runProtectedAudio(job) {
       metadata: { url: page.url(), bytes: Buffer.byteLength(html), title: await page.title(), server_pass_observed: true }
     });
     await capture('protected_audio_result', { playback_started: playbackStarted, pass_text_observed: true, body_excerpt: bodyText.slice(-4000) });
-    await capture('browser_certificate_observation', { authenticated: Boolean(ownerSession?.access_token), rendered: true, playback_started: playbackStarted, pass_text_observed: true, elapsed_ms: result.elapsed_ms, challenge_echo: result.challenge_echo });
-    return { ...result, authenticated: Boolean(ownerSession?.access_token), evidence_count: captures.length, captures };
+    await capture('browser_certificate_observation', { authenticated: true, rendered: true, playback_started: playbackStarted, pass_text_observed: true, elapsed_ms: result.elapsed_ms, challenge_echo: result.challenge_echo });
+    return { ...result, authenticated: true, evidence_count: captures.length, captures };
   } finally {
     await context.close();
     await browser.close();

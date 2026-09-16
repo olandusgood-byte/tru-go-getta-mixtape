@@ -1,0 +1,8 @@
+{
+  "name": "tgg-self-hosted-browser-worker",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"start":"node worker.mjs"},
+  "dependencies": {"@supabase/supabase-js":"^2.57.0","express":"^5.1.0","playwright":"^1.55.0"}
+}

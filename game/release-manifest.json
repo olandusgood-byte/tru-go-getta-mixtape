@@ -1,0 +1,10 @@
+{
+  "project":"TRU GO GETTA Game",
+  "release":"V1.2 City Progression",
+  "workflow":"BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
+  "modules":["GAME-001","GAME-002","GAME-003","GAME-004","GAME-005","GAME-006","V1.2-MISSION-CHAINS","V1.2-DISTRICTS","V1.2-SAVE-INTEGRITY"],
+  "gates":["runtime_api_presence","screen_presence","control_presence","save_state","career_persistence","mission_progression","expansion_progression","mission_chain_progression","district_progression","website_bridge","v1_2_integrity","browser_smoke"],
+  "browser_smoke":"required",
+  "release_checkpoint":"V1.2-VERIFY-PASSED",
+  "production":"gated"
+}

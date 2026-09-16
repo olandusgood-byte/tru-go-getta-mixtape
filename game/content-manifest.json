@@ -1,0 +1,9 @@
+{
+  "project":"TRU GO GETTA Game",
+  "version":"1.0",
+  "module":"GAME-003",
+  "name":"Content System",
+  "content":{"missions":3,"npcs":3,"locations":3,"items":4,"rewardTypes":4},
+  "workflow":["BUILD","TEST","REPAIR","VERIFY","CHECKPOINT","ADVANCE"],
+  "next":"GAME-004 QA and Auto Repair"
+}

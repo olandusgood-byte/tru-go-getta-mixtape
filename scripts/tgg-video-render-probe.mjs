@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isTransientBrokerFailure, retryDelayMs } from './tgg-video-render-retry.mjs';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://xsofowzvwetamhyuvlpj.supabase.co';
 const BROKER_URL = `${SUPABASE_URL}/functions/v1/tgg-media-operations`;
@@ -14,6 +15,8 @@ const workerId = `github:${process.env.GITHUB_RUN_ID || 'manual'}:${process.env.
 if (!oidcRequestUrl || !oidcRequestToken) throw new Error('GitHub OIDC runtime unavailable.');
 if (!outputFile) throw new Error('GITHUB_OUTPUT unavailable.');
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function token() {
   const sep = oidcRequestUrl.includes('?') ? '&' : '?';
   const r = await fetch(`${oidcRequestUrl}${sep}audience=${encodeURIComponent(OIDC_AUDIENCE)}`, {
@@ -25,14 +28,27 @@ async function token() {
 }
 
 async function broker(operation, args = {}) {
-  const r = await fetch(BROKER_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-tgg-github-oidc': await token() },
-    body: JSON.stringify({ operation, ...args }),
-  });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok || !d.ok) throw new Error(`Render broker ${operation} failed (${r.status}): ${d.error || d.detail || 'unknown error'}`);
-  return d.data;
+  const maxAttempts = operation === 'render_worker_register' ? 4 : 1;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const r = await fetch(BROKER_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-tgg-github-oidc': await token() },
+      body: JSON.stringify({ operation, ...args }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (r.ok && d.ok) return d.data;
+
+    const message = `Render broker ${operation} failed (${r.status}): ${d.error || d.detail || 'unknown error'}`;
+    const canRetry = operation === 'render_worker_register' && isTransientBrokerFailure(r.status, d) && attempt < maxAttempts - 1;
+    if (!canRetry) throw new Error(message);
+
+    const delay = retryDelayMs(attempt);
+    console.warn(`${message}. Safe registration retry ${attempt + 1}/${maxAttempts - 1} in ${delay}ms.`);
+    await sleep(delay);
+  }
+
+  throw new Error(`Render broker ${operation} failed after bounded retries.`);
 }
 
 await broker('render_worker_register', {

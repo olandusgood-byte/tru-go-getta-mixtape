@@ -15,25 +15,36 @@ permissions:
 jobs:
   portable-damage-core:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
-      - name: Compile DAMAGE portable tests
-        run: >-
-          g++ -std=c++17 -Wall -Wextra -Werror
-          game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageMathTests.cpp
-          game/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Private/Combat/TGGDamageMath.cpp
-          -Igame/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Public -o damage-tests
-      - name: Run DAMAGE portable tests
+      - name: Compile DAMAGE math tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=game/unreal-fastlane/overlays/damage-v1
+          g++ -std=c++17 -Wall -Wextra -Werror "$ROOT/Tests/TGGDamageMathTests.cpp" "$ROOT/Source/TGGWorld/Private/Combat/TGGDamageMath.cpp" -I"$ROOT/Source/TGGWorld/Public" -o damage-tests
+      - name: Run DAMAGE math tests
+        shell: bash
         run: ./damage-tests
       - name: Compile hit-zone mapping tests
-        run: >-
-          g++ -std=c++17 -Wall -Wextra -Werror
-          game/unreal-fastlane/overlays/damage-v1/Tests/TGGHitZoneMapTests.cpp
-          game/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Private/Combat/TGGHitZoneMap.cpp
-          -Igame/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Public -o hit-zone-tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=game/unreal-fastlane/overlays/damage-v1
+          g++ -std=c++17 -Wall -Wextra -Werror "$ROOT/Tests/TGGHitZoneMapTests.cpp" "$ROOT/Source/TGGWorld/Private/Combat/TGGHitZoneMap.cpp" -I"$ROOT/Source/TGGWorld/Public" -o hit-zone-tests
       - name: Run hit-zone mapping tests
+        shell: bash
         run: ./hit-zone-tests
+      - name: Compile request-factory tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=game/unreal-fastlane/overlays/damage-v1
+          g++ -std=c++17 -Wall -Wextra -Werror "$ROOT/Tests/TGGDamageRequestFactoryTests.cpp" "$ROOT/Source/TGGWorld/Private/Combat/TGGDamageRequestFactory.cpp" -I"$ROOT/Source/TGGWorld/Public" -o request-factory-tests
+      - name: Run request-factory tests
+        shell: bash
+        run: ./request-factory-tests
       - name: Validate Unreal damage component contract
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentContract.py
       - name: Validate safe overlay application contract

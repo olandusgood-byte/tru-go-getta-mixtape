@@ -1,5 +1,5 @@
 (() => {
-  const keys={game:'tgg-game-v1',career:'tgg-career-v1',content:'tgg-content-v1',expansion:'tgg-expansion-v1',progression:'tgg-progression-v1',chains:'tgg-chains-v1',districts:'tgg-districts-v1',inventory:'tgg-inventory-v1',crew:'tgg-crew-v1',events:'tgg-events-v1'};
+  const keys={game:'tgg-game-v1',career:'tgg-career-v1',content:'tgg-content-v1',expansion:'tgg-expansion-v1',progression:'tgg-progression-v1',chains:'tgg-chains-v1',districts:'tgg-districts-v1',inventory:'tgg-inventory-v1',crew:'tgg-crew-v1',events:'tgg-events-v1',lifestyle:'tgg-lifestyle-v1'};
   const num=(v,f,min=0)=>{v=Number(v);return Number.isFinite(v)&&v>=min?v:f};
   function read(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v&&typeof v==='object'?v:fallback}catch(e){return fallback}}
   function repair(){
@@ -8,6 +8,13 @@
     const inv=read(keys.inventory,null);if(inv&&typeof inv.items!=='object')localStorage.setItem(keys.inventory,JSON.stringify({items:{},updatedAt:Date.now()}));
     const crew=read(keys.crew,null);if(crew&&(!Array.isArray(crew.members)))localStorage.setItem(keys.crew,JSON.stringify({members:[],updatedAt:Date.now()}));
     const events=read(keys.events,null);if(events&&(!Array.isArray(events.completed)))localStorage.setItem(keys.events,JSON.stringify({completed:[],runs:{},updatedAt:Date.now()}));
+    const lifestyle=read(keys.lifestyle,null);if(lifestyle){
+      const properties=Array.isArray(lifestyle.properties)?lifestyle.properties:[];
+      const vehicles=Array.isArray(lifestyle.vehicles)?lifestyle.vehicles:[];
+      const activeProperty=properties.includes(lifestyle.activeProperty)?lifestyle.activeProperty:(properties[0]||null);
+      const activeVehicle=vehicles.includes(lifestyle.activeVehicle)?lifestyle.activeVehicle:(vehicles[0]||null);
+      localStorage.setItem(keys.lifestyle,JSON.stringify({properties,vehicles,activeProperty,activeVehicle,updatedAt:Date.now()}));
+    }
     return report();
   }
   function report(){

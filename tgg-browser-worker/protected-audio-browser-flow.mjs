@@ -38,8 +38,10 @@ export async function protectedAudioBrowserFlow(input = {}) {
     const noAuthJson = await noAuth.json().catch(() => ({}));
     const anonymousStatus = noAuth.status;
     const anonymousError = String(noAuthJson?.error || noAuthJson?.code || '');
+    const anonymousProof = String(noAuthJson?.qa_denial_proof || '');
     const unauthorizedDenied = anonymousStatus === 403 && ['ACCOUNT_REQUIRED', 'VERIFIED_EMAIL_REQUIRED'].includes(anonymousError);
     if (!unauthorizedDenied) throw new Error(`Unauthorized protected-audio denial was not proven. status=${anonymousStatus} error=${anonymousError || 'UNKNOWN'}`);
+    if (!anonymousProof) throw new Error('Anonymous protected-audio denial proof was not returned.');
     say('Requesting authenticated signed playback…');
     const yesAuth = await fetchStage('authenticated_signed_access', endpoint, {
       method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` }, body: streamBody
@@ -60,12 +62,12 @@ export async function protectedAudioBrowserFlow(input = {}) {
     say('Server-verifying and recording browser evidence…');
     const record = await fetchStage('server_evidence_record', endpoint, {
       method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ action: 'qa_record_protected_audio', track_id: trackId, page_path: `${locationObj.pathname}${locationObj.search}`, load_ms: Math.max(1, Math.round(now() - started)), playback_started: true, anonymous_status: anonymousStatus, anonymous_error: anonymousError })
+      body: JSON.stringify({ action: 'qa_record_protected_audio', track_id: trackId, page_path: `${locationObj.pathname}${locationObj.search}`, load_ms: Math.max(1, Math.round(now() - started)), playback_started: true, anonymous_status: anonymousStatus, anonymous_error: anonymousError, qa_denial_proof: anonymousProof })
     });
     const recorded = await record.json().catch(() => ({}));
     if (!record.ok || !recorded?.ok) throw new Error(recorded?.error || 'Server evidence recording failed.');
     const message = `PASS · Protected Audio browser QA recorded.\nBrowser evidence: ${String(recorded.verified ?? '?')}/${String(recorded.required ?? '?')} · remaining ${String(recorded.remaining ?? '?')}\nEvidence was recorded through the hardened server bridge.`;
-    say(message); return { ok: true, playbackStarted: true, trackId, anonymousStatus, anonymousError, statusText: message, record: recorded };
+    say(message); return { ok: true, playbackStarted: true, trackId, anonymousStatus, anonymousError, anonymousProofPresent: true, statusText: message, record: recorded };
   } catch (error) {
     const message = `QA not complete: ${String(error?.message || error || 'Unknown error')}`; say(message);
     return { ok: false, playbackStarted: false, statusText: message, error: String(error?.message || error || 'Unknown error') };

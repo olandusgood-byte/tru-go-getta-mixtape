@@ -112,8 +112,13 @@ jobs:
           TGG_RENDER_MANIFEST_FILE: ${{ steps.probe.outputs.manifest_file }}
         run: node scripts/tgg-video-render-worker.mjs
 
+      - name: Deferred broker confirmation
+        if: steps.probe.outputs.broker_deferred == 'true'
+        shell: bash
+        run: echo "TGG render probe deferred because Supabase Data API is transiently unavailable; no job was marked complete and the next schedule will retry."
+
       - name: Idle queue confirmation
-        if: steps.probe.outputs.has_work != 'true'
+        if: steps.probe.outputs.has_work != 'true' && steps.probe.outputs.broker_deferred != 'true'
         shell: bash
         run: echo "TGG render queue idle; OIDC heartbeat refreshed without heavy worker setup."
 

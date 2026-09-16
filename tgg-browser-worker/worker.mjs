@@ -8,13 +8,13 @@ import { extractClaimJob } from './claim-response.mjs';
 import { buildProtectedAudioCertificateResult } from './protected-audio-proof.mjs';
 import { assessProtectedAudioQaPage, shouldHydratePlainTextQaResponse, withQaCacheBust } from './qa-page-contract.mjs';
 import { buildStoredSupabaseSession } from './access-session.mjs';
-import { classifyQaStatus } from './qa-status.mjs';
+import { protectedAudioBrowserFlow } from './protected-audio-browser-flow.mjs';
 
 const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvlpj.supabase.co';
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || 'sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv';
 const PORT = Number(process.env.PORT || 10000);
 const POLL_MS = Number(process.env.TGG_POLL_MS || 5000);
-const RUNTIME_VERSION = '1.2.8';
+const RUNTIME_VERSION = '1.2.9';
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 let workerId = process.env.TGG_WORKER_ID || '';
@@ -137,37 +137,18 @@ async function runProtectedAudio(job) {
     const navigation = await navigateProtectedAudioQa(page, url, job);
     await capture('page_rendered', { url: page.url(), title: await page.title(), http_status: navigation.status, qa_marker: navigation.marker, content_type: navigation.contentType, hydrated_plain_text: navigation.hydratedPlainText });
 
-    try {
-      await page.waitForFunction(() => {
-        const button = document.getElementById('run');
-        return Boolean(button && !button.disabled);
-      }, null, { timeout: 20000 });
-    } catch {
-      const statusText = await page.locator('#status').innerText().catch(() => '');
-      throw new Error(`PROTECTED_AUDIO_QA_SESSION_NOT_READY:${statusText.slice(0,500)}`);
-    }
-
     const textBefore = await page.locator('body').innerText().catch(()=> '');
     await capture('authenticated', { session_bootstrapped: true, body_excerpt: textBefore.slice(-1200) });
 
-    await navigation.runButton.click({ timeout: 15000 });
-    try {
-      await page.waitForFunction(() => {
-        const text = document.getElementById('status')?.textContent || '';
-        return /PASS\s*·\s*Protected Audio browser QA recorded\./i.test(text) || /QA not complete:/i.test(text);
-      }, null, { timeout: 45000 });
-    } catch {
-      const statusText = await page.locator('#status').innerText().catch(() => '');
-      throw new Error(`PROTECTED_AUDIO_QA_TIMEOUT:${statusText.slice(0,1000)}`);
-    }
-
-    const finalStatusText = await page.locator('#status').innerText().catch(() => '');
-    const qaStatus = classifyQaStatus(finalStatusText);
-    if (!qaStatus.passed) throw new Error(`PROTECTED_AUDIO_QA_PAGE_FAILED:${finalStatusText.slice(0,1000)}`);
+    const qaRun = await page.evaluate(protectedAudioBrowserFlow, {
+      supabaseUrl: SUPABASE_URL,
+      apiKey: SUPABASE_KEY,
+      accessToken: ownerSession.access_token
+    });
+    if (!qaRun?.ok) throw new Error(`PROTECTED_AUDIO_QA_PAGE_FAILED:${String(qaRun?.statusText || qaRun?.error || 'Unknown browser QA failure').slice(0,1000)}`);
 
     const bodyText = await page.locator('body').innerText();
-    const audio = page.locator('audio').first();
-    const playbackStarted = await audio.count() ? await audio.evaluate(a => !a.paused && a.currentTime > 0).catch(()=>false) : false;
+    const playbackStarted = qaRun.playbackStarted === true;
     const screenshotBuffer = await page.screenshot({ fullPage: true, type: 'png' });
     const html = await page.content();
     const result = buildProtectedAudioCertificateResult({
@@ -191,7 +172,7 @@ async function runProtectedAudio(job) {
       artifact_uri: `tgg://browser-cert/${job.id}/page.html`,
       metadata: { url: page.url(), bytes: Buffer.byteLength(html), title: await page.title(), server_pass_observed: true }
     });
-    await capture('protected_audio_result', { playback_started: playbackStarted, pass_text_observed: true, body_excerpt: bodyText.slice(-4000) });
+    await capture('protected_audio_result', { playback_started: playbackStarted, pass_text_observed: true, body_excerpt: bodyText.slice(-4000), track_id: qaRun.trackId || null });
     await capture('browser_certificate_observation', { authenticated: true, rendered: true, playback_started: playbackStarted, pass_text_observed: true, elapsed_ms: result.elapsed_ms, challenge_echo: result.challenge_echo });
     return { ...result, authenticated: true, evidence_count: captures.length, captures };
   } finally {

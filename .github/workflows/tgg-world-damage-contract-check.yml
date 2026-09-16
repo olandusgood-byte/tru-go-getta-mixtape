@@ -25,6 +25,7 @@ jobs:
           ROOT=game/unreal-fastlane/overlays/damage-v1
           g++ -std=c++17 -Wall -Wextra -Werror "$ROOT/Tests/TGGDamageMathTests.cpp" "$ROOT/Source/TGGWorld/Private/Combat/TGGDamageMath.cpp" -I"$ROOT/Source/TGGWorld/Public" -o damage-tests
       - name: Run DAMAGE math tests
+        shell: bash
         run: ./damage-tests
       - name: Compile hit-zone mapping tests
         shell: bash
@@ -33,6 +34,7 @@ jobs:
           ROOT=game/unreal-fastlane/overlays/damage-v1
           g++ -std=c++17 -Wall -Wextra -Werror "$ROOT/Tests/TGGHitZoneMapTests.cpp" "$ROOT/Source/TGGWorld/Private/Combat/TGGHitZoneMap.cpp" -I"$ROOT/Source/TGGWorld/Public" -o hit-zone-tests
       - name: Run hit-zone mapping tests
+        shell: bash
         run: ./hit-zone-tests
       - name: Compile request-factory tests
         shell: bash
@@ -41,6 +43,7 @@ jobs:
           ROOT=game/unreal-fastlane/overlays/damage-v1
           g++ -std=c++17 -Wall -Wextra -Werror "$ROOT/Tests/TGGDamageRequestFactoryTests.cpp" "$ROOT/Source/TGGWorld/Private/Combat/TGGDamageRequestFactory.cpp" -I"$ROOT/Source/TGGWorld/Public" -o request-factory-tests
       - name: Run request-factory tests
+        shell: bash
         run: ./request-factory-tests
       - name: Compile severity adapter tests
         shell: bash
@@ -49,6 +52,7 @@ jobs:
           ROOT=game/unreal-fastlane/overlays/damage-v1
           g++ -std=c++17 -Wall -Wextra -Werror "$ROOT/Tests/TGGDamageSeverityTests.cpp" "$ROOT/Source/TGGWorld/Private/Combat/TGGDamageSeverity.cpp" "$ROOT/Source/TGGWorld/Private/Combat/TGGDamageRequestFactory.cpp" -I"$ROOT/Source/TGGWorld/Public" -o severity-tests
       - name: Run severity adapter tests
+        shell: bash
         run: ./severity-tests
       - name: Compile presentation tests
         shell: bash
@@ -57,6 +61,7 @@ jobs:
           ROOT=game/unreal-fastlane/overlays/damage-v1
           g++ -std=c++17 -Wall -Wextra -Werror "$ROOT/Tests/TGGDamagePresentationTests.cpp" "$ROOT/Source/TGGWorld/Private/Combat/TGGDamagePresentation.cpp" -I"$ROOT/Source/TGGWorld/Public" -o presentation-tests
       - name: Run presentation tests
+        shell: bash
         run: ./presentation-tests
       - name: Compile sanitized telemetry tests
         shell: bash
@@ -65,36 +70,45 @@ jobs:
           ROOT=game/unreal-fastlane/overlays/damage-v1
           g++ -std=c++17 -Wall -Wextra -Werror "$ROOT/Tests/TGGDamageTelemetryTests.cpp" "$ROOT/Source/TGGWorld/Private/Combat/TGGDamageTelemetry.cpp" -I"$ROOT/Source/TGGWorld/Public" -o telemetry-tests
       - name: Run sanitized telemetry tests
+        shell: bash
         run: ./telemetry-tests
-      - name: Validate Unreal damage component contract
+      - name: Check character component authority contract
+        shell: bash
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentContract.py
-      - name: Validate character HUD contract
+      - name: Check character HUD contract
+        shell: bash
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageHudContract.py
-      - name: Compile Unreal damage component under strict stubs
+      - name: Syntax-check character component against portable UE stubs
+        shell: bash
         run: bash game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentSyntaxCheck.sh
-      - name: Run character and vehicle authority behavior harness
+      - name: Run character and vehicle component behavior harness
+        shell: bash
         run: bash game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentBehaviorCheck.sh
-      - name: Validate vehicle durability authority contract
+      - name: Check vehicle component contract
+        shell: bash
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGVehicleDamageComponentContract.py
-      - name: Compile vehicle component under strict stubs
+      - name: Syntax-check vehicle component against portable UE stubs
+        shell: bash
         run: bash game/unreal-fastlane/overlays/damage-v1/Tests/TGGVehicleDamageComponentSyntaxCheck.sh
-      - name: Validate safe overlay application contract
+      - name: Check overlay safety contract
+        shell: bash
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/ApplyTGGDamageOverlayContract.py
-      - name: Validate candidate QA launcher contract
+      - name: Check candidate QA launcher contract
+        shell: bash
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageCandidateQAContract.py
-      - name: Scan DAMAGE source for embedded privileged credentials
+      - name: Check one-command R3 runtime handoff contract
+        shell: bash
+        run: python game/unreal-fastlane/overlays/damage-v1/Tests/StartTGGDamageR3RuntimeContract.py
+      - name: Check R4 machine-ready runtime handoff contract
+        shell: bash
+        run: python game/unreal-fastlane/overlays/damage-v1/Tests/StartTGGDamageR4RuntimeContract.py
+      - name: Scan DAMAGE source for embedded private credentials
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re, sys
-          root = Path('game/unreal-fastlane/overlays/damage-v1')
-          files = [p for base in (root/'Source', root/'scripts') if base.exists() for p in base.rglob('*') if p.is_file()]
-          text = '\n'.join(p.read_text(errors='ignore') for p in files)
-          markers = ['TGG_EOS_CLIENT_SECRET','TGG_SUPABASE_TEST_ACCESS_TOKEN','TGG_SENTRY_UNREAL_ENDPOINT']
-          bad = [m for m in markers if re.search(re.escape(m) + r'\s*=\s*["\']', text)]
-          if bad:
-              print('TGG_DAMAGE_SECRET_SCAN: FAIL - embedded privileged credential marker: ' + ', '.join(bad))
-              sys.exit(1)
-          print('TGG_DAMAGE_SECRET_SCAN: PASS')
-          PY
+          set -euo pipefail
+          ROOT=game/unreal-fastlane/overlays/damage-v1
+          if grep -R -nE 'TGG_(EOS_CLIENT_SECRET|SUPABASE_TEST_ACCESS_TOKEN|SENTRY_UNREAL_ENDPOINT)\s*=\s*["'"'"']' "$ROOT/Source" "$ROOT/scripts"; then
+            echo 'TGG_DAMAGE_SECRET_SCAN: FAIL'
+            exit 1
+          fi
+          echo 'TGG_DAMAGE_SECRET_SCAN: PASS'

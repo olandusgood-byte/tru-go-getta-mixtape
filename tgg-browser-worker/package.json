@@ -1,10 +1,10 @@
 {
   "name": "tgg-self-hosted-browser-worker",
-  "version": "1.2.10",
+  "version": "1.2.11",
   "private": true,
   "type": "module",
   "scripts": {
-    "postinstall": "playwright install chromium chrome-headless-shell",
+    "postinstall": "playwright install chromium chromium-headless-shell",
     "start": "node worker.mjs",
     "test": "node --test *.test.mjs"
   },

@@ -54,4 +54,4 @@ if (backend === 'steel') {
   console.log('TGG browser backend: local Playwright Chromium');
 }
 
-await import('./worker.mjs');
+await import('./worker-core.mjs');

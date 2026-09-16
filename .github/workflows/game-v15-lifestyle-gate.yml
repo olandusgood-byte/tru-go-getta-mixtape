@@ -1,0 +1,74 @@
+name: Game V1.5 Lifestyle Gate
+
+on:
+  pull_request:
+    paths:
+      - 'game/**'
+      - '.github/workflows/game-v15-lifestyle-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'game/**'
+      - '.github/workflows/game-v15-lifestyle-gate.yml'
+
+jobs:
+  lifestyle-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate lifestyle JavaScript
+        run: |
+          node --check game/lifestyle.js
+          node --check game/lifestyle-ui.js
+          node --check game/game.js
+          node --check game/save-validator.js
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+      - name: Run V1.5 lifestyle browser gate
+        run: |
+          python3 -m http.server 8765 --directory game >/tmp/tgg-v15-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 2
+          cat > /tmp/tgg-v15.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage();
+          const errors=[];
+          page.on('pageerror',e=>errors.push('pageerror: '+e.message));
+          page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});
+          await page.goto('http://127.0.0.1:8765/index.html',{waitUntil:'networkidle'});
+          const baseline=await page.evaluate(()=>({qa:window.TGGQA?.run?.(),release:window.TGGReleaseQA?.run?.(),api:!!window.TGGLifestyle}));
+          if(!baseline.api||!baseline.qa?.passed||!baseline.release?.passed)throw new Error('baseline QA failed: '+JSON.stringify(baseline));
+          await page.click('#newGame');
+          await page.fill('#stageName','Lifestyle Smoke');
+          await page.click('#startGame');
+          await page.evaluate(()=>window.TGGGame.reward(10000,0));
+          await page.click('#lifestyleBtn');
+          const screen=await page.evaluate(()=>({active:document.getElementById('lifestyleBoard')?.classList.contains('active'),properties:document.querySelectorAll('#propertyList [data-lifestyle-property]').length,vehicles:document.querySelectorAll('#vehicleList [data-lifestyle-vehicle]').length}));
+          if(!screen.active||screen.properties<3||screen.vehicles<3)throw new Error('lifestyle screen/catalog failed: '+JSON.stringify(screen));
+          const beforeCash=await page.evaluate(()=>window.TGGGame.getState().cash);
+          await page.click('[data-lifestyle-property="studio-loft"]');
+          await page.click('[data-lifestyle-vehicle="starter-coupe"]');
+          const purchase=await page.evaluate(()=>({cash:window.TGGGame.getState().cash,state:{...window.TGGLifestyle.state},speed:window.TGGLifestyle.movementMultiplier(),saved:JSON.parse(localStorage.getItem('tgg-lifestyle-v1'))}));
+          if(purchase.cash!==beforeCash-1250)throw new Error('lifestyle cash integration failed: '+JSON.stringify(purchase));
+          if(!purchase.state.properties.includes('studio-loft')||!purchase.state.vehicles.includes('starter-coupe')||purchase.state.activeVehicle!=='starter-coupe'||purchase.speed!==1.25)throw new Error('lifestyle ownership/equip failed: '+JSON.stringify(purchase));
+          if(!purchase.saved?.properties?.includes('studio-loft')||!purchase.saved?.vehicles?.includes('starter-coupe'))throw new Error('lifestyle persistence failed: '+JSON.stringify(purchase.saved));
+          await page.click('#lifestyleBack');
+          const beforeX=await page.evaluate(()=>window.TGGGame.getState().x);
+          await page.keyboard.press('ArrowRight');
+          const afterX=await page.evaluate(()=>window.TGGGame.getState().x);
+          if(Math.abs((afterX-beforeX)-2.5)>0.001)throw new Error('vehicle movement bonus failed: '+JSON.stringify({beforeX,afterX}));
+          const repaired=await page.evaluate(()=>{localStorage.setItem('tgg-lifestyle-v1',JSON.stringify({properties:'bad',vehicles:'bad',activeProperty:'bad',activeVehicle:'bad'}));window.TGGSave.repair();return JSON.parse(localStorage.getItem('tgg-lifestyle-v1'))});
+          if(!Array.isArray(repaired.properties)||!Array.isArray(repaired.vehicles)||repaired.activeProperty!==null||repaired.activeVehicle!==null)throw new Error('lifestyle save repair failed: '+JSON.stringify(repaired));
+          if(errors.length)throw new Error(errors.join('\n'));
+          console.log('V1.5 Lifestyle property + vehicle + movement + persistence gate PASS');
+          await browser.close();
+          JS
+          node /tmp/tgg-v15.mjs

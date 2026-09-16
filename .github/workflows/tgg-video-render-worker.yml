@@ -9,6 +9,8 @@ on:
     paths:
       - 'scripts/tgg-video-render-worker.mjs'
       - 'scripts/tgg-video-render-probe.mjs'
+      - 'scripts/tgg-video-render-retry.mjs'
+      - 'scripts/tgg-video-render-retry.test.mjs'
       - '.github/workflows/tgg-video-render-worker.yml'
 
 permissions:
@@ -34,6 +36,8 @@ jobs:
           set -euo pipefail
           node --check scripts/tgg-video-render-worker.mjs
           node --check scripts/tgg-video-render-probe.mjs
+          node --check scripts/tgg-video-render-retry.mjs
+          node --test scripts/tgg-video-render-retry.test.mjs
           grep -q "OIDC_AUDIENCE = 'tgg-video-render-worker'" scripts/tgg-video-render-worker.mjs
           grep -q "OIDC_AUDIENCE = 'tgg-video-render-worker'" scripts/tgg-video-render-probe.mjs
           grep -q "render_worker_claim" scripts/tgg-video-render-probe.mjs

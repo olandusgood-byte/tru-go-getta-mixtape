@@ -12,13 +12,20 @@ export async function protectedAudioBrowserFlow(input = {}) {
   const audio = documentObj?.getElementById?.('audio');
   const say = (message) => { if (status) status.textContent = message; };
   const started = now();
+  const fetchStage = async (stage, url, options) => {
+    try {
+      return await fetchFn(url, options);
+    } catch (error) {
+      throw new Error(`${stage}: ${String(error?.message || error || 'fetch failed')}`);
+    }
+  };
 
   try {
     if (!supabaseUrl || !apiKey || !accessToken) throw new Error('Browser QA auth input missing.');
     if (!audio) throw new Error('Protected audio element missing.');
 
     say('Finding a published protected-audio track…');
-    const candResp = await fetchFn(`${supabaseUrl}/rest/v1/rpc/tgg_browser_qa_protected_audio_candidate_v1`, {
+    const candResp = await fetchStage('candidate_lookup', `${supabaseUrl}/rest/v1/rpc/tgg_browser_qa_protected_audio_candidate_v1`, {
       method: 'POST',
       headers: { apikey: apiKey, authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
       body: '{}'
@@ -33,13 +40,13 @@ export async function protectedAudioBrowserFlow(input = {}) {
     const streamBody = JSON.stringify({ track_id: trackId, mode: 'stream' });
 
     say('Verifying anonymous access is denied…');
-    const noAuth = await fetchFn(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: streamBody });
+    const noAuth = await fetchStage('anonymous_denial', endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: streamBody });
     const noAuthJson = await noAuth.json().catch(() => ({}));
     const unauthorizedDenied = noAuth.status === 403 && ['ACCOUNT_REQUIRED', 'VERIFIED_EMAIL_REQUIRED'].includes(String(noAuthJson?.error || ''));
     if (!unauthorizedDenied) throw new Error('Unauthorized protected-audio denial was not proven.');
 
     say('Requesting authenticated signed playback…');
-    const yesAuth = await fetchFn(endpoint, {
+    const yesAuth = await fetchStage('authenticated_signed_access', endpoint, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` },
       body: streamBody
@@ -68,17 +75,17 @@ export async function protectedAudioBrowserFlow(input = {}) {
         if (done) return;
         done = true;
         cleanup();
-        reject(new Error('Protected audio did not start playing.'));
+        reject(new Error('protected_playback: Protected audio did not start playing.'));
       };
       audio.addEventListener?.('playing', finish, { once: true });
       audio.addEventListener?.('error', fail, { once: true });
       audio.src = access.url;
       timer = timeoutFn(fail, 15000);
-      Promise.resolve(audio.play()).catch(fail);
+      Promise.resolve(audio.play()).catch((error) => reject(new Error(`protected_playback: ${String(error?.message || error || 'playback failed')}`)));
     });
 
     say('Server-verifying and recording browser evidence…');
-    const record = await fetchFn(endpoint, {
+    const record = await fetchStage('server_evidence_record', endpoint, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({

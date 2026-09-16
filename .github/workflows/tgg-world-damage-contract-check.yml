@@ -19,26 +19,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Compile DAMAGE portable tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          g++ -std=c++17 -Wall -Wextra -Werror \
-            game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageMathTests.cpp \
-            game/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Private/Combat/TGGDamageMath.cpp \
-            -Igame/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Public \
-            -o damage-tests
+        run: >-
+          g++ -std=c++17 -Wall -Wextra -Werror
+          game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageMathTests.cpp
+          game/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Private/Combat/TGGDamageMath.cpp
+          -Igame/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Public -o damage-tests
       - name: Run DAMAGE portable tests
-        shell: bash
         run: ./damage-tests
       - name: Compile hit-zone mapping tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          g++ -std=c++17 -Wall -Wextra -Werror \
-            game/unreal-fastlane/overlays/damage-v1/Tests/TGGHitZoneMapTests.cpp \
-            game/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Private/Combat/TGGHitZoneMap.cpp \
-            -Igame/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Public \
-            -o hit-zone-tests
+        run: >-
+          g++ -std=c++17 -Wall -Wextra -Werror
+          game/unreal-fastlane/overlays/damage-v1/Tests/TGGHitZoneMapTests.cpp
+          game/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Private/Combat/TGGHitZoneMap.cpp
+          -Igame/unreal-fastlane/overlays/damage-v1/Source/TGGWorld/Public -o hit-zone-tests
       - name: Run hit-zone mapping tests
-        shell: bash
         run: ./hit-zone-tests
+      - name: Validate Unreal damage component contract
+        run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentContract.py
+      - name: Validate safe overlay application contract
+        run: python game/unreal-fastlane/overlays/damage-v1/Tests/ApplyTGGDamageOverlayContract.py

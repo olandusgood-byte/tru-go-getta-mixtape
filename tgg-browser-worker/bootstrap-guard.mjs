@@ -15,19 +15,25 @@ export async function authorizeBootstrap(body, { verifyOwner, verifyWorker }) {
   }
 
   try {
-    const ownerOk = await verifyOwner(value.access_token);
-    if (!ownerOk) {
-      console.warn('bootstrap owner validation failed');
-      return { ok: false, error: 'bootstrap_owner_unauthorized' };
+    const ownerResult = await verifyOwner(value.access_token);
+    if (!ownerResult?.ok) {
+      const safeError = typeof ownerResult?.error === 'string' && ownerResult.error.length <= 80
+        ? ownerResult.error
+        : 'bootstrap_owner_unauthorized';
+      console.warn('bootstrap owner validation failed', safeError);
+      return { ok: false, error: safeError };
     }
 
-    const workerOk = await verifyWorker(value.worker_id, value.worker_token);
-    if (!workerOk) {
-      console.warn('bootstrap worker credential validation failed');
-      return { ok: false, error: 'bootstrap_worker_unauthorized' };
+    const workerResult = await verifyWorker(value.worker_id, value.worker_token);
+    if (!workerResult?.ok) {
+      const safeError = typeof workerResult?.error === 'string' && workerResult.error.length <= 80
+        ? workerResult.error
+        : 'bootstrap_worker_unauthorized';
+      console.warn('bootstrap worker validation failed', safeError);
+      return { ok: false, error: safeError };
     }
-  } catch (error) {
-    console.warn('bootstrap validation error', error instanceof Error ? error.message : String(error));
+  } catch (_error) {
+    console.warn('bootstrap validation exception');
     return { ok: false, error: 'bootstrap_validation_error' };
   }
 

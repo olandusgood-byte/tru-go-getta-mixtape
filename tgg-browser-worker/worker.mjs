@@ -3,11 +3,13 @@ import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
 import { authorizeBootstrap } from './bootstrap-guard.mjs';
+import { scheduleBootstrapLoop } from './bootstrap-runtime.mjs';
 
 const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvlpj.supabase.co';
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || 'sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv';
 const PORT = Number(process.env.PORT || 10000);
 const POLL_MS = Number(process.env.TGG_POLL_MS || 5000);
+const RUNTIME_VERSION = '1.2.2';
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 let workerId = process.env.TGG_WORKER_ID || '';
@@ -27,13 +29,13 @@ async function verifyWorkerCredential(id, token) {
   const result = await rpc.rpc('tgg_browser_cert_worker_heartbeat', {
     p_worker_id: id,
     p_token: token,
-    p_metadata: { host: 'render', version: '1.2.1', bootstrap_validation: true }
+    p_metadata: { host: 'render', version: RUNTIME_VERSION, bootstrap_validation: true }
   });
   return !result.error;
 }
 
-app.get('/health', (_req, res) => res.json({ ok: true, worker_configured: Boolean(workerId && workerToken), session_bootstrapped: Boolean(ownerSession?.access_token), last }));
-app.get('/enroll', (_req, res) => res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>TGG Browser Worker Enrollment</title><style>body{font-family:Arial;background:#080808;color:#fff;max-width:720px;margin:50px auto;padding:24px}button{background:#e50914;color:#fff;border:0;padding:12px 18px;border-radius:8px;font-weight:700}input{display:block;width:100%;margin:8px 0;padding:12px;background:#151515;color:#fff;border:1px solid #333;border-radius:8px;box-sizing:border-box}pre{white-space:pre-wrap;background:#111;padding:15px;border-radius:8px}</style></head><body><h1>TGG Self-Hosted Browser Worker</h1><p>Owner-only enrollment. Your authenticated Supabase session is handed directly to this worker in memory so the real browser can run the protected-audio QA. The session is never printed.</p><input id="email" type="email" placeholder="Owner email"><input id="password" type="password" placeholder="Owner password"><button id="go">Enroll Worker</button><pre id="out">Waiting…</pre><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>(async()=>{const S=window.supabase.createClient(${JSON.stringify(SUPABASE_URL)},${JSON.stringify(SUPABASE_KEY)});document.querySelector('#go').onclick=async()=>{const out=document.querySelector('#out');try{const email=document.querySelector('#email').value.trim(),password=document.querySelector('#password').value;const a=await S.auth.signInWithPassword({email,password});if(a.error)throw a.error;const sess=a.data?.session;if(!sess)throw new Error('No authenticated session returned.');const r=await S.rpc('tgg_browser_cert_worker_enroll',{p_worker_name:'tgg-render-browser-worker',p_capabilities:{playwright:true,chromium:true,protected_audio_runtime:true},p_metadata:{host:'render',version:'1.2.1'}});if(r.error)throw r.error;const d=r.data&&Array.isArray(r.data)?r.data[0]:r.data;if(!d?.worker_id||!d?.worker_token)throw new Error('Enrollment did not return worker credentials.');const b=await fetch('/bootstrap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({worker_id:d.worker_id,worker_token:d.worker_token,access_token:sess.access_token,refresh_token:sess.refresh_token})});const bj=await b.json();if(!b.ok)throw new Error(bj.error||'Worker bootstrap failed');out.textContent='Worker enrolled and browser session bootstrapped. You can close this page.';await S.auth.signOut()}catch(e){out.textContent='ERROR: '+(e.message||String(e))}}})();</script></body></html>`));
+app.get('/health', (_req, res) => res.json({ ok: true, version: RUNTIME_VERSION, worker_configured: Boolean(workerId && workerToken), session_bootstrapped: Boolean(ownerSession?.access_token), last }));
+app.get('/enroll', (_req, res) => res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>TGG Browser Worker Enrollment</title><style>body{font-family:Arial;background:#080808;color:#fff;max-width:720px;margin:50px auto;padding:24px}button{background:#e50914;color:#fff;border:0;padding:12px 18px;border-radius:8px;font-weight:700}input{display:block;width:100%;margin:8px 0;padding:12px;background:#151515;color:#fff;border:1px solid #333;border-radius:8px;box-sizing:border-box}pre{white-space:pre-wrap;background:#111;padding:15px;border-radius:8px}</style></head><body><h1>TGG Self-Hosted Browser Worker</h1><p>Owner-only enrollment. Your authenticated Supabase session is handed directly to this worker in memory so the real browser can run the protected-audio QA. The session is never printed.</p><input id="email" type="email" placeholder="Owner email"><input id="password" type="password" placeholder="Owner password"><button id="go">Enroll Worker</button><pre id="out">Waiting…</pre><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>(async()=>{const S=window.supabase.createClient(${JSON.stringify(SUPABASE_URL)},${JSON.stringify(SUPABASE_KEY)});document.querySelector('#go').onclick=async()=>{const out=document.querySelector('#out');try{const email=document.querySelector('#email').value.trim(),password=document.querySelector('#password').value;const a=await S.auth.signInWithPassword({email,password});if(a.error)throw a.error;const sess=a.data?.session;if(!sess)throw new Error('No authenticated session returned.');const r=await S.rpc('tgg_browser_cert_worker_enroll',{p_worker_name:'tgg-render-browser-worker',p_capabilities:{playwright:true,chromium:true,protected_audio_runtime:true},p_metadata:{host:'render',version:${JSON.stringify(RUNTIME_VERSION)}}});if(r.error)throw r.error;const d=r.data&&Array.isArray(r.data)?r.data[0]:r.data;if(!d?.worker_id||!d?.worker_token)throw new Error('Enrollment did not return worker credentials.');const b=await fetch('/bootstrap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({worker_id:d.worker_id,worker_token:d.worker_token,access_token:sess.access_token,refresh_token:sess.refresh_token})});const bj=await b.json();if(!b.ok)throw new Error(bj.error||'Worker bootstrap failed');out.textContent='Worker enrolled and browser session bootstrapped. TGG certification started.';await S.auth.signOut()}catch(e){out.textContent='ERROR: '+(e.message||String(e))}}})();</script></body></html>`));
 app.post('/bootstrap', async (req, res) => {
   const authz = await authorizeBootstrap(req.body, {
     verifyOwner: verifyOwnerSession,
@@ -46,7 +48,8 @@ app.post('/bootstrap', async (req, res) => {
   const { worker_id: id, worker_token: token, access_token: access, refresh_token: refresh } = authz.value;
   workerId = id; workerToken = token; ownerSession = { access_token: access, refresh_token: refresh };
   last = { status: 'bootstrapped', worker_id: id, updated_at: new Date().toISOString() };
-  return res.json({ ok: true, worker_id: id });
+  scheduleBootstrapLoop(loop);
+  return res.json({ ok: true, worker_id: id, version: RUNTIME_VERSION, certification_started: true });
 });
 
 async function complete(job, verdict, result, evidence) {
@@ -93,7 +96,7 @@ async function loop() {
   if (running || !workerId || !workerToken) return;
   running = true;
   try {
-    const hb = await rpc.rpc('tgg_browser_cert_worker_heartbeat', { p_worker_id: workerId, p_token: workerToken, p_metadata: { host:'render', version:'1.2.1', session_bootstrapped:Boolean(ownerSession?.access_token) } });
+    const hb = await rpc.rpc('tgg_browser_cert_worker_heartbeat', { p_worker_id: workerId, p_token: workerToken, p_metadata: { host:'render', version:RUNTIME_VERSION, session_bootstrapped:Boolean(ownerSession?.access_token) } });
     if (hb.error) throw hb.error;
     const claim = await rpc.rpc('tgg_browser_cert_worker_claim', { p_worker_id: workerId, p_token: workerToken, p_lease_seconds: 300 });
     if (claim.error) throw claim.error;
@@ -114,4 +117,4 @@ async function loop() {
   finally { running = false; }
 }
 
-app.listen(PORT, () => { console.log(`TGG browser worker listening on ${PORT}`); setInterval(loop, POLL_MS); loop(); });
+app.listen(PORT, () => { console.log(`TGG browser worker ${RUNTIME_VERSION} listening on ${PORT}`); setInterval(loop, POLL_MS); loop(); });

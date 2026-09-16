@@ -12,3 +12,11 @@ export function shouldDeferProbe(operation, status, data = {}) {
   return ['render_worker_register', 'render_worker_claim'].includes(String(operation))
     && isTransientBrokerFailure(status, data);
 }
+
+export function isTransientBrokerException(error) {
+  const name = String(error?.name || '').toLowerCase();
+  const message = String(error?.message || error || '').toLowerCase();
+  return name === 'aborterror'
+    || name === 'timeouterror'
+    || /fetch failed|network|socket|econnreset|econnrefused|etimedout|timed out|timeout|aborted/.test(message);
+}

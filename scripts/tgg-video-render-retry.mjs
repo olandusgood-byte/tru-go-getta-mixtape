@@ -7,3 +7,8 @@ export function isTransientBrokerFailure(status, data = {}) {
 export function retryDelayMs(attemptIndex) {
   return [1000, 2500, 5000, 8000][attemptIndex] ?? 8000;
 }
+
+export function shouldDeferProbe(operation, status, data = {}) {
+  return ['render_worker_register', 'render_worker_claim'].includes(String(operation))
+    && isTransientBrokerFailure(status, data);
+}

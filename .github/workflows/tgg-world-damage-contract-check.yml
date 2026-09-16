@@ -47,7 +47,25 @@ jobs:
         run: ./request-factory-tests
       - name: Validate Unreal damage component contract
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentContract.py
+      - name: Compile Unreal damage component under strict stubs
+        run: bash game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentSyntaxCheck.sh
       - name: Validate safe overlay application contract
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/ApplyTGGDamageOverlayContract.py
       - name: Validate candidate QA launcher contract
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageCandidateQAContract.py
+      - name: Scan DAMAGE source for embedded privileged credentials
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, sys
+          root = Path('game/unreal-fastlane/overlays/damage-v1')
+          files = [p for base in (root/'Source', root/'scripts') if base.exists() for p in base.rglob('*') if p.is_file()]
+          text = '\n'.join(p.read_text(errors='ignore') for p in files)
+          markers = ['TGG_EOS_CLIENT_SECRET','TGG_SUPABASE_TEST_ACCESS_TOKEN','TGG_SENTRY_UNREAL_ENDPOINT']
+          bad = [m for m in markers if re.search(re.escape(m) + r'\s*=\s*["\']', text)]
+          if bad:
+              print('TGG_DAMAGE_SECRET_SCAN: FAIL - embedded privileged credential marker: ' + ', '.join(bad))
+              sys.exit(1)
+          print('TGG_DAMAGE_SECRET_SCAN: PASS')
+          PY

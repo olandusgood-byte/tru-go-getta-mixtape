@@ -1,0 +1,5 @@
+create index if not exists tgg_brain_component_links_to_component_id_idx on public.tgg_brain_component_links(to_component_id);
+create index if not exists tgg_brain_lineage_evidence_to_component_id_idx on public.tgg_brain_lineage_evidence(to_component_id);
+create index if not exists tgg_world_dynamic_events_event_key_idx on public.tgg_world_dynamic_events(event_key);
+create index if not exists tgg_world_leaderboard_snapshots_season_key_idx on public.tgg_world_leaderboard_snapshots(season_key);
+create index if not exists tgg_world_character_challenges_challenge_key_idx on public.tgg_world_character_challenges(challenge_key);

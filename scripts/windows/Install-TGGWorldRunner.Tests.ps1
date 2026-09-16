@@ -36,11 +36,15 @@ $requiredFragments = @(
   '--labels',
   'tgg-ue58',
   'function Get-RunnerRegistrationToken',
+  'function Ensure-GitHubRunnerLabel',
   'Get-Command gh',
   'actions/runners/registration-token',
+  'actions/runners?per_page=100',
+  '/labels',
   '--method POST',
   '--jq .token',
-  '$RegistrationToken = Get-RunnerRegistrationToken'
+  '$RegistrationToken = Get-RunnerRegistrationToken',
+  'TGG_RUNNER_LABEL_RECONCILED'
 )
 
 foreach ($fragment in $requiredFragments) {
@@ -57,6 +61,11 @@ $validateIndex = $text.IndexOf('if ($ValidateOnly)')
 $tokenResolveIndex = $text.IndexOf('$RegistrationToken = Get-RunnerRegistrationToken')
 if ($validateIndex -lt 0 -or $tokenResolveIndex -lt 0 -or $validateIndex -gt $tokenResolveIndex) {
   throw 'ValidateOnly must exit before any registration-token acquisition is attempted.'
+}
+
+$existingRunnerPattern = '(?s)if\s*\(Test-Path\s+-LiteralPath\s+\$settings\)\s*\{.*?Ensure-GitHubRunnerLabel\s+-Url\s+\$RepositoryUrl.*?return\s*\}'
+if ($text -notmatch $existingRunnerPattern) {
+  throw 'An already-configured runner must reconcile the dedicated tgg-ue58 label before registration is skipped.'
 }
 
 $runtimeText = Get-Content -LiteralPath $runtimeWorkflowPath -Raw

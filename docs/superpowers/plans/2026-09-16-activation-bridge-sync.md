@@ -67,7 +67,7 @@ Commit message: `feat: track owner activation bridge edge source`.
 ### Task 3: Add Idempotent Control-Plane Reconciliation Migration
 
 **Files:**
-- Create: `supabase/migrations/20260916160000_activation_bridge_master_admin_reconciliation.sql`
+- Create: `supabase/migrations/20260916155930_activation_bridge_master_admin_reconciliation.sql`
 
 **Interfaces:**
 - Consumes: existing `owner_master_admin` route, runtime manifest row, Edge registry/retirement rows, and current ONE-FINAL helper functions.

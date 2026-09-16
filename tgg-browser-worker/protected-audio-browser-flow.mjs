@@ -43,7 +43,10 @@ export async function protectedAudioBrowserFlow(input = {}) {
     const noAuth = await fetchStage('anonymous_denial', endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: streamBody });
     const noAuthJson = await noAuth.json().catch(() => ({}));
     const unauthorizedDenied = noAuth.status === 403 && ['ACCOUNT_REQUIRED', 'VERIFIED_EMAIL_REQUIRED'].includes(String(noAuthJson?.error || ''));
-    if (!unauthorizedDenied) throw new Error('Unauthorized protected-audio denial was not proven.');
+    if (!unauthorizedDenied) {
+      const code = String(noAuthJson?.error || noAuthJson?.code || 'UNKNOWN');
+      throw new Error(`Unauthorized protected-audio denial was not proven. status=${noAuth.status} error=${code}`);
+    }
 
     say('Requesting authenticated signed playback…');
     const yesAuth = await fetchStage('authenticated_signed_access', endpoint, {

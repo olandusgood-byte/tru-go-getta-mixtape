@@ -6,12 +6,13 @@ import { authorizeBootstrap } from './bootstrap-guard.mjs';
 import { scheduleBootstrapLoop } from './bootstrap-runtime.mjs';
 import { extractClaimJob } from './claim-response.mjs';
 import { buildProtectedAudioCertificateResult } from './protected-audio-proof.mjs';
+import { assessProtectedAudioQaPage, withQaCacheBust } from './qa-page-contract.mjs';
 
 const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvlpj.supabase.co';
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || 'sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv';
 const PORT = Number(process.env.PORT || 10000);
 const POLL_MS = Number(process.env.TGG_POLL_MS || 5000);
-const RUNTIME_VERSION = '1.2.3';
+const RUNTIME_VERSION = '1.2.4';
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 let workerId = process.env.TGG_WORKER_ID || '';
@@ -60,6 +61,37 @@ async function complete(job, verdict, result, evidence) {
   return r.data;
 }
 
+async function navigateProtectedAudioQa(page, baseUrl, job) {
+  let lastDiagnostic = null;
+  for (let navigationAttempt = 1; navigationAttempt <= 3; navigationAttempt += 1) {
+    const navToken = `${job.id}-${job.attempt_count || 0}-${navigationAttempt}-${Date.now()}`;
+    const navUrl = withQaCacheBust(baseUrl, navToken);
+    const response = await page.goto(navUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    const status = response?.status() || 0;
+    const headers = response?.headers() || {};
+    const marker = String(headers['x-tgg-qa'] || '');
+    const contentType = String(headers['content-type'] || '');
+    const runButton = page.locator('#run');
+    const hasRunButton = (await runButton.count().catch(() => 0)) > 0;
+    const assessment = assessProtectedAudioQaPage({ status, marker, hasRunButton });
+    if (assessment.ok) return { runButton, navUrl, status, marker, contentType };
+
+    lastDiagnostic = {
+      navigationAttempt,
+      status,
+      marker,
+      contentType,
+      title: await page.title().catch(() => ''),
+      url: page.url(),
+      reason: assessment.reason
+    };
+    if (navigationAttempt < 3) await page.waitForTimeout(750 * navigationAttempt);
+  }
+
+  const diagnostic = lastDiagnostic || { reason: 'unknown_navigation_failure' };
+  throw new Error(`PROTECTED_AUDIO_QA_PAGE_INVALID:${JSON.stringify(diagnostic)}`);
+}
+
 async function runProtectedAudio(job) {
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
@@ -78,13 +110,13 @@ async function runProtectedAudio(job) {
       const sessionPayload = { access_token: ownerSession.access_token, refresh_token: ownerSession.refresh_token, token_type:'bearer' };
       await context.addInitScript(({ key, value }) => { localStorage.setItem(key, JSON.stringify(value)); }, { key: storageKey, value: sessionPayload });
     }
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await capture('page_rendered', { url: page.url(), title: await page.title() });
+
+    const navigation = await navigateProtectedAudioQa(page, url, job);
+    await capture('page_rendered', { url: page.url(), title: await page.title(), http_status: navigation.status, qa_marker: navigation.marker, content_type: navigation.contentType });
     const textBefore = await page.locator('body').innerText().catch(()=> '');
     await capture('authenticated', { session_bootstrapped: Boolean(ownerSession?.access_token), body_excerpt: textBefore.slice(-1200) });
-    const qaButton = page.getByRole('button', { name: /run protected audio qa/i });
-    if (!(await qaButton.count())) throw new Error('PROTECTED_AUDIO_QA_BUTTON_MISSING');
-    await qaButton.first().click({ timeout: 15000 });
+
+    await navigation.runButton.click({ timeout: 15000 });
     await page.waitForFunction(() => /PASS\s*·\s*Protected Audio browser QA recorded\./i.test(document.getElementById('status')?.textContent || ''), null, { timeout: 35000 });
 
     const bodyText = await page.locator('body').innerText();

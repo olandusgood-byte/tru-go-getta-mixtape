@@ -29,4 +29,5 @@ The existing `game/` web prototype is intentionally preserved. This folder is ad
 ## Runtime evidence dispatch
 
 - Dispatch refresh requested: `2026-09-15` via AUTO WORK continuation.
+- Dispatch refresh requested: `2026-09-16` after confirming the corrected `tgg-ue58` runner label is present on the current branch.
 - This watched-path touch is intentionally non-functional; it exists only to enqueue the existing self-hosted Windows runtime evidence workflow without changing game source or readiness claims.

@@ -40,7 +40,15 @@ export async function protectedAudioBrowserFlow(input = {}) {
     const streamBody = JSON.stringify({ track_id: trackId, mode: 'stream' });
 
     say('Verifying anonymous access is denied…');
-    const noAuth = await fetchStage('anonymous_denial', endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: streamBody });
+    // The browser has an authenticated owner session in localStorage. Force this
+    // request to omit cookies so the denial proof is genuinely anonymous.
+    const noAuth = await fetchStage('anonymous_denial', endpoint, {
+      method: 'POST',
+      credentials: 'omit',
+      cache: 'no-store',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: streamBody
+    });
     const noAuthJson = await noAuth.json().catch(() => ({}));
     const unauthorizedDenied = noAuth.status === 403 && ['ACCOUNT_REQUIRED', 'VERIFIED_EMAIL_REQUIRED'].includes(String(noAuthJson?.error || ''));
     if (!unauthorizedDenied) {

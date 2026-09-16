@@ -72,6 +72,9 @@ $runtimeText = Get-Content -LiteralPath $runtimeWorkflowPath -Raw
 if (-not $runtimeText.Contains('runs-on: [self-hosted, Windows, X64, tgg-ue58]')) {
   throw 'UE runtime workflow must target the dedicated tgg-ue58 runner label.'
 }
+if (-not $runtimeText.Contains("- 'scripts/windows/**'")) {
+  throw 'UE runtime workflow must retrigger when Windows runner/bootstrap scripts change.'
+}
 
 if ($text -match 'TGG_EOS_CLIENT_SECRET\s*=\s*["''][^"'']+["'']') {
   throw 'Runner bootstrap must not embed EOS client secrets.'

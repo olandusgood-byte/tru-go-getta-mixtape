@@ -1,0 +1,129 @@
+name: Game Static Gate
+
+on:
+  push:
+    branches: [game/v1-foundation, game/v1-2-build]
+    paths:
+      - 'game/**'
+      - '.github/workflows/game-static-gate.yml'
+  pull_request:
+    paths:
+      - 'game/**'
+      - '.github/workflows/game-static-gate.yml'
+
+jobs:
+  static-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JavaScript syntax
+        run: |
+          set -e
+          for f in game/*.js; do
+            node --check "$f"
+          done
+      - name: Validate JSON manifests
+        run: |
+          set -e
+          for f in game/*.json; do
+            node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$f"
+          done
+      - name: Validate script references
+        run: |
+          set -e
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          html=Path('game/index.html').read_text()
+          for src in re.findall(r'<script[^>]+src=[\"\']([^\"\']+)[\"\']', html):
+              p=Path('game')/src
+              assert p.is_file(), f'missing script: {src}'
+          print('All game script references exist.')
+          PY
+      - name: Validate required release controls
+        run: |
+          set -e
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('game/index.html').read_text()
+          ids=re.findall(r'id=[\"\']([^\"\']+)[\"\']', html)
+          required={'menu','creator','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','chainBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
+          missing=sorted(required-set(ids))
+          assert not missing, 'missing required IDs: '+', '.join(missing)
+          assert len(ids)==len(set(ids)), 'duplicate DOM ids detected'
+          print('Required V1.3 controls and unique IDs verified.')
+          PY
+      - name: Browser smoke gate
+        run: |
+          set -e
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.55.0 >/dev/null 2>&1
+          npx playwright install --with-deps chromium >/dev/null 2>&1
+          python3 -m http.server 8765 --directory game >/tmp/tgg-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 2
+          cat > game/browser-smoke.mjs <<'JS'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage();
+          const errors=[];
+          page.on('pageerror',e=>errors.push('pageerror: '+e.message));
+          page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});
+          await page.goto('http://127.0.0.1:8765/index.html',{waitUntil:'networkidle'});
+          const result=await page.evaluate(()=>{
+            const q=window.TGGQA?.run?.();
+            const r=window.TGGReleaseQA?.run?.();
+            const i=window.TGGV12Integrity?.run?.();
+            return {q,r,i,apis:!!window.TGGGame&&!!window.TGGCareer&&!!window.TGGContent&&!!window.TGGExpansion&&!!window.TGGProgression&&!!window.TGGChains&&!!window.TGGDistricts&&!!window.TGGSave&&!!window.TGGInventory&&!!window.TGGCrew&&!!window.TGGEvents};
+          });
+          if(!result.apis||!result.q?.passed||!result.r?.passed||!result.i?.passed)throw new Error('QA gate failed: '+JSON.stringify(result));
+          await page.click('#newGame');
+          await page.fill('#stageName','Smoke Test');
+          await page.click('#startGame');
+          await page.click('#inventoryBtn');
+          const inventory=await page.evaluate(()=>({api:!!window.TGGInventory,items:{...window.TGGInventory.state.items},screen:document.getElementById('inventoryBoard')?.classList.contains('active')}));
+          if(!inventory.api||!inventory.screen||inventory.items.mic!==1||inventory.items['beat-pack']!==1)throw new Error('inventory starter pack failed: '+JSON.stringify(inventory));
+          await page.click('[data-inventory-add="promo-flyers"]');
+          const inventorySaved=await page.evaluate(()=>JSON.parse(localStorage.getItem('tgg-inventory-v1')));
+          if(inventorySaved.items['promo-flyers']!==2)throw new Error('inventory persistence failed: '+JSON.stringify(inventorySaved));
+          await page.evaluate(()=>{window.TGGGame.reward(1000,0);window.TGGGame.show('game')});
+          await page.click('#crewBtn');
+          const crewScreen=await page.evaluate(()=>document.getElementById('crewBoard')?.classList.contains('active'));
+          if(!crewScreen)throw new Error('crew screen did not open');
+          const crewResult=await page.evaluate(()=>{const before=window.TGGGame.getState().cash;const ok=window.TGGCrew.recruit('dj-v');return {ok,before,after:window.TGGGame.getState().cash,bonus:window.TGGCrew.bonus('xp')}});
+          if(!crewResult.ok||crewResult.after!==crewResult.before-150||crewResult.bonus!==10)throw new Error('crew recruitment/bonus failed: '+JSON.stringify(crewResult));
+          const crewAll=await page.evaluate(()=>{const kane=window.TGGCrew.recruit('kane');const manager=window.TGGCrew.recruit('manager');return {kane,manager,cash:window.TGGCrew.bonus('cash'),xp:window.TGGCrew.bonus('xp'),rep:window.TGGCrew.bonus('rep')}});
+          if(!crewAll.kane||!crewAll.manager||crewAll.cash!==25||crewAll.xp!==10||crewAll.rep!==10)throw new Error('crew bonus catalog coverage failed: '+JSON.stringify(crewAll));
+          const economyAll=await page.evaluate(()=>{const r=window.TGGEconomy.reward({cash:100,xp:20,rep:5});return {cash:r.cash,xp:r.xp,rep:r.rep,crew:r.crew}});
+          if(economyAll.cash!==125||economyAll.xp!==30||economyAll.rep!==15)throw new Error('economy all-bonus normalization failed: '+JSON.stringify(economyAll));
+          await page.evaluate(()=>window.TGGGame.show('game'));
+          await page.click('#eventsBtn');
+          const eventsScreen=await page.evaluate(()=>({active:document.getElementById('eventsBoard')?.classList.contains('active'),cards:document.querySelectorAll('#eventsList [data-event-run]').length}));
+          if(!eventsScreen.active||eventsScreen.cards<1)throw new Error('events screen did not render: '+JSON.stringify(eventsScreen));
+          const eventResult=await page.evaluate(()=>{const before=window.TGGGame.getState();const beforeCash=before.cash;const beforeXp=before.xp;const beforeRep=window.TGGCareer.career.reputation;const ok=window.TGGEvents.run('street-cypher');const after=window.TGGGame.getState();return {ok,beforeCash,afterCash:after.cash,xpGain:after.xp-beforeXp,repGain:window.TGGCareer.career.reputation-beforeRep,runs:window.TGGEvents.state.runs['street-cypher']||0}});
+          if(!eventResult.ok||eventResult.runs!==1||eventResult.afterCash<=eventResult.beforeCash||eventResult.xpGain!==45||eventResult.repGain!==20)throw new Error('city event crew reward failed: '+JSON.stringify(eventResult));
+          await page.evaluate(()=>window.TGGGame.show('game'));
+          const expansionResult=await page.evaluate(()=>{const before=window.TGGGame.getState().cash;const ok=window.TGGExpansion.run('open-mic');return {ok,before,after:window.TGGGame.getState().cash,completed:window.TGGExpansion.state.completed.includes('open-mic')}});
+          if(!expansionResult.ok||!expansionResult.completed||expansionResult.after<=expansionResult.before)throw new Error('expansion economy reward failed: '+JSON.stringify(expansionResult));
+          await page.click('#contentBtn');
+          await page.click('#chainBtn');
+          const chain=await page.evaluate(()=>window.TGGChains?.state?.active);
+          if(chain!=='first-move')throw new Error('mission chain did not start');
+          await page.click('[data-mission="flyer-run"]');
+          await page.click('#advanceContentBtn');
+          const saved=await page.evaluate(()=>localStorage.getItem('tgg-content-v1'));
+          if(!saved)throw new Error('content state was not saved');
+          await page.evaluate(()=>{const s=window.TGGGame.getState();s.level=3;s.xp=0;window.TGGGame.refresh();window.TGGDistricts.sync()});
+          const districts=await page.evaluate(()=>window.TGGDistricts.state.unlocked.slice().sort());
+          if(JSON.stringify(districts)!==JSON.stringify(['downtown','mixtape-ave','studio-row']))throw new Error('district unlock progression failed: '+JSON.stringify(districts));
+          await page.evaluate(()=>{localStorage.setItem('tgg-game-v1',JSON.stringify({level:-4,cash:-99,xp:'bad',x:'bad',y:null}));window.TGGSave.repair()});
+          const repaired=await page.evaluate(()=>JSON.parse(localStorage.getItem('tgg-game-v1')));
+          if(!(repaired.level>=1&&repaired.cash>=0&&repaired.xp>=0&&Number.isFinite(repaired.x)&&Number.isFinite(repaired.y)))throw new Error('save repair failed: '+JSON.stringify(repaired));
+          if(errors.length)throw new Error(errors.join('\n'));
+          console.log('V1.3 all crew bonuses + expansion + events + inventory + V1.2 browser smoke PASS');
+          await browser.close();
+          JS
+          node game/browser-smoke.mjs
+          rm -f game/browser-smoke.mjs

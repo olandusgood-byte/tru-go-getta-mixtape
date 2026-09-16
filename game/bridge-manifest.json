@@ -1,0 +1,10 @@
+{
+  "project":"TRU GO GETTA Game",
+  "version":"1.0",
+  "module":"GAME-006",
+  "name":"Website Bridge",
+  "principles":["separate game runtime from Blogger theme","external launch points only","no automatic redirects","no shared mutable page state"],
+  "links":["public_site","creator_dashboard"],
+  "workflow":["BUILD","TEST","REPAIR","VERIFY","CHECKPOINT","ADVANCE"],
+  "next":"V1.0 RELEASE QA"
+}

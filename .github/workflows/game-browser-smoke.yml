@@ -1,0 +1,104 @@
+name: Game Browser Smoke
+
+on:
+  push:
+    branches: [game/v1-foundation]
+    paths:
+      - 'game/**'
+      - '.github/workflows/game-browser-smoke.yml'
+  pull_request:
+    paths:
+      - 'game/**'
+      - '.github/workflows/game-browser-smoke.yml'
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start local game server
+        run: |
+          python3 -m http.server 8765 --directory game > /tmp/tgg-game-server.log 2>&1 &
+          echo $! > /tmp/tgg-game-server.pid
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8765/index.html >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/tgg-game-server.log
+          exit 1
+
+      - name: Run browser smoke
+        run: |
+          cat > game/browser-smoke.mjs <<'EOF'
+          import { chromium } from 'playwright';
+
+          const browser = await chromium.launch({headless:true});
+          const page = await browser.newPage();
+          const errors = [];
+          page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
+          page.on('console', msg => { if (msg.type() === 'error') errors.push(`console: ${msg.text()}`); });
+
+          await page.goto('http://127.0.0.1:8765/index.html', {waitUntil:'networkidle'});
+          await page.waitForFunction(() => window.TGGGame && window.TGGCareer && window.TGGContent && window.TGGExpansion && window.TGGProgression && window.TGGBridge && window.TGGQA && window.TGGReleaseQA);
+
+          const result = await page.evaluate(async () => {
+            const ids = ['menu','creator','game','career','contentBoard','expansionBoard','progressionBoard','bridge','pause','hud','newGame','continueGame','startGame','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','bridgeBtn','saveBtn','pauseBtn','resumeBtn','menuBtn','recordBtn','mixtapeBtn','upgradeBtn'];
+            const missing = ids.filter(id => !document.getElementById(id));
+            const qa = window.TGGQA?.run?.();
+            const release = window.TGGReleaseQA?.run?.();
+            const start = window.TGGContent?.start?.('flyer-run');
+            const before = window.TGGContent?.state?.progress ?? -1;
+            const advanced = window.TGGContent?.advance?.();
+            const after = window.TGGContent?.state?.progress ?? -1;
+            window.TGGGame?.save?.();
+            const stored = !!localStorage.getItem('tgg-game-v1');
+            window.TGGProgression?.sync?.();
+            window.TGGGame?.show?.('progressionBoard');
+            const progressionVisible = document.getElementById('progressionBoard')?.classList.contains('active');
+            const achievementCatalog = (window.TGGProgression?.achievements?.length || 0) >= 7;
+            return {
+              missing,
+              qaPassed: qa?.passed ?? false,
+              releasePassed: release?.passed ?? false,
+              missionStarted: !!start,
+              advanceReturned: !!advanced,
+              progressAdvanced: after === before + 1 || after === 0,
+              localStorageSaved: stored,
+              progressionVisible,
+              achievementCatalog,
+              currentScreen: [...document.querySelectorAll('.screen')].find(el => el.classList.contains('active'))?.id || null
+            };
+          });
+
+          await browser.close();
+
+          if (errors.length) {
+            console.error(errors.join('\n'));
+            process.exit(1);
+          }
+          if (result.missing.length || !result.qaPassed || !result.releasePassed || !result.missionStarted || !result.advanceReturned || !result.progressAdvanced || !result.localStorageSaved || !result.progressionVisible || !result.achievementCatalog) {
+            console.error(JSON.stringify(result, null, 2));
+            process.exit(1);
+          }
+          console.log(JSON.stringify(result, null, 2));
+          EOF
+          node ./game/browser-smoke.mjs
+          rm -f game/browser-smoke.mjs
+
+      - name: Stop local game server
+        if: always()
+        run: |
+          if [ -f /tmp/tgg-game-server.pid ]; then kill $(cat /tmp/tgg-game-server.pid) || true; fi

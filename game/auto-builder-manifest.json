@@ -1,0 +1,15 @@
+{
+  "project":"TRU GO GETTA Game",
+  "version":"1.0",
+  "module":"GAME-002",
+  "name":"Career System",
+  "workflow":["BUILD","TEST","REPAIR","VERIFY","CHECKPOINT","ADVANCE"],
+  "gates":{
+    "career_state":true,
+    "recording_progression":true,
+    "mixtape_unlock_rule":true,
+    "studio_upgrade_rule":true,
+    "persistence":true
+  },
+  "next":"GAME-003 Content System"
+}

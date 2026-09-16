@@ -69,22 +69,8 @@ function Get-LatestRunnerAsset {
   }
 }
 
-function Get-RunnerRegistrationToken {
+function Get-RepositoryCoordinates {
   param([Parameter(Mandatory = $true)][string]$Url)
-
-  if (-not [string]::IsNullOrWhiteSpace($RegistrationToken)) {
-    return $RegistrationToken.Trim()
-  }
-
-  $gh = Get-Command gh -ErrorAction SilentlyContinue
-  if (-not $gh) {
-    throw 'RegistrationToken was not provided and GitHub CLI (gh) was not found. Install/login to gh or pass -RegistrationToken explicitly.'
-  }
-
-  & $gh.Source auth status --hostname github.com 1>$null 2>$null
-  if ($LASTEXITCODE -ne 0) {
-    throw 'GitHub CLI is installed but not authenticated. Run gh auth login or pass -RegistrationToken explicitly.'
-  }
 
   try {
     $uri = [Uri]$Url
@@ -94,7 +80,7 @@ function Get-RunnerRegistrationToken {
   }
 
   if ($uri.Host -ne 'github.com') {
-    throw 'Automatic registration-token acquisition currently supports github.com repository URLs only. Pass -RegistrationToken explicitly for another host.'
+    throw 'Automatic GitHub runner management currently supports github.com repository URLs only.'
   }
 
   $parts = @($uri.AbsolutePath.Trim('/').Split('/') | Where-Object { $_ })
@@ -102,15 +88,77 @@ function Get-RunnerRegistrationToken {
     throw "Could not derive OWNER/REPO from RepositoryUrl: $Url"
   }
 
-  $owner = $parts[0]
-  $repo = ($parts[1] -replace '\.git$','')
-  $endpoint = "repos/$owner/$repo/actions/runners/registration-token"
+  [pscustomobject]@{
+    Owner = $parts[0]
+    Repo = ($parts[1] -replace '\.git$','')
+  }
+}
+
+function Get-GitHubCli {
+  $gh = Get-Command gh -ErrorAction SilentlyContinue
+  if (-not $gh) {
+    throw 'GitHub CLI (gh) is required for automatic runner registration or label reconciliation.'
+  }
+
+  & $gh.Source auth status --hostname github.com 1>$null 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    throw 'GitHub CLI is installed but not authenticated. Run gh auth login with repository Administration write access.'
+  }
+
+  return $gh
+}
+
+function Get-RunnerRegistrationToken {
+  param([Parameter(Mandatory = $true)][string]$Url)
+
+  if (-not [string]::IsNullOrWhiteSpace($RegistrationToken)) {
+    return $RegistrationToken.Trim()
+  }
+
+  $gh = Get-GitHubCli
+  $coordinates = Get-RepositoryCoordinates -Url $Url
+  $endpoint = "repos/$($coordinates.Owner)/$($coordinates.Repo)/actions/runners/registration-token"
   $token = & $gh.Source api $endpoint --method POST --jq .token
   if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($token)) {
     throw 'GitHub CLI could not create a repository runner registration token. The authenticated GitHub identity needs repository Administration write access.'
   }
 
   return ([string]$token).Trim()
+}
+
+function Ensure-GitHubRunnerLabel {
+  param([Parameter(Mandatory = $true)][string]$Url)
+
+  $gh = Get-GitHubCli
+  $coordinates = Get-RepositoryCoordinates -Url $Url
+  $runnerName = "TGG-UE58-$env:COMPUTERNAME"
+  $listEndpoint = "repos/$($coordinates.Owner)/$($coordinates.Repo)/actions/runners?per_page=100"
+  $runnerJson = & $gh.Source api $listEndpoint
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($runnerJson)) {
+    throw 'GitHub CLI could not list repository self-hosted runners. Repository Administration read access is required.'
+  }
+
+  $runnerList = $runnerJson | ConvertFrom-Json
+  $runner = @($runnerList.runners) | Where-Object { $_.name -eq $runnerName } | Select-Object -First 1
+  if (-not $runner) {
+    throw "The local runner is configured but GitHub has no runner named '$runnerName'. Remove the stale local runner registration or re-register it."
+  }
+
+  $labelNames = @($runner.labels | ForEach-Object { $_.name })
+  if ($labelNames -contains 'tgg-ue58') {
+    Write-Host "Dedicated runner label already present on $runnerName."
+    Write-Host 'TGG_RUNNER_LABEL_RECONCILED: PASS'
+    return
+  }
+
+  $labelsEndpoint = "repos/$($coordinates.Owner)/$($coordinates.Repo)/actions/runners/$($runner.id)/labels"
+  & $gh.Source api $labelsEndpoint --method POST -f 'labels[]=tgg-ue58' 1>$null
+  if ($LASTEXITCODE -ne 0) {
+    throw "GitHub CLI could not add the tgg-ue58 label to runner '$runnerName'."
+  }
+
+  Write-Host "Added dedicated tgg-ue58 label to existing runner $runnerName."
+  Write-Host 'TGG_RUNNER_LABEL_RECONCILED: PASS'
 }
 
 function Install-GitHubRunnerFiles {
@@ -133,7 +181,8 @@ function Register-GitHubRunner {
 
   $settings = Join-Path $RunnerRoot '.runner'
   if (Test-Path -LiteralPath $settings) {
-    Write-Host 'GitHub Actions runner is already configured. Skipping registration.'
+    Write-Host 'GitHub Actions runner is already configured. Reconciling required custom labels before skipping registration.'
+    Ensure-GitHubRunnerLabel -Url $RepositoryUrl
     return
   }
 

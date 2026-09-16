@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "postinstall": "playwright install chromium chromium-headless-shell",
-    "start": "node worker.mjs",
+    "start": "node steel-entry.mjs",
     "test": "node --test *.test.mjs"
   },
   "dependencies": {

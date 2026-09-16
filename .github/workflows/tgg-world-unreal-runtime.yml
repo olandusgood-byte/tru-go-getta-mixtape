@@ -10,6 +10,7 @@ on:
       - 'game/unreal-fastlane/RELEASE-READINESS-e628173.md'
       - 'game/unreal-fastlane/WINDOWS-RUNTIME-RUNBOOK-e628173.md'
       - 'game/unreal-fastlane/README.md'
+      - 'scripts/windows/**'
       - '.github/workflows/tgg-world-unreal-runtime.yml'
 
 permissions:

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isTransientBrokerFailure, retryDelayMs, shouldDeferProbe } from './tgg-video-render-retry.mjs';
+import { isTransientBrokerFailure, retryDelayMs, shouldDeferProbe, isTransientBrokerException } from './tgg-video-render-retry.mjs';
 
 test('retries Supabase schema-cache and connection availability failures', () => {
   assert.equal(isTransientBrokerFailure(400, { error: 'Could not query the database for the schema cache. Retrying.' }), true);
@@ -26,4 +26,15 @@ test('does not defer auth, validation, or processing operations', () => {
   assert.equal(shouldDeferProbe('render_worker_register', 403, { error: 'github_oidc_repository_invalid' }), false);
   assert.equal(shouldDeferProbe('render_worker_claim', 400, { error: 'worker_source_invalid' }), false);
   assert.equal(shouldDeferProbe('render_worker_complete', 503, { error: 'connection unavailable' }), false);
+});
+
+test('treats fetch timeout and network failures as transient', () => {
+  const timeout = new Error('The operation was aborted due to timeout');
+  timeout.name = 'TimeoutError';
+  assert.equal(isTransientBrokerException(timeout), true);
+  assert.equal(isTransientBrokerException(new TypeError('fetch failed')), true);
+});
+
+test('does not classify arbitrary application errors as network transient', () => {
+  assert.equal(isTransientBrokerException(new Error('worker_source_invalid')), false);
 });

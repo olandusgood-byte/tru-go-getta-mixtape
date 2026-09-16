@@ -1,8 +1,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { stagedEndpointDefaults } from "./endpoint-prefill.mjs";
 
 const SUPABASE_URL = "https://xsofowzvwetamhyuvlpj.supabase.co";
 const PUBLISHABLE_KEY = "sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv";
 const VERSION = "TGG-ACTIVATION-BRIDGE-V1";
+const PREFILL_FN = stagedEndpointDefaults.toString();
 
 const html = `<!doctype html>
 <html lang="en">
@@ -39,10 +41,12 @@ const U=${JSON.stringify(SUPABASE_URL)},K=${JSON.stringify(PUBLISHABLE_KEY)};
 const sb=window.supabase.createClient(U,K,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=s=>document.querySelector(s);
 const fmt=x=>JSON.stringify(x,null,2);
+${PREFILL_FN}
 async function rpc(name,args={}){const {data,error}=await sb.rpc(name,args);if(error)throw error;return data}
 function clearSecrets(){['#password','#lkKey','#lkSecret','#dspKey'].forEach(s=>{const e=$(s);if(e)e.value=''})}
+function applyStagedEndpoints(expansion){const defaults=stagedEndpointDefaults(expansion),lk=$('#lkUrl'),dsp=$('#dspUrl');if(defaults.livekit&&lk&&!lk.value.trim())lk.value=defaults.livekit;if(defaults.dsp&&dsp&&!dsp.value.trim())dsp.value=defaults.dsp}
 async function requireOwner(){const {data:{session}}=await sb.auth.getSession();if(!session)return false;const {data,error}=await sb.auth.getUser();if(error||!data?.user||data.user.app_metadata?.tgg_role!=='owner'){await sb.auth.signOut();return false}$('#login').classList.add('hidden');$('#app').classList.remove('hidden');$('#who').textContent=data.user.email||'TGG Owner';return true}
-async function refresh(){const out=$('#overview');out.textContent='Refreshing…';try{const [exp,ready,queue]=await Promise.all([rpc('tgg_creator_expansion_control_center'),rpc('tgg_one_final_activation_readiness'),rpc('tgg_one_final_activation_queue')]);out.textContent=fmt({expansion:exp,readiness:ready,activation_queue:queue})}catch(e){out.textContent='ERROR: '+(e.message||String(e))}}
+async function refresh(){const out=$('#overview');out.textContent='Refreshing…';try{const [exp,ready,queue]=await Promise.all([rpc('tgg_creator_expansion_control_center'),rpc('tgg_one_final_activation_readiness'),rpc('tgg_one_final_activation_queue')]);applyStagedEndpoints(exp);out.textContent=fmt({expansion:exp,readiness:ready,activation_queue:queue})}catch(e){out.textContent='ERROR: '+(e.message||String(e))}}
 $('#signIn').onclick=async()=>{const out=$('#loginStatus');out.textContent='Signing in…';try{const {data,error}=await sb.auth.signInWithPassword({email:$('#email').value.trim(),password:$('#password').value});if(error)throw error;if(data?.user?.app_metadata?.tgg_role!=='owner'){await sb.auth.signOut();throw new Error('OWNER_REQUIRED')}clearSecrets();await requireOwner();await refresh()}catch(e){clearSecrets();out.textContent='ERROR: '+(e.message||String(e))}};
 $('#refresh').onclick=refresh;
 $('#signOut').onclick=async()=>{await sb.auth.signOut();location.reload()};

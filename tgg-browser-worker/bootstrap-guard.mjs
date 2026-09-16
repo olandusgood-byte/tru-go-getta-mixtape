@@ -15,14 +15,20 @@ export async function authorizeBootstrap(body, { verifyOwner, verifyWorker }) {
   }
 
   try {
-    if (!(await verifyOwner(value.access_token))) {
-      return { ok: false, error: 'bootstrap_unauthorized' };
+    const ownerOk = await verifyOwner(value.access_token);
+    if (!ownerOk) {
+      console.warn('bootstrap owner validation failed');
+      return { ok: false, error: 'bootstrap_owner_unauthorized' };
     }
-    if (!(await verifyWorker(value.worker_id, value.worker_token))) {
-      return { ok: false, error: 'bootstrap_unauthorized' };
+
+    const workerOk = await verifyWorker(value.worker_id, value.worker_token);
+    if (!workerOk) {
+      console.warn('bootstrap worker credential validation failed');
+      return { ok: false, error: 'bootstrap_worker_unauthorized' };
     }
-  } catch {
-    return { ok: false, error: 'bootstrap_unauthorized' };
+  } catch (error) {
+    console.warn('bootstrap validation error', error instanceof Error ? error.message : String(error));
+    return { ok: false, error: 'bootstrap_validation_error' };
   }
 
   return { ok: true, value };

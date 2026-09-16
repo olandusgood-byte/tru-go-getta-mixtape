@@ -68,8 +68,16 @@ jobs:
         run: ./telemetry-tests
       - name: Validate Unreal damage component contract
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentContract.py
+      - name: Validate character HUD contract
+        run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageHudContract.py
       - name: Compile Unreal damage component under strict stubs
         run: bash game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentSyntaxCheck.sh
+      - name: Run character and vehicle authority behavior harness
+        run: bash game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentBehaviorCheck.sh
+      - name: Validate vehicle durability authority contract
+        run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGVehicleDamageComponentContract.py
+      - name: Compile vehicle component under strict stubs
+        run: bash game/unreal-fastlane/overlays/damage-v1/Tests/TGGVehicleDamageComponentSyntaxCheck.sh
       - name: Validate safe overlay application contract
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/ApplyTGGDamageOverlayContract.py
       - name: Validate candidate QA launcher contract

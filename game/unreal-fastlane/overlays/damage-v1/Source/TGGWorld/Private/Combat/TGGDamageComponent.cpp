@@ -1,6 +1,7 @@
 #include "Combat/TGGDamageComponent.h"
 
 #include "Combat/TGGDamageMath.h"
+#include "Combat/TGGDamagePresentation.h"
 #include "GameFramework/Actor.h"
 #include "Net/UnrealNetwork.h"
 
@@ -73,6 +74,11 @@ float UTGGDamageComponent::GetHealthPercent() const {
 
 float UTGGDamageComponent::GetArmorPercent() const {
   return MaxArmor > 0.0f ? Armor / MaxArmor : 0.0f;
+}
+
+FTGGDamageHudState UTGGDamageComponent::GetHudState() const {
+  return FTGGDamagePresentation::MakeHudState(
+      MaxHealth, Health, MaxArmor, Armor, bKnockedOut, bInvulnerable);
 }
 
 void UTGGDamageComponent::OnRep_Health(const float PreviousHealth) {

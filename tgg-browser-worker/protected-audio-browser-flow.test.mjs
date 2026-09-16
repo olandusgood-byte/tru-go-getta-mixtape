@@ -24,7 +24,7 @@ test('runs protected audio QA directly in browser context without page click han
     calls.push({url:String(url), opts});
     if (String(url).includes('/rest/v1/rpc/tgg_browser_qa_protected_audio_candidate_v1')) return { ok:true, json:async()=>({track_id:'f75ca67a-95c9-40bb-8dfd-38e729d2d74d'}) };
     if (opts.headers?.authorization && opts.body?.includes('qa_record_protected_audio')) return { ok:true, json:async()=>({ok:true,verified:11,required:11,remaining:0}) };
-    if (!opts.headers?.authorization && opts.body?.includes('"mode":"stream"')) return { ok:false, status:403, json:async()=>({error:'ACCOUNT_REQUIRED'}) };
+    if (!opts.headers?.authorization && opts.body?.includes('"mode":"stream"')) return { ok:false, status:403, json:async()=>({error:'ACCOUNT_REQUIRED',qa_denial_proof:'proof-main'}) };
     if (opts.headers?.authorization && opts.body?.includes('"mode":"stream"')) return { ok:true, json:async()=>({source:'protected_storage',url:'https://signed.example/audio.mp3',expires_in:300}) };
     throw new Error('unexpected fetch '+url);
   };
@@ -78,4 +78,34 @@ test('anonymous denial failure reports status and backend error code', async () 
   assert.equal(result.ok,false);
   assert.match(result.error,/status=401/);
   assert.match(result.error,/MISSING_AUTH_HEADER/);
+});
+
+test('forwards server-signed anonymous denial proof into evidence record', async () => {
+  const calls = [];
+  const status = { textContent: '' };
+  const audio = {
+    listeners: {},
+    addEventListener(name, fn) { this.listeners[name] = fn; },
+    removeEventListener(name) { delete this.listeners[name]; },
+    set src(v) { this._src = v; },
+    async play() { queueMicrotask(() => this.listeners.playing?.()); }
+  };
+  const documentObj = { getElementById: (id) => id === 'status' ? status : id === 'audio' ? audio : null };
+  const locationObj = { origin:'https://xsofowzvwetamhyuvlpj.supabase.co', pathname:'/functions/v1/tgg-audio-access', search:'?qa=protected_audio&cert_nav=test' };
+  const fetchFn = async (url, opts={}) => {
+    calls.push({ url:String(url), opts });
+    if (String(url).includes('/rest/v1/rpc/tgg_browser_qa_protected_audio_candidate_v1')) return { ok:true, json:async()=>({track_id:'f75ca67a-95c9-40bb-8dfd-38e729d2d74d'}) };
+    if (!opts.headers?.authorization && opts.body?.includes('"mode":"stream"')) return { ok:false, status:403, json:async()=>({error:'ACCOUNT_REQUIRED',qa_denial_proof:'signed-proof-123'}) };
+    if (opts.headers?.authorization && opts.body?.includes('"mode":"stream"')) return { ok:true, json:async()=>({source:'protected_storage',url:'https://signed.example/audio.mp3',expires_in:300}) };
+    if (opts.headers?.authorization && opts.body?.includes('qa_record_protected_audio')) return { ok:true, json:async()=>({ok:true,verified:11,required:11,remaining:0}) };
+    throw new Error('unexpected fetch '+url);
+  };
+  const result = await protectedAudioBrowserFlow({
+    supabaseUrl:'https://xsofowzvwetamhyuvlpj.supabase.co', apiKey:'publishable', accessToken:'owner',
+    fetchFn, documentObj, locationObj, now:()=>1000, timeoutFn:()=>1, clearTimeoutFn:()=>{}
+  });
+  assert.equal(result.ok, true);
+  const recordCall = calls.find(c => c.opts.body?.includes('qa_record_protected_audio'));
+  const body = JSON.parse(recordCall.opts.body);
+  assert.equal(body.qa_denial_proof, 'signed-proof-123');
 });

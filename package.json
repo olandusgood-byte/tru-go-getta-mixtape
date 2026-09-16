@@ -1,9 +1,10 @@
 {
   "name": "tgg-repo-render-entrypoint",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "playwright install chromium",
     "start": "node worker.mjs"
   },
   "dependencies": {

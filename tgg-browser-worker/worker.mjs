@@ -4,12 +4,14 @@ import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
 import { authorizeBootstrap } from './bootstrap-guard.mjs';
 import { scheduleBootstrapLoop } from './bootstrap-runtime.mjs';
+import { extractClaimJob } from './claim-response.mjs';
+import { buildProtectedAudioCertificateResult } from './protected-audio-proof.mjs';
 
 const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvlpj.supabase.co';
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || 'sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv';
 const PORT = Number(process.env.PORT || 10000);
 const POLL_MS = Number(process.env.TGG_POLL_MS || 5000);
-const RUNTIME_VERSION = '1.2.2';
+const RUNTIME_VERSION = '1.2.3';
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 let workerId = process.env.TGG_WORKER_ID || '';
@@ -63,7 +65,10 @@ async function runProtectedAudio(job) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
   const captures = [];
-  const capture = async (type, payload) => { const body = Buffer.from(JSON.stringify({ type, at: new Date().toISOString(), ...payload }, null, 2)); captures.push({ type, sha256: sha256(body), artifact_uri: `tgg://browser-cert/${job.id}/${type}.json`, metadata: payload }); };
+  const capture = async (type, payload) => {
+    const body = Buffer.from(JSON.stringify({ type, at: new Date().toISOString(), ...payload }, null, 2));
+    captures.push({ type, sha256: sha256(body), artifact_uri: `tgg://browser-cert/${job.id}/${type}.json`, metadata: payload });
+  };
   const started = Date.now();
   try {
     const url = job.url || 'https://xsofowzvwetamhyuvlpj.supabase.co/functions/v1/tgg-audio-access?qa=protected_audio';
@@ -78,18 +83,43 @@ async function runProtectedAudio(job) {
     const textBefore = await page.locator('body').innerText().catch(()=> '');
     await capture('authenticated', { session_bootstrapped: Boolean(ownerSession?.access_token), body_excerpt: textBefore.slice(-1200) });
     const qaButton = page.getByRole('button', { name: /run protected audio qa/i });
-    if (await qaButton.count()) await qaButton.first().click();
-    const audio = page.locator('audio').first();
-    if (await audio.count()) { try { await audio.evaluate(a => a.play().catch(()=>{})); } catch {} }
-    await page.waitForTimeout(6000);
+    if (!(await qaButton.count())) throw new Error('PROTECTED_AUDIO_QA_BUTTON_MISSING');
+    await qaButton.first().click({ timeout: 15000 });
+    await page.waitForFunction(() => /PASS\s*·\s*Protected Audio browser QA recorded\./i.test(document.getElementById('status')?.textContent || ''), null, { timeout: 35000 });
+
     const bodyText = await page.locator('body').innerText();
+    const audio = page.locator('audio').first();
     const playbackStarted = await audio.count() ? await audio.evaluate(a => !a.paused && a.currentTime > 0).catch(()=>false) : false;
-    const passText = /protected audio browser qa recorded|browser evidence/i.test(bodyText);
-    await capture('protected_audio_result', { playback_started: playbackStarted, pass_text_observed: passText, body_excerpt: bodyText.slice(-4000) });
-    if (!playbackStarted && !passText) throw new Error('Protected audio playback/evidence did not complete in browser.');
-    await capture('browser_certificate_observation', { authenticated: Boolean(ownerSession?.access_token), rendered: true, playback_started: playbackStarted, pass_text_observed: passText, elapsed_ms: Date.now()-started });
-    return { browser: 'chromium', elapsed_ms: Date.now()-started, authenticated: Boolean(ownerSession?.access_token), rendered: true, playback_started: playbackStarted, pass_text_observed: passText, evidence_count: captures.length, captures };
-  } finally { await context.close(); await browser.close(); }
+    const screenshotBuffer = await page.screenshot({ fullPage: true, type: 'png' });
+    const html = await page.content();
+    const result = buildProtectedAudioCertificateResult({
+      job,
+      screenshotBuffer,
+      html,
+      bodyText,
+      playbackStarted,
+      elapsedMs: Date.now() - started
+    });
+
+    captures.push({
+      type: 'screenshot',
+      sha256: result.screenshot_sha256,
+      artifact_uri: `tgg://browser-cert/${job.id}/screenshot.png`,
+      metadata: { url: page.url(), bytes: screenshotBuffer.length, server_pass_observed: true }
+    });
+    captures.push({
+      type: 'page',
+      sha256: result.html_sha256,
+      artifact_uri: `tgg://browser-cert/${job.id}/page.html`,
+      metadata: { url: page.url(), bytes: Buffer.byteLength(html), title: await page.title(), server_pass_observed: true }
+    });
+    await capture('protected_audio_result', { playback_started: playbackStarted, pass_text_observed: true, body_excerpt: bodyText.slice(-4000) });
+    await capture('browser_certificate_observation', { authenticated: Boolean(ownerSession?.access_token), rendered: true, playback_started: playbackStarted, pass_text_observed: true, elapsed_ms: result.elapsed_ms, challenge_echo: result.challenge_echo });
+    return { ...result, authenticated: Boolean(ownerSession?.access_token), evidence_count: captures.length, captures };
+  } finally {
+    await context.close();
+    await browser.close();
+  }
 }
 
 async function loop() {
@@ -100,7 +130,7 @@ async function loop() {
     if (hb.error) throw hb.error;
     const claim = await rpc.rpc('tgg_browser_cert_worker_claim', { p_worker_id: workerId, p_token: workerToken, p_lease_seconds: 300 });
     if (claim.error) throw claim.error;
-    const job = Array.isArray(claim.data) ? claim.data[0] : claim.data;
+    const job = extractClaimJob(claim.data);
     if (!job?.id) { last = { status:'idle', updated_at:new Date().toISOString() }; return; }
     last = { status:'running', flow_key:job.flow_key, job_id:job.id, updated_at:new Date().toISOString() };
     if (job.flow_key !== 'protected_audio_runtime') { await complete(job,'blocked',{reason:'Unsupported flow_key for this worker.'},[]); return; }
@@ -113,8 +143,15 @@ async function loop() {
       await complete(job,'failed',failure,[{type:'browser_failure',sha256:sha256(JSON.stringify(failure)),artifact_uri:`tgg://browser-cert/${job.id}/failure.json`,metadata:failure}]);
       last = { status:'failed', flow_key:job.flow_key, job_id:job.id, error:e.message||String(e), updated_at:new Date().toISOString() };
     }
-  } catch (e) { last = { status:'worker_error', error:e.message||String(e), updated_at:new Date().toISOString() }; }
-  finally { running = false; }
+  } catch (e) {
+    last = { status:'worker_error', error:e.message||String(e), updated_at:new Date().toISOString() };
+  } finally {
+    running = false;
+  }
 }
 
-app.listen(PORT, () => { console.log(`TGG browser worker ${RUNTIME_VERSION} listening on ${PORT}`); setInterval(loop, POLL_MS); loop(); });
+app.listen(PORT, () => {
+  console.log(`TGG browser worker ${RUNTIME_VERSION} listening on ${PORT}`);
+  setInterval(loop, POLL_MS);
+  loop();
+});

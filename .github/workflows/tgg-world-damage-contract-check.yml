@@ -49,3 +49,5 @@ jobs:
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageComponentContract.py
       - name: Validate safe overlay application contract
         run: python game/unreal-fastlane/overlays/damage-v1/Tests/ApplyTGGDamageOverlayContract.py
+      - name: Validate candidate QA launcher contract
+        run: python game/unreal-fastlane/overlays/damage-v1/Tests/TGGDamageCandidateQAContract.py

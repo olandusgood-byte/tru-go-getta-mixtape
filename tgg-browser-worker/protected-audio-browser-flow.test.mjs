@@ -43,3 +43,18 @@ test('runs protected audio QA directly in browser context without page click han
   assert.equal(calls.length, 4);
   assert.ok(calls.some(c => c.url.includes('/rest/v1/rpc/tgg_browser_qa_protected_audio_candidate_v1')));
 });
+
+test('labels the network stage when browser fetch fails', async () => {
+  const status = { textContent:'' };
+  const documentObj = { getElementById: (id) => id === 'status' ? status : id === 'audio' ? {} : null };
+  const result = await protectedAudioBrowserFlow({
+    supabaseUrl:'https://xsofowzvwetamhyuvlpj.supabase.co',
+    apiKey:'publishable',
+    accessToken:'owner-token',
+    documentObj,
+    locationObj:{origin:'https://xsofowzvwetamhyuvlpj.supabase.co',pathname:'/functions/v1/tgg-audio-access',search:'?qa=protected_audio'},
+    fetchFn: async () => { throw new TypeError('Failed to fetch'); }
+  });
+  assert.equal(result.ok,false);
+  assert.match(result.error,/candidate_lookup: Failed to fetch/);
+});

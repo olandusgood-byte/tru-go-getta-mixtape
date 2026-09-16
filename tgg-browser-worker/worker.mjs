@@ -14,7 +14,7 @@ const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvl
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || 'sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv';
 const PORT = Number(process.env.PORT || 10000);
 const POLL_MS = Number(process.env.TGG_POLL_MS || 5000);
-const RUNTIME_VERSION = '1.2.9';
+const RUNTIME_VERSION = '1.2.11';
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 let workerId = process.env.TGG_WORKER_ID || '';
@@ -67,11 +67,7 @@ async function restoreBrowserOwnerSession(context) {
   if (!ownerSession?.access_token) throw new Error('OWNER_SESSION_RESTORE_INPUT_MISSING');
   const { data, error } = await rpc.auth.getUser(ownerSession.access_token);
   if (error || !data?.user || data.user.app_metadata?.tgg_role !== 'owner') throw new Error('OWNER_SESSION_ACCESS_TOKEN_INVALID');
-  const sessionPayload = buildStoredSupabaseSession({
-    accessToken: ownerSession.access_token,
-    refreshToken: ownerSession.refresh_token,
-    user: data.user
-  });
+  const sessionPayload = buildStoredSupabaseSession({ accessToken: ownerSession.access_token, refreshToken: ownerSession.refresh_token, user: data.user });
   if (!sessionPayload) throw new Error('OWNER_SESSION_RESTORE_FAILED');
   const ref = new URL(SUPABASE_URL).hostname.split('.')[0];
   const storageKey = `sb-${ref}-auth-token`;
@@ -89,35 +85,18 @@ async function navigateProtectedAudioQa(page, baseUrl, job) {
     const marker = String(headers['x-tgg-qa'] || '');
     const contentType = String(headers['content-type'] || '');
     let hydratedPlainText = false;
-
     if (/^text\/plain\b/i.test(contentType) && response) {
       const rawBody = await response.text().catch(() => '');
-      if (shouldHydratePlainTextQaResponse({ status, marker, contentType, body: rawBody })) {
-        await page.setContent(rawBody, { waitUntil: 'load', timeout: 45000 });
-        hydratedPlainText = true;
-      }
+      if (shouldHydratePlainTextQaResponse({ status, marker, contentType, body: rawBody })) { await page.setContent(rawBody, { waitUntil: 'load', timeout: 45000 }); hydratedPlainText = true; }
     }
-
     const runButton = page.locator('#run');
     const hasRunButton = (await runButton.count().catch(() => 0)) > 0;
     const assessment = assessProtectedAudioQaPage({ status, marker, hasRunButton });
     if (assessment.ok) return { runButton, navUrl, status, marker, contentType, hydratedPlainText };
-
-    lastDiagnostic = {
-      navigationAttempt,
-      status,
-      marker,
-      contentType,
-      hydratedPlainText,
-      title: await page.title().catch(() => ''),
-      url: page.url(),
-      reason: assessment.reason
-    };
+    lastDiagnostic = { navigationAttempt, status, marker, contentType, hydratedPlainText, title: await page.title().catch(() => ''), url: page.url(), reason: assessment.reason };
     if (navigationAttempt < 3) await page.waitForTimeout(750 * navigationAttempt);
   }
-
-  const diagnostic = lastDiagnostic || { reason: 'unknown_navigation_failure' };
-  throw new Error(`PROTECTED_AUDIO_QA_PAGE_INVALID:${JSON.stringify(diagnostic)}`);
+  throw new Error(`PROTECTED_AUDIO_QA_PAGE_INVALID:${JSON.stringify(lastDiagnostic || { reason: 'unknown_navigation_failure' })}`);
 }
 
 async function runProtectedAudio(job) {
@@ -125,60 +104,28 @@ async function runProtectedAudio(job) {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   const page = await context.newPage();
   const captures = [];
-  const capture = async (type, payload) => {
-    const body = Buffer.from(JSON.stringify({ type, at: new Date().toISOString(), ...payload }, null, 2));
-    captures.push({ type, sha256: sha256(body), artifact_uri: `tgg://browser-cert/${job.id}/${type}.json`, metadata: payload });
-  };
+  const capture = async (type, payload) => { const body = Buffer.from(JSON.stringify({ type, at: new Date().toISOString(), ...payload }, null, 2)); captures.push({ type, sha256: sha256(body), artifact_uri: `tgg://browser-cert/${job.id}/${type}.json`, metadata: payload }); };
   const started = Date.now();
   try {
     const url = job.url || 'https://xsofowzvwetamhyuvlpj.supabase.co/functions/v1/tgg-audio-access?qa=protected_audio';
     await restoreBrowserOwnerSession(context);
-
     const navigation = await navigateProtectedAudioQa(page, url, job);
     await capture('page_rendered', { url: page.url(), title: await page.title(), http_status: navigation.status, qa_marker: navigation.marker, content_type: navigation.contentType, hydrated_plain_text: navigation.hydratedPlainText });
-
     const textBefore = await page.locator('body').innerText().catch(()=> '');
     await capture('authenticated', { session_bootstrapped: true, body_excerpt: textBefore.slice(-1200) });
-
-    const qaRun = await page.evaluate(protectedAudioBrowserFlow, {
-      supabaseUrl: SUPABASE_URL,
-      apiKey: SUPABASE_KEY,
-      accessToken: ownerSession.access_token
-    });
+    const qaRun = await page.evaluate(protectedAudioBrowserFlow, { supabaseUrl: SUPABASE_URL, apiKey: SUPABASE_KEY, accessToken: ownerSession.access_token });
     if (!qaRun?.ok) throw new Error(`PROTECTED_AUDIO_QA_PAGE_FAILED:${String(qaRun?.statusText || qaRun?.error || 'Unknown browser QA failure').slice(0,1000)}`);
-
     const bodyText = await page.locator('body').innerText();
     const playbackStarted = qaRun.playbackStarted === true;
     const screenshotBuffer = await page.screenshot({ fullPage: true, type: 'png' });
     const html = await page.content();
-    const result = buildProtectedAudioCertificateResult({
-      job,
-      screenshotBuffer,
-      html,
-      bodyText,
-      playbackStarted,
-      elapsedMs: Date.now() - started
-    });
-
-    captures.push({
-      type: 'screenshot',
-      sha256: result.screenshot_sha256,
-      artifact_uri: `tgg://browser-cert/${job.id}/screenshot.png`,
-      metadata: { url: page.url(), bytes: screenshotBuffer.length, server_pass_observed: true }
-    });
-    captures.push({
-      type: 'page',
-      sha256: result.html_sha256,
-      artifact_uri: `tgg://browser-cert/${job.id}/page.html`,
-      metadata: { url: page.url(), bytes: Buffer.byteLength(html), title: await page.title(), server_pass_observed: true }
-    });
+    const result = buildProtectedAudioCertificateResult({ job, screenshotBuffer, html, bodyText, playbackStarted, elapsedMs: Date.now() - started });
+    captures.push({ type: 'screenshot', sha256: result.screenshot_sha256, artifact_uri: `tgg://browser-cert/${job.id}/screenshot.png`, metadata: { url: page.url(), bytes: screenshotBuffer.length, server_pass_observed: true } });
+    captures.push({ type: 'page', sha256: result.html_sha256, artifact_uri: `tgg://browser-cert/${job.id}/page.html`, metadata: { url: page.url(), bytes: Buffer.byteLength(html), title: await page.title(), server_pass_observed: true } });
     await capture('protected_audio_result', { playback_started: playbackStarted, pass_text_observed: true, body_excerpt: bodyText.slice(-4000), track_id: qaRun.trackId || null });
     await capture('browser_certificate_observation', { authenticated: true, rendered: true, playback_started: playbackStarted, pass_text_observed: true, elapsed_ms: result.elapsed_ms, challenge_echo: result.challenge_echo });
     return { ...result, authenticated: true, evidence_count: captures.length, captures };
-  } finally {
-    await context.close();
-    await browser.close();
-  }
+  } finally { await context.close(); await browser.close(); }
 }
 
 async function loop() {
@@ -202,11 +149,8 @@ async function loop() {
       await complete(job,'failed',failure,[{type:'browser_failure',sha256:sha256(JSON.stringify(failure)),artifact_uri:`tgg://browser-cert/${job.id}/failure.json`,metadata:failure}]);
       last = { status:'failed', flow_key:job.flow_key, job_id:job.id, error:e.message||String(e), updated_at:new Date().toISOString() };
     }
-  } catch (e) {
-    last = { status:'worker_error', error:e.message||String(e), updated_at:new Date().toISOString() };
-  } finally {
-    running = false;
-  }
+  } catch (e) { last = { status:'worker_error', error:e.message||String(e), updated_at:new Date().toISOString() }; }
+  finally { running = false; }
 }
 
 app.listen(PORT, () => {

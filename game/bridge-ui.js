@@ -1,7 +1,7 @@
 (() => {
   const $=id=>document.getElementById(id);
   const site='https://trugogettamixtapes.blogspot.com/';
-  const creator=site+'p/creator-dashboard.html';
+  const creator=site+'p/artist-dashboard_0633467215.html';
   const worldSyncStatus=()=>{
     const s=window.TGGWorldSync?.status?.()||{status:'offline_ready',connected:false,version:'1.6.0'};
     const text=s.connected?`CONNECTED • ${s.status.toUpperCase()} • v${s.version}`:`LOCAL READY • v${s.version} • transport not connected`;

@@ -1,6 +1,6 @@
-# TRU GO GETTA Game V1.11
+# TRU GO GETTA Game V1.12
 
-The game now has a credential-free, explicit bridge into TGG World player state, career, virtual economy, inventory/equipment, social/crew discovery, and mission/story discovery.
+This checkpoint extends the credential-free TGG World adapter through property and vehicle discovery while keeping ownership, travel, spawn and upgrade mutations out of the game bundle.
 
 ## Verified layers
 
@@ -12,43 +12,55 @@ The game now has a credential-free, explicit bridge into TGG World player state,
 - V1.9: Inventory + Equipment
 - V1.10: Social + Crew
 - V1.11: Mission + Story Discovery
+- V1.12: Property + Vehicle Discovery
 
-## V1.11 Mission + Story Discovery
+## V1.12 Property + Vehicle Discovery
 
-`window.TGGWorldSync` adds read/discovery methods:
+`window.TGGWorldSync` adds:
 
-- `creativeMissions()` → creative mission discovery.
-- `npcEncounters()` → NPC encounter state.
-- `storyControl()` → current story/control state.
-- `memoryHistory()` → world memory/history state.
-- `locationBundle(locationKey)` → validated location detail read.
-- `missionStoryBundle()` → combined mission/story discovery packet.
+- `propertyMarket()` — property-market discovery read.
+- `propertyUpgrades()` — available property-upgrade catalog read.
+- `vehicleProgression()` — vehicle progression/catalog state.
+- `vehicleBundle(vehicleId)` — validated vehicle UUID detail read.
+- `worldAssetsBundle()` — combined property/upgrades/vehicle discovery packet.
 
-V1.11 deliberately does not expose mission accept/complete, story start/claim, location join, reward claim, or mission-evidence mutation RPCs.
+Vehicle detail is backed by an existing TGG World contract that explicitly reports `real_money:false`.
+
+## Explicit exclusions
+
+V1.12 does not expose:
+
+- property buy/list/cancel;
+- property upgrade install/buy;
+- fast travel / travel-to;
+- vehicle spawn/join/drive;
+- vehicle tune/music mutation;
+- party travel.
 
 ## Safety model
 
 - No automatic network calls or timers.
 - Trusted transport injection only.
-- No purchase or social mutation bridge.
-- No mission/story progression mutation bridge.
+- No ownership/travel mutation surface.
+- No purchase bridge.
+- No mission/social mutation bridge.
 - No local save overwrite from remote state.
 - No service-role/provider secrets.
-- Existing local gameplay remains playable offline.
 
 ## Current checkpoint
 
 - [x] Character Identity
 - [x] World Sync Foundation
-- [x] Player State Bridge
-- [x] Career + Economy Bridge
-- [x] Inventory + Equipment Bridge
-- [x] Social + Crew Bridge
-- [x] Mission + Story Discovery code
-- [x] V1.11 static code gate
+- [x] Player State
+- [x] Career + Economy
+- [x] Inventory + Equipment
+- [x] Social + Crew
+- [x] Mission + Story
+- [x] Property + Vehicle discovery code
+- [ ] V1.12 static code gate
 - [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.11-MISSION-STORY-DISCOVERY-STATIC-PASSED.** The next safe internal candidate is property/vehicle/world-travel discovery mapping.
+**V1.12-PROPERTY-VEHICLE-DISCOVERY-CODE-COMPLETE.** The next safe internal candidate is progression/achievement/business discovery mapping.

@@ -46,10 +46,10 @@ V1.10 intentionally exposes **no** create/join/post/react/invite mutation method
 - [x] Crew discovery bridge
 - [x] Contact offers bridge
 - [x] Social mutations excluded
-- [ ] V1.10 static code gate
+- [x] V1.10 static code gate
 - [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.10-SOCIAL-CREW-BRIDGE-CODE-COMPLETE.** The next safe internal candidate is mission/story/world-discovery state mapping through existing authenticated read contracts.
+**V1.10-SOCIAL-CREW-BRIDGE-STATIC-PASSED.** The next safe internal candidate is mission/story/world-discovery state mapping through existing authenticated read contracts.

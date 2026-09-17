@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.11 Mission + Story Discovery",
-  "base": "V1.10 Social + Crew Bridge",
+  "release": "V1.12 Property + Vehicle Discovery",
+  "base": "V1.11 Mission + Story Discovery",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -34,7 +34,11 @@
     "V1.11-NPC-ENCOUNTERS",
     "V1.11-STORY-CONTROL",
     "V1.11-MEMORY-HISTORY",
-    "V1.11-LOCATION-BUNDLE"
+    "V1.11-LOCATION-BUNDLE",
+    "V1.12-PROPERTY-MARKET-READ",
+    "V1.12-PROPERTY-UPGRADES-READ",
+    "V1.12-VEHICLE-PROGRESSION-READ",
+    "V1.12-VEHICLE-BUNDLE-READ"
   ],
   "gates": [
     "runtime_api_presence",
@@ -87,10 +91,15 @@
     "world_story_control",
     "world_memory_history",
     "world_location_bundle",
-    "no_mission_story_mutations"
+    "no_mission_story_mutations",
+    "world_property_market",
+    "world_property_upgrades",
+    "world_vehicle_progression",
+    "world_vehicle_bundle",
+    "no_property_vehicle_mutations"
   ],
-  "static_gate": "passed_code_only",
+  "static_gate": "pending_reverify",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.11-MISSION-STORY-DISCOVERY-STATIC-PASSED",
+  "release_checkpoint": "V1.12-PROPERTY-VEHICLE-DISCOVERY-CODE-COMPLETE",
   "production": "gated"
 }

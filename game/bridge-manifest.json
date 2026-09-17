@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.8",
-  "module": "GAME-BRIDGE-V1.8",
-  "name": "Creator OS + Career/Economy Bridge",
+  "version": "1.9",
+  "module": "GAME-BRIDGE-V1.9",
+  "name": "Creator OS + Inventory/Equipment Bridge",
   "principles": [
     "separate game runtime from Blogger theme",
     "external launch points only",
@@ -40,7 +40,8 @@
       "tgg_world_career_tracks",
       "tgg_world_v12_career_industry_bundle",
       "tgg_world_economy_bundle",
-      "tgg_world_wallet_reconcile"
+      "tgg_world_wallet_reconcile",
+      "tgg_world_inventory_equip"
     ]
   },
   "workflow": [
@@ -51,5 +52,5 @@
     "CHECKPOINT",
     "ADVANCE"
   ],
-  "next": "V1.9 INVENTORY + EQUIPMENT BRIDGE"
+  "next": "V1.10 SOCIAL + CREW BRIDGE"
 }

@@ -1,6 +1,6 @@
-# TRU GO GETTA Game V1.9
+# TRU GO GETTA Game V1.10
 
-The game now bridges local gameplay into the existing TGG World player, career, economy, inventory, and equipment contracts without embedding credentials or introducing automatic network traffic.
+The game now bridges local gameplay into the existing TGG World player, career, economy, inventory, equipment, social discovery, crew discovery, and contact-offer contracts without embedding credentials or running background network activity.
 
 ## Verified layers
 
@@ -10,26 +10,30 @@ The game now bridges local gameplay into the existing TGG World player, career, 
 - V1.7: Online Player State Bridge
 - V1.8: Career + Economy Bridge
 - V1.9: Inventory + Equipment Bridge
+- V1.10: Social + Crew Bridge
 
-## V1.9 Inventory + Equipment Bridge
+## V1.10 Social + Crew Bridge
 
-`window.TGGWorldSync` adds:
+`window.TGGWorldSync` adds read/discovery methods:
 
-- `remoteInventory()` — reads the remote TGG World inventory + catalog from the virtual economy bundle.
-- `equipRemoteItem(itemKey)` — explicit authenticated mapping to `tgg_world_inventory_equip`.
-- Strict item-key validation before any transport call.
+- `socialBundle()` — social hub, lobby, engagement, and event discovery.
+- `crewActivity()` — crew activity feed.
+- `crewRides()` — crew ride/discovery state.
+- `crewBundle(crewId)` — validated UUID read of crew/member/activity state.
+- `contactOffers()` — industry/contact offer bundle.
 
-V1.9 intentionally does **not** expose `tgg_world_purchase` through the game adapter.
+V1.10 intentionally exposes **no** create/join/post/react/invite mutation methods.
 
 ## Safety model
 
-- No service-role or provider secrets.
-- No automatic network calls or timers.
-- No automatic purchase path.
-- Remote inventory does not overwrite local `tgg-inventory-v1`.
-- Remote wallet does not overwrite local game cash.
-- Economy bridge remains virtual-currency-only.
 - Trusted transport injection only.
+- No automatic network calls or timers.
+- No social mutation surface.
+- No purchase bridge.
+- No local inventory/cash overwrite.
+- No service-role/provider secrets.
+- Crew detail requires a validated UUID.
+- Existing game save keys remain unchanged.
 
 ## Current checkpoint
 
@@ -37,13 +41,15 @@ V1.9 intentionally does **not** expose `tgg_world_purchase` through the game ada
 - [x] World Sync Foundation
 - [x] Online Player State
 - [x] Career + Economy Bridge
-- [x] Remote Inventory Read
-- [x] Explicit Equipment Mapping
-- [x] Purchase path excluded
-- [x] V1.9 static code gate
+- [x] Inventory + Equipment Bridge
+- [x] Social discovery bridge
+- [x] Crew discovery bridge
+- [x] Contact offers bridge
+- [x] Social mutations excluded
+- [ ] V1.10 static code gate
 - [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.9-INVENTORY-EQUIPMENT-BRIDGE-STATIC-PASSED.** The next safe candidate is social/crew/event state mapping over existing authenticated read contracts.
+**V1.10-SOCIAL-CREW-BRIDGE-CODE-COMPLETE.** The next safe internal candidate is mission/story/world-discovery state mapping through existing authenticated read contracts.

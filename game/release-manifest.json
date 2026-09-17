@@ -81,12 +81,16 @@
   "static_gate": "passed",
   "browser_smoke": "passed",
   "release_checkpoint": "V1.10-SOCIAL-CREW-BRIDGE-CODE-COMPLETE",
-  "production": "rc_verified",
+  "production": "live_verified",
   "verification": {
     "static_gate_run_id": 35286272257,
     "browser_smoke_run_id": 35286400222,
     "rc_commit": "9456fc2be7e1cd906650a7754fcf9b7613b2b2c9",
     "rc_url": "https://tru-go-getta-world-v110-rc.onrender.com",
-    "verified_at": "2026-09-17T23:21:31Z"
+    "verified_at": "2026-09-17T23:21:31Z",
+    "live_url": "https://tru-go-getta-world.onrender.com",
+    "live_service_id": "srv-dam7cbgu01pc73ekagl0",
+    "live_deploy_id": "dep-dam7cbou01pc73ekahl0",
+    "live_verified_at": "2026-09-17T23:22:42Z"
   }
 }

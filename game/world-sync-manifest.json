@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.11",
-  "module": "V1.11-MISSION-STORY-DISCOVERY",
+  "version": "1.12",
+  "module": "V1.12-PROPERTY-VEHICLE-DISCOVERY",
   "localApi": "window.TGGWorldSync",
   "mode": "offline_ready",
   "automaticNetworkCalls": false,
@@ -33,7 +33,11 @@
     "tgg_world_npc_encounters",
     "tgg_world_story_control",
     "tgg_world_memory_history",
-    "tgg_world_location_bundle"
+    "tgg_world_location_bundle",
+    "tgg_world_property_market",
+    "tgg_world_property_upgrades",
+    "tgg_world_vehicle_progression",
+    "tgg_world_vehicle_bundle"
   ],
   "forbiddenBundleSecrets": [
     "service_role",
@@ -41,7 +45,7 @@
     "sk_live_",
     "refresh_token"
   ],
-  "next": "V1.12 PROPERTY + VEHICLE DISCOVERY",
+  "next": "V1.13 PROGRESSION + BUSINESS DISCOVERY",
   "excludedRpcs": [
     "tgg_world_purchase",
     "tgg_world_crew_create",
@@ -58,6 +62,19 @@
     "tgg_world_join_location",
     "tgg_world_join_location_at",
     "tgg_world_v4_record_mission_evidence",
-    "tgg_world_v4_verify_and_complete_mission"
+    "tgg_world_v4_verify_and_complete_mission",
+    "tgg_world_buy_property",
+    "tgg_world_property_market_buy",
+    "tgg_world_property_market_list",
+    "tgg_world_property_market_cancel",
+    "tgg_world_install_property_upgrade",
+    "tgg_world_fast_travel",
+    "tgg_world_v3_travel_to",
+    "tgg_world_vehicle_spawn",
+    "tgg_world_vehicle_join",
+    "tgg_world_vehicle_drive_session",
+    "tgg_world_vehicle_install_tune",
+    "tgg_world_vehicle_music",
+    "tgg_world_party_travel"
   ]
 }

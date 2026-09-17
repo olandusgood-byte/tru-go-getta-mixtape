@@ -64,13 +64,16 @@ jobs:
           const html=fs.readFileSync('game/index.html','utf8');
           const manifest=JSON.parse(fs.readFileSync('game/release-manifest.json','utf8'));
           if(!html.includes('<script src="world-sync.js"></script>')) throw new Error('world-sync.js is not loaded');
-          for(const token of ['window.TGGWorldSync','snapshot','setTransport','syncAvatar','positionPayload','heartbeat','presenceBundle','nextMoves','offline_ready','tgg_world_v11_save_avatar','tgg_world_presence_heartbeat_full','careerBundle','economyBundle','walletReconcile','readRemoteState','tgg_world_economy_bundle','tgg_world_wallet_reconcile','remoteInventory','equipRemoteItem','tgg_world_inventory_equip']){
+          for(const token of ['window.TGGWorldSync','snapshot','setTransport','syncAvatar','positionPayload','heartbeat','presenceBundle','nextMoves','offline_ready','tgg_world_v11_save_avatar','tgg_world_presence_heartbeat_full','careerBundle','economyBundle','walletReconcile','readRemoteState','tgg_world_economy_bundle','tgg_world_wallet_reconcile','remoteInventory','equipRemoteItem','tgg_world_inventory_equip','socialBundle','crewActivity','crewRides','crewBundle','contactOffers','tgg_world_social_hub','tgg_world_crew_bundle']){
             if(!sync.includes(token)) throw new Error('missing world sync contract token: '+token);
           }
           for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
             if(sync.includes(forbidden)) throw new Error('forbidden secret marker in game bundle: '+forbidden);
           }
-          if(!String(manifest.release||'').startsWith('V1.9')) throw new Error('release manifest is not V1.9');
+          if(!String(manifest.release||'').startsWith('V1.10')) throw new Error('release manifest is not V1.10');
           if(sync.includes("rpc('tgg_world_purchase'")) throw new Error('tgg_world_purchase must remain excluded from the game adapter');
-          console.log('V1.9 world sync contract verified.');
+          for(const forbiddenRpc of ['tgg_world_crew_create','tgg_world_crew_join','tgg_world_social_post','tgg_world_social_comment','tgg_world_social_react','tgg_world_party_create','tgg_world_party_invite']){
+            if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('social mutation RPC must remain excluded: '+forbiddenRpc);
+          }
+          console.log('V1.10 world sync contract verified.');
           NODE

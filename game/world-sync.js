@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='1.9.0';
+  const VERSION='1.10.0';
   let transport=null;
   let last={status:'offline_ready',syncedAt:null,error:null};
 
@@ -193,6 +193,37 @@
     return rpc('tgg_world_inventory_equip',{p_item_key:key});
   }
 
+  async function socialBundle(){
+    if(!transport)return {ok:false,status:'offline_ready'};
+    const hub=await rpc('tgg_world_social_hub',{});
+    if(!hub.ok)return {ok:false,status:'error',hub};
+    const lobby=await rpc('tgg_world_social_lobby_bundle',{});
+    if(!lobby.ok)return {ok:false,status:'error',hub,lobby};
+    const engagement=await rpc('tgg_world_social_engagement',{});
+    if(!engagement.ok)return {ok:false,status:'error',hub,lobby,engagement};
+    const events=await rpc('tgg_world_discover_events',{});
+    if(!events.ok)return {ok:false,status:'error',hub,lobby,engagement,events};
+    return {ok:true,status:'ready',hub:hub.data,lobby:lobby.data,engagement:engagement.data,events:events.data};
+  }
+
+  async function crewActivity(){
+    return rpc('tgg_world_crew_activity',{});
+  }
+
+  async function crewRides(){
+    return rpc('tgg_world_crew_rides',{});
+  }
+
+  async function crewBundle(crewId){
+    const id=String(crewId||'').trim();
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))return {ok:false,status:'invalid_crew_id'};
+    return rpc('tgg_world_crew_bundle',{p_crew_id:id});
+  }
+
+  async function contactOffers(){
+    return rpc('tgg_world_v12_contact_offers_bundle',{});
+  }
+
   async function sync(){
     if(!transport)return {ok:false,status:'offline_ready',snapshot:snapshot()};
     const boot=await bootstrap();
@@ -209,5 +240,5 @@
     return {...last,connected:typeof transport==='function',version:VERSION};
   }
 
-  window.TGGWorldSync={version:VERSION,snapshot,avatarProfile,positionPayload,setTransport,bootstrap,syncAvatar,heartbeat,presenceBundle,nextMoves,careerBundle,economyBundle,walletReconcile,readRemoteState,remoteInventory,equipRemoteItem,sync,status};
+  window.TGGWorldSync={version:VERSION,snapshot,avatarProfile,positionPayload,setTransport,bootstrap,syncAvatar,heartbeat,presenceBundle,nextMoves,careerBundle,economyBundle,walletReconcile,readRemoteState,remoteInventory,equipRemoteItem,socialBundle,crewActivity,crewRides,crewBundle,contactOffers,sync,status};
 })();

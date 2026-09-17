@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.12",
-  "module": "GAME-V1.12",
-  "name": "Property + Vehicle Discovery Checkpoint",
+  "version": "1.13",
+  "module": "GAME-V1.13",
+  "name": "Progression + Business Discovery Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -18,9 +18,14 @@
     "vehicle_progression_read": true,
     "vehicle_bundle_read": true,
     "no_property_vehicle_mutations": true,
-    "credential_free_bundle": true
+    "credential_free_bundle": true,
+    "progression_api": true,
+    "business_api": true,
+    "business_catalog": true,
+    "business_discovery_persistence": true,
+    "business_screen": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.13 PROGRESSION + BUSINESS DISCOVERY"
+  "next": "V1.14 LIVE CITY ACTIVITIES + VEHICLE/PROPERTY GAMEPLAY"
 }

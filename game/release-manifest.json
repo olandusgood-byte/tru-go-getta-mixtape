@@ -48,8 +48,8 @@
     "release_qa",
     "static_gate"
   ],
-  "static_gate": "pending_reverify",
+  "static_gate": "passed_code_only",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.6-WORLD-SYNC-FOUNDATION-CODE-COMPLETE",
+  "release_checkpoint": "V1.6-WORLD-SYNC-FOUNDATION-STATIC-PASSED",
   "production": "gated"
 }

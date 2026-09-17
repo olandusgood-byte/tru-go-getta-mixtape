@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.11",
-  "module": "GAME-BRIDGE-V1.11",
-  "name": "Creator OS + Mission/Story Discovery Bridge",
+  "version": "1.12",
+  "module": "GAME-BRIDGE-V1.12",
+  "name": "Creator OS + Property/Vehicle Discovery Bridge",
   "principles": [
     "separate game runtime from Blogger theme",
     "external launch points only",
@@ -54,7 +54,11 @@
       "tgg_world_npc_encounters",
       "tgg_world_story_control",
       "tgg_world_memory_history",
-      "tgg_world_location_bundle"
+      "tgg_world_location_bundle",
+      "tgg_world_property_market",
+      "tgg_world_property_upgrades",
+      "tgg_world_vehicle_progression",
+      "tgg_world_vehicle_bundle"
     ]
   },
   "workflow": [
@@ -65,5 +69,5 @@
     "CHECKPOINT",
     "ADVANCE"
   ],
-  "next": "V1.12 PROPERTY + VEHICLE DISCOVERY"
+  "next": "V1.13 PROGRESSION + BUSINESS DISCOVERY"
 }

@@ -27,5 +27,5 @@
     fig?.addEventListener('pointerup',()=>down=false);fig?.addEventListener('pointercancel',()=>down=false);
   }
   function rotate(d){const f=$('avatarFigure');if(!f)return;let r=Number(f.dataset.rot||0)+d;f.dataset.rot=r;f.style.setProperty('--rot',r+'deg');f.style.setProperty('--spin',r+'deg');}
-  load();window.TGGAvatar={get:()=>avatar,open:()=>window.TGGGame?.show('avatar'),renderMini,renderPreview};bind();renderPreview();
+  load();window.TGGAvatar={get:()=>({...avatar}),set,save,load,open:()=>window.TGGGame?.show('avatar'),renderMini,renderPreview};bind();renderPreview();renderMini();
 })();

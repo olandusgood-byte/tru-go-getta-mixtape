@@ -1,6 +1,6 @@
-# TRU GO GETTA Game V1.6
+# TRU GO GETTA Game V1.7
 
-Browser-based TRU GO GETTA game with city progression, career and achievements, persistent inventory, inventory-aware missions/events, crews, economy bonuses, mission chains, district unlocks, expansion activities, save repair, character creation, and a credential-free World Sync foundation for Creator OS/Supabase integration.
+Browser-based TRU GO GETTA game with city progression, career and achievements, persistent inventory, inventory-aware missions/events, crews, economy bonuses, mission chains, district unlocks, expansion activities, save repair, character creation, and an injected World/Creator OS transport bridge.
 
 ## Playable loop
 
@@ -13,59 +13,47 @@ CREATE PLAYER → CUSTOMIZE CHARACTER → ENTER CITY → MOVE → TAKE JOBS → 
 - V1.2 city progression: mission chains, district unlocks, save validation/repair, integrity gate
 - V1.3 City Life: city events, crews, normalized economy bonuses, persistent inventory, expansion activities
 - V1.4 Inventory Gameplay: mission/event item requirements, missing-item blocks, successful-consumption rules
-- V1.5 Character Identity: persistent avatar, wardrobe, hair, accent palette, 360-degree preview controls, mini city avatar
-- V1.6 World Sync Foundation: local sync packet, avatar/profile mapping, injected RPC transport contract, offline-ready default
-- Creator/website bridge and release/runtime QA
+- V1.5 Character Identity: persistent avatar, wardrobe, hair, accent palette, 360-degree preview controls
+- V1.6 World Sync Foundation: local sync packet, avatar/profile mapping, injected RPC transport, offline-ready default
+- V1.7 Online Player State Bridge: position/rotation/activity payload, authenticated presence heartbeat mapping, presence bundle, next-moves bridge
 
-## V1.6 World Sync Foundation
+## V1.7 Online Player State Bridge
 
-`window.TGGWorldSync` is an additive adapter. It does not change existing save keys and it performs **no automatic network calls**.
+`window.TGGWorldSync` remains explicit-only and credential-free.
 
-It provides:
+New V1.7 methods:
 
-- `snapshot()` — builds a normalized local player/avatar/career/inventory/crew/events packet.
-- `avatarProfile()` — maps the local V1.5 avatar into the existing TGG World avatar profile contract.
-- `setTransport(fn)` — injects a trusted RPC transport from Creator OS or another host.
-- `bootstrap()` — maps to existing backend bootstrap RPCs.
-- `syncAvatar()` — maps to `tgg_world_v11_save_avatar`.
-- `sync()` — runs the additive bootstrap + avatar sync sequence.
-- `status()` — reports `offline_ready`, `transport_ready`, `bootstrapped`, `synced`, or `error`.
+- `positionPayload()` — maps local city X/Y + heading + current screen/activity into a backend-ready presence payload.
+- `heartbeat()` — maps to `tgg_world_presence_heartbeat_full`.
+- `presenceBundle()` — maps to `tgg_world_v11_6_presence_bundle`.
+- `nextMoves()` — maps to `tgg_world_next_moves`.
+- `sync()` — now performs bootstrap → avatar sync → presence heartbeat when a trusted transport is injected.
 
-The game bundle stores no service-role key, provider secret, refresh token, or hardcoded authenticated credential.
+There are still **no timers, no background polling, no automatic network calls, and no embedded credentials**.
 
 ## Automatic Builder loop
 
 BUILD → TEST → REPAIR → VERIFY → CHECKPOINT → ADVANCE
 
-Normal game updates use code/static validation only. Browser smoke remains manual-only and is not part of automatic update execution.
+Normal game updates use code/static validation only. Browser smoke remains manual-only.
 
 ## Current checkpoint
 
-- [x] Main menu and player creation
-- [x] Keyboard + mobile movement
-- [x] Missions, cash, XP and levels
-- [x] Save/load + save repair
-- [x] Career system + career/progression sync
-- [x] Progression achievements
-- [x] Mission chains + district progression
-- [x] Expansion activities
-- [x] City events
-- [x] Crew recruitment + bonuses
-- [x] Normalized economy rewards
-- [x] Persistent inventory
-- [x] Inventory-aware missions/events
-- [x] Persistent Character Creator
-- [x] Hair + wardrobe + accent customization
-- [x] Avatar save repair + release QA coverage
+- [x] Core game loop
+- [x] Career/progression
+- [x] City jobs/events/crew/economy
+- [x] Persistent inventory + inventory gameplay
+- [x] Character Creator + avatar persistence
 - [x] World Sync local packet
-- [x] World Sync injected transport contract
-- [x] Existing backend RPC mapping
-- [x] Website/Creator bridge
-- [x] Runtime QA + release QA
-- [x] V1.6 static code gate
+- [x] Trusted transport injection contract
+- [x] Avatar backend RPC mapping
+- [x] Presence position/rotation/activity mapping
+- [x] Presence heartbeat backend RPC mapping
+- [x] Presence bundle + next-moves mapping
+- [ ] Re-run static code gate on V1.7
 - [ ] Connect trusted Creator OS transport
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.6-WORLD-SYNC-FOUNDATION-STATIC-PASSED.** V1.6 is additive over the verified V1.5 checkpoint. The code-only gate is green; production remains gated until a trusted Creator OS transport is connected.
+**V1.7-ONLINE-PLAYER-STATE-BRIDGE-CODE-COMPLETE.** Production remains gated; the next safe internal layer is authenticated career/economy state mapping over the same injected transport.

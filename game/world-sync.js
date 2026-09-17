@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='1.10.0';
+  const VERSION='1.11.0';
   let transport=null;
   let last={status:'offline_ready',syncedAt:null,error:null};
 
@@ -224,6 +224,41 @@
     return rpc('tgg_world_v12_contact_offers_bundle',{});
   }
 
+  async function creativeMissions(){
+    return rpc('tgg_world_creative_missions',{});
+  }
+
+  async function npcEncounters(){
+    return rpc('tgg_world_npc_encounters',{});
+  }
+
+  async function storyControl(){
+    return rpc('tgg_world_story_control',{});
+  }
+
+  async function memoryHistory(){
+    return rpc('tgg_world_memory_history',{});
+  }
+
+  async function locationBundle(locationKey){
+    const key=String(locationKey||'').trim();
+    if(!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(key))return {ok:false,status:'invalid_location_key'};
+    return rpc('tgg_world_location_bundle',{p_location_key:key});
+  }
+
+  async function missionStoryBundle(){
+    if(!transport)return {ok:false,status:'offline_ready'};
+    const missions=await creativeMissions();
+    if(!missions.ok)return {ok:false,status:'error',missions};
+    const encounters=await npcEncounters();
+    if(!encounters.ok)return {ok:false,status:'error',missions,encounters};
+    const story=await storyControl();
+    if(!story.ok)return {ok:false,status:'error',missions,encounters,story};
+    const memory=await memoryHistory();
+    if(!memory.ok)return {ok:false,status:'error',missions,encounters,story,memory};
+    return {ok:true,status:'ready',missions:missions.data,encounters:encounters.data,story:story.data,memory:memory.data};
+  }
+
   async function sync(){
     if(!transport)return {ok:false,status:'offline_ready',snapshot:snapshot()};
     const boot=await bootstrap();
@@ -240,5 +275,5 @@
     return {...last,connected:typeof transport==='function',version:VERSION};
   }
 
-  window.TGGWorldSync={version:VERSION,snapshot,avatarProfile,positionPayload,setTransport,bootstrap,syncAvatar,heartbeat,presenceBundle,nextMoves,careerBundle,economyBundle,walletReconcile,readRemoteState,remoteInventory,equipRemoteItem,socialBundle,crewActivity,crewRides,crewBundle,contactOffers,sync,status};
+  window.TGGWorldSync={version:VERSION,snapshot,avatarProfile,positionPayload,setTransport,bootstrap,syncAvatar,heartbeat,presenceBundle,nextMoves,careerBundle,economyBundle,walletReconcile,readRemoteState,remoteInventory,equipRemoteItem,socialBundle,crewActivity,crewRides,crewBundle,contactOffers,creativeMissions,npcEncounters,storyControl,memoryHistory,locationBundle,missionStoryBundle,sync,status};
 })();

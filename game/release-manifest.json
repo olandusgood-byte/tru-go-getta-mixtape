@@ -98,8 +98,8 @@
     "world_vehicle_bundle",
     "no_property_vehicle_mutations"
   ],
-  "static_gate": "pending_reverify",
+  "static_gate": "passed_code_only",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.12-PROPERTY-VEHICLE-DISCOVERY-CODE-COMPLETE",
+  "release_checkpoint": "V1.12-PROPERTY-VEHICLE-DISCOVERY-STATIC-PASSED",
   "production": "gated"
 }

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.10 Social + Crew Bridge",
-  "base": "V1.9 Inventory + Equipment Bridge",
+  "release": "V1.11 Mission + Story Discovery",
+  "base": "V1.10 Social + Crew Bridge",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -29,7 +29,12 @@
     "V1.9-EQUIPMENT-BRIDGE",
     "V1.10-SOCIAL-DISCOVERY",
     "V1.10-CREW-DISCOVERY",
-    "V1.10-CONTACT-OFFERS"
+    "V1.10-CONTACT-OFFERS",
+    "V1.11-CREATIVE-MISSIONS",
+    "V1.11-NPC-ENCOUNTERS",
+    "V1.11-STORY-CONTROL",
+    "V1.11-MEMORY-HISTORY",
+    "V1.11-LOCATION-BUNDLE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -76,10 +81,16 @@
     "world_crew_rides",
     "world_crew_bundle",
     "world_contact_offers",
-    "no_social_mutations"
+    "no_social_mutations",
+    "world_creative_missions",
+    "world_npc_encounters",
+    "world_story_control",
+    "world_memory_history",
+    "world_location_bundle",
+    "no_mission_story_mutations"
   ],
-  "static_gate": "passed_code_only",
+  "static_gate": "pending_reverify",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.10-SOCIAL-CREW-BRIDGE-STATIC-PASSED",
+  "release_checkpoint": "V1.11-MISSION-STORY-DISCOVERY-CODE-COMPLETE",
   "production": "gated"
 }

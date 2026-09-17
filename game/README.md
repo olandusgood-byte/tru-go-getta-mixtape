@@ -57,10 +57,10 @@ V1.12 does not expose:
 - [x] Social + Crew
 - [x] Mission + Story
 - [x] Property + Vehicle discovery code
-- [ ] V1.12 static code gate
+- [x] V1.12 static code gate
 - [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.12-PROPERTY-VEHICLE-DISCOVERY-CODE-COMPLETE.** The next safe internal candidate is progression/achievement/business discovery mapping.
+**V1.12-PROPERTY-VEHICLE-DISCOVERY-STATIC-PASSED.** The next safe internal candidate is progression/achievement/business discovery mapping.

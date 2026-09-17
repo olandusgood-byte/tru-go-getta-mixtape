@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.8",
-  "module": "V1.8-CAREER-ECONOMY-BRIDGE",
+  "version": "1.9",
+  "module": "V1.9-INVENTORY-EQUIPMENT-BRIDGE",
   "localApi": "window.TGGWorldSync",
   "mode": "offline_ready",
   "automaticNetworkCalls": false,
@@ -19,7 +19,8 @@
     "tgg_world_career_tracks",
     "tgg_world_v12_career_industry_bundle",
     "tgg_world_economy_bundle",
-    "tgg_world_wallet_reconcile"
+    "tgg_world_wallet_reconcile",
+    "tgg_world_inventory_equip"
   ],
   "forbiddenBundleSecrets": [
     "service_role",
@@ -27,5 +28,8 @@
     "sk_live_",
     "refresh_token"
   ],
-  "next": "V1.9 INVENTORY + EQUIPMENT BRIDGE"
+  "next": "V1.10 SOCIAL + CREW BRIDGE",
+  "excludedRpcs": [
+    "tgg_world_purchase"
+  ]
 }

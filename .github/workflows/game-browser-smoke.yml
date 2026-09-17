@@ -2,10 +2,6 @@ name: Game Browser Smoke
 
 on:
   workflow_dispatch:
-  push:
-    branches: [release/game-v1.11-rc]
-    paths:
-      - '.github/workflows/game-browser-smoke.yml'
 jobs:
   browser-smoke:
     runs-on: ubuntu-latest

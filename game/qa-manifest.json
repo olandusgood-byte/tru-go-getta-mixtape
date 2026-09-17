@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.8",
-  "module": "GAME-V1.8-QA",
-  "name": "Career + Economy Bridge + Regression QA",
+  "version": "1.9",
+  "module": "GAME-V1.9-QA",
+  "name": "Inventory + Equipment Bridge + Regression QA",
   "checks": [
     "storage",
     "game_api",
@@ -26,7 +26,10 @@
     "world_economy_bundle",
     "world_wallet_reconcile",
     "world_remote_state_read",
-    "virtual_currency_only"
+    "virtual_currency_only",
+    "world_remote_inventory",
+    "world_inventory_equip",
+    "no_purchase_bridge"
   ],
   "workflow": [
     "BUILD",
@@ -39,5 +42,5 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "manual_only",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.9 INVENTORY + EQUIPMENT BRIDGE"
+  "next": "V1.10 SOCIAL + CREW BRIDGE"
 }

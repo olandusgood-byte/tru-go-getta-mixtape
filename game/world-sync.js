@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='1.7.0';
+  const VERSION='1.8.0';
   let transport=null;
   let last={status:'offline_ready',syncedAt:null,error:null};
 
@@ -135,6 +135,43 @@
     return rpc('tgg_world_next_moves',{});
   }
 
+  async function careerBundle(){
+    if(!transport)return {ok:false,status:'offline_ready'};
+    const climb=await rpc('tgg_world_career_climb',{});
+    if(!climb.ok)return {ok:false,status:'error',climb};
+    const tracks=await rpc('tgg_world_career_tracks',{});
+    if(!tracks.ok)return {ok:false,status:'error',climb,tracks};
+    const industry=await rpc('tgg_world_v12_career_industry_bundle',{});
+    if(!industry.ok)return {ok:false,status:'error',climb,tracks,industry};
+    return {ok:true,status:'ready',climb:climb.data,tracks:tracks.data,industry:industry.data};
+  }
+
+  async function economyBundle(){
+    return rpc('tgg_world_economy_bundle',{});
+  }
+
+  async function walletReconcile(){
+    return rpc('tgg_world_wallet_reconcile',{});
+  }
+
+  async function readRemoteState(){
+    if(!transport)return {ok:false,status:'offline_ready'};
+    const career=await careerBundle();
+    if(!career.ok)return {ok:false,status:'error',career};
+    const economy=await economyBundle();
+    if(!economy.ok)return {ok:false,status:'error',career,economy};
+    const next=await nextMoves();
+    if(!next.ok)return {ok:false,status:'error',career,economy,next};
+    return {
+      ok:true,
+      status:'ready',
+      career,
+      economy:economy.data,
+      nextMoves:next.data,
+      virtualCurrencyOnly:economy.data?.real_money===false
+    };
+  }
+
   async function sync(){
     if(!transport)return {ok:false,status:'offline_ready',snapshot:snapshot()};
     const boot=await bootstrap();
@@ -151,5 +188,5 @@
     return {...last,connected:typeof transport==='function',version:VERSION};
   }
 
-  window.TGGWorldSync={version:VERSION,snapshot,avatarProfile,positionPayload,setTransport,bootstrap,syncAvatar,heartbeat,presenceBundle,nextMoves,sync,status};
+  window.TGGWorldSync={version:VERSION,snapshot,avatarProfile,positionPayload,setTransport,bootstrap,syncAvatar,heartbeat,presenceBundle,nextMoves,careerBundle,economyBundle,walletReconcile,readRemoteState,sync,status};
 })();

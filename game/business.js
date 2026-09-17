@@ -18,7 +18,7 @@
     const rows=available().map(x=>'<button class="business-card" data-business="'+x.id+'"><b>'+x.name+'</b><span>'+x.type+' • LVL '+x.unlock+'</span><small>'+x.detail+'</small></button>').join('');
     el.innerHTML='<div class="panel"><p class="eyebrow">V1.13 • BUSINESS DISCOVERY</p><h2>KNOW THE CITY.</h2><p>Discover businesses as your career grows. No purchases are triggered by discovery.</p><div class="business-grid">'+rows+'</div><div id="businessDetail" class="mission-card">Select a location to inspect it.</div><button id="businessSync" class="primary">CHECK WORLD ASSETS</button><button id="businessBack" class="secondary">BACK TO CITY</button></div>';
     el.querySelectorAll('[data-business]').forEach(b=>b.onclick=()=>select(b.dataset.business));
-    document.getElementById('businessBack').onclick=()=>window.TGGGame?.show?.('game');
+    document.getElementById('businessBack').onclick=()=>window.TGGGame?.show?.('game');    document.getElementById('businessSync').setAttribute('aria-label','Check connected world assets');
     document.getElementById('businessSync').onclick=async()=>{const r=await window.TGGWorldSync?.worldAssetsBundle?.();window.__tggToast?.(r?.ok?'WORLD ASSETS READY':'WORLD ASSETS OFFLINE-READY');};
   }
   function select(id){const x=catalog.find(v=>v.id===id);if(!x)return;state.selected=id;save();const el=document.getElementById('businessDetail');if(el)el.innerHTML='<b>'+x.name+'</b><span>'+x.type+'</span><small>'+x.detail+'</small>';}

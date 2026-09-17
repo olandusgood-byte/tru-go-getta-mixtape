@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.6",
-  "module": "GAME-V1.6-QA",
-  "name": "World Sync Foundation + Regression QA",
+  "version": "1.7",
+  "module": "GAME-V1.7-QA",
+  "name": "Online Player State Bridge + Regression QA",
   "checks": [
     "storage",
     "game_api",
@@ -17,7 +17,11 @@
     "world_sync_packet",
     "world_sync_offline_default",
     "credential_free_bundle",
-    "save_repair"
+    "save_repair",
+    "world_presence_payload",
+    "world_presence_heartbeat",
+    "world_presence_bundle",
+    "world_next_moves"
   ],
   "workflow": [
     "BUILD",
@@ -30,5 +34,5 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "manual_only",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.7 ONLINE PLAYER STATE BRIDGE"
+  "next": "V1.8 CAREER + ECONOMY SYNC"
 }

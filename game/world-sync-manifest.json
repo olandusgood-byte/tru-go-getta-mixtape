@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.6",
-  "module": "V1.6-WORLD-SYNC-FOUNDATION",
+  "version": "1.7",
+  "module": "V1.7-ONLINE-PLAYER-STATE-BRIDGE",
   "localApi": "window.TGGWorldSync",
   "mode": "offline_ready",
   "automaticNetworkCalls": false,
@@ -11,7 +11,10 @@
     "tgg_world_mvp_v1_bootstrap_player",
     "tgg_world_v11_6_presence_bootstrap",
     "tgg_world_v4_phone_bootstrap",
-    "tgg_world_v11_save_avatar"
+    "tgg_world_v11_save_avatar",
+    "tgg_world_presence_heartbeat_full",
+    "tgg_world_v11_6_presence_bundle",
+    "tgg_world_next_moves"
   ],
   "forbiddenBundleSecrets": [
     "service_role",
@@ -19,5 +22,5 @@
     "sk_live_",
     "refresh_token"
   ],
-  "next": "V1.7 ONLINE PLAYER STATE BRIDGE"
+  "next": "V1.8 CAREER + ECONOMY SYNC"
 }

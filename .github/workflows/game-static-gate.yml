@@ -2,7 +2,7 @@ name: Game Static Gate
 
 on:
   push:
-    branches: [main, game/v1-foundation, game/v1-2-build]
+    branches: [release/game-v1.11-rc]
     paths:
       - 'game/**'
       - '.github/workflows/game-static-gate.yml'
@@ -75,7 +75,7 @@ jobs:
                     for(const forbiddenRpc of ['tgg_world_mvp_v1_accept_mission','tgg_world_mvp_v1_complete_mission','tgg_world_start_story_arc','tgg_world_claim_story_chapter','tgg_world_join_location','tgg_world_join_location_at','tgg_world_v4_record_mission_evidence','tgg_world_v4_verify_and_complete_mission']){
             if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('mission/story mutation RPC must remain excluded: '+forbiddenRpc);
           }
-for(const forbiddenRpc of ['tgg_world_crew_create','tgg_world_crew_join','tgg_world_social_post','tgg_world_social_comment','tgg_world_social_react','tgg_world_party_create','tgg_world_party_invite']){
+          for(const forbiddenRpc of ['tgg_world_crew_create','tgg_world_crew_join','tgg_world_social_post','tgg_world_social_comment','tgg_world_social_react','tgg_world_party_create','tgg_world_party_invite']){
             if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('social mutation RPC must remain excluded: '+forbiddenRpc);
           }
           console.log('V1.11 world sync contract verified.');

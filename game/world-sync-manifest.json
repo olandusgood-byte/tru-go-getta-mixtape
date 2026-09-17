@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.10",
-  "module": "V1.10-SOCIAL-CREW-BRIDGE",
+  "version": "1.11",
+  "module": "V1.11-MISSION-STORY-DISCOVERY",
   "localApi": "window.TGGWorldSync",
   "mode": "offline_ready",
   "automaticNetworkCalls": false,
@@ -28,7 +28,12 @@
     "tgg_world_crew_activity",
     "tgg_world_crew_rides",
     "tgg_world_crew_bundle",
-    "tgg_world_v12_contact_offers_bundle"
+    "tgg_world_v12_contact_offers_bundle",
+    "tgg_world_creative_missions",
+    "tgg_world_npc_encounters",
+    "tgg_world_story_control",
+    "tgg_world_memory_history",
+    "tgg_world_location_bundle"
   ],
   "forbiddenBundleSecrets": [
     "service_role",
@@ -36,7 +41,7 @@
     "sk_live_",
     "refresh_token"
   ],
-  "next": "V1.11 MISSION + STORY DISCOVERY",
+  "next": "V1.12 PROPERTY + VEHICLE DISCOVERY",
   "excludedRpcs": [
     "tgg_world_purchase",
     "tgg_world_crew_create",
@@ -45,6 +50,14 @@
     "tgg_world_social_comment",
     "tgg_world_social_react",
     "tgg_world_party_create",
-    "tgg_world_party_invite"
+    "tgg_world_party_invite",
+    "tgg_world_mvp_v1_accept_mission",
+    "tgg_world_mvp_v1_complete_mission",
+    "tgg_world_start_story_arc",
+    "tgg_world_claim_story_chapter",
+    "tgg_world_join_location",
+    "tgg_world_join_location_at",
+    "tgg_world_v4_record_mission_evidence",
+    "tgg_world_v4_verify_and_complete_mission"
   ]
 }

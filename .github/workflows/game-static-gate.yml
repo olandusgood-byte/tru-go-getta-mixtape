@@ -64,19 +64,22 @@ jobs:
           const html=fs.readFileSync('game/index.html','utf8');
           const manifest=JSON.parse(fs.readFileSync('game/release-manifest.json','utf8'));
           if(!html.includes('<script src="world-sync.js"></script>')) throw new Error('world-sync.js is not loaded');
-          for(const token of ['window.TGGWorldSync','snapshot','setTransport','syncAvatar','positionPayload','heartbeat','presenceBundle','nextMoves','offline_ready','tgg_world_v11_save_avatar','tgg_world_presence_heartbeat_full','careerBundle','economyBundle','walletReconcile','readRemoteState','tgg_world_economy_bundle','tgg_world_wallet_reconcile','remoteInventory','equipRemoteItem','tgg_world_inventory_equip','socialBundle','crewActivity','crewRides','crewBundle','contactOffers','tgg_world_social_hub','tgg_world_crew_bundle','creativeMissions','npcEncounters','storyControl','memoryHistory','locationBundle','missionStoryBundle','tgg_world_creative_missions','tgg_world_location_bundle']){
+          for(const token of ['window.TGGWorldSync','snapshot','setTransport','syncAvatar','positionPayload','heartbeat','presenceBundle','nextMoves','offline_ready','tgg_world_v11_save_avatar','tgg_world_presence_heartbeat_full','careerBundle','economyBundle','walletReconcile','readRemoteState','tgg_world_economy_bundle','tgg_world_wallet_reconcile','remoteInventory','equipRemoteItem','tgg_world_inventory_equip','socialBundle','crewActivity','crewRides','crewBundle','contactOffers','tgg_world_social_hub','tgg_world_crew_bundle','creativeMissions','npcEncounters','storyControl','memoryHistory','locationBundle','missionStoryBundle','tgg_world_creative_missions','tgg_world_location_bundle','propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle','tgg_world_property_market','tgg_world_vehicle_bundle']){
             if(!sync.includes(token)) throw new Error('missing world sync contract token: '+token);
           }
           for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
             if(sync.includes(forbidden)) throw new Error('forbidden secret marker in game bundle: '+forbidden);
           }
-          if(!String(manifest.release||'').startsWith('V1.11')) throw new Error('release manifest is not V1.11');
+          if(!String(manifest.release||'').startsWith('V1.12')) throw new Error('release manifest is not V1.12');
           if(sync.includes("rpc('tgg_world_purchase'")) throw new Error('tgg_world_purchase must remain excluded from the game adapter');
-                    for(const forbiddenRpc of ['tgg_world_mvp_v1_accept_mission','tgg_world_mvp_v1_complete_mission','tgg_world_start_story_arc','tgg_world_claim_story_chapter','tgg_world_join_location','tgg_world_join_location_at','tgg_world_v4_record_mission_evidence','tgg_world_v4_verify_and_complete_mission']){
+                              for(const forbiddenRpc of ['tgg_world_buy_property','tgg_world_property_market_buy','tgg_world_property_market_list','tgg_world_property_market_cancel','tgg_world_install_property_upgrade','tgg_world_fast_travel','tgg_world_v3_travel_to','tgg_world_vehicle_spawn','tgg_world_vehicle_join','tgg_world_vehicle_drive_session','tgg_world_vehicle_install_tune','tgg_world_vehicle_music','tgg_world_party_travel']){
+            if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('property/vehicle mutation RPC must remain excluded: '+forbiddenRpc);
+          }
+for(const forbiddenRpc of ['tgg_world_mvp_v1_accept_mission','tgg_world_mvp_v1_complete_mission','tgg_world_start_story_arc','tgg_world_claim_story_chapter','tgg_world_join_location','tgg_world_join_location_at','tgg_world_v4_record_mission_evidence','tgg_world_v4_verify_and_complete_mission']){
             if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('mission/story mutation RPC must remain excluded: '+forbiddenRpc);
           }
 for(const forbiddenRpc of ['tgg_world_crew_create','tgg_world_crew_join','tgg_world_social_post','tgg_world_social_comment','tgg_world_social_react','tgg_world_party_create','tgg_world_party_invite']){
             if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('social mutation RPC must remain excluded: '+forbiddenRpc);
           }
-          console.log('V1.11 world sync contract verified.');
+          console.log('V1.12 world sync contract verified.');
           NODE

@@ -89,8 +89,8 @@
     "world_location_bundle",
     "no_mission_story_mutations"
   ],
-  "static_gate": "pending_reverify",
+  "static_gate": "passed_code_only",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.11-MISSION-STORY-DISCOVERY-CODE-COMPLETE",
+  "release_checkpoint": "V1.11-MISSION-STORY-DISCOVERY-STATIC-PASSED",
   "production": "gated"
 }

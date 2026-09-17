@@ -45,10 +45,10 @@ V1.11 deliberately does not expose mission accept/complete, story start/claim, l
 - [x] Inventory + Equipment Bridge
 - [x] Social + Crew Bridge
 - [x] Mission + Story Discovery code
-- [ ] V1.11 static code gate
+- [x] V1.11 static code gate
 - [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.11-MISSION-STORY-DISCOVERY-CODE-COMPLETE.** The next safe internal candidate is property/vehicle/world-travel discovery mapping.
+**V1.11-MISSION-STORY-DISCOVERY-STATIC-PASSED.** The next safe internal candidate is property/vehicle/world-travel discovery mapping.

@@ -1,6 +1,6 @@
-# TRU GO GETTA Game V1.12
+# TRU GO GETTA Game V1.13
 
-This checkpoint extends the credential-free TGG World adapter through property and vehicle discovery while keeping ownership, travel, spawn and upgrade mutations out of the game bundle.
+This checkpoint promotes the already-wired progression and business discovery layer on top of the credential-free TGG World property and vehicle discovery adapter, while keeping ownership, travel, spawn and upgrade mutations out of the game bundle.
 
 ## Verified layers
 
@@ -13,22 +13,23 @@ This checkpoint extends the credential-free TGG World adapter through property a
 - V1.10: Social + Crew
 - V1.11: Mission + Story Discovery
 - V1.12: Property + Vehicle Discovery
+- V1.13: Progression + Business Discovery
 
-## V1.12 Property + Vehicle Discovery
+## V1.13 Progression + Business Discovery
 
-`window.TGGWorldSync` adds:
+V1.13 keeps the V1.12 `window.TGGWorldSync` discovery reads and adds the already-wired `window.TGGBusiness` gameplay layer:
 
-- `propertyMarket()` — property-market discovery read.
-- `propertyUpgrades()` — available property-upgrade catalog read.
-- `vehicleProgression()` — vehicle progression/catalog state.
-- `vehicleBundle(vehicleId)` — validated vehicle UUID detail read.
-- `worldAssetsBundle()` — combined property/upgrades/vehicle discovery packet.
+- persistent local business discovery;
+- level-gated business catalog;
+- business selection/detail UI;
+- read-only world asset refresh through `worldAssetsBundle()`;
+- no purchase, ownership, travel, spawn, or upgrade mutation bridge.
 
 Vehicle detail is backed by an existing TGG World contract that explicitly reports `real_money:false`.
 
 ## Explicit exclusions
 
-V1.12 does not expose:
+V1.13 does not expose:
 
 - property buy/list/cancel;
 - property upgrade install/buy;
@@ -58,9 +59,11 @@ V1.12 does not expose:
 - [x] Mission + Story
 - [x] Property + Vehicle discovery code
 - [x] V1.12 static code gate
+- [x] V1.13 progression + business discovery runtime wiring
+- [x] V1.13 static code gate target
 - [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.12-PROPERTY-VEHICLE-DISCOVERY-STATIC-PASSED.** The next safe internal candidate is progression/achievement/business discovery mapping.
+**V1.13-PROGRESSION-BUSINESS-DISCOVERY-STATIC-CANDIDATE.** Browser validation remains manual-only by policy. The next safe internal candidate after static verification is V1.14 live city activities plus read-only vehicle/property gameplay surfaces.

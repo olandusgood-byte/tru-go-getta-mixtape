@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.10",
-  "module": "GAME-BRIDGE-V1.10",
-  "name": "Creator OS + Social/Crew Discovery Bridge",
+  "version": "1.11",
+  "module": "GAME-BRIDGE-V1.11",
+  "name": "Creator OS + Mission/Story Discovery Bridge",
   "principles": [
     "separate game runtime from Blogger theme",
     "external launch points only",
@@ -49,7 +49,12 @@
       "tgg_world_crew_activity",
       "tgg_world_crew_rides",
       "tgg_world_crew_bundle",
-      "tgg_world_v12_contact_offers_bundle"
+      "tgg_world_v12_contact_offers_bundle",
+      "tgg_world_creative_missions",
+      "tgg_world_npc_encounters",
+      "tgg_world_story_control",
+      "tgg_world_memory_history",
+      "tgg_world_location_bundle"
     ]
   },
   "workflow": [
@@ -60,5 +65,5 @@
     "CHECKPOINT",
     "ADVANCE"
   ],
-  "next": "V1.11 MISSION + STORY DISCOVERY"
+  "next": "V1.12 PROPERTY + VEHICLE DISCOVERY"
 }

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.10",
-  "module": "GAME-V1.10",
-  "name": "Social + Crew Bridge Checkpoint",
+  "version": "1.11",
+  "module": "GAME-V1.11",
+  "name": "Mission + Story Discovery Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -12,16 +12,16 @@
     "ADVANCE"
   ],
   "gates": {
-    "v1_9_integrity": true,
-    "social_discovery": true,
-    "crew_activity": true,
-    "crew_rides": true,
-    "crew_bundle": true,
-    "contact_offers": true,
-    "no_social_mutations": true,
+    "v1_10_integrity": true,
+    "creative_missions": true,
+    "npc_encounters": true,
+    "story_control": true,
+    "memory_history": true,
+    "location_bundle": true,
+    "no_mission_story_mutations": true,
     "credential_free_bundle": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.11 MISSION + STORY DISCOVERY"
+  "next": "V1.12 PROPERTY + VEHICLE DISCOVERY"
 }

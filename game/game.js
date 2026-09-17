@@ -19,3 +19,5 @@
   document.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>{const k=b.dataset.key;move(k==='ArrowLeft'?-2:k==='ArrowRight'?2:0,k==='ArrowUp'?-2:k==='ArrowDown'?2:0)});
   load();
 })();
+// V1.15 connected business activity helpers
+window.TGGGame.startBusinessActivity=(kind='lobby')=>{ if(typeof activityReward==='function'){activityReward(kind);return true;} return false; };

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.10",
-  "module": "GAME-V1.10-QA",
-  "name": "Social + Crew Bridge + Regression QA",
+  "version": "1.11",
+  "module": "GAME-V1.11-QA",
+  "name": "Mission + Story Discovery + Regression QA",
   "checks": [
     "storage",
     "game_api",
@@ -35,7 +35,13 @@
     "world_crew_rides",
     "world_crew_bundle",
     "world_contact_offers",
-    "no_social_mutations"
+    "no_social_mutations",
+    "world_creative_missions",
+    "world_npc_encounters",
+    "world_story_control",
+    "world_memory_history",
+    "world_location_bundle",
+    "no_mission_story_mutations"
   ],
   "workflow": [
     "BUILD",
@@ -48,5 +54,5 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "manual_only",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.11 MISSION + STORY DISCOVERY"
+  "next": "V1.12 PROPERTY + VEHICLE DISCOVERY"
 }

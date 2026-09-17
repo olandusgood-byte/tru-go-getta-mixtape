@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.9",
-  "module": "GAME-V1.9-QA",
-  "name": "Inventory + Equipment Bridge + Regression QA",
+  "version": "1.10",
+  "module": "GAME-V1.10-QA",
+  "name": "Social + Crew Bridge + Regression QA",
   "checks": [
     "storage",
     "game_api",
@@ -29,7 +29,13 @@
     "virtual_currency_only",
     "world_remote_inventory",
     "world_inventory_equip",
-    "no_purchase_bridge"
+    "no_purchase_bridge",
+    "world_social_bundle",
+    "world_crew_activity",
+    "world_crew_rides",
+    "world_crew_bundle",
+    "world_contact_offers",
+    "no_social_mutations"
   ],
   "workflow": [
     "BUILD",
@@ -42,5 +48,5 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "manual_only",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.10 SOCIAL + CREW BRIDGE"
+  "next": "V1.11 MISSION + STORY DISCOVERY"
 }

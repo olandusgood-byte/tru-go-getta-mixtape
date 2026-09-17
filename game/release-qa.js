@@ -25,3 +25,6 @@
   }
   window.TGGReleaseQA={checks,passed:false,run};
 })();
+
+check('v115-title',document.title.includes('V1.15'),'V1.15 shell title aligned');
+check('property-vehicle-panels',!!document.querySelector('#worldProperties,#worldVehicles'),'property/vehicle panels present');

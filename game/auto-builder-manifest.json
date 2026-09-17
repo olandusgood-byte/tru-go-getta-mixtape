@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.9",
-  "module": "GAME-V1.9",
-  "name": "Inventory + Equipment Bridge Checkpoint",
+  "version": "1.10",
+  "module": "GAME-V1.10",
+  "name": "Social + Crew Bridge Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -12,14 +12,16 @@
     "ADVANCE"
   ],
   "gates": {
-    "v1_8_integrity": true,
-    "remote_inventory_read": true,
-    "explicit_equipment_mapping": true,
-    "no_purchase_bridge": true,
-    "no_local_inventory_overwrite": true,
+    "v1_9_integrity": true,
+    "social_discovery": true,
+    "crew_activity": true,
+    "crew_rides": true,
+    "crew_bundle": true,
+    "contact_offers": true,
+    "no_social_mutations": true,
     "credential_free_bundle": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.10 SOCIAL + CREW BRIDGE"
+  "next": "V1.11 MISSION + STORY DISCOVERY"
 }

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.6 World Sync Foundation",
-  "base": "V1.5 Character Identity",
+  "release": "V1.7 Online Player State Bridge",
+  "base": "V1.6 World Sync Foundation",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -17,7 +17,10 @@
     "V1.5-CHARACTER-CREATOR",
     "V1.5-AVATAR-PERSISTENCE",
     "V1.6-WORLD-SYNC-ADAPTER",
-    "V1.6-CREATOR-OS-TRANSPORT-CONTRACT"
+    "V1.6-CREATOR-OS-TRANSPORT-CONTRACT",
+    "V1.7-PRESENCE-PAYLOAD",
+    "V1.7-PRESENCE-HEARTBEAT",
+    "V1.7-NEXT-MOVES-BRIDGE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -46,10 +49,14 @@
     "website_bridge",
     "v1_2_integrity",
     "release_qa",
-    "static_gate"
+    "static_gate",
+    "world_presence_payload",
+    "world_presence_heartbeat",
+    "world_presence_bundle",
+    "world_next_moves"
   ],
-  "static_gate": "passed_code_only",
+  "static_gate": "pending_reverify",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.6-WORLD-SYNC-FOUNDATION-STATIC-PASSED",
+  "release_checkpoint": "V1.7-ONLINE-PLAYER-STATE-BRIDGE-CODE-COMPLETE",
   "production": "gated"
 }

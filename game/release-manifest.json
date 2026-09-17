@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.4 Inventory Gameplay",
-  "base": "V1.3 City Life",
+  "release": "V1.5 Character Identity",
+  "base": "V1.4 Inventory Gameplay",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -13,7 +13,9 @@
     "V1.3-CREW",
     "V1.3-ECONOMY",
     "V1.3-INVENTORY",
-    "V1.4-INVENTORY-GAMEPLAY"
+    "V1.4-INVENTORY-GAMEPLAY",
+    "V1.5-CHARACTER-CREATOR",
+    "V1.5-AVATAR-PERSISTENCE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -31,14 +33,16 @@
     "expansion_progression",
     "mission_chain_progression",
     "district_progression",
+    "avatar_api",
+    "avatar_persistence",
+    "avatar_controls",
     "website_bridge",
     "v1_2_integrity",
     "release_qa",
-    "static_gate",
-    "browser_smoke"
+    "static_gate"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "passed",
-  "release_checkpoint": "V1.4-INVENTORY-VERIFY-PASSED",
+  "static_gate": "pending_reverify",
+  "browser_smoke": "manual_only",
+  "release_checkpoint": "V1.5-CHARACTER-IDENTITY-CODE-COMPLETE",
   "production": "gated"
 }

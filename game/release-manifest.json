@@ -69,8 +69,8 @@
     "world_inventory_equip",
     "no_purchase_bridge"
   ],
-  "static_gate": "pending_reverify",
+  "static_gate": "passed_code_only",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.9-INVENTORY-EQUIPMENT-BRIDGE-CODE-COMPLETE",
+  "release_checkpoint": "V1.9-INVENTORY-EQUIPMENT-BRIDGE-STATIC-PASSED",
   "production": "gated"
 }

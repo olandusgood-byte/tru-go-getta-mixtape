@@ -40,10 +40,10 @@ V1.9 intentionally does **not** expose `tgg_world_purchase` through the game ada
 - [x] Remote Inventory Read
 - [x] Explicit Equipment Mapping
 - [x] Purchase path excluded
-- [ ] V1.9 static code gate
+- [x] V1.9 static code gate
 - [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.9-INVENTORY-EQUIPMENT-BRIDGE-CODE-COMPLETE.** The next safe candidate is social/crew/event state mapping over existing authenticated read contracts.
+**V1.9-INVENTORY-EQUIPMENT-BRIDGE-STATIC-PASSED.** The next safe candidate is social/crew/event state mapping over existing authenticated read contracts.

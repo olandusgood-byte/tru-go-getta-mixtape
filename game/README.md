@@ -1,59 +1,46 @@
-# TRU GO GETTA Game V1.7
+# TRU GO GETTA Game V1.8
 
-Browser-based TRU GO GETTA game with city progression, career and achievements, persistent inventory, inventory-aware missions/events, crews, economy bonuses, mission chains, district unlocks, expansion activities, save repair, character creation, and an injected World/Creator OS transport bridge.
+TRU GO GETTA Game now has an additive, credential-free bridge from the local career experience into the existing TGG World backend contracts.
 
-## Playable loop
+## Verified layers
 
-CREATE PLAYER → CUSTOMIZE CHARACTER → ENTER CITY → MOVE → TAKE JOBS → USE/CONSUME INVENTORY → EARN CASH/XP/REP → BUILD CAREER + CREW → UNLOCK DISTRICTS → SAVE/LOAD
+- V1.0–V1.4: core game, career, city, inventory gameplay
+- V1.5: Character Identity
+- V1.6: World Sync Foundation
+- V1.7: Online Player State Bridge
+- V1.8: Career + Economy Bridge
 
-## Verified foundation
+## V1.8 Career + Economy Bridge
 
-- V1.0 foundation: player creation, movement, mission interaction, cash/XP, save/load
-- V1.1 career/progression: recordings, mixtapes, studio upgrades, achievements, career level unlocks
-- V1.2 city progression: mission chains, district unlocks, save validation/repair, integrity gate
-- V1.3 City Life: city events, crews, normalized economy bonuses, persistent inventory, expansion activities
-- V1.4 Inventory Gameplay: mission/event item requirements, missing-item blocks, successful-consumption rules
-- V1.5 Character Identity: persistent avatar, wardrobe, hair, accent palette, 360-degree preview controls
-- V1.6 World Sync Foundation: local sync packet, avatar/profile mapping, injected RPC transport, offline-ready default
-- V1.7 Online Player State Bridge: position/rotation/activity payload, authenticated presence heartbeat mapping, presence bundle, next-moves bridge
+`window.TGGWorldSync` now adds explicit, read-only remote state methods:
 
-## V1.7 Online Player State Bridge
+- `careerBundle()` → `tgg_world_career_climb` + `tgg_world_career_tracks` + `tgg_world_v12_career_industry_bundle`
+- `economyBundle()` → `tgg_world_economy_bundle`
+- `walletReconcile()` → `tgg_world_wallet_reconcile`
+- `readRemoteState()` → combines career, economy and next-move reads
 
-`window.TGGWorldSync` remains explicit-only and credential-free.
+The TGG World economy contract reports virtual currency separately and explicitly returns `real_money:false`. V1.8 does **not** copy backend wallet balances into local game cash and does not perform real-money actions.
 
-New V1.7 methods:
+## Safety model
 
-- `positionPayload()` — maps local city X/Y + heading + current screen/activity into a backend-ready presence payload.
-- `heartbeat()` — maps to `tgg_world_presence_heartbeat_full`.
-- `presenceBundle()` — maps to `tgg_world_v11_6_presence_bundle`.
-- `nextMoves()` — maps to `tgg_world_next_moves`.
-- `sync()` — now performs bootstrap → avatar sync → presence heartbeat when a trusted transport is injected.
-
-There are still **no timers, no background polling, no automatic network calls, and no embedded credentials**.
-
-## Automatic Builder loop
-
-BUILD → TEST → REPAIR → VERIFY → CHECKPOINT → ADVANCE
-
-Normal game updates use code/static validation only. Browser smoke remains manual-only.
+- No service-role key in the game bundle.
+- No provider secret in the game bundle.
+- No automatic network calls.
+- No timers/background polling.
+- No automatic wallet or purchase mutation.
+- Trusted transport injection only.
+- Existing local save keys remain unchanged.
 
 ## Current checkpoint
 
-- [x] Core game loop
-- [x] Career/progression
-- [x] City jobs/events/crew/economy
-- [x] Persistent inventory + inventory gameplay
-- [x] Character Creator + avatar persistence
-- [x] World Sync local packet
-- [x] Trusted transport injection contract
-- [x] Avatar backend RPC mapping
-- [x] Presence position/rotation/activity mapping
-- [x] Presence heartbeat backend RPC mapping
-- [x] Presence bundle + next-moves mapping
-- [x] V1.7 static code gate
-- [ ] Connect trusted Creator OS transport
+- [x] V1.5 Character Identity
+- [x] V1.6 World Sync Foundation
+- [x] V1.7 Player State Bridge
+- [x] V1.8 Career + Economy code
+- [ ] V1.8 static code gate
+- [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.7-ONLINE-PLAYER-STATE-BRIDGE-STATIC-PASSED.** Production remains gated; the next safe internal layer is authenticated career/economy state mapping over the same injected transport.
+**V1.8-CAREER-ECONOMY-BRIDGE-CODE-COMPLETE.** The next safe internal candidate is inventory/equipment mapping over explicit authenticated RPCs.

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.7 Online Player State Bridge",
-  "base": "V1.6 World Sync Foundation",
+  "release": "V1.8 Career + Economy Bridge",
+  "base": "V1.7 Online Player State Bridge",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -20,7 +20,11 @@
     "V1.6-CREATOR-OS-TRANSPORT-CONTRACT",
     "V1.7-PRESENCE-PAYLOAD",
     "V1.7-PRESENCE-HEARTBEAT",
-    "V1.7-NEXT-MOVES-BRIDGE"
+    "V1.7-NEXT-MOVES-BRIDGE",
+    "V1.8-CAREER-BUNDLE",
+    "V1.8-ECONOMY-BUNDLE",
+    "V1.8-WALLET-RECONCILE",
+    "V1.8-REMOTE-STATE-READ"
   ],
   "gates": [
     "runtime_api_presence",
@@ -53,10 +57,15 @@
     "world_presence_payload",
     "world_presence_heartbeat",
     "world_presence_bundle",
-    "world_next_moves"
+    "world_next_moves",
+    "world_career_bundle",
+    "world_economy_bundle",
+    "world_wallet_reconcile",
+    "world_remote_state_read",
+    "virtual_currency_only"
   ],
-  "static_gate": "passed_code_only",
+  "static_gate": "pending_reverify",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.7-ONLINE-PLAYER-STATE-BRIDGE-STATIC-PASSED",
+  "release_checkpoint": "V1.8-CAREER-ECONOMY-BRIDGE-CODE-COMPLETE",
   "production": "gated"
 }

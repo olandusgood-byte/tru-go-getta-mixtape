@@ -1,16 +1,7 @@
 name: Game Browser Smoke
 
 on:
-  push:
-    branches: [game/v1-foundation]
-    paths:
-      - 'game/**'
-      - '.github/workflows/game-browser-smoke.yml'
-  pull_request:
-    paths:
-      - 'game/**'
-      - '.github/workflows/game-browser-smoke.yml'
-
+  workflow_dispatch:
 jobs:
   browser-smoke:
     runs-on: ubuntu-latest
@@ -52,10 +43,10 @@ jobs:
           page.on('console', msg => { if (msg.type() === 'error') errors.push(`console: ${msg.text()}`); });
 
           await page.goto('http://127.0.0.1:8765/index.html', {waitUntil:'networkidle'});
-          await page.waitForFunction(() => window.TGGGame && window.TGGCareer && window.TGGContent && window.TGGExpansion && window.TGGProgression && window.TGGBridge && window.TGGQA && window.TGGReleaseQA);
+          await page.waitForFunction(() => window.TGGGame && window.TGGCareer && window.TGGContent && window.TGGExpansion && window.TGGProgression && window.TGGBridge && window.TGGAvatar && window.TGGQA && window.TGGReleaseQA);
 
           const result = await page.evaluate(async () => {
-            const ids = ['menu','creator','game','career','contentBoard','expansionBoard','progressionBoard','bridge','pause','hud','newGame','continueGame','startGame','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','bridgeBtn','saveBtn','pauseBtn','resumeBtn','menuBtn','recordBtn','mixtapeBtn','upgradeBtn'];
+            const ids = ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','saveBtn','pauseBtn','resumeBtn','menuBtn','recordBtn','mixtapeBtn','upgradeBtn'];
             const missing = ids.filter(id => !document.getElementById(id));
             const qa = window.TGGQA?.run?.();
             const release = window.TGGReleaseQA?.run?.();

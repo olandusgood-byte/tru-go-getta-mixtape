@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.12 Property + Vehicle Discovery",
-  "base": "V1.11 Mission + Story Discovery",
+  "release": "V1.13 Progression + Business Discovery",
+  "base": "V1.12 Property + Vehicle Discovery",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -38,7 +38,11 @@
     "V1.12-PROPERTY-MARKET-READ",
     "V1.12-PROPERTY-UPGRADES-READ",
     "V1.12-VEHICLE-PROGRESSION-READ",
-    "V1.12-VEHICLE-BUNDLE-READ"
+    "V1.12-VEHICLE-BUNDLE-READ",
+    "V1.13-PROGRESSION-DISCOVERY",
+    "V1.13-BUSINESS-DISCOVERY",
+    "V1.13-BUSINESS-PERSISTENCE",
+    "V1.13-BUSINESS-SCREEN"
   ],
   "gates": [
     "runtime_api_presence",
@@ -96,10 +100,14 @@
     "world_property_upgrades",
     "world_vehicle_progression",
     "world_vehicle_bundle",
-    "no_property_vehicle_mutations"
+    "no_property_vehicle_mutations",
+    "business_api",
+    "business_catalog",
+    "business_discovery_persistence",
+    "business_screen"
   ],
-  "static_gate": "passed_code_only",
+  "static_gate": "candidate_pending_ci",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.12-PROPERTY-VEHICLE-DISCOVERY-STATIC-PASSED",
+  "release_checkpoint": "V1.13-PROGRESSION-BUSINESS-DISCOVERY-STATIC-CANDIDATE",
   "production": "gated"
 }

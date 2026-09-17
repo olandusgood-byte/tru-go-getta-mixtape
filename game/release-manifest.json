@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.5 Character Identity",
-  "base": "V1.4 Inventory Gameplay",
+  "release": "V1.6 World Sync Foundation",
+  "base": "V1.5 Character Identity",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -15,7 +15,9 @@
     "V1.3-INVENTORY",
     "V1.4-INVENTORY-GAMEPLAY",
     "V1.5-CHARACTER-CREATOR",
-    "V1.5-AVATAR-PERSISTENCE"
+    "V1.5-AVATAR-PERSISTENCE",
+    "V1.6-WORLD-SYNC-ADAPTER",
+    "V1.6-CREATOR-OS-TRANSPORT-CONTRACT"
   ],
   "gates": [
     "runtime_api_presence",
@@ -36,6 +38,11 @@
     "avatar_api",
     "avatar_persistence",
     "avatar_controls",
+    "world_sync_adapter",
+    "world_sync_packet",
+    "world_sync_offline_ready",
+    "world_sync_transport_injection",
+    "credential_free_bundle",
     "website_bridge",
     "v1_2_integrity",
     "release_qa",
@@ -43,6 +50,6 @@
   ],
   "static_gate": "pending_reverify",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.5-CHARACTER-IDENTITY-CODE-COMPLETE",
+  "release_checkpoint": "V1.6-WORLD-SYNC-FOUNDATION-CODE-COMPLETE",
   "production": "gated"
 }

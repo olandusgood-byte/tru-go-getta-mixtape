@@ -70,7 +70,7 @@ jobs:
           for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
             if(sync.includes(forbidden)) throw new Error('forbidden secret marker in game bundle: '+forbidden);
           }
-          if(!String(manifest.release||'').startsWith('V1.12')) throw new Error('release manifest is not V1.12');
+          if(!String(manifest.release||'').startsWith('V1.13')) throw new Error('release manifest is not V1.13');
           if(sync.includes("rpc('tgg_world_purchase'")) throw new Error('tgg_world_purchase must remain excluded from the game adapter');
                               for(const forbiddenRpc of ['tgg_world_buy_property','tgg_world_property_market_buy','tgg_world_property_market_list','tgg_world_property_market_cancel','tgg_world_install_property_upgrade','tgg_world_fast_travel','tgg_world_v3_travel_to','tgg_world_vehicle_spawn','tgg_world_vehicle_join','tgg_world_vehicle_drive_session','tgg_world_vehicle_install_tune','tgg_world_vehicle_music','tgg_world_party_travel']){
             if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('property/vehicle mutation RPC must remain excluded: '+forbiddenRpc);
@@ -81,5 +81,12 @@ for(const forbiddenRpc of ['tgg_world_mvp_v1_accept_mission','tgg_world_mvp_v1_c
 for(const forbiddenRpc of ['tgg_world_crew_create','tgg_world_crew_join','tgg_world_social_post','tgg_world_social_comment','tgg_world_social_react','tgg_world_party_create','tgg_world_party_invite']){
             if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('social mutation RPC must remain excluded: '+forbiddenRpc);
           }
-          console.log('V1.12 world sync contract verified.');
+          const business=fs.readFileSync('game/business.js','utf8');
+          for(const token of ['window.TGGBusiness','businessBoard','businessBtn','worldAssetsBundle']){
+            if(!business.includes(token) && !html.includes(token)) throw new Error('missing V1.13 business contract token: '+token);
+          }
+          for(const forbidden of ['tgg_world_buy_property','tgg_world_property_market_buy','tgg_world_vehicle_spawn','tgg_world_vehicle_drive_session']){
+            if(business.includes(forbidden)) throw new Error('V1.13 business layer must remain discovery-only: '+forbidden);
+          }
+          console.log('V1.13 world sync + business discovery contract verified.');
           NODE

@@ -1,14 +1,15 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.5",
-  "module": "GAME-BRIDGE-V1.5",
-  "name": "Creator OS Bridge",
+  "version": "1.6",
+  "module": "GAME-BRIDGE-V1.6",
+  "name": "Creator OS + World Sync Bridge",
   "principles": [
     "separate game runtime from Blogger theme",
     "external launch points only",
     "no automatic redirects",
     "no shared mutable page state",
-    "no credential storage in game bundle"
+    "no credential storage in game bundle",
+    "trusted transport injection only"
   ],
   "links": [
     "public_site",
@@ -21,8 +22,19 @@
     "xp",
     "reputation",
     "recordings",
-    "mixtapes"
+    "mixtapes",
+    "avatar"
   ],
+  "worldSync": {
+    "mode": "offline_ready",
+    "transport": "injected",
+    "backendRpcs": [
+      "tgg_world_mvp_v1_bootstrap_player",
+      "tgg_world_v11_6_presence_bootstrap",
+      "tgg_world_v4_phone_bootstrap",
+      "tgg_world_v11_save_avatar"
+    ]
+  },
   "workflow": [
     "BUILD",
     "TEST",
@@ -31,5 +43,5 @@
     "CHECKPOINT",
     "ADVANCE"
   ],
-  "next": "V1.6 WORLD SYNC FOUNDATION"
+  "next": "V1.7 ONLINE PLAYER STATE BRIDGE"
 }

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.9",
-  "module": "V1.9-INVENTORY-EQUIPMENT-BRIDGE",
+  "version": "1.10",
+  "module": "V1.10-SOCIAL-CREW-BRIDGE",
   "localApi": "window.TGGWorldSync",
   "mode": "offline_ready",
   "automaticNetworkCalls": false,
@@ -20,7 +20,15 @@
     "tgg_world_v12_career_industry_bundle",
     "tgg_world_economy_bundle",
     "tgg_world_wallet_reconcile",
-    "tgg_world_inventory_equip"
+    "tgg_world_inventory_equip",
+    "tgg_world_social_hub",
+    "tgg_world_social_lobby_bundle",
+    "tgg_world_social_engagement",
+    "tgg_world_discover_events",
+    "tgg_world_crew_activity",
+    "tgg_world_crew_rides",
+    "tgg_world_crew_bundle",
+    "tgg_world_v12_contact_offers_bundle"
   ],
   "forbiddenBundleSecrets": [
     "service_role",
@@ -28,8 +36,15 @@
     "sk_live_",
     "refresh_token"
   ],
-  "next": "V1.10 SOCIAL + CREW BRIDGE",
+  "next": "V1.11 MISSION + STORY DISCOVERY",
   "excludedRpcs": [
-    "tgg_world_purchase"
+    "tgg_world_purchase",
+    "tgg_world_crew_create",
+    "tgg_world_crew_join",
+    "tgg_world_social_post",
+    "tgg_world_social_comment",
+    "tgg_world_social_react",
+    "tgg_world_party_create",
+    "tgg_world_party_invite"
   ]
 }

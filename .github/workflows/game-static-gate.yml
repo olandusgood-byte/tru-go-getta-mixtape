@@ -28,6 +28,9 @@ jobs:
           for f in game/*.json; do
             node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$f"
           done
+      - name: Run V1.13 static contract
+        run: node game/static-contract.test.mjs
+
       - name: Validate script references
         run: |
           set -e

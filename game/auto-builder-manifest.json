@@ -1,15 +1,24 @@
 {
-  "project":"TRU GO GETTA Game",
-  "version":"1.0",
-  "module":"GAME-002",
-  "name":"Career System",
-  "workflow":["BUILD","TEST","REPAIR","VERIFY","CHECKPOINT","ADVANCE"],
-  "gates":{
-    "career_state":true,
-    "recording_progression":true,
-    "mixtape_unlock_rule":true,
-    "studio_upgrade_rule":true,
-    "persistence":true
+  "project": "TRU GO GETTA Game",
+  "version": "1.5",
+  "module": "GAME-V1.5",
+  "name": "Character Identity Checkpoint",
+  "workflow": [
+    "BUILD",
+    "TEST",
+    "REPAIR",
+    "VERIFY",
+    "CHECKPOINT",
+    "ADVANCE"
+  ],
+  "gates": {
+    "v1_4_integrity": true,
+    "avatar_api": true,
+    "avatar_persistence": true,
+    "avatar_save_repair": true,
+    "character_controls": true,
+    "legacy_save_keys_preserved": true
   },
-  "next":"GAME-003 Content System"
+  "browserPolicy": "manual_only",
+  "next": "V1.6 WORLD SYNC FOUNDATION"
 }

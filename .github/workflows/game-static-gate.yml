@@ -48,9 +48,28 @@ jobs:
           import re
           html=Path('game/index.html').read_text()
           ids=re.findall(r'id=[\"\']([^\"\']+)[\"\']', html)
-          required={'menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','chainBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
+          required={'menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','worldSyncBtn','chainBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
           missing=sorted(required-set(ids))
           assert not missing, 'missing required IDs: '+', '.join(missing)
           assert len(ids)==len(set(ids)), 'duplicate DOM ids detected'
           print('Required V1.5 controls and unique IDs verified.')
           PY
+
+      - name: Validate V1.6 world sync contract
+        run: |
+          set -e
+          node <<'NODE'
+          const fs=require('fs');
+          const sync=fs.readFileSync('game/world-sync.js','utf8');
+          const html=fs.readFileSync('game/index.html','utf8');
+          const manifest=JSON.parse(fs.readFileSync('game/release-manifest.json','utf8'));
+          if(!html.includes('<script src="world-sync.js"></script>')) throw new Error('world-sync.js is not loaded');
+          for(const token of ['window.TGGWorldSync','snapshot','setTransport','syncAvatar','offline_ready','tgg_world_v11_save_avatar']){
+            if(!sync.includes(token)) throw new Error('missing world sync contract token: '+token);
+          }
+          for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
+            if(sync.includes(forbidden)) throw new Error('forbidden secret marker in game bundle: '+forbidden);
+          }
+          if(!String(manifest.release||'').startsWith('V1.6')) throw new Error('release manifest is not V1.6');
+          console.log('V1.6 world sync contract verified.');
+          NODE

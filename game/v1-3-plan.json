@@ -2,7 +2,7 @@
   "project": "TRU GO GETTA Game",
   "release": "V1.3 City Life",
   "base": "V1.2 City Progression",
-  "status": "planned",
+  "status": "verified",
   "principles": [
     "additive-only over verified V1.2",
     "no changes to V1.2 save keys without migration",
@@ -43,5 +43,6 @@
     "save_repair_compatibility",
     "browser_smoke",
     "production_gated"
-  ]
+  ],
+  "completedBy": "V1.4-INVENTORY-VERIFY-PASSED"
 }

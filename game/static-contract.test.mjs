@@ -1,0 +1,62 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+
+const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
+const business=fs.readFileSync(new URL('./business.js',import.meta.url),'utf8');
+const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
+const qa=fs.readFileSync(new URL('./qa.js',import.meta.url),'utf8');
+const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
+const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
+const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
+
+assert.match(html,/Game V1\.13/);
+assert.match(html,/GAME V1\.13 • PROGRESSION \+ BUSINESS DISCOVERY/);
+assert.match(html,/<script src="business\.js"><\/script>/);
+assert.match(html,/id="businessBoard"/);
+assert.match(html,/id="businessBtn"/);
+
+assert.match(business,/window\.TGGBusiness/);
+assert.match(business,/worldAssetsBundle/);
+assert.match(business,/tgg-business-v1/);
+assert.match(business,/V1\.13 • CITY BUSINESS \+ VEHICLE HUB/);
+
+for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
+  assert.match(world,new RegExp('function '+api+'\\b'));
+}
+for (const rpc of ['tgg_world_property_market','tgg_world_property_upgrades','tgg_world_vehicle_progression','tgg_world_vehicle_bundle']) {
+  assert.match(world,new RegExp(rpc));
+}
+
+const forbidden=[
+  'tgg_world_buy_property',
+  'tgg_world_property_market_buy',
+  'tgg_world_property_market_list',
+  'tgg_world_property_market_cancel',
+  'tgg_world_install_property_upgrade',
+  'tgg_world_fast_travel',
+  'tgg_world_v3_travel_to',
+  'tgg_world_vehicle_spawn',
+  'tgg_world_vehicle_join',
+  'tgg_world_vehicle_drive_session',
+  'tgg_world_vehicle_install_tune',
+  'tgg_world_vehicle_music',
+  'tgg_world_party_travel',
+  'sb_secret_',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'sk_live_'
+];
+for (const token of forbidden) {
+  assert.equal(world.includes(token),false,'world-sync must not contain '+token);
+  assert.equal(business.includes(token),false,'business layer must not contain '+token);
+}
+
+assert.match(qa,/business-api/);
+assert.match(qa,/business-catalog/);
+assert.match(qa,/business-persistence/);
+assert.equal(release.release,'V1.13 Progression + Business Discovery');
+assert.equal(auto.version,'1.13');
+assert.equal(qaManifest.version,'1.13');
+assert.equal(release.browser_smoke,'manual_only');
+assert.equal(release.production,'gated');
+
+console.log('GAME_V1_13_STATIC_CONTRACT_PASS');

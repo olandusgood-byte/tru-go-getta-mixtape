@@ -62,10 +62,10 @@ Normal game updates use code/static validation only. Browser smoke remains manua
 - [x] Existing backend RPC mapping
 - [x] Website/Creator bridge
 - [x] Runtime QA + release QA
-- [ ] Re-run static code gate on V1.6
+- [x] V1.6 static code gate
 - [ ] Connect trusted Creator OS transport
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.6-WORLD-SYNC-FOUNDATION-CODE-COMPLETE.** V1.6 is additive over the verified V1.5 code checkpoint. Production remains gated until the V1.6 static gate is green and a trusted Creator OS transport is connected.
+**V1.6-WORLD-SYNC-FOUNDATION-STATIC-PASSED.** V1.6 is additive over the verified V1.5 checkpoint. The code-only gate is green; production remains gated until a trusted Creator OS transport is connected.

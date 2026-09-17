@@ -89,8 +89,17 @@
     "world_location_bundle",
     "no_mission_story_mutations"
   ],
-  "static_gate": "passed_code_only",
-  "browser_smoke": "manual_only",
+  "static_gate": "passed",
+  "browser_smoke": "passed",
   "release_checkpoint": "V1.11-MISSION-STORY-DISCOVERY-STATIC-PASSED",
-  "production": "gated"
+  "production": "rc_verified",
+  "verification": {
+    "static_gate_run_id": 35286726450,
+    "browser_smoke_run_id": 35287115875,
+    "rc_commit": "93e9380c63ca13965c22cc8f3d81e7c28651d266",
+    "rc_url": "https://tru-go-getta-world-v111-rc.onrender.com",
+    "rc_service_id": "srv-dam7g8p42hec738j4bog",
+    "rc_deploy_id": "dep-dam7g9142hec738j4cs0",
+    "verified_at": "2026-09-17T23:31:04Z"
+  }
 }

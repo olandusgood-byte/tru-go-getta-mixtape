@@ -37,10 +37,10 @@ The TGG World economy contract reports virtual currency separately and explicitl
 - [x] V1.6 World Sync Foundation
 - [x] V1.7 Player State Bridge
 - [x] V1.8 Career + Economy code
-- [ ] V1.8 static code gate
+- [x] V1.8 static code gate
 - [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.8-CAREER-ECONOMY-BRIDGE-CODE-COMPLETE.** The next safe internal candidate is inventory/equipment mapping over explicit authenticated RPCs.
+**V1.8-CAREER-ECONOMY-BRIDGE-STATIC-PASSED.** The next safe internal candidate is inventory/equipment mapping over explicit authenticated RPCs.

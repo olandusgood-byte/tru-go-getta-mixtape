@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.8",
-  "module": "GAME-V1.8",
-  "name": "Career + Economy Bridge Checkpoint",
+  "version": "1.9",
+  "module": "GAME-V1.9",
+  "name": "Inventory + Equipment Bridge Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -12,16 +12,14 @@
     "ADVANCE"
   ],
   "gates": {
-    "v1_7_integrity": true,
-    "world_career_bundle": true,
-    "world_economy_bundle": true,
-    "world_wallet_reconcile": true,
-    "world_remote_state_read": true,
-    "virtual_currency_only": true,
-    "no_local_cash_overwrite": true,
+    "v1_8_integrity": true,
+    "remote_inventory_read": true,
+    "explicit_equipment_mapping": true,
+    "no_purchase_bridge": true,
+    "no_local_inventory_overwrite": true,
     "credential_free_bundle": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.9 INVENTORY + EQUIPMENT BRIDGE"
+  "next": "V1.10 SOCIAL + CREW BRIDGE"
 }

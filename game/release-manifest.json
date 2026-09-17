@@ -64,8 +64,8 @@
     "world_remote_state_read",
     "virtual_currency_only"
   ],
-  "static_gate": "pending_reverify",
+  "static_gate": "passed_code_only",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.8-CAREER-ECONOMY-BRIDGE-CODE-COMPLETE",
+  "release_checkpoint": "V1.8-CAREER-ECONOMY-BRIDGE-STATIC-PASSED",
   "production": "gated"
 }

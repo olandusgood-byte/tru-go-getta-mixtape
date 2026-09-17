@@ -1,1 +1,1 @@
-import './tgg-browser-worker/worker-v130.mjs';
+import './tgg-browser-worker/worker-v131.mjs';

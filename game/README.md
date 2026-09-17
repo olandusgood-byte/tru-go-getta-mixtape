@@ -50,10 +50,10 @@ Normal game updates use code/static validation only. Browser smoke remains manua
 - [x] Presence position/rotation/activity mapping
 - [x] Presence heartbeat backend RPC mapping
 - [x] Presence bundle + next-moves mapping
-- [ ] Re-run static code gate on V1.7
+- [x] V1.7 static code gate
 - [ ] Connect trusted Creator OS transport
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.7-ONLINE-PLAYER-STATE-BRIDGE-CODE-COMPLETE.** Production remains gated; the next safe internal layer is authenticated career/economy state mapping over the same injected transport.
+**V1.7-ONLINE-PLAYER-STATE-BRIDGE-STATIC-PASSED.** Production remains gated; the next safe internal layer is authenticated career/economy state mapping over the same injected transport.

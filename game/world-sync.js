@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='1.11.0';
+  const VERSION='1.12.0';
   let transport=null;
   let last={status:'offline_ready',syncedAt:null,error:null};
 
@@ -259,6 +259,35 @@
     return {ok:true,status:'ready',missions:missions.data,encounters:encounters.data,story:story.data,memory:memory.data};
   }
 
+  async function propertyMarket(){
+    return rpc('tgg_world_property_market',{});
+  }
+
+  async function propertyUpgrades(){
+    return rpc('tgg_world_property_upgrades',{});
+  }
+
+  async function vehicleProgression(){
+    return rpc('tgg_world_vehicle_progression',{});
+  }
+
+  async function vehicleBundle(vehicleId){
+    const id=String(vehicleId||'').trim();
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id))return {ok:false,status:'invalid_vehicle_id'};
+    return rpc('tgg_world_vehicle_bundle',{p_vehicle_id:id});
+  }
+
+  async function worldAssetsBundle(){
+    if(!transport)return {ok:false,status:'offline_ready'};
+    const properties=await propertyMarket();
+    if(!properties.ok)return {ok:false,status:'error',properties};
+    const upgrades=await propertyUpgrades();
+    if(!upgrades.ok)return {ok:false,status:'error',properties,upgrades};
+    const vehicles=await vehicleProgression();
+    if(!vehicles.ok)return {ok:false,status:'error',properties,upgrades,vehicles};
+    return {ok:true,status:'ready',properties:properties.data,propertyUpgrades:upgrades.data,vehicles:vehicles.data};
+  }
+
   async function sync(){
     if(!transport)return {ok:false,status:'offline_ready',snapshot:snapshot()};
     const boot=await bootstrap();
@@ -275,5 +304,5 @@
     return {...last,connected:typeof transport==='function',version:VERSION};
   }
 
-  window.TGGWorldSync={version:VERSION,snapshot,avatarProfile,positionPayload,setTransport,bootstrap,syncAvatar,heartbeat,presenceBundle,nextMoves,careerBundle,economyBundle,walletReconcile,readRemoteState,remoteInventory,equipRemoteItem,socialBundle,crewActivity,crewRides,crewBundle,contactOffers,creativeMissions,npcEncounters,storyControl,memoryHistory,locationBundle,missionStoryBundle,sync,status};
+  window.TGGWorldSync={version:VERSION,snapshot,avatarProfile,positionPayload,setTransport,bootstrap,syncAvatar,heartbeat,presenceBundle,nextMoves,careerBundle,economyBundle,walletReconcile,readRemoteState,remoteInventory,equipRemoteItem,socialBundle,crewActivity,crewRides,crewBundle,contactOffers,creativeMissions,npcEncounters,storyControl,memoryHistory,locationBundle,missionStoryBundle,propertyMarket,propertyUpgrades,vehicleProgression,vehicleBundle,worldAssetsBundle,sync,status};
 })();

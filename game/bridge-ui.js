@@ -3,7 +3,7 @@
   const site='https://trugogettamixtapes.blogspot.com/';
   const creator=site+'p/artist-dashboard_0633467215.html';
   const worldSyncStatus=()=>{
-    const s=window.TGGWorldSync?.status?.()||{status:'offline_ready',connected:false,version:'1.6.0'};
+    const s=window.TGGWorldSync?.status?.()||{status:'offline_ready',connected:false,version:'1.7.0'};
     const text=s.connected?`CONNECTED • ${s.status.toUpperCase()} • v${s.version}`:`LOCAL READY • v${s.version} • transport not connected`;
     const el=$('worldSyncStatus');if(el)el.textContent=text;
     return {text,...s};
@@ -24,6 +24,6 @@
   $('bridgeBtn')?.addEventListener('click',openBridge);
   $('bridgeHome')?.addEventListener('click',openHome);
   $('bridgeCreator')?.addEventListener('click',openCreator);
-  $('worldSyncBtn')?.addEventListener('click',()=>{const packet=window.TGGWorldSync?.snapshot?.();const s=worldSyncStatus();window.__tggToast?.(packet&&s?'WORLD SYNC PACKET READY':'WORLD SYNC NOT READY');});
+  $('worldSyncBtn')?.addEventListener('click',()=>{const packet=window.TGGWorldSync?.snapshot?.();const s=worldSyncStatus();window.__tggToast?.(packet&&s?'WORLD STATE BRIDGE READY':'WORLD SYNC NOT READY');});
   $('bridgeBack')?.addEventListener('click',back);
 })();

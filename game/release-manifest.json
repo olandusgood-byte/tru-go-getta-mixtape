@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.9 Inventory + Equipment Bridge",
-  "base": "V1.8 Career + Economy Bridge",
+  "release": "V1.10 Social + Crew Bridge",
+  "base": "V1.9 Inventory + Equipment Bridge",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -26,7 +26,10 @@
     "V1.8-WALLET-RECONCILE",
     "V1.8-REMOTE-STATE-READ",
     "V1.9-REMOTE-INVENTORY",
-    "V1.9-EQUIPMENT-BRIDGE"
+    "V1.9-EQUIPMENT-BRIDGE",
+    "V1.10-SOCIAL-DISCOVERY",
+    "V1.10-CREW-DISCOVERY",
+    "V1.10-CONTACT-OFFERS"
   ],
   "gates": [
     "runtime_api_presence",
@@ -67,10 +70,16 @@
     "virtual_currency_only",
     "world_remote_inventory",
     "world_inventory_equip",
-    "no_purchase_bridge"
+    "no_purchase_bridge",
+    "world_social_bundle",
+    "world_crew_activity",
+    "world_crew_rides",
+    "world_crew_bundle",
+    "world_contact_offers",
+    "no_social_mutations"
   ],
-  "static_gate": "passed_code_only",
+  "static_gate": "pending_reverify",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.9-INVENTORY-EQUIPMENT-BRIDGE-STATIC-PASSED",
+  "release_checkpoint": "V1.10-SOCIAL-CREW-BRIDGE-CODE-COMPLETE",
   "production": "gated"
 }

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='1.8.0';
+  const VERSION='1.9.0';
   let transport=null;
   let last={status:'offline_ready',syncedAt:null,error:null};
 
@@ -172,6 +172,27 @@
     };
   }
 
+  async function remoteInventory(){
+    if(!transport)return {ok:false,status:'offline_ready'};
+    const economy=await economyBundle();
+    if(!economy.ok)return economy;
+    const data=economy.data||{};
+    return {
+      ok:true,
+      status:'ready',
+      inventory:Array.isArray(data.inventory)?data.inventory:[],
+      catalog:Array.isArray(data.catalog)?data.catalog:[],
+      virtualCurrencyOnly:data.real_money===false
+    };
+  }
+
+  async function equipRemoteItem(itemKey){
+    const key=String(itemKey||'').trim();
+    if(!/^[a-z0-9][a-z0-9._-]{0,79}$/i.test(key))return {ok:false,status:'invalid_item_key'};
+    if(!transport)return {ok:false,status:'offline_ready'};
+    return rpc('tgg_world_inventory_equip',{p_item_key:key});
+  }
+
   async function sync(){
     if(!transport)return {ok:false,status:'offline_ready',snapshot:snapshot()};
     const boot=await bootstrap();
@@ -188,5 +209,5 @@
     return {...last,connected:typeof transport==='function',version:VERSION};
   }
 
-  window.TGGWorldSync={version:VERSION,snapshot,avatarProfile,positionPayload,setTransport,bootstrap,syncAvatar,heartbeat,presenceBundle,nextMoves,careerBundle,economyBundle,walletReconcile,readRemoteState,sync,status};
+  window.TGGWorldSync={version:VERSION,snapshot,avatarProfile,positionPayload,setTransport,bootstrap,syncAvatar,heartbeat,presenceBundle,nextMoves,careerBundle,economyBundle,walletReconcile,readRemoteState,remoteInventory,equipRemoteItem,sync,status};
 })();

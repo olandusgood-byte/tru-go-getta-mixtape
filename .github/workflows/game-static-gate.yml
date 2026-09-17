@@ -1,4 +1,5 @@
 name: Game Static Gate
+# V1.13 RC isolated validation
 
 on:
   push:

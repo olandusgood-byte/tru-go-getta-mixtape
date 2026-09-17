@@ -55,8 +55,8 @@
     "world_presence_bundle",
     "world_next_moves"
   ],
-  "static_gate": "pending_reverify",
+  "static_gate": "passed_code_only",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.7-ONLINE-PLAYER-STATE-BRIDGE-CODE-COMPLETE",
+  "release_checkpoint": "V1.7-ONLINE-PLAYER-STATE-BRIDGE-STATIC-PASSED",
   "production": "gated"
 }

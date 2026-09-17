@@ -1,10 +1,35 @@
 {
-  "project":"TRU GO GETTA Game",
-  "version":"1.0",
-  "module":"GAME-006",
-  "name":"Website Bridge",
-  "principles":["separate game runtime from Blogger theme","external launch points only","no automatic redirects","no shared mutable page state"],
-  "links":["public_site","creator_dashboard"],
-  "workflow":["BUILD","TEST","REPAIR","VERIFY","CHECKPOINT","ADVANCE"],
-  "next":"V1.0 RELEASE QA"
+  "project": "TRU GO GETTA Game",
+  "version": "1.5",
+  "module": "GAME-BRIDGE-V1.5",
+  "name": "Creator OS Bridge",
+  "principles": [
+    "separate game runtime from Blogger theme",
+    "external launch points only",
+    "no automatic redirects",
+    "no shared mutable page state",
+    "no credential storage in game bundle"
+  ],
+  "links": [
+    "public_site",
+    "creator_dashboard"
+  ],
+  "snapshot": [
+    "player",
+    "level",
+    "cash",
+    "xp",
+    "reputation",
+    "recordings",
+    "mixtapes"
+  ],
+  "workflow": [
+    "BUILD",
+    "TEST",
+    "REPAIR",
+    "VERIFY",
+    "CHECKPOINT",
+    "ADVANCE"
+  ],
+  "next": "V1.6 WORLD SYNC FOUNDATION"
 }

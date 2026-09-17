@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.5",
-  "module": "GAME-V1.5",
-  "name": "Character Identity Checkpoint",
+  "version": "1.6",
+  "module": "GAME-V1.6",
+  "name": "World Sync Foundation Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -12,13 +12,15 @@
     "ADVANCE"
   ],
   "gates": {
-    "v1_4_integrity": true,
-    "avatar_api": true,
-    "avatar_persistence": true,
-    "avatar_save_repair": true,
-    "character_controls": true,
+    "v1_5_integrity": true,
+    "world_sync_api": true,
+    "world_sync_packet": true,
+    "world_sync_offline_default": true,
+    "transport_injection": true,
+    "credential_free_bundle": true,
     "legacy_save_keys_preserved": true
   },
   "browserPolicy": "manual_only",
-  "next": "V1.6 WORLD SYNC FOUNDATION"
+  "networkPolicy": "transport injection only",
+  "next": "V1.7 ONLINE PLAYER STATE BRIDGE"
 }

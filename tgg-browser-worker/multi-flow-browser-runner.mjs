@@ -15,8 +15,8 @@ const FLOW_CONFIG = {
 
 const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex');
 
-async function browserRpc(page, supabaseUrl, accessToken, fn, body = {}) {
-  const coreUrl = String(process.env.TGG_CORE_URL || supabaseUrl).replace(/\/$/,'');
+async function browserRpc(page, tggCoreUrl, accessToken, fn, body = {}) {
+  const coreUrl = String(process.env.TGG_CORE_URL || tggCoreUrl).replace(/\/$/,'');
   if (fn === 'tgg_get_creator_workspace_manifest' || fn === 'tgg_get_creator_ui_workspace_states' || fn === 'tgg_get_creator_workspace_schema') {
     const r = await page.evaluate(async ({coreUrl,accessToken}) => { const x=await fetch(coreUrl+'/v1/creator/workspace',{headers:{authorization:'Bearer '+accessToken}}); const json=await x.json().catch(()=>({})); return {ok:x.ok,status:x.status,json,text:JSON.stringify(json)}; }, {coreUrl,accessToken});
     return r;
@@ -55,8 +55,8 @@ async function browserRpc(page, supabaseUrl, accessToken, fn, body = {}) {
   return {ok:false,status:501,json:{error:'tgg_core_rpc_migration_pending',function:fn},text:'TGG Core RPC migration pending'};
 }
 
-async function browserAuthUser(page, supabaseUrl, accessToken) {
-  const coreUrl = String(process.env.TGG_CORE_URL || supabaseUrl).replace(/\/$/,'');
+async function browserAuthUser(page, tggCoreUrl, accessToken) {
+  const coreUrl = String(process.env.TGG_CORE_URL || tggCoreUrl).replace(/\/$/,'');
   return page.evaluate(async ({ coreUrl, accessToken }) => {
     const r = await fetch(coreUrl + '/v1/me', { headers: { Authorization: 'Bearer ' + accessToken } });
     const json = await r.json().catch(() => ({}));
@@ -69,15 +69,15 @@ function hasTitleInvalid(result) {
   return haystack.includes('TITLE_INVALID');
 }
 
-async function getArtistId(page, supabaseUrl, accessToken) {
-  const manifest = await browserRpc(page, supabaseUrl, accessToken, 'tgg_get_creator_workspace_manifest');
+async function getArtistId(page, tggCoreUrl, accessToken) {
+  const manifest = await browserRpc(page, tggCoreUrl, accessToken, 'tgg_get_creator_workspace_manifest');
   return manifest.ok ? manifest.json?.artist_id || null : null;
 }
 
-async function runMultiFlowBrowser(page, { flowKey, supabaseUrl, supabaseKey, accessToken, job }) {
+async function runMultiFlowBrowser(page, { flowKey, tggCoreUrl, tggCoreKey, accessToken, job }) {
   const config = FLOW_CONFIG[flowKey];
   if (!config) throw new Error(`UNSUPPORTED_RUNTIME_FLOW:${flowKey}`);
-  await page.addInitScript(({ key }) => { window.__TGG_SUPABASE_KEY = key; }, { key: supabaseKey });
+  await page.addInitScript(({ key }) => { window.__TGG_CORE_KEY = key; }, { key: tggCoreKey });
   const started = Date.now();
   const consoleErrors = [];
   const pageErrors = [];
@@ -91,12 +91,12 @@ async function runMultiFlowBrowser(page, { flowKey, supabaseUrl, supabaseKey, ac
   await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
   const rendered = await page.evaluate(() => document.readyState !== 'loading' && !!document.body);
   if (!rendered) throw new Error('BROWSER_PAGE_NOT_RENDERED');
-  const auth = await browserAuthUser(page, supabaseUrl, accessToken);
+  const auth = await browserAuthUser(page, tggCoreUrl, accessToken);
   if (!auth.ok || !auth.user?.id) throw new Error(`BROWSER_AUTH_NOT_PRESENT:${auth.status}`);
 
   const loadMs = Date.now() - started;
   const bodyText = await page.locator('body').innerText().catch(() => '');
-  const control = await browserRpc(page, supabaseUrl, accessToken, 'tgg_get_creator_ui_workspace_states');
+  const control = await browserRpc(page, tggCoreUrl, accessToken, 'tgg_get_creator_ui_workspace_states');
   const controlResponded = control.ok;
   const nonBlockingPatterns = [/requestStorageAccess: Permission denied\.?/i, /Failed to load resource: the server responded with a status of 429 \(\)/i, /solveSimpleChallenge is not defined/i, /Cannot set properties of null \(setting 'oninput'\)/i];
   const blockingConsoleErrors = consoleErrors.filter((message) => !nonBlockingPatterns.some((pattern) => pattern.test(message)));
@@ -106,12 +106,12 @@ async function runMultiFlowBrowser(page, { flowKey, supabaseUrl, supabaseKey, ac
   const capture = { build: 'ARTIST-HQ-V3-AUTO-QA-V1', load_ms: Math.max(1, loadMs), rendered, page_path: pagePath, auth_present: true, browser_context: true, control_responded: controlResponded, blocking_error_count: blockingErrorCount, browser_errors: browserErrors, ignored_browser_errors: { console: consoleErrors.filter((message) => !blockingConsoleErrors.includes(message)), page: pageErrors.filter((message) => !blockingPageErrors.includes(message)) } };
 
   if (config.workspace) {
-    const schema = await browserRpc(page, supabaseUrl, accessToken, 'tgg_get_creator_workspace_schema', { p_workspace: config.workspace });
+    const schema = await browserRpc(page, tggCoreUrl, accessToken, 'tgg_get_creator_workspace_schema', { p_workspace: config.workspace });
     capture.workspace = config.workspace;
     capture.workspace_schema_ok = schema.ok && schema.json?.key === config.workspace;
     if (!capture.workspace_schema_ok) throw new Error(`WORKSPACE_SCHEMA_FAILED:${config.workspace}:${schema.status}`);
     if (flowKey === 'release_pro_runtime') {
-      const invalidCreate = await browserRpc(page, supabaseUrl, accessToken, 'tgg_creator_create_mixtape_draft', { p_title: '', p_genre: 'qa', p_description: '', p_cover_url: '', p_cover_path: '', p_explicit: 'false' });
+      const invalidCreate = await browserRpc(page, tggCoreUrl, accessToken, 'tgg_creator_create_mixtape_draft', { p_title: '', p_genre: 'qa', p_description: '', p_cover_url: '', p_cover_path: '', p_explicit: 'false' });
       capture.workspace_rpc_ok = false;
       capture.release_create_path_ok = !invalidCreate.ok && hasTitleInvalid(invalidCreate);
       capture.release_create_rpc = 'tgg_creator_create_mixtape_draft';
@@ -119,23 +119,23 @@ async function runMultiFlowBrowser(page, { flowKey, supabaseUrl, supabaseKey, ac
       capture.release_mutation_performed = false;
       if (!capture.release_create_path_ok) throw new Error(`RELEASE_VALIDATION_FAILED:${invalidCreate.status}`);
     } else {
-      const artistId = await getArtistId(page, supabaseUrl, accessToken);
+      const artistId = await getArtistId(page, tggCoreUrl, accessToken);
       let rpcBody = {};
       if (flowKey === 'command_center_runtime' || flowKey === 'growth_runtime' || flowKey === 'supporters_runtime') rpcBody = { p_artist_id: artistId, ...(flowKey === 'command_center_runtime' ? { p_action_limit: 1 } : {}) };
-      const workspaceRpc = await browserRpc(page, supabaseUrl, accessToken, config.rpc, rpcBody);
+      const workspaceRpc = await browserRpc(page, tggCoreUrl, accessToken, config.rpc, rpcBody);
       capture.workspace_rpc_ok = workspaceRpc.ok;
       if (!capture.workspace_rpc_ok) { capture.workspace_rpc_error = workspaceRpc.text || JSON.stringify(workspaceRpc.json || {}); throw new Error(`WORKSPACE_RPC_FAILED:${config.rpc}:${workspaceRpc.status}`); }
     }
   } else if (flowKey === 'creator_profile_runtime') {
-    const profile = await browserRpc(page, supabaseUrl, accessToken, 'tgg_creator_profile_bundle');
+    const profile = await browserRpc(page, tggCoreUrl, accessToken, 'tgg_creator_profile_bundle');
     capture.profile_visible = profile.ok && !!profile.json && (Object.keys(profile.json).length > 0 || /artist|profile/i.test(bodyText));
     if (!capture.profile_visible) throw new Error(`PROFILE_NOT_VISIBLE:${profile.status}`);
   } else if (flowKey === 'notifications_runtime') {
-    const notifications = await browserRpc(page, supabaseUrl, accessToken, 'tgg_creator_notifications_bundle');
+    const notifications = await browserRpc(page, tggCoreUrl, accessToken, 'tgg_creator_notifications_bundle');
     capture.notifications_rpc_ok = notifications.ok;
     if (!capture.notifications_rpc_ok) throw new Error(`NOTIFICATIONS_RPC_FAILED:${notifications.status}`);
   } else if (flowKey === 'session_recovery_runtime') {
-    const secondAuth = await browserAuthUser(page, supabaseUrl, accessToken);
+    const secondAuth = await browserAuthUser(page, tggCoreUrl, accessToken);
     capture.session_recovered = secondAuth.ok && secondAuth.user?.id === auth.user.id;
     if (!capture.session_recovered) throw new Error(`SESSION_RECOVERY_FAILED:${secondAuth.status}`);
   }

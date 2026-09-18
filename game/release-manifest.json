@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.14 Live City + Read-Only World Assets",
-  "base": "V1.13 Progression + Business Discovery",
+  "release": "V1.15 City Activity Mastery",
+  "base": "V1.14 Live City + Read-Only World Assets",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -45,7 +45,11 @@
     "V1.13-BUSINESS-SCREEN",
     "V1.14-LIVE-CITY-ACTIVITY-SURFACE",
     "V1.14-WORLD-ASSET-READONLY-INSPECT",
-    "V1.14-WORLD-ASSET-SAFE-RENDER"
+    "V1.14-WORLD-ASSET-SAFE-RENDER",
+    "V1.15-CITY-ACTIVITY-MASTERY",
+    "V1.15-CITY-RANK",
+    "V1.15-CITY-STREAK",
+    "V1.15-CITY-ACHIEVEMENTS"
   ],
   "gates": [
     "runtime_api_presence",
@@ -118,10 +122,16 @@
     "core_control_bindings",
     "pause_input_lock",
     "secondary_world_navigation",
-    "browser_smoke_automated"
+    "browser_smoke_automated",
+    "city_mastery_api",
+    "city_mastery_state",
+    "city_rank",
+    "city_streak",
+    "city_mastery_achievements",
+    "base_event_economy_unchanged"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.14-LIVE-CITY-READONLY-ASSETS-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.15-CITY-ACTIVITY-MASTERY-CANDIDATE",
   "production": "gated"
 }

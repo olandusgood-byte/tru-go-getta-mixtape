@@ -1,0 +1,30 @@
+name: Game V1.33 Street Reputation Smoke
+
+on:
+  push:
+    branches:
+      - feat/game-v1-33-street-reputation-20260918
+    paths:
+      - 'game/**'
+      - '.github/workflows/game-v1-33-browser-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright Chromium
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Run V1.33 street reputation browser smoke
+        run: python game/tests/browser_v133_smoke.py

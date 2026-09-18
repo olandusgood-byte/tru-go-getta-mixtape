@@ -203,3 +203,18 @@
   .shops3d{min-height:250px;height:300px}
   #park.interior-3d-ready .park-world{min-height:360px}
 }
+
+
+/* V2.00 BIG BUILD — smooth player locomotion */
+.player-move-hud{position:absolute;left:18px;bottom:18px;z-index:14;display:grid;grid-template-columns:auto auto;gap:7px 16px;align-items:end;min-width:190px;padding:11px 13px;border:1px solid #ffffff1f;border-radius:16px;background:#05070de6;box-shadow:0 14px 34px #000a;backdrop-filter:blur(10px);opacity:0;transform:translateY(4px);transition:opacity .2s,transform .2s,border-color .2s;pointer-events:none}
+.player-move-hud.active{opacity:1;transform:translateY(-2px);border-color:#7b86ff55}
+.player-move-hud>div{min-width:0}.player-move-hud small{display:block;font-size:8px;letter-spacing:.12em;color:#8f93a8}.player-move-hud b{display:block;margin-top:2px;font-size:13px;color:#fff;letter-spacing:.08em}.player-move-hud b.sprinting{color:#c7ff00}.player-move-hud i{font-style:normal;color:#c7ff00;font-variant-numeric:tabular-nums}.player-move-hud>span{grid-column:1/-1;font-size:7px;letter-spacing:.08em;color:#a9adbd}
+.vehicle-hud.active+.player-move-hud{opacity:0!important}
+.dpad button.held,.d-core.held{transform:translateY(2px) scale(.97);border-color:#c7ff00!important;background:#c7ff00!important;color:#071000!important;box-shadow:0 0 18px #c7ff0030}
+.d-core{appearance:none;padding:0;font-family:inherit;cursor:pointer}
+#sprintBtn{font-size:9px;font-weight:900;letter-spacing:.08em}
+#walkModeValue.sprinting{color:#c7ff00;text-shadow:0 0 12px #c7ff0050}
+@media(max-width:650px){
+  .player-move-hud{left:10px;bottom:10px;min-width:160px;padding:9px 10px}
+  .player-move-hud>span{max-width:160px;white-space:normal}
+}

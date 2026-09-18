@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.22 3D Collision + Camera Orbit",
-  "base": "V1.21 True 3D City Foundation",
+  "release": "V1.23 3D District Landmarks + Enterable Hubs",
+  "base": "V1.22 3D Collision + Camera Orbit",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -76,7 +76,10 @@
     "V1.21-3D-PLAYER-NPC",
     "V1.22-3D-COLLISION",
     "V1.22-CAMERA-ORBIT",
-    "V1.22-CAMERA-ZOOM"
+    "V1.22-CAMERA-ZOOM",
+    "V1.23-3D-LANDMARKS",
+    "V1.23-PROXIMITY-PROMPT",
+    "V1.23-ENTERABLE-HUBS"
   ],
   "gates": [
     "runtime_api_presence",
@@ -200,10 +203,14 @@
     "world3d_collision",
     "world3d_orbit_camera",
     "world3d_zoom",
-    "mission_path_clear"
+    "mission_path_clear",
+    "world3d_landmarks",
+    "world3d_proximity",
+    "world3d_enter_hub",
+    "world3d_e_key"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.22-3D-COLLISION-CAMERA-ORBIT-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.23-3D-LANDMARKS-ENTERABLE-HUBS-CANDIDATE",
   "production": "gated"
 }

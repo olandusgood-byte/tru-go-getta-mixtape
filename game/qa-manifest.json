@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.30",
-  "module": "GAME-V1.30-QA",
-  "name": "City Life 3D",
+  "version": "1.31",
+  "module": "GAME-V1.31-QA",
+  "name": "Street Life + Traffic Proximity",
   "checks": [
     "storage",
     "game_api",
@@ -92,7 +92,14 @@
     "navigation_hud",
     "traffic_population",
     "traffic_animation",
-    "interior_no_reward_path"
+    "interior_no_reward_path",
+    "street_life_api",
+    "pedestrian_proximity",
+    "street_contact_memory",
+    "street_talk_no_rewards",
+    "traffic_proximity",
+    "horn_reaction",
+    "contextual_prompt"
   ],
   "workflow": [
     "BUILD",
@@ -105,6 +112,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.31 TRAFFIC PROXIMITY + STREET INTERACTIONS",
-  "verification": "passed"
+  "next": "V1.32 STREET EVENTS + CROWD REACTIONS",
+  "verification": "pending_ci"
 }

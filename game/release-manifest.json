@@ -184,8 +184,8 @@
     "opportunities_single_memory_store",
     "first_opportunity_achievement"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.20-NPC-FAVOR-HOOKS-CONTACT-OPPORTUNITIES-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.20-NPC-FAVOR-HOOKS-CONTACT-OPPORTUNITIES-VERIFIED",
   "production": "gated"
 }

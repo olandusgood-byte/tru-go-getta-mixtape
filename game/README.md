@@ -1,6 +1,6 @@
-# TRU GO GETTA Game V1.13
+# TRU GO GETTA Game V1.14
 
-This checkpoint promotes the already-wired progression and business discovery layer on top of the credential-free TGG World property and vehicle discovery adapter, while keeping ownership, travel, spawn and upgrade mutations out of the game bundle.
+V1.14 turns the existing V1.13 business/world-asset discovery wiring into a usable **Live City + Read-Only World Assets** surface while preserving the same fail-closed production and mutation boundaries.
 
 ## Verified layers
 
@@ -14,39 +14,44 @@ This checkpoint promotes the already-wired progression and business discovery la
 - V1.11: Mission + Story Discovery
 - V1.12: Property + Vehicle Discovery
 - V1.13: Progression + Business Discovery
+- V1.14: Live City + Read-Only World Assets
 
-## V1.13 Progression + Business Discovery
+## V1.14 Live City + Read-Only World Assets
 
-V1.13 keeps the V1.12 `window.TGGWorldSync` discovery reads and adds the already-wired `window.TGGBusiness` gameplay layer:
+This layer keeps the existing `window.TGGWorldSync` reads and hardens `window.TGGBusiness`:
 
-- persistent local business discovery;
-- level-gated business catalog;
-- business selection/detail UI;
-- read-only world asset refresh through `worldAssetsBundle()`;
-- no purchase, ownership, travel, spawn, or upgrade mutation bridge.
-
-Vehicle detail is backed by an existing TGG World contract that explicitly reports `real_money:false`.
+- exports the previously hidden world-asset loader and renderer;
+- keeps one persistent `tgg-business-v1` state object;
+- shows the existing city activity catalog in the business hub;
+- exposes a read-only activity snapshot for deterministic QA;
+- supports property and vehicle **inspect-only** detail;
+- escapes remote asset labels before HTML rendering;
+- keeps offline-ready behavior when trusted Creator OS transport is absent;
+- exposes no purchase, ownership, travel, spawn, driving, tune, or upgrade mutation bridge.
 
 ## Explicit exclusions
 
-V1.13 does not expose:
+V1.14 does not expose:
 
 - property buy/list/cancel;
 - property upgrade install/buy;
 - fast travel / travel-to;
 - vehicle spawn/join/drive;
 - vehicle tune/music mutation;
-- party travel.
+- party travel;
+- automatic network polling;
+- service-role/provider secrets.
 
 ## Safety model
 
-- No automatic network calls or timers.
 - Trusted transport injection only.
-- No ownership/travel mutation surface.
+- No automatic network calls or timers.
+- Remote property/vehicle payloads are rendered as escaped display data.
+- World assets are inspect-only.
+- No local save overwrite from remote state.
 - No purchase bridge.
 - No mission/social mutation bridge.
-- No local save overwrite from remote state.
-- No service-role/provider secrets.
+- Production remains gated.
 
 ## Current checkpoint
 
@@ -57,13 +62,18 @@ V1.13 does not expose:
 - [x] Inventory + Equipment
 - [x] Social + Crew
 - [x] Mission + Story
-- [x] Property + Vehicle discovery code
-- [x] V1.12 static code gate
-- [x] V1.13 progression + business discovery runtime wiring
-- [x] V1.13 static code gate target
+- [x] Property + Vehicle discovery
+- [x] Progression + Business discovery
+- [x] V1.14 live-city surface
+- [x] V1.14 property/vehicle read-only inspectors
+- [x] V1.14 remote-label escaping
+- [x] V1.14 runtime/release QA targets
+- [x] V1.14 static contract target
+- [ ] V1.14 static CI confirmation
+- [ ] V1.14 manual browser confirmation
 - [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.13-PROGRESSION-BUSINESS-DISCOVERY-STATIC-CANDIDATE.** Browser validation remains manual-only by policy. The next safe internal candidate after static verification is V1.14 live city activities plus read-only vehicle/property gameplay surfaces.
+**V1.14-LIVE-CITY-READONLY-ASSETS-STATIC-CANDIDATE.** The branch is intentionally not a production release. Static CI and manual browser validation remain required before this checkpoint advances.

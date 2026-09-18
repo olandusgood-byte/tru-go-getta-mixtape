@@ -15,6 +15,14 @@
       streetEvents.bestHype=Math.max(streetEvents.crowdHype,Math.max(0,Math.min(100,num(streetEvents.bestHype,0))));
       const totalRuns=Object.values(streetEvents.runs).reduce((sum,v)=>sum+Math.max(0,num(v,0)),0);
       streetEvents.streetRep=Math.max(0,Math.min(100,totalRuns*6+Math.floor(streetEvents.crowdHype/2)));
+      if(!streetEvents.sets||typeof streetEvents.sets!=='object'||Array.isArray(streetEvents.sets))streetEvents.sets={active:null,step:0,completed:[],history:[],momentum:0,bestMomentum:0,lastEvent:null,lastResult:null};
+      if(typeof streetEvents.sets.active!=='string')streetEvents.sets.active=null;
+      streetEvents.sets.step=Math.max(0,Math.floor(num(streetEvents.sets.step,0)));
+      if(!Array.isArray(streetEvents.sets.completed))streetEvents.sets.completed=[];
+      if(!Array.isArray(streetEvents.sets.history))streetEvents.sets.history=[];
+      streetEvents.sets.momentum=Math.max(0,Math.min(100,num(streetEvents.sets.momentum,0)));
+      streetEvents.sets.bestMomentum=Math.max(streetEvents.sets.momentum,Math.max(0,Math.min(100,num(streetEvents.sets.bestMomentum,0))));
+      streetEvents.sets.lastEvent=typeof streetEvents.sets.lastEvent==='string'?streetEvents.sets.lastEvent:null;
       streetEvents.updatedAt=num(streetEvents.updatedAt,Date.now());
       localStorage.setItem(keys.streetEvents,JSON.stringify(streetEvents));
     }

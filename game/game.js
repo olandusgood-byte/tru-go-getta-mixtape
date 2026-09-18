@@ -218,6 +218,12 @@
       const typing=t instanceof HTMLInputElement||t instanceof HTMLTextAreaElement||t instanceof HTMLSelectElement||t?.isContentEditable;
       if(typing)return;
       const k=e.key.length===1?e.key.toLowerCase():e.key;
+      if(k==='e'){
+        e.preventDefault();
+        const entered=window.TGGWorld3D?.tryEnterLandmark?.();
+        if(entered&&entered.ok===false)toast('MOVE CLOSER TO A 3D LANDMARK');
+        return;
+      }
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(k)){
         e.preventDefault();
         move(k==='a'||k==='ArrowLeft'?-2:k==='d'||k==='ArrowRight'?2:0,k==='w'||k==='ArrowUp'?-2:k==='s'||k==='ArrowDown'?2:0);

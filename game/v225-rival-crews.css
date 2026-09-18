@@ -1,0 +1,38 @@
+/* V2.25 RIVAL CREWS + STORY CHOICES 100 */
+body.tgg-v225 .v225-rival-panel{position:fixed;left:50%;top:50%;z-index:220;display:grid;gap:11px;width:min(480px,calc(100vw - 24px));padding:16px;transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;border:1px solid #ffffff20;border-radius:23px;background:linear-gradient(150deg,#090c13fb,#1a0f17fb);box-shadow:0 36px 120px #000f;transition:.22s ease}
+body.tgg-v225 .v225-rival-panel.active{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+body.tgg-v225 .v225-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+body.tgg-v225 .v225-head div{display:grid;gap:3px}
+body.tgg-v225 .v225-head small{font-size:7px;font-weight:900;letter-spacing:.18em;color:#ff466d}
+body.tgg-v225 .v225-head b{font-size:13px;color:#fff}
+body.tgg-v225 .v225-head button{width:32px;height:32px;border:1px solid #ffffff18;border-radius:50%;background:#111722;color:#fff;font-size:18px}
+body.tgg-v225 .v225-dialogue{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #ffffff10;border-radius:13px;background:#ffffff05}
+body.tgg-v225 .v225-dialogue>span{display:grid;place-items:center;flex:0 0 42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#ff466d,#c56cff);font-weight:1000;color:#fff}
+body.tgg-v225 .v225-dialogue p{margin:0;font-size:10px;line-height:1.5;color:#d7dce6}
+body.tgg-v225 .v225-meters{display:grid;gap:7px}
+body.tgg-v225 .v225-meters label{display:grid;grid-template-columns:1fr auto;gap:4px;font-size:7px;font-weight:900;letter-spacing:.1em;color:#8993a5}
+body.tgg-v225 .v225-meters label>b{color:#fff}
+body.tgg-v225 .v225-meters label>i{grid-column:1/-1;height:5px;overflow:hidden;border-radius:999px;background:#ffffff10}
+body.tgg-v225 .v225-meters em{display:block;height:100%;transition:width .18s}
+body.tgg-v225 #v225RivalryFill{background:#ff466d}
+body.tgg-v225 #v225RespectFill{background:#61d9ff}
+body.tgg-v225 #v225ChemFill{background:#c7ff00}
+body.tgg-v225 .v225-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+body.tgg-v225 .v225-choices button{display:grid;gap:4px;min-height:76px;text-align:left;padding:10px;border:1px solid #ffffff16;border-radius:12px;background:#111722;color:#fff;cursor:pointer}
+body.tgg-v225 .v225-choices button:hover,body.tgg-v225 .v225-choices button:focus-visible{outline:none;border-color:#ff466d}
+body.tgg-v225 .v225-choices button:disabled{opacity:.36;cursor:not-allowed}
+body.tgg-v225 .v225-choices b{font-size:9px}
+body.tgg-v225 .v225-choices span{font-size:7px;line-height:1.4;color:#909aac}
+body.tgg-v225 #v225Cooldown{font-size:7px;color:#7f899c}
+body.tgg-v225 .v225-rival-hud{position:absolute;left:18px;top:145px;z-index:13;display:none;gap:2px;padding:8px 10px;border:1px solid #ff466d2d;border-radius:11px;background:#070b12dd}
+body.tgg-v225 .v225-rival-hud.active{display:grid}
+body.tgg-v225 .v225-rival-hud small{font-size:6px;font-weight:900;letter-spacing:.15em;color:#ff466d}
+body.tgg-v225 .v225-rival-hud b{font-size:9px;color:#fff}
+body.tgg-v225 .v225-rival-hud span{font-size:7px;color:#a3adbc}
+body.tgg-v225 .v225-rival-panel[data-tier="rivals"]{border-color:#ff466d66}
+body.tgg-v225 .v225-rival-panel[data-tier="respected"]{border-color:#61d9ff66}
+body.tgg-v225 .v225-rival-panel[data-tier="allies"]{border-color:#c7ff0066}
+body.tgg-v225 .sr-only{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(prefers-reduced-motion:reduce){body.tgg-v225 .v225-rival-panel,body.tgg-v225 .v225-meters em{transition:none!important}}
+@media(max-width:700px){body.tgg-v225 .v225-rival-panel{padding:13px;border-radius:18px}body.tgg-v225 .v225-choices{grid-template-columns:1fr}body.tgg-v225 .v225-choices button{min-height:56px}body.tgg-v225 .v225-rival-hud{left:10px;top:112px}}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v225 .v225-rival-panel{width:min(640px,78vw);max-height:94vh;overflow:auto}body.tgg-v225 .v225-choices{grid-template-columns:repeat(3,1fr)}}

@@ -1,65 +1,73 @@
-# TRU GO GETTA Game V1.32
+# TRU GO GETTA Game V1.33
 
-V1.32 turns the verified V1.31 living street layer into a local 3D event system with crowd reactions, while keeping the existing economy, missions and Creator OS boundaries intact.
+V1.33 builds local street reputation on top of the verified V1.32 street-event system without adding another cash, XP, reputation-currency, or remote mutation path.
 
-## Street Events
+## Street Reputation
 
-Three on-foot hotspots are active in the 3D city:
+Street reputation is calculated from:
 
-- Downtown Cypher
-- Studio Sidewalk
-- Mixtape Pop-Out
+- verified local street-event run count;
+- crowd hype from completed events.
 
-Walk into a hotspot and press **G** (or use the contextual prompt) to start the local event.
+Ranks:
 
-## Crowd reactions
+- NEW FACE
+- ON THE RADAR
+- LOCAL NAME
+- CITY KNOWN
+- CITY HEADLINER
 
-When a street event starts:
+Street reputation persists inside the existing `tgg-street-events-v1` state.
 
-- up to four nearby 3D pedestrians gather around the player;
-- the crowd faces the performance;
-- arms/body animation shifts into a reaction pose;
-- the event HUD moves through BUILD → LIVE → FINISH;
-- completing the event releases pedestrians back to their ambient routes;
-- local crowd hype and event history persist in `tgg-street-events-v1`.
+## Event Variants
 
-The street-event layer does **not** award cash, XP or reputation and does not call any Creator OS/world mutation API.
+Each hotspot evolves through cosmetic/presentation variants as its local run count increases.
 
-## Preserved stack
+Downtown Cypher:
+- Open Circle
+- Local Buzz Cypher
+- City Circle
+- Headline Cypher
 
-Everything verified through V1.31 remains intact:
+Studio Sidewalk:
+- Sidewalk Set
+- Late Night Set
+- Studio Row Feature
+- Studio Lockout
 
-- smooth car driving, braking, drift, horn and collision;
-- cinematic camera + live radar;
-- garage customization and handling presets;
-- 3D Apartment, Media, Shops, Park, Garage and Recording Studio;
-- live navigation;
-- six ambient traffic vehicles + six animated pedestrians;
-- street conversations and traffic proximity;
-- missions, save/continue, economy, city events, circuits and story;
-- NPC memory, relationships and contact opportunities;
-- read-only world/Creator OS discovery.
+Mixtape Pop-Out:
+- Block Pop-Out
+- Corner Takeover
+- Mixtape Ave Live
+- City Premiere
+
+Every variant is explicitly `cosmeticOnly: true` with `rewardMultiplier: 1`.
+
+## Progression
+
+- Street Known — reach 30 local street reputation.
+- Street Headliner — reach 80 local street reputation.
+- Progression now shows Street Rep, Street Rank, and total Street Events.
 
 ## Verification
 
-- [x] V1.32 static contract
-- [x] three street-event hotspots
-- [x] contextual G-to-start prompt
-- [x] 3D crowd gather
-- [x] crowd reaction animation
-- [x] live event HUD
-- [x] event completion + crowd release
-- [x] local event persistence
-- [x] crowd hype persistence
-- [x] no cash / XP reward path
+- [x] street reputation API
+- [x] street rank calculation
+- [x] event variant catalog
+- [x] variants stay cosmetic-only
+- [x] street reputation save repair
+- [x] first run remains Open Circle
+- [x] third Downtown run unlocks Local Buzz Cypher
+- [x] three runs reach Local Name
+- [x] Street Known achievement unlocks
+- [x] cash and XP remain unchanged across street-event reputation progression
 - [x] no remote mutation path
-- [x] V1.31 regression suite preserved
-- [x] Static CI PASS on `36b5803`
-- [x] Chromium Smoke PASS on `36b5803`
+- [x] Static CI PASS on `bd60f89`
+- [x] Chromium Smoke PASS on `bd60f89`
 - [x] production remains gated
 
 ## Release status
 
-**V1.32-STREET-EVENTS-CROWD-REACTIONS-VERIFIED.**
+**V1.33-STREET-REPUTATION-EVENT-VARIANTS-VERIFIED.**
 
-Next internal development layer: **V1.33 Street Reputation + Event Variants**.
+Next internal development layer: **V1.34 Street Sets + Crowd Momentum**.

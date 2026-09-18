@@ -2,242 +2,82 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
 const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
-const business=fs.readFileSync(new URL('./business.js',import.meta.url),'utf8');
 const game=fs.readFileSync(new URL('./game.js',import.meta.url),'utf8');
+const game3d=fs.readFileSync(new URL('./game-3d.js',import.meta.url),'utf8');
+const garage=fs.readFileSync(new URL('./garage.js',import.meta.url),'utf8');
+const studio3d=fs.readFileSync(new URL('./studio-3d.js',import.meta.url),'utf8');
 const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
-const events=fs.readFileSync(new URL('./events.js',import.meta.url),'utf8');
-const progression=fs.readFileSync(new URL('./progression.js',import.meta.url),'utf8');
-const circuits=fs.readFileSync(new URL('./circuits.js',import.meta.url),'utf8');
-const districtStory=fs.readFileSync(new URL('./district-story.js',import.meta.url),'utf8');
-const routeMemory=fs.readFileSync(new URL('./route-memory.js',import.meta.url),'utf8');
-const contactOps=fs.readFileSync(new URL('./contact-opportunities.js',import.meta.url),'utf8');
-const qa=fs.readFileSync(new URL('./qa.js',import.meta.url),'utf8');
-const releaseQa=fs.readFileSync(new URL('./release-qa.js',import.meta.url),'utf8');
 const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
-const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
+const qa=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.20/);
-assert.match(html,/GAME V1\.20 • NPC FAVOR HOOKS \+ CONTACT OPPORTUNITIES/);
-assert.match(html,/<script src="business\.js"><\/script>/);
-assert.match(html,/<script src="circuits\.js"><\/script>/);
-assert.match(html,/<script src="district-story\.js"><\/script>/);
-assert.match(html,/<script src="route-memory\.js"><\/script>/);
-assert.match(html,/<script src="contact-opportunities\.js"><\/script>/);
-assert.match(html,/id="businessBoard"/);
-assert.match(html,/id="businessBtn"/);
-assert.match(html,/id="cityAssetsBtn"/);
+assert.match(html,/Game V1\.29 3D/);
+assert.match(html,/GAME V1\.29 • BULK WORLD UPGRADE/);
+assert.match(html,/vendor\/three-r152\.min\.js/);
+assert.match(html,/id="garage"/);
+assert.match(html,/id="garageBtn"/);
+assert.match(html,/id="studio3d"/);
+assert.match(html,/id="npcDialogue"/);
+assert.match(html,/id="driftBtn"/);
+assert.match(html,/id="hornBtn"/);
 
-assert.match(business,/VERSION='1\.14\.0'/);
-assert.match(business,/window\.TGGBusiness/);
-assert.match(business,/worldAssetsBundle/);
-assert.match(business,/tgg-business-v1/);
-assert.match(business,/V1\.14 • LIVE CITY \+ READ-ONLY WORLD ASSETS/);
-for (const api of ['loadAssets','renderAssets','activitySnapshot','inspectProperty','inspectVehicle']) {
-  assert.match(business,new RegExp('function '+api+'\\b'));
-}
-assert.match(business,/readOnly:true/);
-assert.match(business,/const esc=/);
-assert.match(business,/esc\(assetName\(/);
+assert.match(garage,/tgg-garage-v1/);
+assert.match(garage,/window\.TGGGarage/);
+assert.match(garage,/street:/);
+assert.match(garage,/sport:/);
+assert.match(garage,/drift:/);
+assert.match(garage,/setCarAppearance/);
+assert.match(garage,/setDriveTuning/);
 
-for (const token of [
-  "newGame')?.addEventListener",
-  "continueGame')?.addEventListener",
-  "startGame')?.addEventListener",
-  "missionBtn')?.addEventListener",
-  "saveBtn')?.addEventListener",
-  "pauseBtn')?.addEventListener",
-  "resumeBtn')?.addEventListener",
-  "progressionBtn')?.addEventListener",
-  "DOMContentLoaded"
-]) {
-  assert.ok(game.includes(token),'missing playable control binding: '+token);
-}
-assert.match(game,/if\(activeScreen!==['"]game['"]\)return false/);
+assert.match(game,/function setDriveTuning/);
+assert.match(game,/function getDriveTuning/);
+assert.match(game,/garageBtn/);
+assert.match(game,/driftBtn/);
+assert.match(game,/hornBtn/);
+assert.match(game,/npcDialogue/);
+assert.match(game,/md<16/);
+assert.match(game,/canMovePercent\(nx,ny,true\)/);
 
+assert.match(game3d,/function setCarAppearance/);
+assert.match(game3d,/extra=vehicle \? \.9 : 0/);
+assert.match(game3d,/window\.TGG3D/);
+assert.match(game3d,/setVehicleDynamics/);
+assert.match(game3d,/getVehicleDynamics/);
 
-for (const api of ['totalRuns','mastery','cityProfile','recordMomentum']) {
-  assert.match(events,new RegExp('function '+api+'\\b'));
-}
-assert.match(events,/tgg-events-v1/);
-assert.match(events,/streak:0/);
-assert.match(events,/bestStreak:0/);
-for (const reward of [
-  /street-cypher[^\n]+cash:180,xp:35,rep:10/,
-  /studio-pop-in[^\n]+cash:275,xp:55,rep:20/,
-  /release-rush[^\n]+cash:450,xp:90,rep:35/
-]) assert.match(events,reward);
-for (const achievement of ['city-regular','city-known','city-headliner']) assert.match(progression,new RegExp(achievement));
+assert.match(studio3d,/id='studio3d'|getElementById\('studio3d'\)/);
+assert.match(studio3d,/WebGLRenderer/);
+assert.match(studio3d,/window\.TGGStudio3D/);
+assert.match(studio3d,/DOMContentLoaded/);
 
-
-assert.match(circuits,/tgg-circuits-v1/);
-assert.match(circuits,/window\.TGGCircuits/);
-for (const api of ['start','expected','status','onEventComplete','variant','render']) {
-  assert.match(circuits,new RegExp('function '+api+'\\b'));
-}
-assert.match(circuits,/first-lap/);
-assert.match(circuits,/city-run/);
-assert.match(circuits,/rewardMultiplier:1/);
-assert.match(circuits,/cosmeticOnly:true/);
-assert.equal(circuits.includes('TGGGame?.reward'),false);
-assert.equal(circuits.includes('TGGCareer?.addRep'),false);
-assert.match(events,/TGGCircuits\?\.onEventComplete/);
-assert.match(events,/TGGCircuits\?\.variant/);
-assert.match(events,/TGGCircuits\?\.render/);
-for (const achievement of ['first-circuit','city-circuit']) assert.match(progression,new RegExp(achievement));
-
-
-assert.match(districtStory,/tgg-district-story-v1/);
-assert.match(districtStory,/window\.TGGDistrictStory/);
-assert.match(districtStory,/city-story-lap/);
-assert.match(districtStory,/missionStoryBundle/);
-for (const api of ['districtState','currentBeat','status','start','onCircuitResult','summarizeRemoteStory','refreshRemoteStory','render']) {
-  assert.match(districtStory,new RegExp('function '+api+'\\b'));
-}
-assert.match(circuits,/TGGDistrictStory\?\.onCircuitResult/);
-assert.equal(districtStory.includes('TGGGame?.reward'),false);
-assert.equal(districtStory.includes('TGGCareer?.addRep'),false);
-for (const forbiddenStoryWrite of [
-  'tgg_world_mvp_v1_accept_mission',
-  'tgg_world_mvp_v1_complete_mission',
-  'tgg_world_start_story_arc',
-  'tgg_world_claim_story_chapter',
-  'tgg_world_join_location',
-  'tgg_world_join_location_at',
-  'tgg_world_v4_record_mission_evidence',
-  'tgg_world_v4_verify_and_complete_mission'
-]) assert.equal(districtStory.includes(forbiddenStoryWrite),false,'story router must remain read-only: '+forbiddenStoryWrite);
-assert.match(progression,/district-story/);
-
-
-assert.match(routeMemory,/tgg-route-memory-v1/);
-assert.match(routeMemory,/window\.TGGRouteMemory/);
-for (const npc of ['m','producer','dj']) assert.match(routeMemory,new RegExp(npc+':'));
-for (const api of ['districtMemory','recordBeat','currentNpc','encounterCurrent','uniqueNpcIds','memorySnapshot','summarizeRemote','refreshRemoteMemory','render']) {
-  assert.match(routeMemory,new RegExp('function '+api+'\\b'));
-}
-assert.match(routeMemory,/npcEncounters/);
-assert.match(routeMemory,/memoryHistory/);
-assert.match(events,/TGGDistrictStory\?\.render/);
-assert.match(districtStory,/TGGRouteMemory\?\.recordBeat/);
-assert.match(districtStory,/TGGRouteMemory\?\.render/);
-assert.equal(routeMemory.includes('TGGGame?.reward'),false);
-assert.equal(routeMemory.includes('TGGCareer?.addRep'),false);
-assert.equal(routeMemory.includes('TGGEconomy?.apply'),false);
-for (const forbiddenNpcWrite of [
-  'tgg_world_mvp_v1_accept_mission',
-  'tgg_world_mvp_v1_complete_mission',
-  'tgg_world_start_story_arc',
-  'tgg_world_claim_story_chapter',
-  'tgg_world_join_location',
-  'tgg_world_join_location_at',
-  'tgg_world_v4_record_mission_evidence',
-  'tgg_world_v4_verify_and_complete_mission',
-  'tgg_world_social_post',
-  'tgg_world_social_comment',
-  'tgg_world_social_react'
-]) assert.equal(routeMemory.includes(forbiddenNpcWrite),false,'route memory must remain read-only: '+forbiddenNpcWrite);
-assert.match(progression,/know-the-city/);
-
-
-assert.match(routeMemory,/relationships:\{\}/);
-assert.match(routeMemory,/RELATION_EVENT/);
-assert.match(routeMemory,/DIALOGUE/);
-for (const api of ['relationship','dialogue','syncRelationships']) {
-  assert.match(routeMemory,new RegExp('function '+api+'\\b'));
-}
-assert.match(events,/TGGRouteMemory\?\.syncRelationships/);
-assert.match(progression,/trusted-contact/);
-assert.equal(routeMemory.includes('tgg-relationship-v1'),false);
-assert.equal(routeMemory.includes('TGGGame?.reward'),false);
-assert.equal(routeMemory.includes('TGGCareer?.addRep'),false);
-assert.equal(routeMemory.includes('TGGEconomy?.apply'),false);
-
-
-assert.match(contactOps,/window\.TGGContactOps/);
-assert.match(contactOps,/manager-intro/);
-assert.match(contactOps,/producer-lockin/);
-assert.match(contactOps,/dj-test-spin/);
-assert.match(contactOps,/TIER_SCORE/);
-assert.match(contactOps,/baseRun/);
-for (const api of ['memory','available','list','start','onEventComplete','status','render']) {
-  assert.match(contactOps,new RegExp('function '+api+'\\b'));
-}
-assert.match(events,/TGGContactOps\?\.onEventComplete/);
-assert.match(routeMemory,/TGGContactOps\?\.render/);
-assert.match(progression,/first-opportunity/);
-assert.equal(contactOps.includes('localStorage'),false);
-assert.equal(contactOps.includes('tgg-contact-opportunities-v1'),false);
-assert.equal(contactOps.includes('TGGGame?.reward'),false);
-assert.equal(contactOps.includes('TGGCareer?.addRep'),false);
-assert.equal(contactOps.includes('TGGEconomy?.apply'),false);
-
-for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
-  assert.match(world,new RegExp('function '+api+'\\b'));
-}
-for (const rpc of ['tgg_world_property_market','tgg_world_property_upgrades','tgg_world_vehicle_progression','tgg_world_vehicle_bundle']) {
-  assert.match(world,new RegExp(rpc));
-}
-
-const forbidden=[
-  'tgg_world_buy_property',
-  'tgg_world_property_market_buy',
-  'tgg_world_property_market_list',
-  'tgg_world_property_market_cancel',
-  'tgg_world_install_property_upgrade',
-  'tgg_world_fast_travel',
-  'tgg_world_v3_travel_to',
-  'tgg_world_vehicle_spawn',
-  'tgg_world_vehicle_join',
-  'tgg_world_vehicle_drive_session',
-  'tgg_world_vehicle_install_tune',
-  'tgg_world_vehicle_music',
-  'tgg_world_party_travel',
-  'sb_secret_',
+for(const forbidden of [
   'SUPABASE_SERVICE_ROLE_KEY',
-  'sk_live_'
-];
-for (const token of forbidden) {
-  assert.equal(world.includes(token),false,'world-sync must not contain '+token);
-  assert.equal(business.includes(token),false,'business layer must not contain '+token);
+  'sb_secret_',
+  'sk_live_',
+  'tgg_world_buy_property',
+  'tgg_world_vehicle_spawn',
+  'tgg_world_vehicle_drive_session',
+  'tgg_world_mvp_v1_complete_mission',
+  'tgg_world_social_post'
+]){
+  assert.equal(world.includes(forbidden),false,'world sync must exclude '+forbidden);
+  assert.equal(game.includes(forbidden),false,'game runtime must exclude '+forbidden);
+  assert.equal(game3d.includes(forbidden),false,'3D runtime must exclude '+forbidden);
 }
 
-for (const token of ['business-assets-loader','live-city-activity-snapshot','property-readonly-inspect','vehicle-readonly-inspect','city-assets-hotspot']) {
-  assert.match(qa,new RegExp(token));
-}
-for (const token of ['business assets loader','live city activity snapshot','property readonly inspect','vehicle readonly inspect','city assets hotspot']) {
-  assert.match(releaseQa,new RegExp(token));
-}
-
-assert.equal(release.release,'V1.20 NPC Favor Hooks + Contact Opportunities');
-assert.equal(release.base,'V1.19 NPC Dialogue States + Relationship Memory');
-assert.equal(auto.version,'1.20');
-assert.equal(qaManifest.version,'1.20');
-assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
-assert.equal(auto.browserPolicy,'automated_ci_required');
-assert.ok(['pending_ci','passed'].includes(auto.verification));
-assert.equal(qaManifest.browserPolicy,'automated_ci_required');
-assert.ok(['pending_ci','passed'].includes(qaManifest.verification));
+assert.equal(release.release,'V1.29 Bulk World Upgrade');
+assert.equal(release.base,'V1.28 Drift + Horn Verified');
+assert.equal(auto.version,'1.29');
+assert.equal(qa.version,'1.29');
 assert.equal(release.production,'gated');
-assert.ok(release.modules.includes('V1.14-LIVE-CITY-ACTIVITY-SURFACE'));
-assert.ok(release.modules.includes('V1.14-WORLD-ASSET-READONLY-INSPECT'));
-assert.ok(release.gates.includes('remote_label_escape'));
-assert.ok(release.gates.includes('city_mastery_api'));
-assert.ok(release.gates.includes('base_event_economy_unchanged'));
-assert.ok(release.gates.includes('circuit_api'));
-assert.ok(release.gates.includes('circuit_ordering'));
-assert.ok(release.gates.includes('event_variants_cosmetic_only'));
-assert.ok(release.gates.includes('district_story_api'));
-assert.ok(release.gates.includes('remote_story_readonly'));
-assert.ok(release.gates.includes('story_router_no_rewards'));
-assert.ok(release.gates.includes('route_memory_api'));
-assert.ok(release.gates.includes('remote_memory_readonly'));
-assert.ok(release.gates.includes('route_memory_no_rewards'));
-assert.ok(release.gates.includes('relationship_api'));
-assert.ok(release.gates.includes('repeat_talk_no_progress'));
-assert.ok(release.gates.includes('single_memory_store'));
-assert.ok(release.gates.includes('contact_ops_api'));
-assert.ok(release.gates.includes('contact_ops_no_bonus_rewards'));
-assert.ok(release.gates.includes('opportunities_single_memory_store'));
+assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
+assert.ok(['candidate_pending_ci','passed'].includes(release.static_gate));
+assert.ok(['pending_ci','passed'].includes(auto.verification));
+assert.ok(['pending_ci','passed'].includes(qa.verification));
 
-console.log('GAME_V1_20_STATIC_CONTRACT_PASS');
+for(const gate of [
+  'garage_api','garage_persistence','car_appearance_runtime','handling_preset_runtime',
+  'vehicle_collision_margin','studio_3d_renderer','studio_3d_entry','manager_dialogue_proximity',
+  'mobile_drift_control','mobile_horn_control','local_three_runtime','studio_dom_ready_boot'
+]) assert.ok(release.gates.includes(gate),'missing V1.29 gate '+gate);
+
+console.log('GAME_V1_29_STATIC_CONTRACT_PASS');

@@ -31,8 +31,13 @@ async function run(){
     });
     let webglReady=false;
     try{
-      await page.waitForFunction(()=>window.TGG3D?.isReady?.()===true,{timeout:20000});
-      webglReady=true;
+      const readyDeadline=Date.now()+30000;
+      while(Date.now()<readyDeadline){
+        webglReady=await page.evaluate(()=>window.TGG3D?.isReady?.()===true).catch(()=>false);
+        if(webglReady)break;
+        await page.waitForTimeout(250);
+      }
+      if(!webglReady)throw new Error('TGG3D readiness poll timed out after 30000ms');
     }catch(error){
       const diagnostics=await page.evaluate(()=>({
         title:document.title,

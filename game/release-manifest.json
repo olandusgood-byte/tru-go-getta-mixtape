@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.26 Fixed Car Steering Playtest",
-  "base": "V1.25 Cinematic Camera + Radar Playtest",
+  "release": "V1.27 Smooth Driving Feel Playtest",
+  "base": "V1.26 Fixed Car Steering Playtest",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -94,7 +94,14 @@
     "V1.26-FORWARD-REVERSE-DRIVE",
     "V1.26-STEERING-HEADING",
     "V1.26-CAR-MESH-ALIGNMENT",
-    "V1.26-AUTO-CHASE-CAMERA"
+    "V1.26-AUTO-CHASE-CAMERA",
+    "V1.27-SMOOTH-THROTTLE",
+    "V1.27-BRAKING-COASTING",
+    "V1.27-SPEED-SENSITIVE-STEERING",
+    "V1.27-WHEEL-STEER-ANIMATION",
+    "V1.27-BODY-LEAN",
+    "V1.27-HEADLIGHTS-BRAKE-LIGHTS",
+    "V1.27-SPEEDOMETER"
   ],
   "gates": [
     "runtime_api_presence",
@@ -236,10 +243,19 @@
     "car_reverse_relative",
     "car_steer_left_right",
     "car_mesh_heading_alignment",
-    "vehicle_auto_chase_camera"
+    "vehicle_auto_chase_camera",
+    "smooth_acceleration",
+    "smooth_braking",
+    "coast_deceleration",
+    "speed_sensitive_steering",
+    "front_wheel_visual_steer",
+    "vehicle_body_lean",
+    "headlights",
+    "brake_lights",
+    "speedometer_hud"
   ],
   "static_gate": "passed",
   "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.26-FIXED-DRIVING-CONTROLS",
+  "release_checkpoint": "V1.27-SMOOTH-DRIVING-FEEL",
   "production": "playtest"
 }

@@ -106,6 +106,7 @@
     state.lastReward={id,cash,xp,rep,run:state.runs[id]};
     save();
     window.TGGCircuits?.onEventComplete?.(id);
+    window.TGGRouteMemory?.syncRelationships?.();
     window.TGGProgression?.sync?.();
     window.__tggToast?.(event.name+' COMPLETE — '+MONEY+cash+' / +'+xp+' XP / +'+rep+' REP');
     render();

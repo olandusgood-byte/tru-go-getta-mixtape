@@ -90,5 +90,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
   "next": "V1.23 3D WALK CYCLE + NPC FACING",
-  "verification": "pending_ci"
+  "verification": "passed"
 }

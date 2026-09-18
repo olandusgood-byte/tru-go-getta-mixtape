@@ -71,6 +71,9 @@
   function performObjective(){
     const stage=currentStage();
     if(!stage||!near(stage))return false;
+    if(window.TGGV218?.shouldHandleStage?.(stage)){
+      return window.TGGV218.enterObjective?.(stage)??true;
+    }
     const now=Date.now();
     if(now-lastCompletionAt<650)return true;
     lastCompletionAt=now;

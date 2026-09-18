@@ -1,9 +1,12 @@
 (() => {
+  let booted=false;
   function boot(){
+    if(booted)return window.TGGGarage3D||null;
     const host=document.getElementById('garage3d');
     const screen=document.getElementById('garage');
     if(!host||!screen||!window.THREE)return;
 
+    booted=true;
     const THREE=window.THREE;
     const scene=new THREE.Scene();
     scene.background=new THREE.Color(0x06080d);
@@ -145,6 +148,14 @@
 
     window.TGGGarage3D={scene,camera,renderer,car,setAppearance,isReady:()=>true,resize};
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
-  else boot();
+  function watch(){
+    const screen=document.getElementById('garage');
+    if(!screen)return;
+    const maybeBoot=()=>{if(screen.classList.contains('active'))boot()};
+    maybeBoot();
+    new MutationObserver(maybeBoot).observe(screen,{attributes:true,attributeFilter:['class']});
+  }
+  window.TGGGarage3D={ensure:boot,isReady:()=>booted};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch,{once:true});
+  else watch();
 })();

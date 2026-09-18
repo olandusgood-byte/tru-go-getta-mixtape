@@ -71,6 +71,7 @@
     return false;
   }
   function installCard(){
+    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.03 CONTACTS';
     const city=document.querySelector('.city');if(!city||contactCard)return;
     contactCard=document.createElement('div');contactCard.className='street-contact-card';contactCard.id='streetContactCard';
     contactCard.innerHTML='<b id="scName">CONTACT</b><span id="scRole">ROLE</span><small id="scJob">INTERACT TO TALK</small>';

@@ -208,6 +208,55 @@ async function runSmoke(target) {
       };
     });
 
+    const storyMission = await page.evaluate(() => {
+      const api = window.TGGStoryMission;
+      if (!api) return { present: false, passed: true, checks: [] };
+      const checks = [];
+      const record = (name, pass, detail='') => checks.push({ name, pass: Boolean(pass), detail });
+      try {
+        localStorage.removeItem('tgg-story-mission-v1');
+        api.state.accepted = false;
+        api.state.step = 0;
+        api.state.completed = false;
+        api.state.rewardClaimed = false;
+        api.save();
+        api.render();
+
+        record('story-api', api.mission?.id === 'make-noise');
+        record('story-ui', Boolean(document.getElementById('missionStoryBtn')) && Boolean(document.getElementById('missionStoryStatus')));
+        record('story-accept', api.accept() === true && api.state.accepted === true);
+        record('story-persist', Boolean(localStorage.getItem('tgg-story-mission-v1')));
+
+        window.TGGContent.state.active = null;
+        window.TGGContent.state.progress = 0;
+        window.TGGContent.state.completed = [];
+        window.TGGContent.save();
+        const started = api.act();
+        record('story-starts-first-job', started === true && window.TGGContent.state.active === 'flyer-run');
+
+        window.TGGContent.state.active = null;
+        window.TGGContent.state.completed = ['flyer-run','studio-session','mixtape-promo'];
+        window.TGGContent.save();
+        api.sync(false);
+        record('story-final-step', api.currentStep()?.id === 'return-m');
+
+        const game = window.TGGGame?.getState?.();
+        const cashBefore = Number(game?.cash || 0);
+        const claimed = api.claim();
+        const cashAfter = Number(window.TGGGame?.getState?.()?.cash || 0);
+        record('story-claim', claimed === true && api.state.completed === true && api.state.rewardClaimed === true);
+        record('story-bonus', cashAfter >= cashBefore + 750, `${cashBefore}->${cashAfter}`);
+
+        const cashBeforeSecond = Number(window.TGGGame?.getState?.()?.cash || 0);
+        const claimedAgain = api.claim();
+        const cashAfterSecond = Number(window.TGGGame?.getState?.()?.cash || 0);
+        record('story-reward-once', claimedAgain === false && cashAfterSecond === cashBeforeSecond);
+      } catch (error) {
+        record('story-exception', false, error?.message || String(error));
+      }
+      return { present: true, passed: checks.length > 0 && checks.every(x => x.pass), checks };
+    });
+
     const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
     await context.close();
 
@@ -235,7 +284,9 @@ async function runSmoke(target) {
       (mobileResponse?.status() || 0) >= 200 &&
       (mobileResponse?.status() || 0) < 400 &&
       releasePassed &&
+      foundationQa?.passed === true &&
       gameplay?.passed === true &&
+      storyMission?.passed === true &&
       pageErrors.length === 0 &&
       consoleErrors.length === 0 &&
       failedResources.length === 0 &&
@@ -259,6 +310,7 @@ async function runSmoke(target) {
         ? releaseQa.checks.filter(x => !x.pass).slice(0, 20)
         : [],
       foundation_qa_passed: foundationQa?.passed === true,
+      story_mission: storyMission,
       gameplay,
       dom,
       console_errors: consoleErrors,

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.20",
-  "module": "GAME-V1.20-QA",
-  "name": "NPC Favor Hooks + Contact Opportunities",
+  "version": "1.21",
+  "module": "GAME-V1.21-QA",
+  "name": "3D World Foundation",
   "checks": [
     "storage",
     "game_api",
@@ -70,7 +70,13 @@
     "event_run_completion_hook",
     "contact_ops_no_bonus_rewards",
     "opportunities_single_memory_store",
-    "first_opportunity_achievement"
+    "first_opportunity_achievement",
+    "world3d_api",
+    "webgl_canvas",
+    "third_person_camera",
+    "player_state_sync_3d",
+    "webgl_fallback",
+    "three_pin_0_186_0"
   ],
   "workflow": [
     "BUILD",
@@ -83,6 +89,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.21 CONTACT CHAINS + OPPORTUNITY HISTORY",
-  "verification": "passed"
+  "next": "V1.22 3D COLLISION + WALKABLE DISTRICTS",
+  "verification": "pending_ci"
 }

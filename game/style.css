@@ -45,3 +45,6 @@
 .show-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
 .show-actions button:disabled{opacity:.45}
 @media(max-width:700px){.show-actions{grid-template-columns:1fr}}
+
+/* V1.19 Rival Battle */
+#battleBoard .show-stage{max-width:920px;margin:0 auto}.battle-rival{font-weight:800;letter-spacing:.08em}[data-battle-move][disabled]{opacity:.45;cursor:not-allowed}

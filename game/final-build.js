@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.17 CITY + INTERIOR DEPTH 100';
+  const VERSION='V2.18 MISSION ACTIONS 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

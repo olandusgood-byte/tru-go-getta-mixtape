@@ -168,7 +168,14 @@
     test('v231 native lighting mode',lightForge.mode==='native-lighting-forge'&&lightForge.mood==='night');
     test('v231 lighting HUD',!!document.getElementById('v231ForgeHud')&&!!document.getElementById('v231ForgePanel'));
     test('v231 lighting forge css',!!document.querySelector('link[href*="v231-lighting-forge.css"]'));
-    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.31 TGG LIGHTING + MATERIAL FORGE 100');
+    const animForge=window.TGGV232?.status?.()||{};
+    test('v232 animation core api',!!window.TGGV232Core&&typeof window.TGGV232Core.clip==='function'&&typeof window.TGGV232Core.blend==='function');
+    test('v232 animation forge api',!!window.TGGV232&&typeof window.TGGV232.play==='function'&&typeof window.TGGV232.clear==='function');
+    test('v232 100 layers',Array.isArray(window.TGGV232?.layers)&&window.TGGV232.layers.length===100);
+    test('v232 native animation mode',animForge.mode==='native-animation-forge'&&animForge.enabled===true);
+    test('v232 animation HUD',!!document.getElementById('v232ForgeHud')&&!!document.getElementById('v232ForgePanel'));
+    test('v232 animation forge css',!!document.querySelector('link[href*="v232-animation-forge.css"]'));
+    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.32 TGG ANIMATION FORGE 100');
     test('v2 movement hud',!!document.getElementById('playerMoveHud')&&!!document.getElementById('walkModeValue')&&!!document.getElementById('walkSpeedValue'));
     test('v2 sprint control',!!document.getElementById('sprintBtn'));test('v202 world gameplay',!!window.TGGWorldGameplay&&typeof window.TGGWorldGameplay.getNavTarget==='function'&&typeof window.TGGWorldGameplay.performObjective==='function');test('v202 world objective hud',!!document.getElementById('worldObjective'));test('v203 street contacts',!!window.TGGStreetContacts&&Array.isArray(window.TGGStreetContacts.contacts)&&window.TGGStreetContacts.contacts.length>=3&&typeof window.TGGStreetContacts.startContact==='function');test('v203 contact hud',!!document.getElementById('streetContactCard'));test('career api',!!window.TGGCareer);test('content api',!!window.TGGContent);test('expansion api',!!window.TGGExpansion);test('progression api',!!window.TGGProgression);test('bridge api',!!window.TGGBridge);test('chain api',!!window.TGGChains);test('district api',!!window.TGGDistricts);test('save api',!!window.TGGSave);test('inventory api',!!window.TGGInventory);test('crew api',!!window.TGGCrew);test('events api',!!window.TGGEvents);test('economy api',!!window.TGGEconomy&&typeof window.TGGEconomy.apply==='function');test('avatar api',!!window.TGGAvatar&&typeof window.TGGAvatar.get==='function'&&typeof window.TGGAvatar.save==='function');test('world sync api',!!window.TGGWorldSync&&typeof window.TGGWorldSync.snapshot==='function'&&typeof window.TGGWorldSync.setTransport==='function'&&typeof window.TGGWorldSync.sync==='function');
     ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud'].forEach(id=>test('dom:'+id,!!document.getElementById(id)));

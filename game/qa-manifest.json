@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.15",
-  "module": "GAME-V1.15-QA",
-  "name": "City Activity Mastery",
+  "version": "1.16",
+  "module": "GAME-V1.16-QA",
+  "name": "City Circuits + Event Variants",
   "checks": [
     "storage",
     "game_api",
@@ -36,7 +36,12 @@
     "city_rank",
     "city_streak",
     "city_mastery_achievements",
-    "base_event_economy_unchanged"
+    "base_event_economy_unchanged",
+    "circuit_api",
+    "circuit_ordering",
+    "circuit_persistence",
+    "event_variants_cosmetic_only",
+    "circuit_achievements"
   ],
   "workflow": [
     "BUILD",
@@ -49,6 +54,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.16 CITY CIRCUITS + EVENT VARIANTS",
-  "verification": "passed"
+  "next": "V1.17 DISTRICT CIRCUITS + STORY ROUTING",
+  "verification": "pending_ci"
 }

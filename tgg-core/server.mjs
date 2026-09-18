@@ -300,7 +300,7 @@ app.post('/v1/storage/uploads', auth, async (req,res,next)=>{
     if(!b.rowCount) return res.status(404).json({error:'storage_bucket_not_found'});
     if(!data_base64) return res.status(400).json({error:'data_base64_required'});
     const bucket=b.rows[0];
-    const cleanKey=String(object_key).replace(/^\\/+|\\\\/g,'/').split('/').filter(x=>x && x!=='.' && x!=='..').join('/');
+    const cleanKey=String(object_key).replace(/^\/+|\\/g,'/').split('/').filter(x=>x && x!=='.' && x!=='..').join('/');
     if(!cleanKey) return res.status(400).json({error:'invalid_object_key'});
     const bytes=Buffer.from(String(data_base64).replace(/^data:[^;]+;base64,/,'').replace(/\\s/g,''),'base64');
     if(!bytes.length) return res.status(400).json({error:'empty_upload'});

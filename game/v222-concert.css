@@ -1,0 +1,34 @@
+/* V2.22 CONCERT + VENUE PERFORMANCE 100 */
+body.tgg-v222 .v222-show-panel{position:fixed;left:50%;bottom:15px;z-index:185;display:grid;gap:8px;width:min(520px,calc(100vw - 24px));padding:15px;transform:translate(-50%,18px);opacity:0;pointer-events:none;border:1px solid #ffffff20;border-radius:22px;background:linear-gradient(145deg,#080b12f9,#111827f9);box-shadow:0 34px 120px #000e;transition:.2s ease}
+body.tgg-v222 .v222-show-panel.active{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+body.tgg-v222 .v222-show-panel>small{font-size:7px;font-weight:900;letter-spacing:.2em;color:#c7ff00}
+body.tgg-v222 .v222-show-panel>b{font-size:18px;color:#fff}
+body.tgg-v222 .v222-show-panel>span{font-size:11px;font-weight:1000;letter-spacing:.12em;color:#61d9ff}
+body.tgg-v222 .v222-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+body.tgg-v222 .v222-stats i{display:grid;gap:2px;padding:7px;border:1px solid #ffffff10;border-radius:9px;background:#ffffff05;font-style:normal}
+body.tgg-v222 .v222-stats small{font-size:6px;font-weight:900;color:#818b9c}
+body.tgg-v222 .v222-stats strong{font-size:9px;color:#fff}
+body.tgg-v222 .v222-bars{display:grid;gap:5px}
+body.tgg-v222 .v222-bars>div{height:6px;overflow:hidden;border-radius:999px;background:#ffffff10}
+body.tgg-v222 .v222-bars i{display:block;height:100%;transition:width .14s}
+body.tgg-v222 #v222CrowdFill{width:40%;background:linear-gradient(90deg,#61d9ff,#ffcf4a,#ff466d)}
+body.tgg-v222 #v222StaminaFill{width:100%;background:linear-gradient(90deg,#ff466d,#ffcf4a,#39dd79)}
+body.tgg-v222 #v222Perform{min-height:54px;border:1px solid #c7ff0066;border-radius:14px;background:linear-gradient(135deg,#17230e,#0f160d);color:#e8ffad;font-size:11px;font-weight:1000;letter-spacing:.13em;cursor:pointer}
+body.tgg-v222 .v222-show-panel .secondary{min-height:34px;border:1px solid #ffffff14;border-radius:11px;background:#111722;color:#fff;font-size:8px;font-weight:900;cursor:pointer}
+body.tgg-v222 .v222-show-result{position:fixed;left:50%;top:50%;z-index:195;display:grid;gap:9px;width:min(430px,calc(100vw - 24px));padding:18px;transform:translate(-50%,-46%) scale(.96);opacity:0;pointer-events:none;border:1px solid #ffffff20;border-radius:24px;background:linear-gradient(145deg,#080b12fa,#151425fa);box-shadow:0 36px 120px #000f;transition:.24s ease}
+body.tgg-v222 .v222-show-result.active{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+body.tgg-v222 .v222-show-result>small{font-size:7px;font-weight:900;letter-spacing:.2em;color:#c7ff00}
+body.tgg-v222 .v222-rank{font-size:72px;line-height:.9;font-weight:1000;color:#c7ff00;text-shadow:0 0 28px #c7ff0038}
+body.tgg-v222 .v222-show-result[data-rank="A"] .v222-rank{color:#61d9ff}
+body.tgg-v222 .v222-show-result[data-rank="B"] .v222-rank{color:#c56cff}
+body.tgg-v222 .v222-show-result[data-rank="C"] .v222-rank{color:#ffcf4a}
+body.tgg-v222 .v222-show-result[data-rank="D"] .v222-rank{color:#ff657a}
+body.tgg-v222 .v222-result-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+body.tgg-v222 .v222-result-breakdown span{display:grid;gap:2px;padding:7px;border:1px solid #ffffff10;border-radius:9px;background:#ffffff05}
+body.tgg-v222 .v222-result-breakdown small{font-size:6px;font-weight:900;color:#7f899d}
+body.tgg-v222 .v222-result-breakdown b{font-size:9px;color:#fff}
+body.tgg-v222 #v222ResultClose{min-height:42px;border:1px solid #ffffff18;border-radius:11px;background:#111722;color:#fff;font-weight:900;cursor:pointer}
+body.tgg-v222 .sr-only{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(prefers-reduced-motion:reduce){body.tgg-v222 .v222-show-panel,body.tgg-v222 .v222-show-result,body.tgg-v222 .v222-bars i{transition:none!important}}
+@media(max-width:700px){body.tgg-v222 .v222-show-panel{bottom:max(8px,env(safe-area-inset-bottom));padding:12px}body.tgg-v222 .v222-stats{grid-template-columns:repeat(3,1fr)}body.tgg-v222 #v222Perform{min-height:58px}body.tgg-v222 .v222-result-breakdown{grid-template-columns:1fr 1fr}}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v222 .v222-show-panel{left:8px;bottom:8px;width:min(430px,49vw);transform:translateY(16px);max-height:95vh;overflow:auto}body.tgg-v222 .v222-show-panel.active{transform:translateY(0)}body.tgg-v222 .v222-show-result{width:min(460px,58vw);max-height:92vh;overflow:auto}}

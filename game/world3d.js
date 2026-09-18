@@ -22,9 +22,10 @@
     {id:'apartment-hub',name:'MY APARTMENT',screen:'home',x:-20,z:12,color:0xf2b84b},
     {id:'media-hub',name:'MEDIA DISTRICT',screen:'media',x:20,z:-12,color:0x8b5cf6}
   ];
+  const STARTER_CAR={id:'starter-car',name:'STARTER CAR',x:4,z:-2,color:0xc7ff00};
 
   const api={
-    version:'1.24.0',
+    version:'1.25.0',
     library:'three@0.186.0',
     ready:false,
     failed:false,
@@ -34,6 +35,7 @@
     camera:null,
     player:null,
     npc:null,
+    car:null,
     cameraYawOffset:0,
     cameraDistance:10,
     collisionCount:0,
@@ -51,6 +53,7 @@
         failed:this.failed,
         library:this.library,
         player:p?{x:p.x,y:p.y,z:p.z}:null,
+        car:this.car?{x:this.car.position.x,y:this.car.position.y,z:this.car.position.z,visible:this.car.visible}:null,
         camera:c?{x:c.x,y:c.y,z:c.z}:null,
         cameraDistance:this.cameraDistance,
         cameraYawOffset:this.cameraYawOffset,
@@ -58,6 +61,7 @@
         lastCollision:this.lastCollision,
         district:this.district,
         motion:{...this.motion},
+        inVehicle:!!window.TGGGame?.getState?.()?.inVehicle,
         interaction:this.interaction?{...this.interaction}:null
       };
     }
@@ -148,11 +152,23 @@
   api.constrainPercent=constrainPercent;
   api.collisionBoxes=BUILDINGS.map(([x,z,w,d])=>({x,z,w,d}));
 
+  function distanceToCarPercent(state=window.TGGGame?.getState?.()){
+    if(!state)return Infinity;
+    const p=percentToWorld(state.x,state.y);
+    const carPosition=api.car?.position||STARTER_CAR;
+    return Math.hypot(p.x-carPosition.x,p.z-carPosition.z);
+  }
+
+  api.distanceToCarPercent=distanceToCarPercent;
+
   function nearestInteraction(){
     const state=window.TGGGame?.getState?.();
     if(!state)return null;
     const p=percentToWorld(state.x,state.y);
+    if(state.inVehicle)return {id:'starter-car',type:'vehicle',label:'EXIT STARTER CAR',key:'E',distance:0};
     const candidates=[];
+    const carDistance=distanceToCarPercent(state);
+    if(carDistance<=4.6)candidates.push({id:'starter-car',type:'vehicle',label:'ENTER STARTER CAR',key:'E',distance:carDistance});
     const m=percentToWorld(72,36);
     const managerDistance=Math.hypot(p.x-m.x,p.z-m.z);
     if(managerDistance<=5)candidates.push({id:'manager-m',type:'npc',label:'TALK TO M',key:'E',distance:managerDistance});
@@ -167,6 +183,10 @@
   function activateNearest(){
     const interaction=nearestInteraction();
     if(!interaction)return {ok:false,status:'nothing_nearby'};
+    if(interaction.id==='starter-car'){
+      const result=window.TGGGame?.toggleVehicle?.();
+      return result?.ok?{ok:true,status:result.status,interaction}:{ok:false,status:result?.status||'vehicle_failed',interaction};
+    }
     if(interaction.id==='manager-m'){
       document.getElementById('missionBtn')?.click();
       return {ok:true,status:'activated',interaction};
@@ -272,6 +292,29 @@
     group.name='ManagerM3D';
     group.scale.set(.96,.96,.96);
     return group;
+  }
+
+  function createStarterCar(THREE){
+    const car=new THREE.Group();
+    car.name='TGGStarterCar3D';
+    const bodyMat=makeMaterial(THREE,STARTER_CAR.color,.28,.72);
+    const dark=makeMaterial(THREE,0x080a0d,.42,.35);
+    const glass=new THREE.MeshStandardMaterial({color:0x4d7185,metalness:.25,roughness:.12,transparent:true,opacity:.76});
+    const shell=new THREE.Mesh(new THREE.BoxGeometry(3.4,.82,1.72),bodyMat);
+    shell.position.y=.82;shell.castShadow=true;car.add(shell);
+    const cabin=new THREE.Mesh(new THREE.BoxGeometry(1.86,.72,1.44),glass);
+    cabin.position.set(-.18,1.45,0);cabin.castShadow=true;car.add(cabin);
+    const bumper=new THREE.Mesh(new THREE.BoxGeometry(.14,.28,1.78),dark);
+    bumper.position.set(1.72,.62,0);car.add(bumper);
+    const wheels=[];
+    [[-1.08,.38,-.86],[-1.08,.38,.86],[1.08,.38,-.86],[1.08,.38,.86]].forEach(([x,y,z])=>{
+      const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.28,14),dark);
+      wheel.rotation.x=Math.PI/2;wheel.position.set(x,y,z);wheel.castShadow=true;car.add(wheel);wheels.push(wheel);
+    });
+    const headMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xeaffff,emissiveIntensity:2.2});
+    [-.52,.52].forEach(z=>{const h=new THREE.Mesh(new THREE.BoxGeometry(.05,.2,.28),headMat);h.position.set(1.72,.88,z);car.add(h)});
+    car.userData.wheels=wheels;
+    return car;
   }
 
   function addRoadNetwork(THREE,scene){
@@ -464,7 +507,12 @@
       npc.position.set(missionWorld.x,0,missionWorld.z);
       scene.add(npc);
 
-      api.renderer=renderer;api.scene=scene;api.camera=camera;api.player=player;api.npc=npc;
+      const car=createStarterCar(THREE);
+      car.position.set(STARTER_CAR.x,0,STARTER_CAR.z);
+      car.rotation.y=Math.PI;
+      scene.add(car);
+
+      api.renderer=renderer;api.scene=scene;api.camera=camera;api.player=player;api.npc=npc;api.car=car;
 
       function resize(){
         const rect=host.getBoundingClientRect();
@@ -502,8 +550,10 @@
         lastStateX=stateX;
         lastStateY=stateY;
         const moving=now<movingUntil;
+        const driving=!!state.inVehicle;
+        const walking=moving&&!driving;
         const rig=player.userData.rig;
-        if(moving&&rig){
+        if(walking&&rig){
           player.userData.walkPhase=(player.userData.walkPhase||0)+dt*11;
           const swing=Math.sin(player.userData.walkPhase)*.62;
           rig.arms[0].rotation.x=swing;
@@ -516,27 +566,35 @@
           rig.legs.forEach(l=>l.rotation.x*=.78);
           rig.torso.position.y+=(1.55-rig.torso.position.y)*.18;
         }
-        api.motion={moving,walkPhase:player.userData.walkPhase||0};
+        api.motion={moving,walking,driving,walkPhase:player.userData.walkPhase||0};
 
         target.set(mapped.x,0,mapped.z);
         const smooth=1-Math.pow(.001,dt);
-        player.position.lerp(target,smooth);
-
         const heading=(Number(state.heading)||0)*Math.PI/180;
-        player.rotation.y=-(heading-Math.PI/2);
+        if(driving){
+          player.visible=false;
+          car.position.lerp(target,smooth);
+          car.rotation.y=-(heading-Math.PI/2);
+          if(moving)car.userData.wheels?.forEach(w=>{w.rotation.z-=dt*11});
+        }else{
+          player.visible=true;
+          player.position.lerp(target,smooth);
+          player.rotation.y=-(heading-Math.PI/2);
+        }
 
+        const subject=driving?car:player;
         const yaw=heading+api.cameraYawOffset;
-        const dist=api.cameraDistance;
+        const dist=driving?Math.max(api.cameraDistance,11):api.cameraDistance;
         desiredCam.set(
-          player.position.x-Math.cos(yaw)*dist,
-          5.6,
-          player.position.z-Math.sin(yaw)*dist
+          subject.position.x-Math.cos(yaw)*dist,
+          driving?5.0:5.6,
+          subject.position.z-Math.sin(yaw)*dist
         );
         camera.position.lerp(desiredCam,1-Math.pow(.015,dt));
-        camTarget.set(player.position.x,1.35,player.position.z);
+        camTarget.set(subject.position.x,driving?1.0:1.35,subject.position.z);
         camera.lookAt(camTarget);
 
-        npc.rotation.y=Math.atan2(player.position.x-npc.position.x,player.position.z-npc.position.z);
+        npc.rotation.y=Math.atan2(subject.position.x-npc.position.x,subject.position.z-npc.position.z);
 
         const district=districtAtPercent(state.x,state.y);
         api.district=district?{id:district.id,name:district.name,distance:district.distance}:null;

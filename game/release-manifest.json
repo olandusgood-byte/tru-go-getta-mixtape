@@ -162,8 +162,8 @@
     "route_memory_no_rewards",
     "npc_memory_achievement"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.18-NPC-ROUTE-ENCOUNTERS-DISTRICT-MEMORY-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.18-NPC-ROUTE-ENCOUNTERS-DISTRICT-MEMORY-VERIFIED",
   "production": "gated"
 }

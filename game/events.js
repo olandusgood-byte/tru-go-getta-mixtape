@@ -128,6 +128,7 @@
     el.innerHTML=header+cards;
     el.querySelectorAll('[data-event-run]').forEach(b=>b.onclick=()=>run(b.dataset.eventRun));
     window.TGGCircuits?.render?.();
+    window.TGGDistrictStory?.render?.();
   }
 
   load();

@@ -30,6 +30,24 @@
   neon.position.set(0,8,0);
   scene.add(neon);
 
+  const starPositions=[];
+  for(let i=0;i<180;i++){
+    const a=(i*2.399963229728653)%(Math.PI*2);
+    const radius=58+(i%37)*1.15;
+    const y=22+(i%29)*1.1;
+    starPositions.push(Math.cos(a)*radius,y,Math.sin(a)*radius);
+  }
+  const starGeo=new THREE.BufferGeometry();
+  starGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));
+  const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xdce7ff,size:.18,sizeAttenuation:true,transparent:true,opacity:.78}));
+  scene.add(stars);
+  const moonMesh=new THREE.Mesh(
+    new THREE.SphereGeometry(2.4,24,16),
+    new THREE.MeshStandardMaterial({color:0xf4f7ff,emissive:0xb8c7ff,emissiveIntensity:1.8,roughness:.9})
+  );
+  moonMesh.position.set(-34,34,-46);
+  scene.add(moonMesh);
+
   const groundMat=new THREE.MeshStandardMaterial({color:0x10131a,roughness:.92,metalness:.08});
   const ground=new THREE.Mesh(new THREE.PlaneGeometry(112,112),groundMat);
   ground.rotation.x=-Math.PI/2;
@@ -160,7 +178,18 @@
   const skylineGlow=new THREE.Mesh(new THREE.RingGeometry(32,49,64),new THREE.MeshBasicMaterial({color:0x2a3040,transparent:true,opacity:.25,side:THREE.DoubleSide}));
   skylineGlow.rotation.x=-Math.PI/2;skylineGlow.position.y=.02;scene.add(skylineGlow);
 
+  const cameraModes=['orbit','chase','top'];
+  let cameraMode='orbit';
   let yaw=Math.PI*.25,pitch=.48,distance=17,dragging=false,px=0,py=0;
+
+  function cycleCamera(){
+    const idx=cameraModes.indexOf(cameraMode);
+    cameraMode=cameraModes[(idx+1)%cameraModes.length];
+    window.__tggToast?.('CAMERA — '+cameraMode.toUpperCase());
+    return cameraMode;
+  }
+  function getCameraMode(){return cameraMode;}
+
   let lastPlayerX=0,lastPlayerZ=0,walkPhase=0;
 
   renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture?.(e.pointerId)});
@@ -339,6 +368,35 @@
     vehicle.userData.wheels?.forEach(w=>w.rotation.z-=dt*9*def.dir);
   }
 
+  const radar=document.getElementById('radar3d');
+  const radarPlayer=document.getElementById('radarPlayer');
+  const radarCar=document.getElementById('radarCar');
+  const radarDestinations=document.getElementById('radarDestinations');
+  const radarDestinationDots=[];
+  if(radarDestinations){
+    destinations.forEach(d=>{
+      const dot=document.createElement('span');
+      dot.className='radar-destination';
+      dot.title=d.label;
+      dot.style.setProperty('--radar-color','#'+new THREE.Color(d.color).getHexString());
+      radarDestinations.appendChild(dot);
+      radarDestinationDots.push({dot,d});
+    });
+  }
+  function radarPlace(el,x,z){
+    if(!el)return;
+    el.style.left=((x+50)/100*100)+'%';
+    el.style.top=((z+50)/100*100)+'%';
+  }
+  function updateRadar(s){
+    const p=toWorld(s);
+    radarPlace(radarPlayer,p.x,p.z);
+    radarPlace(radarCar,car.position.x,car.position.z);
+    if(radarCar)radarCar.classList.toggle('active',!!s?.inVehicle);
+    radarDestinationDots.forEach(({dot,d})=>radarPlace(dot,d.x,d.z));
+    if(radar)radar.dataset.mode=cameraMode;
+  }
+
   const clock=new THREE.Clock();
   function animate(){
     requestAnimationFrame(animate);
@@ -377,19 +435,41 @@
 
     const subject=s.inVehicle?car.position:player.position;
     const target=new THREE.Vector3(subject.x,s.inVehicle?1.5:2.2,subject.z);
-    const cp=Math.cos(pitch),sp=Math.sin(pitch);
-    const followDistance=s.inVehicle?Math.max(12,distance):distance;
-    const desired=new THREE.Vector3(
-      target.x+Math.sin(yaw)*followDistance*cp,
-      target.y+followDistance*sp,
-      target.z+Math.cos(yaw)*followDistance*cp
-    );
-    camera.position.lerp(desired,s.inVehicle?.12:.085);
+    let desired;
+    let cameraLerp=.09;
+    if(cameraMode==='top'){
+      desired=new THREE.Vector3(target.x,32,target.z+.01);
+      cameraLerp=.14;
+    }else if(cameraMode==='chase'){
+      const heading=(Number(s.heading)||0)*Math.PI/180;
+      const chaseDistance=s.inVehicle?18:13;
+      desired=new THREE.Vector3(
+        target.x-Math.cos(heading)*chaseDistance,
+        target.y+(s.inVehicle?7.5:6.2),
+        target.z-Math.sin(heading)*chaseDistance
+      );
+      cameraLerp=s.inVehicle ? .16 : .12;
+    }else{
+      const cp=Math.cos(pitch),sp=Math.sin(pitch);
+      const followDistance=s.inVehicle?Math.max(12,distance):distance;
+      desired=new THREE.Vector3(
+        target.x+Math.sin(yaw)*followDistance*cp,
+        target.y+followDistance*sp,
+        target.z+Math.cos(yaw)*followDistance*cp
+      );
+      cameraLerp=s.inVehicle ? .12 : .085;
+    }
+    camera.position.lerp(desired,cameraLerp);
     camera.lookAt(target);
 
     npc.position.y=Math.sin(t*2)*.05;
     npcRing.rotation.z=t*.55;
     neon.intensity=16+Math.sin(t*1.7)*3;
+    stars.material.opacity=.68+Math.sin(t*.22)*.08;
+    moonMesh.rotation.y=t*.03;
+    updateRadar(s);
+    const cameraButton=document.getElementById('camera3dBtn');
+    if(cameraButton)cameraButton.textContent='CAMERA: '+cameraMode.toUpperCase();
 
     const near=nearbyDestination(s);
     destinations.forEach((d,i)=>{
@@ -433,6 +513,9 @@
     nearbyDestination,
     interactNearest,
     pedestrians,
-    traffic
+    traffic,
+    cycleCamera,
+    getCameraMode,
+    updateRadar
   };
 })();

@@ -2,15 +2,15 @@
   const VERSION='V2.27 TGG 3D FORGE 100';
   const LAYERS=[
     'forge core bridge','forge preset state','forge morph state','forge rebuild state','forge legacy snapshot','forge legacy restore','forge real-model coexistence','forge player attach','forge player detach','forge status API',
-    'torso core','chest taper','waist taper','pelvis block','neck cylinder','shoulder width','left upper arm','right upper arm','left forearm','right forearm',
-    'left hand','right hand','left thumb','right thumb','left upper leg','right upper leg','left calf','right calf','left shoe','right shoe',
+    'torso core','chest taper','waist taper','pelvis block','neck cylinder','left upper arm','right upper arm','left forearm','right forearm',
+    'left hand','right hand','left upper leg','right upper leg','left calf','right calf','left shoe','right shoe',
     'left sole','right sole','head sphere','jaw block','left ear','right ear','left eye','right eye','left pupil','right pupil',
     'left brow','right brow','nose bridge','nose tip','mouth line','left cheek','right cheek','hair cap','hair edge','hair fade',
     'jacket shell','jacket left panel','jacket right panel','jacket collar left','jacket collar right','left sleeve cuff','right sleeve cuff','shirt panel','pants waist','belt',
-    'belt buckle','left pant cuff','right pant cuff','chain torus','chain pendant','left shoe trim','right shoe trim','left lace bar','right lace bar','accent seam',
-    'skin material','cloth material','leather material','chrome material','rubber material','eye material','hair material','accent material','material cache','material diagnostics',
-    'street preset','stage preset','luxury preset','height morph','shoulder morph','build morph','leg length morph','arm length morph','head scale morph','skin color morph',
-    'top color morph','pants color morph','shoe color morph','accent color morph','hair color morph','runtime rebuild','preset button UI','morph slider UI','forge HUD','forge panel',
+    'belt buckle','left pant cuff','right pant cuff','chain torus','chain pendant','left lace bar','right lace bar','accent seam',
+    'skin material','cloth material','leather material','chrome material','rubber material','eye material','hair material','accent material','material cache',
+    'street preset','stage preset','luxury preset','height morph','shoulder morph','build morph','leg length morph','arm length morph','head scale morph',
+    'shoe color morph','accent color morph','runtime rebuild','preset button UI','morph slider UI','forge HUD','forge panel',
     'forge keyboard shortcut','mobile forge layout','landscape forge layout','reduced motion safety','quality shadow trim','performance mesh trim','rollback isolation','V2.26 compatibility','100-layer manifest','release QA hooks'
   ];
 

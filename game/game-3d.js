@@ -400,7 +400,10 @@
   const traffic=trafficDefs.map(def=>{
     const vehicle=makeCar(def.color);
     vehicle.scale.set(.72,.72,.72);
-    vehicle.userData.traffic=def;
+    vehicle.userData.traffic={...def,travel:Number(def.offset)||0};
+    vehicle.userData.speedScale=1;
+    vehicle.userData.targetSpeedScale=1;
+    vehicle.userData.braking=false;
     scene.add(vehicle);
     return vehicle;
   });
@@ -469,7 +472,10 @@
   function animateTraffic(vehicle,t,dt){
     const def=vehicle.userData.traffic;
     const span=96;
-    const raw=(t*def.speed+def.offset)%span;
+    const target=Math.max(0,Math.min(1.35,Number(vehicle.userData.targetSpeedScale)??1));
+    vehicle.userData.speedScale=THREE.MathUtils.lerp(Number(vehicle.userData.speedScale)||0,target,Math.min(1,dt*4.8));
+    def.travel=(Number(def.travel)||0)+def.speed*vehicle.userData.speedScale*dt;
+    const raw=((def.travel%span)+span)%span;
     const pos=raw-48;
     if(def.axis==='x'){
       vehicle.position.set(def.dir>0?pos:-pos,0,def.lane);
@@ -478,7 +484,17 @@
       vehicle.position.set(def.lane,0,def.dir>0?pos:-pos);
       vehicle.rotation.y=def.dir>0?-Math.PI/2:Math.PI/2;
     }
-    vehicle.userData.wheels?.forEach(w=>w.rotation.z-=dt*9*def.dir);
+    const brake=vehicle.userData.speedScale<.35||vehicle.userData.braking===true;
+    vehicle.userData.brakeLights?.forEach(light=>{
+      light.material.emissiveIntensity=THREE.MathUtils.lerp(light.material.emissiveIntensity,brake?5.4:.9,.25);
+    });
+    vehicle.userData.wheels?.forEach(w=>w.rotation.z-=dt*9*def.dir*Math.max(.05,vehicle.userData.speedScale));
+  }
+  function setTrafficSpeed(vehicle,factor,braking=false){
+    if(!vehicle?.userData?.traffic)return false;
+    vehicle.userData.targetSpeedScale=Math.max(0,Math.min(1.35,Number(factor)||0));
+    vehicle.userData.braking=!!braking;
+    return true;
   }
 
   const radar=document.getElementById('radar3d');
@@ -682,6 +698,7 @@
     traffic,
     reactToHorn,
     nearestTraffic,
+    setTrafficSpeed,
     cycleCamera,
     setCameraMode,
     getCameraMode,

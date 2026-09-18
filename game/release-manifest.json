@@ -357,8 +357,8 @@
     "audience_single_store",
     "audience_achievements"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.35-STREET-CREWS-AUDIENCE-MEMORY-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.35-STREET-CREWS-AUDIENCE-MEMORY-VERIFIED",
   "production": "gated"
 }

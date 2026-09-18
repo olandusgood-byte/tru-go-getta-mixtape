@@ -34,6 +34,6 @@ CREATE PLAYER → ENTER CITY → MOVE → TALK TO M → TAKE MISSION → MOVE TO
 - [x] XP and levels
 - [x] Save/load via localStorage
 - [x] Automated browser smoke test
-- [ ] Release checkpoint
+- [x] Release checkpoint
 
-No external libraries are required for the foundation.
+Release evidence: `RELEASE-CHECKPOINT-V1.0.md`\n\nNo external libraries are required for the foundation.

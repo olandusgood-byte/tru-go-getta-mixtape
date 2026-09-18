@@ -9,7 +9,9 @@
     {id:'city-showdown',name:'City Showdown',district:'Mixtape Ave',goal:3,reward:900,xp:175,rep:125,requires:[{id:'show-pass',qty:1}]},
     {id:'label-meeting',name:'Label Meeting',district:'Downtown',goal:2,reward:800,xp:90,rep:55,requires:[{id:'contract-folder',qty:1}]},
     {id:'indie-rollout',name:'Independent Rollout',district:'Mixtape Ave',goal:3,reward:550,xp:140,rep:110,requires:[{id:'indie-kit',qty:1}]},
-    {id:'release-night',name:'Release Night',district:'Downtown',goal:3,reward:1200,xp:220,rep:160,requires:[{id:'release-pass',qty:1}]}
+    {id:'release-night',name:'Release Night',district:'Downtown',goal:3,reward:1200,xp:220,rep:160,requires:[{id:'release-pass',qty:1}]},
+    {id:'club-push',name:'Club Headline Push',district:'Downtown',goal:2,reward:700,xp:120,rep:80,requires:[{id:'club-booking',qty:1}]},
+    {id:'festival-push',name:'Festival Headline Push',district:'Mixtape Ave',goal:3,reward:600,xp:160,rep:120,requires:[{id:'festival-kit',qty:1}]}
   ];
   const content={missions,npcs:[{id:'m',name:'M',role:'Manager'},{id:'dj',name:'DJ V',role:'DJ'},{id:'producer',name:'Kane',role:'Producer'}],locations:['Studio Row','Downtown','Mixtape Ave'],items:['Mic','Notebook','Promo Flyers','Beat Pack'],rewards:['Cash','XP','Reputation','Unlocks']};
   let state={active:null,progress:0,completed:[]};

@@ -91,7 +91,16 @@ async function auth(req, res, next) {
   } catch (e) { next(e); }
 }
 
-const ARTIST_HQ_TRANSPORT = new URL('./artist-hq-transport.js', import.meta.url);\napp.get('/assets/artist-hq-transport.js', async (_req, res, next) => {\n  try {\n    res.type('application/javascript');\n    res.set('Cache-Control', 'public, max-age=300');\n    res.send(await fs.readFile(ARTIST_HQ_TRANSPORT, 'utf8'));\n  } catch (e) { next(e); }\n});\n\napp.get('/health', async (_req, res) => {
+const ARTIST_HQ_TRANSPORT = new URL('./artist-hq-transport.js', import.meta.url);
+app.get('/assets/artist-hq-transport.js', async (_req, res, next) => {
+  try {
+    res.type('application/javascript');
+    res.set('Cache-Control', 'public, max-age=300');
+    res.send(await fs.readFile(ARTIST_HQ_TRANSPORT, 'utf8'));
+  } catch (e) { next(e); }
+});
+
+app.get('/health', async (_req, res) => {
   try {
     await init();
     const db = DATABASE_URL ? (await pool.query('select now() as now')).rows[0].now : null;

@@ -1,0 +1,7 @@
+/* V2.16 3D MODEL POLISH 100 */
+body.tgg-v216 .v201-badge{border-color:#61d9ff55;color:#dff8ff;box-shadow:0 0 18px #61d9ff18}
+body.tgg-v216 #city3d{filter:saturate(1.035) contrast(1.015)}
+body[data-mega-quality="high"].tgg-v216 #city3d{filter:saturate(1.06) contrast(1.025)}
+body[data-car-condition="critical"].tgg-v216 #vehicleHud,body[data-car-condition="wrecked"].tgg-v216 #vehicleHud{border-color:#ff315f66}
+@media(prefers-reduced-motion:reduce){body.tgg-v216 #city3d{filter:none!important}}
+@media(max-width:700px){body.tgg-v216 #city3d{filter:saturate(1.02)}}

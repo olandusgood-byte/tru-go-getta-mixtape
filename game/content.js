@@ -1,9 +1,9 @@
 (() => {
   const KEY='tgg-content-v1';
   const missions=[
-    {id:'flyer-run',name:'Flyer Run',district:'Downtown',goal:1,reward:150,xp:30,rep:10,requires:[{id:'promo-flyers',qty:1}]},
-    {id:'studio-session',name:'Studio Session',district:'Studio Row',goal:1,reward:300,xp:60,rep:25,requires:[{id:'mic',qty:1}]},
-    {id:'mixtape-promo',name:'Mixtape Promo',district:'Mixtape Ave',goal:2,reward:500,xp:100,rep:50,requires:[{id:'beat-pack',qty:1}]}
+    {id:'flyer-run',name:'Flyer Run',district:'Downtown',goal:2,reward:150,xp:30,rep:10,requires:[{id:'promo-flyers',qty:1}]},
+    {id:'studio-session',name:'Studio Session',district:'Studio Row',goal:2,reward:300,xp:60,rep:25,requires:[{id:'mic',qty:1}]},
+    {id:'mixtape-promo',name:'Mixtape Promo',district:'Mixtape Ave',goal:3,reward:500,xp:100,rep:50,requires:[{id:'beat-pack',qty:1}]}
   ];
   const content={missions,npcs:[{id:'m',name:'M',role:'Manager'},{id:'dj',name:'DJ V',role:'DJ'},{id:'producer',name:'Kane',role:'Producer'}],locations:['Studio Row','Downtown','Mixtape Ave'],items:['Mic','Notebook','Promo Flyers','Beat Pack'],rewards:['Cash','XP','Reputation','Unlocks']};
   let state={active:null,progress:0,completed:[]};

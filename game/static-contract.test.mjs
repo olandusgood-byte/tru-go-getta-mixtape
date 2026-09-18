@@ -12,13 +12,14 @@ const navigation=fs.readFileSync(new URL('./navigation.js',import.meta.url),'utf
 const streetLife=fs.readFileSync(new URL('./street-life.js',import.meta.url),'utf8');
 const streetEvents=fs.readFileSync(new URL('./street-events.js',import.meta.url),'utf8');
 const streetSets=fs.readFileSync(new URL('./street-sets.js',import.meta.url),'utf8');
+const streetAudience=fs.readFileSync(new URL('./street-audience.js',import.meta.url),'utf8');
 const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
 const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qa=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.34 3D/);
-assert.match(html,/GAME V1\.34 • STREET SETS \+ CROWD MOMENTUM/);
+assert.match(html,/Game V1\.35 3D/);
+assert.match(html,/GAME V1\.35 • STREET CREWS \+ AUDIENCE MEMORY/);
 assert.match(html,/vendor\/three-r152\.min\.js/);
 assert.match(html,/id="garage"/);
 assert.match(html,/id="garageBtn"/);
@@ -33,6 +34,7 @@ assert.match(html,/<script src="navigation\.js"><\/script>/);
 assert.match(html,/<script src="street-life\.js"><\/script>/);
 assert.match(html,/<script src="street-events\.js"><\/script>/);
 assert.match(html,/<script src="street-sets\.js"><\/script>/);
+assert.match(html,/<script src="street-audience\.js"><\/script>/);
 assert.match(html,/id="streetLifePrompt"/);
 assert.match(html,/id="streetDialogue"/);
 assert.match(html,/id="streetEventPrompt"/);
@@ -133,6 +135,20 @@ assert.equal(streetSets.includes('TGGCareer?.addRep'),false);
 assert.equal(streetSets.includes('TGGEconomy?.apply'),false);
 assert.equal(streetSets.includes('TGGWorldSync'),false);
 
+assert.match(streetAudience,/window\.TGGStreetAudience/);
+for(const crew of ['BLOCK CREW','AVE CREW','STUDIO CREW']) assert.match(streetAudience,new RegExp(crew));
+for(const api of ['memory','person','personTier','crewBond','crewTier','crewSnapshot','audienceProfile','recordEvent','rankCandidates','summaryLine','render']) assert.match(streetAudience,new RegExp('function '+api+'\\b'));
+assert.match(streetEvents,/TGGStreetAudience\?\.rankCandidates/);
+assert.match(streetEvents,/TGGStreetAudience\?\.recordEvent/);
+assert.match(streetSets,/data-audience-summary/);
+assert.match(fs.readFileSync(new URL('./progression.js',import.meta.url),'utf8'),/audience-regulars/);
+assert.match(fs.readFileSync(new URL('./progression.js',import.meta.url),'utf8'),/street-crew-locked/);
+assert.equal(streetAudience.includes('localStorage'),false);
+assert.equal(streetAudience.includes('TGGGame?.reward'),false);
+assert.equal(streetAudience.includes('TGGCareer?.addRep'),false);
+assert.equal(streetAudience.includes('TGGEconomy?.apply'),false);
+assert.equal(streetAudience.includes('TGGWorldSync'),false);
+
 
 for(const forbidden of [
   'SUPABASE_SERVICE_ROLE_KEY',
@@ -149,10 +165,10 @@ for(const forbidden of [
   assert.equal(game3d.includes(forbidden),false,'3D runtime must exclude '+forbidden);
 }
 
-assert.equal(release.release,'V1.34 Street Sets + Crowd Momentum');
-assert.equal(release.base,'V1.33 Street Reputation + Event Variants');
-assert.equal(auto.version,'1.34');
-assert.equal(qa.version,'1.34');
+assert.equal(release.release,'V1.35 Street Crews + Audience Memory');
+assert.equal(release.base,'V1.34 Street Sets + Crowd Momentum');
+assert.equal(auto.version,'1.35');
+assert.equal(qa.version,'1.35');
 assert.equal(release.production,'gated');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.ok(['candidate_pending_ci','passed'].includes(release.static_gate));
@@ -166,7 +182,7 @@ for(const gate of [
   'interiors_3d_runtime','home_3d','media_3d','shops_3d','park_3d','garage_3d_runtime',
   'navigation_hud','traffic_population','traffic_animation','interior_no_reward_path',
   'street_life_api','pedestrian_proximity','street_contact_memory','street_talk_no_rewards','traffic_proximity','horn_reaction','contextual_prompt',
-  'street_events_api','street_event_hotspots','street_event_local_state','crowd_gather_3d','crowd_reaction_animation','street_event_no_rewards','street_event_no_remote_mutations','contextual_event_hud','street_reputation_api','street_rank','event_variant_catalog','event_variants_cosmetic_only','street_rep_persistence','street_rep_achievements','street_sets_api','street_set_ordering','street_set_persistence','crowd_momentum','momentum_crowd_bonus','street_sets_no_rewards','street_sets_single_store','street_set_achievements'
+  'street_events_api','street_event_hotspots','street_event_local_state','crowd_gather_3d','crowd_reaction_animation','street_event_no_rewards','street_event_no_remote_mutations','contextual_event_hud','street_reputation_api','street_rank','event_variant_catalog','event_variants_cosmetic_only','street_rep_persistence','street_rep_achievements','street_sets_api','street_set_ordering','street_set_persistence','crowd_momentum','momentum_crowd_bonus','street_sets_no_rewards','street_sets_single_store','street_set_achievements','street_audience_api','audience_memory_persistence','returning_audience','street_crew_bonds','audience_aware_crowd_selection','audience_no_rewards','audience_single_store','audience_achievements'
 ]) assert.ok(release.gates.includes(gate),'missing V1.30 gate '+gate);
 
-console.log('GAME_V1_34_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_35_STATIC_CONTRACT_PASS');

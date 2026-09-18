@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.29 Bulk World Upgrade",
-  "base": "V1.28 Drift + Horn Playtest",
+  "release": "V1.30 City Life 3D",
+  "base": "V1.29 Bulk World Upgrade",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -114,7 +114,14 @@
     "V1.29-MANAGER-M-DIALOGUE",
     "V1.29-MOBILE-DRIFT-HORN",
     "V1.29-METADATA-CLEANUP",
-    "V1.29-LOCAL-THREE-RUNTIME"
+    "V1.29-LOCAL-THREE-RUNTIME",
+    "V1.30-3D-APARTMENT",
+    "V1.30-3D-MEDIA",
+    "V1.30-3D-SHOPS",
+    "V1.30-3D-PARK",
+    "V1.30-3D-GARAGE",
+    "V1.30-LIVE-NAVIGATION",
+    "V1.30-LIVING-TRAFFIC-REGRESSION"
   ],
   "gates": [
     "runtime_api_presence",
@@ -282,10 +289,19 @@
     "mobile_horn_control",
     "metadata_literal_newline_clean",
     "local_three_runtime",
-    "studio_dom_ready_boot"
+    "studio_dom_ready_boot",
+    "interiors_3d_runtime",
+    "home_3d",
+    "media_3d",
+    "shops_3d",
+    "park_3d",
+    "garage_3d_runtime",
+    "navigation_hud",
+    "traffic_population",
+    "interior_no_reward_path"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "pending_runtime_verification",
-  "release_checkpoint": "V1.29-BULK-WORLD-UPGRADE-RC2",
-  "production": "playtest"
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.30-CITY-LIFE-3D-CANDIDATE",
+  "production": "gated"
 }

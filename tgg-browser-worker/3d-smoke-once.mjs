@@ -51,7 +51,8 @@ async function run(){
         scripts:[...document.scripts].map(s=>s.src||'[inline]'),
         readyState:document.readyState
       })).catch(()=>({evaluationFailed:true}));
-      result={
+      console.log(JSON.stringify({tgg_3d_smoke_step:'mobile-complete'}));
+    result={
         ok:false,status:'webgl_not_ready',target:TARGET,
         error:error?.message||String(error),
         diagnostics,
@@ -64,11 +65,13 @@ async function run(){
       await ctx.close();
       return;
     }
+    console.log(JSON.stringify({tgg_3d_smoke_step:'ready'}));
     await page.waitForTimeout(500);
 
     const checks=[];
     const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
 
+    console.log(JSON.stringify({tgg_3d_smoke_step:'before-initial'}));
     const initial=await page.evaluate(()=>({
       title:document.title,
       canvas:!!document.querySelector('#city3d canvas'),
@@ -104,6 +107,7 @@ async function run(){
     record('3d-player',initial.player);
     record('starter-car',initial.car);
     record('building-collision',initial.collisionBlocked);
+    console.log(JSON.stringify({tgg_3d_smoke_step:'initial-complete'}));
     if(REQUIRE_DESTINATIONS){
       record('destination-count',initial.destinations>=6,String(initial.destinations));
       record('destination-interact-api',initial.interactApi);
@@ -147,6 +151,7 @@ async function run(){
       record('studio-3d-entry',studioState.active&&studioState.canvas&&studioState.ready,JSON.stringify(studioState));
       await page.evaluate(()=>document.getElementById('studioBack')?.click());
     }
+    console.log(JSON.stringify({tgg_3d_smoke_step:'world-bulk-complete'}));
     if(REQUIRE_CINEMATIC){
       record('camera-api',initial.cameraApi);
       record('camera-default-orbit',initial.cameraMode==='orbit',String(initial.cameraMode));
@@ -162,17 +167,20 @@ async function run(){
       record('camera-orbit-return',cameraModes[2]==='orbit'&&cameraModes[3]==='orbit',JSON.stringify(cameraModes));
     }
 
+    console.log(JSON.stringify({tgg_3d_smoke_step:'cinematic-complete'}));
     const x0=Number(initial.state?.x);
     await page.keyboard.press('ArrowRight');
     await page.waitForTimeout(150);
     const walk=await page.evaluate(()=>window.TGGGame?.getState?.());
     record('walk-movement',Number(walk?.x)>x0,`${x0}->${walk?.x}`);
 
+    console.log(JSON.stringify({tgg_3d_smoke_step:'walk-complete'}));
     await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());
     await page.waitForTimeout(150);
     const entered=await page.evaluate(()=>window.TGGGame?.getState?.());
     record('enter-car',entered?.inVehicle===true);
 
+    console.log(JSON.stringify({tgg_3d_smoke_step:'entered-car'}));
     const driveStart=await page.evaluate(()=>window.TGGGame?.getState?.());
     const startHeading=Number(driveStart?.heading)||0;
     const startX=Number(driveStart?.x)||0;
@@ -195,6 +203,7 @@ async function run(){
     record('speedometer-hud',accelerated.hudActive&&Number(accelerated.speedText)>0,`mph=${accelerated.speedText}`);
     record('drive-gear',accelerated.gearText==='D',String(accelerated.gearText));
 
+    console.log(JSON.stringify({tgg_3d_smoke_step:'acceleration-complete'}));
     const headingBeforeSteer=Number(accelerated.state?.heading)||0;
     await page.keyboard.down('ArrowRight');
     await page.waitForTimeout(500);
@@ -216,6 +225,7 @@ async function run(){
     rotationDiff=Math.min(rotationDiff,Math.PI*2-rotationDiff);
     record('car-mesh-heading-aligned',rotationDiff<0.22,`diff=${rotationDiff}`);
 
+    console.log(JSON.stringify({tgg_3d_smoke_step:'steering-complete'}));
     const speedBeforeBrake=Math.abs(Number(steeringVisual.driving?.speed)||0);
     await page.keyboard.down('ArrowDown');
     await page.waitForTimeout(700);
@@ -230,6 +240,7 @@ async function run(){
     record('smooth-braking-reverse',Math.abs(brakeSpeed)<speedBeforeBrake||brakeSpeed<0,`before=${speedBeforeBrake},after=${brakeSpeed}`);
     record('brake-lights',braking.brakeGlow.some(v=>Number(v)>1.5),JSON.stringify(braking.brakeGlow));
 
+    console.log(JSON.stringify({tgg_3d_smoke_step:'braking-complete'}));
     await page.keyboard.down('ArrowDown');
     await page.waitForTimeout(900);
     const reversed=await page.evaluate(()=>({
@@ -240,6 +251,7 @@ async function run(){
     await page.keyboard.up('ArrowDown');
     record('reverse-gear',Number(reversed.driving?.speed)<-.2&&reversed.gearText==='R',`speed=${reversed.driving?.speed},gear=${reversed.gearText}`);
 
+    console.log(JSON.stringify({tgg_3d_smoke_step:'reverse-complete'}));
     await page.waitForTimeout(500);
     const coast=await page.evaluate(()=>window.TGGGame?.getDrivingState?.());
     record('coast-deceleration',Math.abs(Number(coast?.speed)||0)<Math.abs(Number(reversed.driving?.speed)||0),`reverse=${reversed.driving?.speed},coast=${coast?.speed}`);
@@ -254,6 +266,7 @@ async function run(){
     record('exit-restores-orbit',exited.camera==='orbit',String(exited.camera));
     record('vehicle-hud-dims-on-exit',exited.hudActive===false);
 
+    console.log(JSON.stringify({tgg_3d_smoke_step:'desktop-complete'}));
     const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
     const mp=await mobile.newPage();
     const mr=await mp.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});

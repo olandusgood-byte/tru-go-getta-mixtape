@@ -12,7 +12,7 @@
     {id:'big-bag',name:'Five Hundred',detail:'Hold $500 cash.',test:p=>p.cash>=500},
     {id:'city-regular',name:'Outside Every Day',detail:'Complete 3 city-event runs.',test:(p,c,content,exp,events)=>Object.values(events.runs||{}).reduce((n,v)=>n+(Number(v)||0),0)>=3},
     {id:'city-known',name:'City Knows The Name',detail:'Complete 8 city-event runs.',test:(p,c,content,exp,events)=>Object.values(events.runs||{}).reduce((n,v)=>n+(Number(v)||0),0)>=8},
-    {id:'city-headliner',name:'City Headliner',detail:'Complete 15 city-event runs.',test:(p,c,content,exp,events)=>Object.values(events.runs||{}).reduce((n,v)=>n+(Number(v)||0),0)>=15}
+    {id:'city-headliner',name:'City Headliner',detail:'Complete 15 city-event runs.',test:(p,c,content,exp,events)=>Object.values(events.runs||{}).reduce((n,v)=>n+(Number(v)||0),0)>=15},
     {id:'first-circuit',name:'First Circuit',detail:'Complete your first ordered city circuit.',test:(p,c,content,exp,events,circuits)=>Array.isArray(circuits.completed)&&circuits.completed.length>=1},
     {id:'city-circuit',name:'City Circuit',detail:'Complete the full City Run circuit.',test:(p,c,content,exp,events,circuits)=>Array.isArray(circuits.completed)&&circuits.completed.includes('city-run')}
   ];

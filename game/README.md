@@ -1,46 +1,50 @@
-# TRU GO GETTA Game V1.20
+# TRU GO GETTA Game V1.21
 
-V1.20 turns earned NPC relationships into local contact opportunities that reuse existing city events instead of creating a second reward system.
+V1.21 is the first true WebGL city foundation. It keeps the verified V1.20 gameplay/economy/NPC systems and replaces only the city presentation layer when WebGL is available.
 
-## Contact opportunities
+## Real 3D foundation
 
-- Manager Introduction — M — requires TRUSTED — complete through Release Rush
-- Producer Lock-In — Kane — requires FAMILIAR — complete through Studio Pop-In
-- DJ Test Spin — DJ V — requires FAMILIAR — complete through Release Rush
+- Three.js WebGL renderer pinned to 0.186.0.
+- Perspective third-person chase camera.
+- Drag-to-orbit camera.
+- Wheel zoom.
+- Lit/shadowed 3D player character and Manager M.
+- Ground plane, road network, sidewalks, district pads, street lights and 3D buildings.
+- Fog, tone mapping and emissive city lighting.
+- Player mesh reads the existing `TGGGame` x/y/heading state.
+- Existing keyboard/D-pad movement remains authoritative.
 
-Opportunity state is stored inside the existing `tgg-route-memory-v1` object under `opportunities`.
+## Fail-safe visual architecture
 
-## Completion rules
+The verified V1.20 2.5D city stays underneath as fallback. When WebGL initializes, the 3D canvas takes over and the fallback player/city layers are hidden. If the 3D engine fails to load, the working 2.5D play surface remains usable.
 
-Starting an opportunity records the linked event's current run count. The opportunity only completes after that existing event successfully runs again and its run count advances.
+## Safety
 
-The opportunity layer itself:
+The 3D renderer is presentation-only:
 
-- awards no cash;
-- awards no XP;
-- awards no reputation;
-- calls no economy reward API;
-- creates no separate localStorage key;
-- adds no remote mutation API.
+- no save writes;
+- no cash/XP/REP rewards;
+- no career mutation;
+- no world RPC mutations;
+- no replacement movement/economy store.
 
 ## Verification
 
-- [x] Manager Introduction unlocks at M = Trusted
-- [x] Producer Lock-In unlocks at Kane = Familiar
-- [x] DJ Test Spin remains locked while DJ V = Intro
-- [x] opportunity UI auto-renders in City Events
-- [x] Manager Introduction starts successfully
-- [x] Release Rush completes Manager Introduction
-- [x] completion adds exactly the existing 450 cash
-- [x] no opportunity bonus payout
-- [x] no separate opportunity save store
-- [x] Opportunity Knocks achievement unlocks
+- [x] V1.21 static contract
+- [x] Three.js engine pin
+- [x] WebGL canvas boot
+- [x] Perspective camera exists
+- [x] 3D player follows real game movement
+- [x] third-person camera stays above the player
+- [x] drag-to-orbit changes camera yaw
+- [x] readable V1.20 controls remain intact
+- [x] prior gameplay/economy/NPC smoke coverage remains intact
 - [x] Static CI PASS
-- [x] Chromium Smoke PASS on `6095ecc`
+- [x] WebGL Chromium Smoke PASS
 - [x] production remains gated
 
 ## Release status
 
-**V1.20-NPC-FAVOR-HOOKS-CONTACT-OPPORTUNITIES-VERIFIED.**
+**V1.21-3D-WORLD-FOUNDATION-VERIFIED.**
 
-Next internal development layer: **V1.21 Contact Chains + Opportunity History**.
+Next internal development layer: **V1.22 3D Collision + Walkable Districts**.

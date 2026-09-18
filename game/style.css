@@ -146,3 +146,4 @@
 .gear-readout{font-size:9px;color:#8f93a8;letter-spacing:.12em}.gear-readout b{display:block;font-size:19px;color:#c7ff00;line-height:1.05}
 .drive-hint{grid-column:1/-1;font-size:8px;letter-spacing:.08em;color:#a9adbd;white-space:nowrap}
 @media(max-width:650px){.vehicle-hud{left:10px;bottom:10px;padding:9px 10px}.speed-readout b{font-size:24px}.drive-hint{font-size:7px;white-space:normal;max-width:190px}}
+\n.drive-state{font-size:9px;color:#8f93a8;letter-spacing:.12em}.drive-state b{display:block;font-size:12px;color:#7b86ff}.vehicle-hud.active .drive-state b{color:#c7ff00}\n

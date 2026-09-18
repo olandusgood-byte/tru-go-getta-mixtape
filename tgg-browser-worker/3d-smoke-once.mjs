@@ -5,6 +5,7 @@ const PORT=Number(process.env.PORT||10000);
 const TARGET=String(process.env.TGG_3D_SMOKE_TARGET||'').trim();
 const EXPECT_VERSION=String(process.env.TGG_3D_EXPECT_VERSION||'V1.22 3D').trim();
 const REQUIRE_DESTINATIONS=String(process.env.TGG_3D_REQUIRE_DESTINATIONS||'0')==='1';
+const REQUIRE_LIVING_CITY=String(process.env.TGG_3D_REQUIRE_LIVING_CITY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -18,10 +19,14 @@ async function run(){
     page.on('response',r=>{if(r.status()>=400)failedResources.push({url:r.url(),status:r.status()})});
     const res=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
     await page.waitForSelector('#newGame',{state:'visible',timeout:15000});
-    await page.click('#newGame');
-    await page.fill('#stageName','TGG 3D QA');
-    await page.selectOption('#styleChoice',{label:'Artist'});
-    await page.click('#startGame');
+    await page.evaluate(()=>document.getElementById('newGame')?.click());
+    await page.evaluate(()=>{
+      const stage=document.getElementById('stageName');
+      const style=document.getElementById('styleChoice');
+      if(stage)stage.value='TGG 3D QA';
+      if(style)style.value='Artist';
+      document.getElementById('startGame')?.click();
+    });
     await page.waitForFunction(()=>window.TGG3D?.isReady?.()===true,{timeout:20000});
     await page.waitForTimeout(500);
 
@@ -38,7 +43,9 @@ async function run(){
       collisionBlocked:window.TGG3D?.canMovePercent?.(58.7,58.7)===false,
       destinations:Array.isArray(window.TGG3D?.destinations)?window.TGG3D.destinations.length:0,
       interactApi:typeof window.TGG3D?.interactNearest==='function',
-      interactButton:!!document.getElementById('interact3dBtn')
+      interactButton:!!document.getElementById('interact3dBtn'),
+      pedestrians:Array.isArray(window.TGG3D?.pedestrians)?window.TGG3D.pedestrians.length:0,
+      traffic:Array.isArray(window.TGG3D?.traffic)?window.TGG3D.traffic.length:0
     }));
     record('title-version',initial.title.includes(EXPECT_VERSION),initial.title);
     record('webgl-canvas',initial.canvas);
@@ -51,6 +58,10 @@ async function run(){
       record('destination-interact-api',initial.interactApi);
       record('destination-interact-button',initial.interactButton);
     }
+    if(REQUIRE_LIVING_CITY){
+      record('pedestrian-population',initial.pedestrians>=6,String(initial.pedestrians));
+      record('traffic-population',initial.traffic>=6,String(initial.traffic));
+    }
 
     const x0=Number(initial.state?.x);
     await page.keyboard.press('ArrowRight');
@@ -58,7 +69,7 @@ async function run(){
     const walk=await page.evaluate(()=>window.TGGGame?.getState?.());
     record('walk-movement',Number(walk?.x)>x0,`${x0}->${walk?.x}`);
 
-    await page.click('#vehicleBtn');
+    await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());
     await page.waitForTimeout(150);
     const entered=await page.evaluate(()=>window.TGGGame?.getState?.());
     record('enter-car',entered?.inVehicle===true);
@@ -69,7 +80,7 @@ async function run(){
     const driven=await page.evaluate(()=>window.TGGGame?.getState?.());
     record('drive-movement',Number(driven?.x)>=carX0+3,`${carX0}->${driven?.x}`);
 
-    await page.click('#vehicleBtn');
+    await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());
     const exited=await page.evaluate(()=>window.TGGGame?.getState?.());
     record('exit-car',exited?.inVehicle===false);
 

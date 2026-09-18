@@ -68,6 +68,42 @@
     save();
     window.TGGProgression?.sync?.();
     window.__tggToast?.(event.name+' COMPLETE — +
+  }
+  function render(){
+    const el=document.getElementById('eventsList');if(!el)return;
+    const profile=cityProfile();
+    const header='<div class="mission-card city-mastery"><b>CITY MOMENTUM • '+profile.rank+'</b><span>'+profile.totalRuns+' total runs • '+profile.uniqueCompleted+'/'+events.length+' activities cleared • streak '+profile.streak+' • best '+profile.bestStreak+'</span><span>Master different activities to build your city name. Existing cash, XP and REP values stay unchanged.</span></div>';
+    const cards=events.map(e=>{
+      const open=!window.TGGDistricts?.canEnter||window.TGGDistricts.canEnter(e.district);
+      const m=mastery(e.id);
+      const next=m.nextAt===null?'MAX MASTERY':m.remaining+' runs to '+(m.nextAt===5?'CITY KNOWN':m.nextAt===10?'HEADLINER':'REGULAR');
+      return '<div class="mission-card"><b>'+e.name+' • '+m.name+'</b><span>'+e.detail+'</span><span>'+e.district+' • 
+  load();
+  window.TGGEvents={events,state,load,save,get,run,render,requirementsMet,requirementText,totalRuns,mastery,cityProfile,recordMomentum};
+})();
++cash+' / +'+xp+' XP / +'+rep+' REP');
+    render();return true;
+  }
+  function render(){const el=document.getElementById('eventsList');if(!el)return;el.innerHTML=events.map(e=>{const open=!window.TGGDistricts?.canEnter||window.TGGDistricts.canEnter(e.district);const runs=Number(state.runs[e.id])||0;return `<div class="mission-card"><b>${e.name}</b><span>${e.detail}</span><span>${e.district} • $${e.cash} • ${e.xp} XP • ${e.rep} REP • ${runs} runs</span><span>NEEDS: ${requirementText(e)}</span>${open&&requirementsMet(e)?`<button class="primary" data-event-run="${e.id}">RUN EVENT</button>`:open?'<span>NEEDS INVENTORY</span>':'<span>LOCKED — LEVEL '+(window.TGGDistricts?.get?.(e.district)?.level||1)+'</span>'}</div>`}).join('');el.querySelectorAll('[data-event-run]').forEach(b=>b.onclick=()=>run(b.dataset.eventRun))}
+  load();
+  window.TGGEvents={events,state,load,save,get,run,render,requirementsMet,requirementText};
+})();
++e.cash+' • '+e.xp+' XP • '+e.rep+' REP • '+m.runs+' runs</span><span>MASTERY: '+next+'</span><span>NEEDS: '+requirementText(e)+'</span>'+(open&&requirementsMet(e)?'<button class="primary" data-event-run="'+e.id+'">RUN EVENT</button>':open?'<span>NEEDS INVENTORY</span>':'<span>LOCKED — LEVEL '+(window.TGGDistricts?.get?.(e.district)?.level||1)+'</span>')+'</div>';
+    }).join('');
+    el.innerHTML=header+cards;
+    el.querySelectorAll('[data-event-run]').forEach(b=>b.onclick=()=>run(b.dataset.eventRun));
+  }
+  load();
+  window.TGGEvents={events,state,load,save,get,run,render,requirementsMet,requirementText};
+})();
++cash+' / +'+xp+' XP / +'+rep+' REP');
+    render();return true;
+  }
+  function render(){const el=document.getElementById('eventsList');if(!el)return;el.innerHTML=events.map(e=>{const open=!window.TGGDistricts?.canEnter||window.TGGDistricts.canEnter(e.district);const runs=Number(state.runs[e.id])||0;return `<div class="mission-card"><b>${e.name}</b><span>${e.detail}</span><span>${e.district} • $${e.cash} • ${e.xp} XP • ${e.rep} REP • ${runs} runs</span><span>NEEDS: ${requirementText(e)}</span>${open&&requirementsMet(e)?`<button class="primary" data-event-run="${e.id}">RUN EVENT</button>`:open?'<span>NEEDS INVENTORY</span>':'<span>LOCKED — LEVEL '+(window.TGGDistricts?.get?.(e.district)?.level||1)+'</span>'}</div>`}).join('');el.querySelectorAll('[data-event-run]').forEach(b=>b.onclick=()=>run(b.dataset.eventRun))}
+  load();
+  window.TGGEvents={events,state,load,save,get,run,render,requirementsMet,requirementText};
+})();
++cash+' / +'+xp+' XP / +'+rep+' REP');
     render();return true;
   }
   function render(){

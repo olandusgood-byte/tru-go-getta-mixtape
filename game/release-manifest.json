@@ -114,10 +114,14 @@
     "live_city_activity_snapshot",
     "property_readonly_inspect",
     "vehicle_readonly_inspect",
-    "remote_label_escape"
+    "remote_label_escape",
+    "core_control_bindings",
+    "pause_input_lock",
+    "secondary_world_navigation",
+    "browser_smoke_automated"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.14-LIVE-CITY-READONLY-ASSETS-STATIC-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.14-LIVE-CITY-READONLY-ASSETS-VERIFIED",
   "production": "gated"
 }

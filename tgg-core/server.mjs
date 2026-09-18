@@ -247,7 +247,7 @@ app.get('/v1/storage/object/:bucket/*key', async (req,res,next)=>{
     const key=String(req.params.key||'').replace(/^\\/+/, '');
     const b=await pool.query('select visibility from tgg_storage_buckets where bucket_key=$1',[bucketKey]);
     if(!b.rowCount) return res.status(404).json({error:'storage_bucket_not_found'});
-    if(b.rows[0].visibility!=='public') return auth(req,res,async()=>{});
+    if(b.rows[0].visibility!=='public') return res.status(401).json({error:'private_object_requires_authenticated_route'});
     const target=path.resolve(STORAGE_ROOT,path.posix.join(bucketKey,key));
     const root=path.resolve(STORAGE_ROOT);
     if(!target.startsWith(root+path.sep)) return res.status(400).json({error:'invalid_object_key'});

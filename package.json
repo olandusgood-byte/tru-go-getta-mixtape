@@ -1,6 +1,6 @@
 {
   "name": "tgg-repo-render-entrypoint",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,6 @@
     "start:worker": "node worker.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.57.0",
     "express": "^5.1.0",
     "pg": "^8.16.3",
     "playwright": "^1.55.0"

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.31 Street Life + Traffic Proximity",
-  "base": "V1.30 City Life 3D",
+  "release": "V1.32 Street Events + Crowd Reactions",
+  "base": "V1.31 Street Life + Traffic Proximity",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -126,7 +126,11 @@
     "V1.31-PED-PROXIMITY",
     "V1.31-TRAFFIC-PROXIMITY",
     "V1.31-CONTEXTUAL-STREET-HUD",
-    "V1.31-HORN-REACTION"
+    "V1.31-HORN-REACTION",
+    "V1.32-STREET-EVENT-HOTSPOTS",
+    "V1.32-3D-CROWD-GATHER",
+    "V1.32-CROWD-REACTION-PHASES",
+    "V1.32-CONTEXTUAL-EVENT-HUD"
   ],
   "gates": [
     "runtime_api_presence",
@@ -310,10 +314,18 @@
     "street_talk_no_rewards",
     "traffic_proximity",
     "horn_reaction",
-    "contextual_prompt"
+    "contextual_prompt",
+    "street_events_api",
+    "street_event_hotspots",
+    "street_event_local_state",
+    "crowd_gather_3d",
+    "crowd_reaction_animation",
+    "street_event_no_rewards",
+    "street_event_no_remote_mutations",
+    "contextual_event_hud"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.31-STREET-LIFE-TRAFFIC-PROXIMITY-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.32-STREET-EVENTS-CROWD-REACTIONS-CANDIDATE",
   "production": "gated"
 }

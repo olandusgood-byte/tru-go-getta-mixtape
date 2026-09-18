@@ -126,5 +126,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
   "next": "V1.34 STREET SETS + CROWD MOMENTUM",
-  "verification": "pending_ci"
+  "verification": "passed"
 }

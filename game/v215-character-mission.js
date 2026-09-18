@@ -188,7 +188,9 @@
     const m=state.mission||{startAt:Date.now(),impacts:0,clean:0,near:0,condition:100,checkpoints:0,name:detail.missionName||'CITY MOVE',id:detail.missionId||'mission'};
     const now=Date.now(),elapsed=clamp((now-m.startAt)/1000,1,3600);
     const ms=mega(),impactDelta=Math.max(0,(Number(ms.impacts)||0)-(Number(m.impacts)||0));
-    const conditionLoss=Math.max(0,(Number(m.condition)||100)-(Number(ms.condition)||100));
+    const startCondition=Number.isFinite(Number(m.condition))?Number(m.condition):100;
+    const endCondition=Number.isFinite(Number(ms.condition))?Number(ms.condition):100;
+    const conditionLoss=Math.max(0,startCondition-endCondition);
     const cleanDelta=Math.max(0,(Number(ms.cleanSeconds)||0)-(Number(m.clean)||0));
     const nearGain=Math.max(0,(Number(ms.bestNearMissStreak)||Number(ms.nearMissStreak)||0)-(Number(m.near)||0));
     let score=1000;
@@ -236,11 +238,16 @@
   }
   function animateCrowd(now){
     for(const ped of window.TGG3D?.pedestrians||[]){
-      const until=Number(ped.userData?.v215CheerUntil)||0;if(until<=now)continue;
       const p=ped.userData?.parts;if(!p)continue;
+      if(p.body&&ped.userData.v215BodyBaseY==null)ped.userData.v215BodyBaseY=Number(p.body.position.y)||0;
+      const until=Number(ped.userData?.v215CheerUntil)||0;
+      if(until<=now){
+        if(p.body)p.body.position.y=window.THREE.MathUtils.lerp(p.body.position.y,Number(ped.userData.v215BodyBaseY)||0,.16);
+        continue;
+      }
       if(p.leftArm)p.leftArm.rotation.x=window.THREE.MathUtils.lerp(p.leftArm.rotation.x,-1.1+Math.sin(now*.014)*.22,.24);
       if(p.rightArm)p.rightArm.rotation.x=window.THREE.MathUtils.lerp(p.rightArm.rotation.x,-1.1-Math.sin(now*.014)*.22,.24);
-      if(p.body)p.body.position.y=Math.abs(Math.sin(now*.012))*.08;
+      if(p.body)p.body.position.y=(Number(ped.userData.v215BodyBaseY)||0)+Math.abs(Math.sin(now*.012))*.08;
     }
   }
 

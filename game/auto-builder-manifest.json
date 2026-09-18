@@ -117,5 +117,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
   "next": "V1.27 CINEMATIC CAMERA + RADAR",
-  "verification": "pending_ci"
+  "verification": "passed"
 }

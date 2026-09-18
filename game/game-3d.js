@@ -315,8 +315,8 @@
       const hot=near?.id===d.id;
       const pulse=1+Math.sin(t*2.4+i)*.08;
       d.ring.scale.setScalar(hot?1.18:pulse);
-      d.ring.material.opacity=hot?.96:.62;
-      d.beam.material.opacity=hot?.27:.10;
+      d.ring.material.opacity=hot ? .96 : .62;
+      d.beam.material.opacity=hot ? .27 : .10;
       d.marker.rotation.y=t*1.4+i;
       d.marker.position.y=2.25+Math.sin(t*2+i)*.18;
       d.label.material.opacity=hot?1:.78;

@@ -1,0 +1,12 @@
+/* V2.09 CITY ACTION */
+body.tgg-v209 .mission-scene{position:absolute;left:50%;bottom:28px;z-index:18;width:min(520px,calc(100% - 28px));transform:translate(-50%,18px) scale(.98);display:grid;gap:4px;padding:13px 16px;border:1px solid #7b86ff66;border-radius:18px;background:linear-gradient(135deg,#080b12f4,#11172af2);box-shadow:0 22px 70px #000b,0 0 30px #7b86ff18;opacity:0;pointer-events:none;transition:.22s ease}
+body.tgg-v209 .mission-scene.active{opacity:1;transform:translate(-50%,0) scale(1)}
+body.tgg-v209 .mission-scene small{font-size:8px;font-weight:900;letter-spacing:.18em;color:#c7ff00}
+body.tgg-v209 .mission-scene b{font-size:18px;letter-spacing:.06em;color:#fff}
+body.tgg-v209 .mission-scene span{font-size:10px;font-weight:800;line-height:1.45;color:#cbd1df}
+body.tgg-v209 .impact-flash{position:absolute;inset:0;z-index:17;border:0 solid #ffcf4a;box-shadow:inset 0 0 0 transparent;opacity:0;pointer-events:none}
+body.tgg-v209 .impact-flash.active{animation:tgg-impact-flash .32s ease-out}
+body.tgg-impact #city3d{animation:tgg-impact-shake .28s linear}
+@keyframes tgg-impact-flash{0%{opacity:.82;border-width:8px;box-shadow:inset 0 0 60px #ff3b304d}100%{opacity:0;border-width:0;box-shadow:inset 0 0 0 transparent}}
+@keyframes tgg-impact-shake{0%,100%{transform:translate(0)}20%{transform:translate(-5px,2px)}40%{transform:translate(5px,-2px)}60%{transform:translate(-3px,-1px)}80%{transform:translate(3px,1px)}}
+@media(max-width:700px){body.tgg-v209 .mission-scene{bottom:16px;padding:11px 13px}body.tgg-v209 .mission-scene b{font-size:15px}}

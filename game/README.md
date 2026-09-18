@@ -1,50 +1,44 @@
-# TRU GO GETTA Game V1.21
+# TRU GO GETTA Game V1.22
 
-V1.21 is the first true WebGL city foundation. It keeps the verified V1.20 gameplay/economy/NPC systems and replaces only the city presentation layer when WebGL is available.
+V1.22 turns the V1.21 WebGL city into a walkable 3D space with building collision and live district awareness.
 
-## Real 3D foundation
+## 3D movement
 
-- Three.js WebGL renderer pinned to 0.186.0.
-- Perspective third-person chase camera.
-- Drag-to-orbit camera.
-- Wheel zoom.
-- Lit/shadowed 3D player character and Manager M.
-- Ground plane, road network, sidewalks, district pads, street lights and 3D buildings.
-- Fog, tone mapping and emissive city lighting.
-- Player mesh reads the existing `TGGGame` x/y/heading state.
-- Existing keyboard/D-pad movement remains authoritative.
+- Authoritative `TGGGame.move()` now asks the 3D world to constrain proposed movement.
+- Building footprints block the player.
+- Diagonal movement can slide along an open axis instead of stopping unnecessarily.
+- Existing x/y save coordinates remain the single player-position store.
+- WebGL failure still falls back to the verified 2.5D movement surface.
 
-## Fail-safe visual architecture
+## District awareness
 
-The verified V1.20 2.5D city stays underneath as fallback. When WebGL initializes, the 3D canvas takes over and the fallback player/city layers are hidden. If the 3D engine fails to load, the working 2.5D play surface remains usable.
+The 3D HUD reports the nearest live district while you move:
 
-## Safety
+- Studio Row
+- Downtown
+- Mixtape Ave
 
-The 3D renderer is presentation-only:
+## Mission alignment
 
-- no save writes;
-- no cash/XP/REP rewards;
-- no career mutation;
-- no world RPC mutations;
-- no replacement movement/economy store.
+Manager M's 3D model now uses the same x=72 / y=36 target that the existing mission system checks, so the visible NPC and gameplay objective agree.
 
 ## Verification
 
-- [x] V1.21 static contract
-- [x] Three.js engine pin
-- [x] WebGL canvas boot
-- [x] Perspective camera exists
-- [x] 3D player follows real game movement
-- [x] third-person camera stays above the player
-- [x] drag-to-orbit changes camera yaw
-- [x] readable V1.20 controls remain intact
-- [x] prior gameplay/economy/NPC smoke coverage remains intact
+- [x] V1.22 static contract
+- [x] collision map loaded from the same building footprints used by the renderer
+- [x] known building footprint blocks occupancy
+- [x] collision resolver slides when one axis is open
+- [x] real keyboard movement is stopped by a building
+- [x] collision counter increments
+- [x] Downtown live district badge updates
+- [x] Manager M 3D position matches mission coordinates
+- [x] all V1.21 camera/player WebGL checks remain green
 - [x] Static CI PASS
-- [x] WebGL Chromium Smoke PASS
+- [x] 3D Collision Chromium Smoke PASS
 - [x] production remains gated
 
 ## Release status
 
-**V1.21-3D-WORLD-FOUNDATION-VERIFIED.**
+**V1.22-3D-COLLISION-WALKABLE-DISTRICTS-VERIFIED.**
 
-Next internal development layer: **V1.22 3D Collision + Walkable Districts**.
+Next internal development layer: **V1.23 3D Animation + Interaction Prompts**.

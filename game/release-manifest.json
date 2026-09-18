@@ -1,6 +1,6 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.16 Mission 02 — Earn The Slot",
+  "release": "V1.16 Mission 02 — Pick A Side",
   "base": "V1.15 Story Missions",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
@@ -49,10 +49,7 @@
     "V1.16-MISSION-02-PICK-A-SIDE",
     "V1.16-BRANCHING-CHOICE",
     "V1.16-PERSISTENT-CONSEQUENCE",
-    "V1.16-CITY-SHOWDOWN",
-    "V1.16-MISSION-02-EARN-THE-SLOT",
-    "V1.16-MISSION-02-CHOICE",
-    "V1.16-MISSION-02-ONE-TIME-REWARD"
+    "V1.16-CITY-SHOWDOWN"
   ],
   "gates": [
     "runtime_api_presence",
@@ -125,13 +122,10 @@
     "story_mission_02_route_rewards",
     "story_mission_02_finale",
     "story_mission_02_reward_once",
-    "story_mission_02_api",
-    "story_mission_02_ui",
-    "story_mission_02_choice",
-    "story_mission_02_reward_once"
+    "story_mission_02_choice"
   ],
   "static_gate": "candidate_pending_ci",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.16-MISSION-02-EARN-THE-SLOT-CANDIDATE",
+  "release_checkpoint": "V1.16-MISSION-02-PICK-A-SIDE-CANDIDATE",
   "production": "staging_candidate"
 }

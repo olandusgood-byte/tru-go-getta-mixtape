@@ -133,7 +133,14 @@
     test('v226 procedural fallback',assets.fallbackMode==='procedural'&&assets.usingFallback!==false);
     test('v226 asset HUD',!!document.getElementById('v226AssetHud'));
     test('v226 asset loader css',!!document.querySelector('link[href*="v226-asset-loader.css"]'));
-    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.26 REAL ASSET LOADER 100');
+    const forge=window.TGGV227?.status?.()||{};
+    test('v227 forge core api',!!window.TGGV227Core&&typeof window.TGGV227Core.normalizePreset==='function'&&typeof window.TGGV227Core.applyMorph==='function');
+    test('v227 forge api',!!window.TGGV227&&typeof window.TGGV227.rebuild==='function'&&typeof window.TGGV227.applyPreset==='function');
+    test('v227 100 layers',Array.isArray(window.TGGV227?.layers)&&window.TGGV227.layers.length===100);
+    test('v227 native forge mode',forge.mode==='native-forge'&&forge.preset==='street');
+    test('v227 forge UI',!!document.getElementById('v227ForgeBtn')&&!!document.getElementById('v227ForgePanel'));
+    test('v227 forge css',!!document.querySelector('link[href*="v227-forge.css"]'));
+    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.27 TGG 3D FORGE 100');
     test('v2 movement hud',!!document.getElementById('playerMoveHud')&&!!document.getElementById('walkModeValue')&&!!document.getElementById('walkSpeedValue'));
     test('v2 sprint control',!!document.getElementById('sprintBtn'));test('v202 world gameplay',!!window.TGGWorldGameplay&&typeof window.TGGWorldGameplay.getNavTarget==='function'&&typeof window.TGGWorldGameplay.performObjective==='function');test('v202 world objective hud',!!document.getElementById('worldObjective'));test('v203 street contacts',!!window.TGGStreetContacts&&Array.isArray(window.TGGStreetContacts.contacts)&&window.TGGStreetContacts.contacts.length>=3&&typeof window.TGGStreetContacts.startContact==='function');test('v203 contact hud',!!document.getElementById('streetContactCard'));test('career api',!!window.TGGCareer);test('content api',!!window.TGGContent);test('expansion api',!!window.TGGExpansion);test('progression api',!!window.TGGProgression);test('bridge api',!!window.TGGBridge);test('chain api',!!window.TGGChains);test('district api',!!window.TGGDistricts);test('save api',!!window.TGGSave);test('inventory api',!!window.TGGInventory);test('crew api',!!window.TGGCrew);test('events api',!!window.TGGEvents);test('economy api',!!window.TGGEconomy&&typeof window.TGGEconomy.apply==='function');test('avatar api',!!window.TGGAvatar&&typeof window.TGGAvatar.get==='function'&&typeof window.TGGAvatar.save==='function');test('world sync api',!!window.TGGWorldSync&&typeof window.TGGWorldSync.snapshot==='function'&&typeof window.TGGWorldSync.setTransport==='function'&&typeof window.TGGWorldSync.sync==='function');
     ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud'].forEach(id=>test('dom:'+id,!!document.getElementById(id)));

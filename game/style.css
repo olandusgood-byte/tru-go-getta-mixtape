@@ -203,3 +203,13 @@
   .shops3d{min-height:250px;height:300px}
   #park.interior-3d-ready .park-world{min-height:360px}
 }
+
+/* V1.31 STREET LIFE */
+.street-life-prompt{position:absolute;left:50%;bottom:24px;z-index:15;transform:translate(-50%,14px);opacity:0;pointer-events:none;padding:11px 16px;border:1px solid #c7ff0070;border-radius:999px;background:#070a10e8;color:#fff;font-size:11px;font-weight:900;letter-spacing:.09em;box-shadow:0 14px 34px #000b,0 0 22px #c7ff001c;transition:.16s ease;backdrop-filter:blur(9px)}
+.street-life-prompt.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.street-life-prompt.traffic{border-color:#ffb34770;color:#ffd29a;pointer-events:none}
+.street-dialogue{position:absolute;left:50%;bottom:72px;z-index:15;width:min(430px,80%);transform:translate(-50%,10px);opacity:0;pointer-events:none;padding:13px 15px;border:1px solid #ffffff22;border-radius:14px;background:#070910ee;box-shadow:0 16px 38px #000b;backdrop-filter:blur(10px);transition:.18s ease}
+.street-dialogue.show{opacity:1;transform:translate(-50%,0)}
+.street-dialogue b,.street-dialogue span{display:block}.street-dialogue b{color:#c7ff00;font-size:10px;letter-spacing:.1em}.street-dialogue span{margin-top:6px;color:#e7e9ef;font-size:12px;line-height:1.45}
+@media(max-width:650px){.street-life-prompt{bottom:12px;font-size:10px;padding:9px 12px}.street-dialogue{bottom:58px;width:88%}}
+

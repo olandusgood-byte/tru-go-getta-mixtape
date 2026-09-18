@@ -13,6 +13,7 @@ const PLAYER_SMOOTH_ONLY=String(process.env.TGG_3D_PLAYER_SMOOTH_ONLY||'0')==='1
 const WORLD_ONLY=String(process.env.TGG_3D_WORLD_ONLY||'0')==='1';
 const GAMEPAD_ONLY=String(process.env.TGG_3D_GAMEPAD_ONLY||'0')==='1';
 const DESKTOP_DRIVE_ONLY=String(process.env.TGG_3D_DESKTOP_DRIVE_ONLY||'0')==='1';
+const VEHICLE_LOGIC_ONLY=String(process.env.TGG_3D_VEHICLE_LOGIC_ONLY||'0')==='1';
 const MOBILE_LAYOUT_ONLY=String(process.env.TGG_3D_MOBILE_LAYOUT_ONLY||'0')==='1';
 const WORLD_LIFE_ONLY=String(process.env.TGG_3D_WORLD_LIFE_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
@@ -122,6 +123,100 @@ async function run(){
       result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'world_life_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await mobile.close();await ctx.close();return;
+    }
+
+    if(VEHICLE_LOGIC_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const response=await fetch(base+'/game.js');
+      if(!response.ok)throw new Error('Vehicle harness could not fetch deployed game.js: '+response.status);
+      const source=await response.text();
+      const harnessErrors=[];
+      page.on('pageerror',e=>harnessErrors.push(e.message||String(e)));
+      await page.setContent(`<!doctype html><html><body>
+        <div id="menu" class="screen active"><button id="newGame">CREATE PLAYER</button></div>
+        <div id="creator" class="screen"><input id="stageName"><select id="styleChoice"><option>Artist</option></select><button id="startGame">START</button></div>
+        <div id="game" class="screen">
+          <div id="player"></div><div id="hud"></div><span id="hudName"></span><span id="hudLevel"></span><span id="hudCash"></span><span id="hudXp"></span><span id="hudNext"></span>
+          <span id="missionStatus"></span><button id="missionBtn"></button><button id="vehicleBtn"></button><button id="interact3dBtn"></button><button id="camera3dBtn"></button><button id="hornBtn"></button><button id="driftBtn"></button>
+          <span id="speedValue"></span><span id="gearValue"></span><div id="vehicleHud"></div><span id="driveStateValue"></span>
+          <div id="playerMoveHud"></div><span id="walkSpeedValue"></span><span id="walkModeValue"></span><div id="npcDialogue"></div>
+          <button data-key="ArrowUp">UP</button><button data-key="ArrowDown">DOWN</button><button data-key="ArrowLeft">LEFT</button><button data-key="ArrowRight">RIGHT</button><button id="sprintBtn">RUN</button>
+        </div><div id="pause" class="screen"></div><div id="toast"></div>
+      </body></html>`);
+      await page.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
+        window.__qaVehicleDynamics={speed:0,steer:0,braking:false,handbrake:false};
+        window.__qaPlayerDynamics={speed:0,vx:0,vy:0,sprinting:false,blocked:false};
+        window.TGG3D={
+          isReady:()=>true,canMovePercent:()=>true,distanceToCarPercent:()=>0,getCarHeading:()=>0,
+          setVehicleDynamics:next=>Object.assign(window.__qaVehicleDynamics,next||{}),
+          getVehicleDynamics:()=>({...window.__qaVehicleDynamics}),
+          setPlayerDynamics:next=>Object.assign(window.__qaPlayerDynamics,next||{}),
+          setCameraMode:m=>m,getCameraMode:()=> 'orbit',interactNearest:()=>true,cycleCamera:()=> 'chase'
+        };
+      });
+      await page.addScriptTag({content:source});
+      await page.waitForTimeout(120);
+      await page.evaluate(()=>{
+        document.getElementById('newGame')?.click();
+        const stage=document.getElementById('stageName'); if(stage)stage.value='TGG VEHICLE QA';
+        document.getElementById('startGame')?.click();
+        window.TGGGame?.toggleVehicle?.();
+      });
+      const checks=[]; const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      let snap=await page.evaluate(()=>({state:window.TGGGame?.getState?.(),drive:window.TGGGame?.getDrivingState?.(),tune:window.TGGGame?.getDriveTuning?.()}));
+      record('vehicle-enter',snap.state?.inVehicle===true,JSON.stringify(snap));
+      record('vehicle-tuning',Number(snap.tune?.maxForward)>8&&Number(snap.tune?.maxReverse)<0,JSON.stringify(snap.tune));
+
+      await page.evaluate(()=>window.TGGGame?.setDriveKey?.('forward',true));
+      await page.waitForTimeout(700);
+      snap=await page.evaluate(()=>({state:window.TGGGame?.getState?.(),drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.(),speed:document.getElementById('speedValue')?.textContent,gear:document.getElementById('gearValue')?.textContent}));
+      record('vehicle-smooth-acceleration',Number(snap.drive?.speed)>3,JSON.stringify(snap));
+      record('vehicle-forward-travel',Number(snap.state?.x)>50.8,JSON.stringify(snap.state));
+      record('vehicle-dynamics-sync',Number(snap.dyn?.speed)>3,JSON.stringify(snap.dyn));
+      record('vehicle-drive-hud',snap.gear==='D'&&Number(snap.speed)>0,JSON.stringify({speed:snap.speed,gear:snap.gear}));
+
+      const h0=Number(snap.state?.heading)||0;
+      await page.evaluate(()=>window.TGGGame?.setDriveKey?.('right',true));
+      await page.waitForTimeout(500);
+      snap=await page.evaluate(()=>({state:window.TGGGame?.getState?.(),drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.()}));
+      record('vehicle-speed-sensitive-steering',Math.abs((Number(snap.state?.heading)||0)-h0)>.5,JSON.stringify(snap));
+      record('vehicle-steer-dynamics',Number(snap.dyn?.steer)>.2,JSON.stringify(snap.dyn));
+      await page.evaluate(()=>{window.TGGGame?.setDriveKey?.('right',false);window.TGGGame?.setDriveKey?.('forward',false);});
+
+      const beforeBrake=Math.abs(Number(snap.drive?.speed)||0);
+      await page.evaluate(()=>window.TGGGame?.setDriveKey?.('reverse',true));
+      await page.waitForTimeout(420);
+      let braking=await page.evaluate(()=>({drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.()}));
+      record('vehicle-braking',Math.abs(Number(braking.drive?.speed)||0)<beforeBrake||braking.drive?.braking===true,JSON.stringify({beforeBrake,braking}));
+
+      await page.waitForTimeout(700);
+      const reversed=await page.evaluate(()=>({drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.(),gear:document.getElementById('gearValue')?.textContent}));
+      record('vehicle-reverse',Number(reversed.drive?.speed)<-.2&&reversed.gear==='R',JSON.stringify(reversed));
+      await page.evaluate(()=>window.TGGGame?.setDriveKey?.('reverse',false));
+      await page.waitForTimeout(350);
+      const coast=await page.evaluate(()=>window.TGGGame?.getDrivingState?.());
+      record('vehicle-coast-deceleration',Math.abs(Number(coast?.speed)||0)<Math.abs(Number(reversed.drive?.speed)||0),JSON.stringify({reversed:reversed.drive,coast}));
+
+      await page.evaluate(()=>window.TGGGame?.setDriveKey?.('forward',true));
+      await page.waitForTimeout(400);
+      await page.evaluate(()=>window.TGGGame?.setDriveKey?.('handbrake',true));
+      await page.waitForTimeout(120);
+      const hb=await page.evaluate(()=>({drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.()}));
+      record('vehicle-handbrake',hb.drive?.handbrake===true&&hb.dyn?.handbrake===true,JSON.stringify(hb));
+      await page.evaluate(()=>{window.TGGGame?.setDriveKey?.('handbrake',false);window.TGGGame?.setDriveKey?.('forward',false);window.TGGGame?.toggleVehicle?.();});
+      const exited=await page.evaluate(()=>window.TGGGame?.getState?.());
+      record('vehicle-exit',exited?.inVehicle===false,JSON.stringify(exited));
+
+      result={ok:checks.every(x=>x.pass)&&harnessErrors.length===0,status:'done',mode:'vehicle_logic_harness',target:TARGET,checks,page_errors:harnessErrors,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();return;
     }
 
     if(MOBILE_LAYOUT_ONLY){

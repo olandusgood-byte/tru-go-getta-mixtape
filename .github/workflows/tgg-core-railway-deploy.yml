@@ -1,0 +1,60 @@
+name: TGG Core Railway Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "tgg-core/**"
+      - "tgg-browser-worker/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/tgg-core-railway-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgg-core-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy TGG Core to Railway
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+      RAILWAY_PROJECT_ID: "49db9e70-3a4b-4737-ac74-716bebd5ad28"
+      RAILWAY_ENVIRONMENT: "454e3152-df86-4af5-9f3b-0aae6cf1469e"
+      RAILWAY_SERVICE: "cfa5c70c-9da2-49e6-bea4-21c4474ba8cb"
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Validate Railway credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${RAILWAY_API_KEY}" || {
+            echo "Missing GitHub secret RAILWAY_API_KEY"
+            exit 1
+          }
+
+      - name: Deploy exact GitHub commit to TGG Core
+        shell: bash
+        run: |
+          set -euo pipefail
+          railway up \
+            --project "${RAILWAY_PROJECT_ID}" \
+            --environment "${RAILWAY_ENVIRONMENT}" \
+            --service "${RAILWAY_SERVICE}" \
+            --ci
+
+      - name: Report deployed commit
+        shell: bash
+        run: |
+          echo "TGG Core deploy requested for commit ${GITHUB_SHA}"
+          echo "Railway service: ${RAILWAY_SERVICE}"
+          echo "Railway environment: ${RAILWAY_ENVIRONMENT}"

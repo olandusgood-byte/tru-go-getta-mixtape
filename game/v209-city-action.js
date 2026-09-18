@@ -9,7 +9,7 @@
   function install(){
     document.body.classList.add('tgg-v209');
     const badge=document.querySelector('.v201-badge');
-    if(badge)badge.textContent='V2.12 MEGA 100';
+    if(badge)badge.textContent='V2.13 WORLD POLISH 100';
     const city=document.querySelector('.city');
     if(city&&!sceneEl){
       sceneEl=document.createElement('div');

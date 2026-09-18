@@ -16,8 +16,8 @@ const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',impor
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qa=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.32 3D/);
-assert.match(html,/GAME V1\.32 • STREET EVENTS \+ CROWD REACTIONS/);
+assert.match(html,/Game V1\.33 3D/);
+assert.match(html,/GAME V1\.33 • STREET REPUTATION \+ EVENT VARIANTS/);
 assert.match(html,/vendor\/three-r152\.min\.js/);
 assert.match(html,/id="garage"/);
 assert.match(html,/id="garageBtn"/);
@@ -97,7 +97,15 @@ assert.equal(streetLife.includes('TGGWorldSync'),false);
 
 assert.match(streetEvents,/tgg-street-events-v1/);
 assert.match(streetEvents,/window\.TGGStreetEvents/);
-for(const api of ['nearest','start','startNearest','finish','status','captureCrowd','releaseCrowd','render']) assert.match(streetEvents,new RegExp('function '+api+'\\b'));
+for(const api of ['nearest','start','startNearest','finish','status','captureCrowd','releaseCrowd','render','variant','totalRuns','calculateStreetRep','repRank','streetProfile']) assert.match(streetEvents,new RegExp('function '+api+'\\b'));
+assert.match(streetEvents,/const VARIANTS=/);
+for(const variantName of ['OPEN CIRCLE','LOCAL BUZZ CYPHER','STUDIO ROW FEATURE','CITY PREMIERE']) assert.match(streetEvents,new RegExp(variantName));
+assert.match(streetEvents,/cosmeticOnly:true/);
+assert.match(streetEvents,/rewardMultiplier:1/);
+assert.match(streetEvents,/streetRep/);
+assert.match(streetEvents,/bestHype/);
+assert.match(fs.readFileSync(new URL('./progression.js',import.meta.url),'utf8'),/street-known/);
+assert.match(fs.readFileSync(new URL('./progression.js',import.meta.url),'utf8'),/street-headliner/);
 for(const eventId of ['downtown-cypher','studio-sidewalk','mixtape-popout']) assert.match(streetEvents,new RegExp(eventId));
 assert.match(streetEvents,/streetEventMode/);
 assert.match(streetEvents,/CROWD BUILDING/);
@@ -123,10 +131,10 @@ for(const forbidden of [
   assert.equal(game3d.includes(forbidden),false,'3D runtime must exclude '+forbidden);
 }
 
-assert.equal(release.release,'V1.32 Street Events + Crowd Reactions');
-assert.equal(release.base,'V1.31 Street Life + Traffic Proximity');
-assert.equal(auto.version,'1.32');
-assert.equal(qa.version,'1.32');
+assert.equal(release.release,'V1.33 Street Reputation + Event Variants');
+assert.equal(release.base,'V1.32 Street Events + Crowd Reactions');
+assert.equal(auto.version,'1.33');
+assert.equal(qa.version,'1.33');
 assert.equal(release.production,'gated');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.ok(['candidate_pending_ci','passed'].includes(release.static_gate));
@@ -140,7 +148,7 @@ for(const gate of [
   'interiors_3d_runtime','home_3d','media_3d','shops_3d','park_3d','garage_3d_runtime',
   'navigation_hud','traffic_population','traffic_animation','interior_no_reward_path',
   'street_life_api','pedestrian_proximity','street_contact_memory','street_talk_no_rewards','traffic_proximity','horn_reaction','contextual_prompt',
-  'street_events_api','street_event_hotspots','street_event_local_state','crowd_gather_3d','crowd_reaction_animation','street_event_no_rewards','street_event_no_remote_mutations','contextual_event_hud'
+  'street_events_api','street_event_hotspots','street_event_local_state','crowd_gather_3d','crowd_reaction_animation','street_event_no_rewards','street_event_no_remote_mutations','contextual_event_hud','street_reputation_api','street_rank','event_variant_catalog','event_variants_cosmetic_only','street_rep_persistence','street_rep_achievements'
 ]) assert.ok(release.gates.includes(gate),'missing V1.30 gate '+gate);
 
-console.log('GAME_V1_32_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_33_STATIC_CONTRACT_PASS');

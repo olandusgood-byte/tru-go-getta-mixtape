@@ -3,6 +3,8 @@ import { chromium } from 'playwright';
 
 const PORT=Number(process.env.PORT||10000);
 const TARGET=String(process.env.TGG_3D_SMOKE_TARGET||'').trim();
+const EXPECT_VERSION=String(process.env.TGG_3D_EXPECT_VERSION||'V1.22 3D').trim();
+const REQUIRE_DESTINATIONS=String(process.env.TGG_3D_REQUIRE_DESTINATIONS||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -31,14 +33,22 @@ async function run(){
       state:window.TGGGame?.getState?.(),
       player:!!window.TGG3D?.player,
       car:!!window.TGG3D?.car,
-      collisionBlocked:window.TGG3D?.canMovePercent?.(58.7,58.7)===false
+      collisionBlocked:window.TGG3D?.canMovePercent?.(58.7,58.7)===false,
+      destinations:Array.isArray(window.TGG3D?.destinations)?window.TGG3D.destinations.length:0,
+      interactApi:typeof window.TGG3D?.interactNearest==='function',
+      interactButton:!!document.getElementById('interact3dBtn')
     }));
-    record('title-v122',/V1\.22 3D/.test(initial.title),initial.title);
+    record('title-version',initial.title.includes(EXPECT_VERSION),initial.title);
     record('webgl-canvas',initial.canvas);
     record('tgg3d-ready',initial.ready);
     record('3d-player',initial.player);
     record('starter-car',initial.car);
     record('building-collision',initial.collisionBlocked);
+    if(REQUIRE_DESTINATIONS){
+      record('destination-count',initial.destinations>=6,String(initial.destinations));
+      record('destination-interact-api',initial.interactApi);
+      record('destination-interact-button',initial.interactButton);
+    }
 
     const x0=Number(initial.state?.x);
     await page.keyboard.press('ArrowRight');

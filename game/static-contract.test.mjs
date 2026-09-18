@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
 const business=fs.readFileSync(new URL('./business.js',import.meta.url),'utf8');
+const game=fs.readFileSync(new URL('./game.js',import.meta.url),'utf8');
 const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
 const qa=fs.readFileSync(new URL('./qa.js',import.meta.url),'utf8');
 const releaseQa=fs.readFileSync(new URL('./release-qa.js',import.meta.url),'utf8');
@@ -28,6 +29,21 @@ for (const api of ['loadAssets','renderAssets','activitySnapshot','inspectProper
 assert.match(business,/readOnly:true/);
 assert.match(business,/const esc=/);
 assert.match(business,/esc\(assetName\(/);
+
+for (const token of [
+  "newGame')?.addEventListener",
+  "continueGame')?.addEventListener",
+  "startGame')?.addEventListener",
+  "missionBtn')?.addEventListener",
+  "saveBtn')?.addEventListener",
+  "pauseBtn')?.addEventListener",
+  "resumeBtn')?.addEventListener",
+  "progressionBtn')?.addEventListener",
+  "DOMContentLoaded"
+]) {
+  assert.ok(game.includes(token),'missing playable control binding: '+token);
+}
+assert.match(game,/if\(activeScreen!==['"]game['"]\)return false/);
 
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
@@ -70,7 +86,9 @@ assert.equal(release.release,'V1.14 Live City + Read-Only World Assets');
 assert.equal(release.base,'V1.13 Progression + Business Discovery');
 assert.equal(auto.version,'1.14');
 assert.equal(qaManifest.version,'1.14');
-assert.equal(release.browser_smoke,'manual_only');
+assert.equal(release.browser_smoke,'automated_ci_pass');
+assert.equal(auto.browserPolicy,'automated_ci_required');
+assert.equal(qaManifest.browserPolicy,'automated_ci_required');
 assert.equal(release.production,'gated');
 assert.ok(release.modules.includes('V1.14-LIVE-CITY-ACTIVITY-SURFACE'));
 assert.ok(release.modules.includes('V1.14-WORLD-ASSET-READONLY-INSPECT'));

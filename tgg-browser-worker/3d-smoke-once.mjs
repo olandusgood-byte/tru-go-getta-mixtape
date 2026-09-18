@@ -136,7 +136,13 @@ async function run(){
         <section id="career"><div id="careerDirectorStats"></div><div id="careerContract"></div><div id="careerNextMove"></div><div id="careerDirectorHistory"></div><button id="careerDirectorGo"></button></section>
       </body></html>`);
       await page.evaluate(()=>{
-        localStorage.clear();
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
         window.__qaGame={cash:0,xp:0,level:3};
         window.__qaCareer={recordings:0,mixtapes:0,reputation:0,studioLevel:3};
         window.__qaContent={completed:[]};

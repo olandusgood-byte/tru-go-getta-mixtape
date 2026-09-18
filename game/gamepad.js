@@ -1,7 +1,7 @@
 (() => {
   const DEAD=.22;
   let connected=false;
-  const held={walkUp:false,walkDown:false,walkLeft:false,walkRight:false,sprint:false,gas:false,reverse:false,steerLeft:false,steerRight:false,drift:false};
+  const held={walkUp:false,walkDown:false,walkLeft:false,walkRight:false,sprint:false,gas:false,reverse:false,steerLeft:false,steerRight:false,drift:false,boost:false};
   const edge={interact:false,vehicle:false,camera:false,horn:false};
 
   const pad=()=>{
@@ -26,7 +26,7 @@
   function releaseAll(){
     const g=window.TGGGame;
     ['up','down','left','right','sprint'].forEach(k=>g?.setWalkKey?.(k,false));
-    ['forward','reverse','left','right','handbrake'].forEach(k=>g?.setDriveKey?.(k,false));
+    ['forward','reverse','left','right','handbrake','boost'].forEach(k=>g?.setDriveKey?.(k,false));
     Object.keys(held).forEach(k=>held[k]=false);
   }
 
@@ -48,6 +48,7 @@
       change('gas',button(p,7)||y<-.4,v=>g.setDriveKey?.('forward',v));
       change('reverse',button(p,6)||y>.45,v=>g.setDriveKey?.('reverse',v));
       change('drift',button(p,4)||button(p,5),v=>g.setDriveKey?.('handbrake',v));
+      change('boost',button(p,10)||button(p,11),v=>g.setDriveKey?.('boost',v));
       for(const [name,key] of [['walkUp','up'],['walkDown','down'],['walkLeft','left'],['walkRight','right'],['sprint','sprint']]){
         if(held[name]){held[name]=false;g.setWalkKey?.(key,false);}
       }
@@ -57,7 +58,7 @@
       change('walkUp',y<-.22,v=>g.setWalkKey?.('up',v));
       change('walkDown',y>.22,v=>g.setWalkKey?.('down',v));
       change('sprint',button(p,7)||button(p,10),v=>g.setWalkKey?.('sprint',v));
-      for(const [name,key] of [['gas','forward'],['reverse','reverse'],['steerLeft','left'],['steerRight','right'],['drift','handbrake']]){
+      for(const [name,key] of [['gas','forward'],['reverse','reverse'],['steerLeft','left'],['steerRight','right'],['drift','handbrake'],['boost','boost']]){
         if(held[name]){held[name]=false;g.setDriveKey?.(key,false);}
       }
     }

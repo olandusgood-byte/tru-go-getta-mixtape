@@ -50,6 +50,21 @@ with sync_playwright() as p:
     page.click('#startGame')
     check('game-screen','active' in (page.locator('#game').get_attribute('class') or ''))
     check('player-name',page.locator('#hudName').inner_text()=='Tony Snow',page.locator('#hudName').inner_text())
+    layout=page.evaluate("""() => {
+      const box=e=>{const r=e.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height}};
+      const city=box(document.querySelector('.game-shell .city'));
+      const controls=box(document.querySelector('.game-controls'));
+      const move=box(document.querySelector('.move-pad'));
+      const deck=box(document.querySelector('.action-deck'));
+      const buttons=[...document.querySelectorAll('.action-deck .actions button')].map(box);
+      const minH=Math.min(...buttons.map(x=>x.height));
+      const player=box(document.getElementById('player'));
+      return {city,controls,move,deck,minH,player,towers:document.querySelectorAll('.city-depth .tower').length};
+    }""")
+    check('controls-below-city',layout['controls']['top']>=layout['city']['bottom']-3,json.dumps(layout))
+    check('action-buttons-readable',layout['minH']>=48,json.dumps(layout))
+    check('move-pad-separated',layout['move']['right']<=layout['deck']['left']+3,json.dumps(layout))
+    check('player-depth-size',layout['player']['height']>=80 and layout['towers']>=4,json.dumps(layout))
     page.click('#eventsBtn')
     check('story-ui-auto-render',page.locator('[data-district-story]').count()==1)
     check('memory-ui-auto-render',page.locator('[data-route-memory]').count()==1)

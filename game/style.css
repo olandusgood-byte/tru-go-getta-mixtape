@@ -126,3 +126,15 @@
   .city3d{min-height:330px}
   .city.webgl-ready .district{font-size:9px;padding:5px 7px}
 }
+
+/* V1.25 cinematic 3D HUD + radar */
+.radar3d{position:absolute;right:18px;top:78px;width:150px;height:150px;z-index:13;border:1px solid #c7ff0050;border-radius:50%;background:radial-gradient(circle,#10151dcc 0,#05070de8 68%,#010204f5 100%);box-shadow:0 14px 38px #000b,inset 0 0 28px #c7ff000d;overflow:hidden;pointer-events:none;backdrop-filter:blur(7px)}
+.radar3d:after{content:"";position:absolute;inset:8px;border:1px solid #ffffff12;border-radius:50%}
+.radar-cross{position:absolute;background:#ffffff12}.radar-cross.x{left:8px;right:8px;top:50%;height:1px}.radar-cross.y{top:8px;bottom:8px;left:50%;width:1px}
+.radar-player,.radar-car,.radar-destination{position:absolute;transform:translate(-50%,-50%);border-radius:50%;z-index:3}
+.radar-player{width:10px;height:10px;background:#c7ff00;box-shadow:0 0 12px #c7ff00}
+.radar-car{width:8px;height:8px;background:#fff;border:2px solid #c7ff00;opacity:.58}.radar-car.active{opacity:1;box-shadow:0 0 10px #fff}
+.radar-destination{width:7px;height:7px;background:var(--radar-color,#fff);box-shadow:0 0 8px var(--radar-color,#fff)}
+#camera3dBtn{border-color:#7b86ff!important}
+#camera3dBtn:hover,#camera3dBtn:focus-visible{border-color:#aab0ff!important}
+@media(max-width:650px){.radar3d{width:112px;height:112px;right:10px;top:58px}}

@@ -224,7 +224,7 @@
 
   const cameraModes=['orbit','chase','top'];
   let cameraMode='orbit';
-  let yaw=Math.PI*.25,pitch=.48,distance=17,dragging=false,px=0,py=0;
+  let yaw=Math.PI*.25,pitch=.48,distance=17,dragging=false,px=0,py=0,manualCameraUntil=0;
 
   function setCameraMode(mode,quiet=false){
     if(!cameraModes.includes(mode))return cameraMode;
@@ -245,6 +245,7 @@
     if(!dragging)return;
     yaw-=(e.clientX-px)*.008;
     pitch=Math.max(.22,Math.min(.9,pitch-(e.clientY-py)*.006));
+    manualCameraUntil=performance.now()+2200;
     px=e.clientX;py=e.clientY;
   });
   renderer.domElement.addEventListener('pointerup',()=>dragging=false);
@@ -530,6 +531,12 @@
       );
       cameraLerp=s.inVehicle ? .16 : (playerDynamics.sprinting ? .15 : .12);
     }else{
+      if(!s.inVehicle&&playerDynamics.speed>.35&&performance.now()>manualCameraUntil){
+        const heading=(Number(s.heading)||0)*Math.PI/180;
+        const desiredYaw=Math.PI*1.5-heading;
+        const yawDelta=Math.atan2(Math.sin(desiredYaw-yaw),Math.cos(desiredYaw-yaw));
+        yaw+=yawDelta*Math.min(1,dt*(playerDynamics.sprinting?2.3:1.55));
+      }
       const cp=Math.cos(pitch),sp=Math.sin(pitch);
       const followDistance=s.inVehicle?Math.max(12,distance):distance;
       desired=new THREE.Vector3(

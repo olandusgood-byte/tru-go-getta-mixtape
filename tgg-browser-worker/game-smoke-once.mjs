@@ -555,7 +555,18 @@ async function runSmoke(target) {
           showStarted===true &&
           performance.state.started===true &&
           performance.state.route==='festival' &&
-          document.getElementById('showBoard')?.classList.contains('active')===true
+          document.getElementById('showBoard')?.classList.contains('active')===true,
+          JSON.stringify({
+            showStarted,
+            performanceStarted:performance.state.started,
+            performanceRoute:performance.state.route,
+            showActive:document.getElementById('showBoard')?.classList.contains('active')===true,
+            headlinePass:window.TGGInventory?.get?.('headline-pass'),
+            storyStep:api.state.step,
+            storyChoice:api.state.choice,
+            storyAccepted:api.state.accepted,
+            performanceCompleted:performance.state.completed
+          })
         );
 
         const intro=performance.act('intro');

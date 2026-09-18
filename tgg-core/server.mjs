@@ -270,7 +270,7 @@ app.post('/v1/storage/uploads', auth, async (req,res,next)=>{
   } catch(e){next(e);}
 });
 
-app.get('/v1/storage/object/:bucket/*key', async (req,res,next)=>{
+app.get('/v1/storage/object-auth/:bucket/*key', auth, async (req,res,next)=>{try{const bucketKey=String(req.params.bucket||''),key=String(req.params.key||'').replace(/^\\/+/,''),r=await pool.query('select * from media_objects where storage_key=$1 and owner_user_id=$2',[path.posix.join(bucketKey,key),req.user.id]);if(!r.rowCount)return res.status(404).json({error:'media_object_not_found'});const target=path.resolve(STORAGE_ROOT,path.posix.join(bucketKey,key)),root=path.resolve(STORAGE_ROOT);if(!target.startsWith(root+path.sep))return res.status(400).json({error:'invalid_object_key'});const stat=await fs.stat(target);res.set('Content-Length',String(stat.size));if(r.rows[0].mime_type)res.type(r.rows[0].mime_type);res.sendFile(target);}catch(e){next(e);}});\n\napp.get('/v1/storage/object/:bucket/*key', async (req,res,next)=>{
   try {
     const bucketKey=String(req.params.bucket||'');
     const key=String(req.params.key||'').replace(/^\\/+/, '');

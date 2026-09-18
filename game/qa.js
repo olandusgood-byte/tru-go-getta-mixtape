@@ -44,6 +44,8 @@ const inventory=window.TGGInventory?.catalog||[];check('inventory-catalog',inven
     check('first-opportunity-achievement',window.TGGProgression?.achievements?.some(a=>a.id==='first-opportunity'),'V1.20 opportunity achievement registered');
     check('world3d-api',!!window.TGGWorld3D&&typeof window.TGGWorld3D.status==='function'&&typeof window.TGGWorld3D.resize==='function','V1.21 true 3D runtime API available');
     check('world3d-host',!!document.getElementById('world3d'),'V1.21 WebGL host available');
+    check('world3d-collision-api',typeof window.TGGWorld3D?.canMove==='function'&&typeof window.TGGWorld3D?.collisionSnapshot==='function','V1.22 building collision API available');
+    check('world3d-camera-orbit-api',typeof window.TGGWorld3D?.cameraState==='function'&&typeof window.TGGWorld3D?.resetCamera==='function','V1.22 camera orbit/zoom API available');
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:20,rep:5});check('economy-reward-shape',!!economy&&economy.cash>=100&&economy.xp>=20&&economy.rep>=5&&!!economy.crew,'shared economy reward normalization available');
     const integrity=window.TGGV12Integrity?.run?.();check('v12-integrity',!!integrity?.passed,'V1.2 integrity gate passes');
     const bad=report.filter(x=>x.status==='FAIL');window.TGGQA={report,passed:bad.length===0,repair(){window.TGGSave?.repair?.();return !!document.getElementById('hud')&&!!window.TGGGame&&!!window.TGGProgression&&!!window.TGGChains&&!!window.TGGDistricts&&!!window.TGGSave&&!!window.TGGInventory&&!!window.TGGCrew&&!!window.TGGEconomy&&!!window.TGGEvents&&!!window.TGGAvatar&&!!window.TGGWorldSync}};return window.TGGQA;

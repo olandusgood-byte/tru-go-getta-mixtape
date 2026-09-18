@@ -1,55 +1,42 @@
-# TRU GO GETTA Game V1.21
+# TRU GO GETTA Game V1.22
 
-V1.21 replaces the flat city play surface with a real WebGL third-person 3D foundation while preserving the verified V1.20 gameplay systems underneath.
+V1.22 upgrades the V1.21 WebGL city with collision-aware movement and an orbit/zoom third-person camera.
 
-## True 3D foundation
+## 3D collision
 
-- Three.js 0.186.0 pinned through jsDelivr
-- real WebGL canvas
-- perspective camera
-- third-person follow camera
-- 3D humanoid player
-- 3D NPC marker for M
-- 3D roads and city grid
-- 30+ procedural building blocks
-- directional, hemisphere and neon point lighting
-- shadows, fog and tone mapping
-- player position synchronized from the existing TGG game state
-- 2.5D fallback retained when WebGL cannot initialize
+- building collision volumes are generated with the procedural city
+- movement checks the next player position before committing state
+- blocked movement leaves the player in place and shows a short feedback toast
+- the mission/NPC area is intentionally kept clear
+- the verified mission path remains reachable
+
+## Camera orbit
+
+- drag the WebGL view with mouse or touch to orbit the camera
+- mouse wheel zooms the camera in/out
+- pitch and zoom are clamped to usable ranges
+- the camera continues to follow the player while preserving the chosen orbit angle
 
 ## Preserved gameplay
 
-The V1.20 systems stay intact:
-
-- create / continue / save
-- keyboard and D-pad movement
-- missions and rewards
-- city activities and mastery
-- circuits and district story routes
-- M / Kane / DJ V memory
-- relationships and dialogue
-- contact opportunities
-- read-only property / vehicle discovery
-- existing economy and safety boundaries
+All verified V1.20/V1.21 systems stay intact, including missions, save/continue, city events, circuits, NPC memory, relationships, opportunities, and read-only world discovery.
 
 ## Verification
 
-- [x] V1.21 static contract
-- [x] Three.js revision 186
-- [x] WebGL renderer + canvas
-- [x] perspective third-person camera
-- [x] 30+ 3D buildings
-- [x] 3D road network
-- [x] 3D player movement follows existing game coordinates
-- [x] 3D NPC marker
-- [x] fallback surface retained
-- [x] existing V1.20 gameplay smoke still passes
+- [x] V1.22 static contract
+- [x] building collision point blocks movement
+- [x] road/start position remains open
+- [x] collision volumes registered for the 3D city
+- [x] mission path remains reachable
+- [x] mouse drag changes camera yaw
+- [x] wheel input changes camera distance
+- [x] WebGL city/player smoke remains green
 - [x] Static CI PASS
-- [x] WebGL Chromium Smoke PASS
+- [x] Chromium Smoke PASS
 - [x] production remains gated
 
 ## Release status
 
-**V1.21-TRUE-3D-CITY-FOUNDATION-VERIFIED.**
+**V1.22-3D-COLLISION-CAMERA-ORBIT-VERIFIED.**
 
-Next internal development layer: **V1.22 3D Collision + Camera Orbit**.
+Next internal development layer: **V1.23 3D District Landmarks + Enterable Hubs**.

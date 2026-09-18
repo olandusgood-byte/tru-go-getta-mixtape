@@ -120,10 +120,11 @@
 
   function crowdCandidates(center,count=4){
     const list=Array.isArray(window.TGG3D?.pedestrians)?window.TGG3D.pedestrians:[];
-    return list
+    const candidates=list
       .map((human,index)=>({human,index,distance:Math.hypot(human.position.x-center.x,human.position.z-center.z)}))
-      .sort((a,b)=>a.distance-b.distance)
-      .slice(0,Math.min(count,list.length));
+      .sort((a,b)=>a.distance-b.distance);
+    const ranked=window.TGGStreetAudience?.rankCandidates?.(candidates,center?.id)||candidates;
+    return ranked.slice(0,Math.min(count,list.length));
   }
 
   function releaseCrowd(){
@@ -194,6 +195,7 @@
     updateStreetRep();
     save();
     window.TGGStreetSets?.onEventComplete?.(done.id);
+    window.TGGStreetAudience?.recordEvent?.(done.id,crowd.map(x=>x.index));
     active=null;
     clearTimeout(activeTimer);
     activeTimer=null;

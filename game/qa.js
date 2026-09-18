@@ -42,6 +42,9 @@ const inventory=window.TGGInventory?.catalog||[];check('inventory-catalog',inven
     check('contact-ops-single-store',!!window.TGGRouteMemory?.state?.opportunities&&typeof window.TGGRouteMemory.state.opportunities==='object','V1.20 opportunities use existing route-memory store');
     check('contact-ops-catalog',Array.isArray(window.TGGContactOps?.opportunities)&&window.TGGContactOps.opportunities.length>=3,'V1.20 contact opportunity catalog registered');
     check('first-opportunity-achievement',window.TGGProgression?.achievements?.some(a=>a.id==='first-opportunity'),'V1.20 opportunity achievement registered');
+    check('world3d-api',!!window.TGGWorld3D&&typeof window.TGGWorld3D.snapshot==='function','V1.21 WebGL world API available');
+    check('world3d-library',window.TGGWorld3D?.library==='three@0.186.0','V1.21 3D engine pin registered');
+    check('world3d-host',!!document.getElementById('world3dBadge')&&!!document.querySelector('#game .city'),'V1.21 3D viewport host available');
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:20,rep:5});check('economy-reward-shape',!!economy&&economy.cash>=100&&economy.xp>=20&&economy.rep>=5&&!!economy.crew,'shared economy reward normalization available');
     const integrity=window.TGGV12Integrity?.run?.();check('v12-integrity',!!integrity?.passed,'V1.2 integrity gate passes');
     const bad=report.filter(x=>x.status==='FAIL');window.TGGQA={report,passed:bad.length===0,repair(){window.TGGSave?.repair?.();return !!document.getElementById('hud')&&!!window.TGGGame&&!!window.TGGProgression&&!!window.TGGChains&&!!window.TGGDistricts&&!!window.TGGSave&&!!window.TGGInventory&&!!window.TGGCrew&&!!window.TGGEconomy&&!!window.TGGEvents&&!!window.TGGAvatar&&!!window.TGGWorldSync}};return window.TGGQA;

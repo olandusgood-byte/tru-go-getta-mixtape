@@ -155,3 +155,110 @@ begin
   )::text);
   return coalesce(new, old);
 end $$;
+
+
+-- TGG-owned platform layer: storage metadata, jobs, browser certification,
+-- auditability and realtime subscriptions. No Supabase-specific dependencies.
+create table if not exists tgg_storage_buckets (
+  id uuid primary key default gen_random_uuid(),
+  bucket_key text not null unique,
+  visibility text not null default 'private' check (visibility in ('private','public')),
+  max_bytes bigint,
+  allowed_mime_types text[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists tgg_media_uploads (
+  id uuid primary key default gen_random_uuid(),
+  media_object_id uuid references media_objects(id) on delete cascade,
+  owner_user_id uuid not null references users(id) on delete cascade,
+  bucket_key text not null references tgg_storage_buckets(bucket_key),
+  object_key text not null unique,
+  status text not null default 'pending' check (status in ('pending','uploaded','processing','ready','failed','deleted')),
+  checksum_sha256 text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists tgg_media_uploads_owner_idx on tgg_media_uploads(owner_user_id);
+create index if not exists tgg_media_uploads_status_idx on tgg_media_uploads(status);
+
+create table if not exists tgg_media_variants (
+  id uuid primary key default gen_random_uuid(),
+  media_object_id uuid not null references media_objects(id) on delete cascade,
+  variant_key text not null,
+  object_key text not null unique,
+  mime_type text,
+  size_bytes bigint,
+  width integer,
+  height integer,
+  duration_seconds integer,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  unique(media_object_id, variant_key)
+);
+
+create table if not exists tgg_jobs (
+  id uuid primary key default gen_random_uuid(),
+  queue text not null,
+  job_type text not null,
+  status text not null default 'queued' check (status in ('queued','running','succeeded','failed','cancelled')),
+  priority integer not null default 0,
+  attempts integer not null default 0,
+  max_attempts integer not null default 3,
+  payload jsonb not null default '{}'::jsonb,
+  result jsonb,
+  error text,
+  available_at timestamptz not null default now(),
+  started_at timestamptz,
+  finished_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists tgg_jobs_queue_idx on tgg_jobs(queue,status,priority desc,available_at);
+
+create table if not exists tgg_browser_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references users(id) on delete set null,
+  session_key text not null unique,
+  status text not null default 'created' check (status in ('created','bootstrapping','active','closed','failed')),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists tgg_certifications (
+  id uuid primary key default gen_random_uuid(),
+  browser_session_id uuid references tgg_browser_sessions(id) on delete set null,
+  user_id uuid references users(id) on delete set null,
+  certification_type text not null,
+  status text not null default 'started' check (status in ('started','passed','failed','expired')),
+  evidence jsonb not null default '{}'::jsonb,
+  started_at timestamptz not null default now(),
+  completed_at timestamptz
+);
+
+create table if not exists tgg_audit_log (
+  id bigserial primary key,
+  actor_user_id uuid references users(id) on delete set null,
+  action text not null,
+  resource_type text,
+  resource_id uuid,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists tgg_audit_log_resource_idx on tgg_audit_log(resource_type,resource_id,created_at desc);
+
+create table if not exists tgg_realtime_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  topic text not null,
+  cursor_id bigint not null default 0,
+  created_at timestamptz not null default now(),
+  unique(user_id, topic)
+);
+
+insert into tgg_storage_buckets(bucket_key,visibility)
+values
+ ('audio','public'),('videos','public'),('covers','public'),
+ ('media-thumbnails','public'),('artist-images','public')
+on conflict(bucket_key) do nothing;

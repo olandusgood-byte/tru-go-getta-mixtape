@@ -9,6 +9,7 @@ const REQUIRE_LIVING_CITY=String(process.env.TGG_3D_REQUIRE_LIVING_CITY||'0')===
 const REQUIRE_CINEMATIC=String(process.env.TGG_3D_REQUIRE_CINEMATIC||'0')==='1';
 const REQUIRE_WORLD_BULK=String(process.env.TGG_3D_REQUIRE_WORLD_BULK||'0')==='1';
 const REQUIRE_PLAYER_SMOOTH=String(process.env.TGG_3D_REQUIRE_PLAYER_SMOOTH||'0')==='1';
+const PLAYER_SMOOTH_ONLY=String(process.env.TGG_3D_PLAYER_SMOOTH_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -115,6 +116,68 @@ async function run(){
     record('starter-car',initial.car);
     record('building-collision',initial.collisionBlocked);
     console.log(JSON.stringify({tgg_3d_smoke_step:'initial-complete'}));
+    if(PLAYER_SMOOTH_ONLY){
+      record('title-version',initial.title.includes(EXPECT_VERSION),initial.title);
+      record('webgl-canvas',initial.canvas);
+      record('tgg3d-ready',initial.ready);
+      record('walking-api',initial.walkingApi);
+      record('walking-tuning',Number(initial.walkingTuning?.walkSpeed)>0&&Number(initial.walkingTuning?.sprintSpeed)>Number(initial.walkingTuning?.walkSpeed),JSON.stringify(initial.walkingTuning));
+      record('player-dynamics-api',initial.playerDynamicsApi);
+      record('sprint-control',initial.sprintButton);
+      record('player-move-hud',initial.playerMoveHud);
+      record('final-build-runtime',String(initial.finalBuildVersion).includes('V2.00'),String(initial.finalBuildVersion));
+
+      console.log(JSON.stringify({tgg_3d_smoke_step:'player-walk-start'}));
+      const smoothStart=await page.evaluate(()=>window.TGGGame?.getState?.());
+      await page.keyboard.down('ArrowRight');
+      await page.waitForTimeout(650);
+      const walking=await page.evaluate(()=>({state:window.TGGGame?.getState?.(),walk:window.TGGGame?.getWalkingState?.(),dyn:window.TGG3D?.getPlayerDynamics?.()}));
+      await page.keyboard.up('ArrowRight');
+      await page.waitForTimeout(260);
+      const coasting=await page.evaluate(()=>window.TGGGame?.getWalkingState?.());
+      record('smooth-walk-distance',Number(walking.state?.x)>Number(smoothStart?.x)+.6,JSON.stringify({start:smoothStart?.x,end:walking.state?.x}));
+      record('smooth-walk-acceleration',Number(walking.walk?.speed)>2,JSON.stringify(walking.walk));
+      record('smooth-walk-deceleration',Number(coasting?.speed)<Number(walking.walk?.speed),JSON.stringify({walking:walking.walk?.speed,coast:coasting?.speed}));
+      console.log(JSON.stringify({tgg_3d_smoke_step:'player-walk-pass'}));
+
+      await page.keyboard.down('ArrowUp');
+      await page.keyboard.down('ArrowRight');
+      await page.waitForTimeout(650);
+      const diagonal=await page.evaluate(()=>({walk:window.TGGGame?.getWalkingState?.(),tune:window.TGGGame?.getWalkTuning?.()}));
+      await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowRight');
+      record('diagonal-normalized',Number(diagonal.walk?.speed)<=Number(diagonal.tune?.walkSpeed)*1.08,JSON.stringify(diagonal));
+      console.log(JSON.stringify({tgg_3d_smoke_step:'player-diagonal-pass'}));
+
+      await page.waitForTimeout(250);
+      await page.keyboard.down('Shift');
+      await page.keyboard.down('ArrowUp');
+      await page.waitForTimeout(750);
+      const sprint=await page.evaluate(()=>({walk:window.TGGGame?.getWalkingState?.(),tune:window.TGGGame?.getWalkTuning?.(),mode:document.getElementById('walkModeValue')?.textContent}));
+      await page.keyboard.up('ArrowUp');await page.keyboard.up('Shift');
+      record('sprint-speed',Number(sprint.walk?.speed)>Number(sprint.tune?.walkSpeed)*1.1,JSON.stringify(sprint));
+      record('sprint-state',sprint.walk?.sprinting===true&&sprint.mode==='SPRINT',JSON.stringify(sprint));
+      console.log(JSON.stringify({tgg_3d_smoke_step:'player-sprint-pass'}));
+
+      await page.waitForTimeout(300);
+      const stopped=await page.evaluate(()=>window.TGGGame?.getWalkingState?.());
+      record('walk-settles-after-release',Number(stopped?.speed)<1.2,JSON.stringify(stopped));
+
+      result={
+        ok:(res?.status()===200)&&checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&failedResources.length===0,
+        status:'done',
+        mode:'player_smooth_only',
+        target:TARGET,
+        http_status:res?.status()||0,
+        checks,
+        console_errors:consoleErrors,
+        page_errors:pageErrors,
+        failed_resources:failedResources,
+        updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();
+      return;
+    }
     if(REQUIRE_DESTINATIONS){
       record('destination-count',initial.destinations>=6,String(initial.destinations));
       record('destination-interact-api',initial.interactApi);

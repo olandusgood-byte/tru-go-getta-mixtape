@@ -177,21 +177,26 @@
       const b=new THREE.Mesh(new THREE.BoxGeometry(.06,.22,.30),brakeMat.clone());
       b.position.set(-2.12,.95,z);car.add(b);brakeLights.push(b);
     });
+    const skidMat=new THREE.MeshBasicMaterial({color:0x8aa0b8,transparent:true,opacity:0,depthWrite:false});
+    const skidMarks=[];
+    [-.72,.72].forEach(z=>{const skid=new THREE.Mesh(new THREE.PlaneGeometry(1.5,.16),skidMat.clone());skid.rotation.x=-Math.PI/2;skid.position.set(-1.45,.03,z);car.add(skid);skidMarks.push(skid)});
     const headGlow=new THREE.PointLight(0xdff8ff,3.8,12,2);
     headGlow.position.set(2.45,1.15,0);car.add(headGlow);
     car.userData.wheels=wheels;
     car.userData.headlights=headlights;
     car.userData.brakeLights=brakeLights;
     car.userData.headGlow=headGlow;
+    car.userData.skidMarks=skidMarks;
     return car;
   }
   const car=makeCar();
   car.position.set(5.7,0,4.6);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
-  const vehicleDynamics={speed:0,steer:0,braking:false};
+  const vehicleDynamics={speed:0,steer:0,braking:false,handbrake:false};
   function setVehicleDynamics(next={}){
     vehicleDynamics.speed=Number(next.speed)||0;
     vehicleDynamics.steer=Math.max(-1,Math.min(1,Number(next.steer)||0));
     vehicleDynamics.braking=!!next.braking;
+    vehicleDynamics.handbrake=!!next.handbrake;
     return {...vehicleDynamics};
   }
 
@@ -461,9 +466,12 @@
       w.rotation.y=THREE.MathUtils.lerp(w.rotation.y,targetSteer,.22);
     });
     const speedRatio=Math.min(1,Math.abs(vehicleDynamics.speed)/10);
-    const targetLean=s.inVehicle?(-vehicleDynamics.steer*speedRatio*.075):0;
+    const leanScale=vehicleDynamics.handbrake?1.8:1;
+    const targetLean=s.inVehicle?(-vehicleDynamics.steer*speedRatio*.075*leanScale):0;
     car.rotation.z=THREE.MathUtils.lerp(car.rotation.z,targetLean,.12);
-    const brakeGlow=vehicleDynamics.braking||vehicleDynamics.speed<-.2;
+    const driftOn=s.inVehicle&&vehicleDynamics.handbrake&&Math.abs(vehicleDynamics.speed)>2;
+    car.userData.skidMarks?.forEach(mark=>{mark.material.opacity=THREE.MathUtils.lerp(mark.material.opacity,driftOn ? .72 : 0,.22)});
+    const brakeGlow=vehicleDynamics.braking||vehicleDynamics.handbrake||vehicleDynamics.speed<-.2;
     car.userData.brakeLights?.forEach(light=>{
       light.material.emissiveIntensity=THREE.MathUtils.lerp(light.material.emissiveIntensity,brakeGlow?5.5:.9,.25);
     });

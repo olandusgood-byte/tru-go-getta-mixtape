@@ -67,3 +67,4 @@ jobs:
           echo "Core service: ${RAILWAY_CORE_SERVICE}"
           echo "Worker service: ${RAILWAY_WORKER_SERVICE}"
           echo "Railway environment: ${RAILWAY_ENVIRONMENT}"
+          echo "Deployment source-of-truth: GitHub Actions checkout of ${GITHUB_SHA}"

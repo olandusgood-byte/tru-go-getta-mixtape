@@ -1,0 +1,15 @@
+/* V2.30 TGG INTERIOR FORGE 100 */
+body.tgg-v230 .v230-interior-hud{position:absolute;left:50%;top:92px;z-index:14;display:none;gap:2px;min-width:220px;padding:8px 11px;transform:translateX(-50%);border:1px solid #61d9ff2d;border-radius:12px;background:#070b12e8;text-align:center}
+body.tgg-v230 .v230-interior-hud.active{display:grid}
+body.tgg-v230 .v230-interior-hud small{font-size:6px;font-weight:900;letter-spacing:.15em;color:#61d9ff}
+body.tgg-v230 .v230-interior-hud b{font-size:9px;color:#fff}
+body.tgg-v230 .v230-interior-hud span{font-size:7px;color:#a4afbf}
+body.tgg-v230 .v230-interior-panel{position:fixed;left:50%;bottom:14px;z-index:240;display:none;gap:8px;width:min(430px,calc(100vw - 24px));padding:14px;transform:translateX(-50%);border:1px solid #61d9ff22;border-radius:18px;background:#09111af5;box-shadow:0 24px 80px #000d}
+body.tgg-v230 .v230-interior-panel.active{display:grid}
+body.tgg-v230 .v230-interior-panel>small{font-size:7px;font-weight:900;letter-spacing:.16em;color:#61d9ff}
+body.tgg-v230 .v230-interior-panel>b{font-size:12px;color:#fff}
+body.tgg-v230 .v230-room-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+body.tgg-v230 .v230-room-grid button,body.tgg-v230 #v230Exit{min-height:40px;border:1px solid #ffffff16;border-radius:10px;background:#111722;color:#fff;font-size:8px;font-weight:900;cursor:pointer}
+body.tgg-v230 #v230Exit{border-color:#61d9ff44;color:#d7f7ff}
+@media(max-width:700px){body.tgg-v230 .v230-interior-hud{top:66px}body.tgg-v230 .v230-room-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v230 .v230-interior-hud{left:auto;right:8px;top:8px;transform:none}body.tgg-v230 .v230-interior-panel{left:8px;bottom:8px;width:min(430px,48vw);transform:none;max-height:94vh;overflow:auto}}

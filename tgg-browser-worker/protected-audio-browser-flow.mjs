@@ -20,14 +20,7 @@ export async function protectedAudioBrowserFlow(input = {}) {
     if (!supabaseUrl || !apiKey || !accessToken) throw new Error('Browser QA auth input missing.');
     if (!audio) throw new Error('Protected audio element missing.');
     say('Finding a published protected-audio track…');
-    const candResp = await fetchStage('candidate_lookup', `${supabaseUrl}/rest/v1/rpc/tgg_browser_qa_protected_audio_candidate_v1`, {
-      method: 'POST', headers: { apikey: apiKey, authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' }, body: '{}'
-    });
-    const candRaw = await candResp.json().catch(() => ({}));
-    if (!candResp.ok) throw new Error(candRaw?.message || candRaw?.error || 'Protected-audio candidate lookup failed.');
-    const cand = Array.isArray(candRaw) ? candRaw[0] : candRaw;
-    const trackId = cand?.track_id;
-    if (!trackId) throw new Error('No published protected-audio candidate is available.');
+    const candResp = await fetchStage('candidate_lookup', `${supabaseUrl}/v1/protected-audio/candidate`, { method:'GET', headers:{authorization:`Bearer ${accessToken}`,accept:'application/json'} }); const candRaw=await candResp.json().catch(()=>({})); if(!candResp.ok) throw new Error(candRaw?.error||'Protected-audio candidate lookup failed.'); const trackId=candRaw?.track_id; if(!trackId) throw new Error('No published protected-audio candidate is available.');
     const endpoint = `${locationObj.origin}${locationObj.pathname}`;
     const streamBody = JSON.stringify({ track_id: trackId, mode: 'stream' });
     say('Verifying anonymous access is denied…');

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.10 CITY DEPTH';
+  const VERSION='V2.11 LIVING TRAFFIC';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

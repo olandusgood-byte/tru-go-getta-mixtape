@@ -123,6 +123,6 @@
     requestAnimationFrame(tick);
   }
   function status(){const c=nearest();return {ready:!!c,contact:c?.id||null,mission:c?.mission||null,distance:c?Number(c.distance.toFixed(2)):null}}
-  window.TGGStreetContacts={contacts:CONTACTS,closest,nearest,focusNearest,getNavTarget,startContact,status};
+  window.TGGStreetContacts={contacts:CONTACTS,closest,nearest,focusNearest,getNavTarget,startContact,getObject:id=>objects[id]||null,status};
   requestAnimationFrame(tick);
 })();

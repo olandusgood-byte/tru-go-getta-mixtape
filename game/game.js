@@ -3,16 +3,16 @@
   const $=id=>document.getElementById(id);
   let state={name:'PLAYER',style:'Artist',x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0,inVehicle:false};
   let activeScreen='menu';
-  const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false};
-  const driveRuntime={speed:0,steer:0,lastTime:performance.now(),braking:false,handbrake:false,blocked:false};
-  const DRIVE={maxForward:9.4,maxReverse:-4.2,accel:6.6,reverseAccel:5.0,brake:11.2,coast:2.8,turnRate:92};
+  const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false,boost:false};
+  const driveRuntime={speed:0,steer:0,lastTime:performance.now(),braking:false,handbrake:false,blocked:false,boosting:false,boostEnergy:100};
+  const DRIVE={maxForward:9.4,maxReverse:-4.2,accel:6.6,reverseAccel:5.0,brake:11.2,coast:2.8,turnRate:92,boostMultiplier:1.38,boostAccel:1.7,boostDrain:25,boostRecharge:16};
 
   const walkKeys={up:false,down:false,left:false,right:false,sprint:false};
   const walkReleaseTimers={up:null,down:null,left:null,right:null,sprint:null};
   const walkRuntime={vx:0,vy:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false};
   const WALK={walkSpeed:6.4,sprintSpeed:9.8,accel:22,decel:27,turnResponse:11.5,stopEpsilon:.025};
   function setDriveTuning(next={}){
-    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate'].forEach(k=>{
+    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate','boostMultiplier','boostAccel','boostDrain','boostRecharge'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))DRIVE[k]=Number(next[k]);
     });
     return {...DRIVE};
@@ -103,8 +103,9 @@
     $('hudNext') && ($('hudNext').textContent=state.level*100);
     if($('player')){$('player').style.left=state.x+'%';$('player').style.top=state.y+'%';$('player').style.setProperty('--player-turn',Math.max(-18,Math.min(18,Math.cos((Number(state.heading)||0)*Math.PI/180)*18))+'deg')}
     window.TGGAvatar?.renderMini?.();
-    $('missionStatus') && ($('missionStatus').textContent=state.accepted?'Mission active — finish the job.':'Find M and start a mission.');
-    $('missionBtn') && ($('missionBtn').textContent=state.mission?(state.accepted?'COMPLETE MISSION':'TAKE MISSION'):'TALK TO M');
+    const activeJob=window.TGGContent?.current?.();
+    $('missionStatus') && ($('missionStatus').textContent=activeJob?('ACTIVE JOB — '+String(activeJob.name||activeJob.title||activeJob.id||'FOLLOW NAV').toUpperCase()):'Find M, Kane or DJ V for a street job.');
+    $('missionBtn') && ($('missionBtn').textContent=activeJob?'ACTIVE JOB':'FIND JOB');
     $('vehicleBtn') && ($('vehicleBtn').textContent=state.inVehicle?'EXIT CAR':'ENTER CAR');
     const speedMph=Math.round(Math.abs(driveRuntime.speed)*7.2);
     $('speedValue') && ($('speedValue').textContent=String(speedMph));
@@ -123,8 +124,11 @@
       npcDialogue.textContent=line;
       npcDialogue.classList.toggle('show',activeScreen==='game'&&md<16);
     }
-    const driveState=driveRuntime.blocked?'CONTACT':driveRuntime.handbrake&&Math.abs(driveRuntime.speed)>2?'DRIFT':driveRuntime.braking?'BRAKE':Math.abs(driveRuntime.speed)>.3?'CRUISE':'IDLE';
+    const driveState=driveRuntime.blocked?'CONTACT':driveRuntime.boosting?'BOOST':driveRuntime.handbrake&&Math.abs(driveRuntime.speed)>2?'DRIFT':driveRuntime.braking?'BRAKE':Math.abs(driveRuntime.speed)>.3?'CRUISE':'IDLE';
     $('driveStateValue') && ($('driveStateValue').textContent=state.inVehicle?driveState:'PARK');
+    $('boostValue') && ($('boostValue').textContent=Math.round(driveRuntime.boostEnergy)+'%');
+    $('boostFill') && ($('boostFill').style.width=Math.max(0,Math.min(100,driveRuntime.boostEnergy))+'%');
+    $('sprintBtn')?.classList.toggle('boosting',!!state.inVehicle&&driveRuntime.boosting);
   }
 
   function addXp(n){
@@ -234,7 +238,9 @@
       driveRuntime.braking=false;
       driveRuntime.handbrake=false;
       driveRuntime.blocked=false;
-      window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:false,handbrake:false,blocked:false});
+      driveRuntime.boosting=false;
+      driveRuntime.boostEnergy=Math.min(100,driveRuntime.boostEnergy+DRIVE.boostRecharge*dt);
+      window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:false,handbrake:false,blocked:false,boosting:false,boostEnergy:driveRuntime.boostEnergy});
       requestAnimationFrame(updateVehiclePhysics);
       return;
     }
@@ -245,10 +251,14 @@
     const movingReverse=driveRuntime.speed<-.15;
     driveRuntime.braking=(wantsReverse&&movingForward)||(wantsForward&&movingReverse);
     driveRuntime.handbrake=!!driveKeys.handbrake;
+    driveRuntime.boosting=!!driveKeys.boost&&wantsForward&&!driveRuntime.handbrake&&driveRuntime.boostEnergy>1;
+    if(driveRuntime.boosting)driveRuntime.boostEnergy=Math.max(0,driveRuntime.boostEnergy-DRIVE.boostDrain*dt);
+    else driveRuntime.boostEnergy=Math.min(100,driveRuntime.boostEnergy+DRIVE.boostRecharge*dt);
 
     if(wantsForward){
-      const rate=movingReverse?DRIVE.brake:DRIVE.accel;
-      driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxForward,rate*dt);
+      const rate=movingReverse?DRIVE.brake:DRIVE.accel*(driveRuntime.boosting?DRIVE.boostAccel:1);
+      const targetForward=DRIVE.maxForward*(driveRuntime.boosting?DRIVE.boostMultiplier:1);
+      driveRuntime.speed=approach(driveRuntime.speed,targetForward,rate*dt);
     }else if(wantsReverse){
       const rate=movingForward?DRIVE.brake:DRIVE.reverseAccel;
       driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxReverse,rate*dt);
@@ -262,7 +272,7 @@
     const steerTarget=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
     driveRuntime.steer=approach(driveRuntime.steer,Math.max(-1,Math.min(1,steerTarget)),4.35*dt);
 
-    const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/DRIVE.maxForward);
+    const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/(DRIVE.maxForward*DRIVE.boostMultiplier));
     if(Math.abs(driveRuntime.steer)>.01&&Math.abs(driveRuntime.speed)>.08){
       const reverseSign=driveRuntime.speed<0?-1:1;
       const turnFactor=.62-speedRatio*.30;
@@ -294,7 +304,7 @@
       driveRuntime.blocked=false;
     }
 
-    window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:driveRuntime.braking,handbrake:driveRuntime.handbrake,blocked:driveRuntime.blocked});
+    window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:driveRuntime.braking,handbrake:driveRuntime.handbrake,blocked:driveRuntime.blocked,boosting:driveRuntime.boosting,boostEnergy:driveRuntime.boostEnergy});
     update();
     requestAnimationFrame(updateVehiclePhysics);
   }
@@ -415,7 +425,7 @@
       Object.keys(driveKeys).forEach(k=>driveKeys[k]=false);
       clearWalkKeys();
       walkRuntime.lastTime=performance.now();
-      window.TGG3D?.setVehicleDynamics?.({speed:0,steer:0,braking:false,handbrake:false});
+      window.TGG3D?.setVehicleDynamics?.({speed:0,steer:0,braking:false,handbrake:false,boosting:false,boostEnergy:driveRuntime.boostEnergy});
       window.TGG3D?.setCameraMode?.('orbit',true);
       update();save(true);toast('EXITED STARTER CAR');
       return true;
@@ -467,24 +477,21 @@
 
   function mission(){
     if(activeScreen!=='game')return false;
-    if(!state.mission){
-      state.mission='studio-run';
-      state.accepted=false;
-      toast('M has a job for you.');
-    }else if(!state.accepted){
-      state.accepted=true;
-      toast('MISSION ACCEPTED — get to the marked spot');
-    }else if(Math.abs(state.x-72)<10&&Math.abs(state.y-36)<10){
-      reward(250,50);
-      state.mission=null;
-      state.accepted=false;
-      save(true);
-      toast('MISSION COMPLETE +$250 +50 XP');
-    }else{
-      toast('Move closer to M to finish the mission');
+    const activeJob=window.TGGContent?.current?.();
+    if(activeJob){
+      toast('ACTIVE JOB — FOLLOW THE LIVE NAV MARKER');
+      return true;
     }
-    update();
-    return true;
+    state.mission=null;
+    state.accepted=false;
+    const nearby=window.TGGStreetContacts?.nearest?.();
+    if(nearby)return window.TGGStreetContacts?.startContact?.(nearby)===true;
+    if(window.TGGStreetContacts?.focusNearest?.()===true){
+      update();
+      return true;
+    }
+    toast('NO STREET JOB CONTACT READY');
+    return false;
   }
 
   function resetForNewGame(){
@@ -588,7 +595,9 @@
       if(k==='h'){e.preventDefault();horn();return;}
       if(k==='r'&&state.inVehicle){e.preventDefault();recoverVehicle();return;}
       if(k==='Shift'){
-        if(!state.inVehicle){e.preventDefault();setWalkKey('sprint',true);}
+        e.preventDefault();
+        if(state.inVehicle)setDriveKey('boost',true);
+        else setWalkKey('sprint',true);
         return;
       }
       if(k===' '||k==='Spacebar'){
@@ -607,7 +616,7 @@
     });
     document.addEventListener('keyup',e=>{
       const k=e.key.length===1?e.key.toLowerCase():e.key;
-      if(k==='Shift'){setWalkKey('sprint',false);return;}
+      if(k==='Shift'){setWalkKey('sprint',false);setDriveKey('boost',false);return;}
       if(k===' '||k==='Spacebar'){setDriveKey('handbrake',false);return;}
       const driveControl=(k==='w'||k==='ArrowUp')?'forward':(k==='s'||k==='ArrowDown')?'reverse':(k==='a'||k==='ArrowLeft')?'left':(k==='d'||k==='ArrowRight')?'right':null;
       const walkControl=(k==='w'||k==='ArrowUp')?'up':(k==='s'||k==='ArrowDown')?'down':(k==='a'||k==='ArrowLeft')?'left':(k==='d'||k==='ArrowRight')?'right':null;
@@ -639,13 +648,17 @@
     const sprintBtn=$('sprintBtn');
     if(sprintBtn){
       sprintBtn.addEventListener('pointerdown',e=>{
-        if(activeScreen!=='game'||state.inVehicle)return;
-        e.preventDefault();setWalkKey('sprint',true);sprintBtn.classList.add('held');sprintBtn.setPointerCapture?.(e.pointerId);
+        if(activeScreen!=='game')return;
+        e.preventDefault();
+        if(state.inVehicle)setDriveKey('boost',true);
+        else setWalkKey('sprint',true);
+        sprintBtn.classList.add('held');
+        sprintBtn.setPointerCapture?.(e.pointerId);
       });
-      const releaseSprint=()=>{setWalkKey('sprint',false);sprintBtn.classList.remove('held')};
+      const releaseSprint=()=>{setWalkKey('sprint',false);setDriveKey('boost',false);sprintBtn.classList.remove('held')};
       sprintBtn.addEventListener('pointerup',releaseSprint);
       sprintBtn.addEventListener('pointercancel',releaseSprint);
-      sprintBtn.addEventListener('pointerleave',releaseSprint);
+      sprintBtn.addEventListener('lostpointercapture',releaseSprint);
     }
   }
 

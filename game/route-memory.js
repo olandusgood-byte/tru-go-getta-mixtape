@@ -231,6 +231,7 @@
     host.prepend(wrap);
     wrap.querySelector('[data-route-encounter]')?.addEventListener('click',()=>encounterCurrent());
     wrap.querySelector('[data-memory-refresh]')?.addEventListener('click',()=>refreshRemoteMemory());
+    window.TGGContactOps?.render?.();
   }
 
   load();

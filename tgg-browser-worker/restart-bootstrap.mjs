@@ -8,6 +8,36 @@ const existingWorkerToken = process.env.TGG_WORKER_TOKEN || '';
 
 const normalizeBootstrap = (value) => Array.isArray(value) ? value[0] : value;
 
+async function probePostgrest() {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      method: 'GET',
+      headers: { apikey: SUPABASE_KEY },
+      signal: AbortSignal.timeout(5000)
+    });
+    const body = await response.text();
+    let parsed = null;
+    try { parsed = JSON.parse(body); } catch {}
+    console.log(JSON.stringify({
+      tgg_bootstrap_postgrest_probe: true,
+      ok: response.ok,
+      status: response.status,
+      code: parsed?.code || null,
+      message: parsed?.message || null,
+      details: parsed?.details || null,
+      hint: parsed?.hint || null,
+      body: body.slice(0, 500)
+    }));
+  } catch (error) {
+    console.error(JSON.stringify({
+      tgg_bootstrap_postgrest_probe: true,
+      ok: false,
+      error: error?.message || String(error)
+    }));
+  }
+}
+
+
 async function directBootstrap() {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/tgg_browser_cert_worker_bootstrap`, {
     method: 'POST',
@@ -44,6 +74,7 @@ async function directBootstrap() {
 
 if (workerId && bootstrapSecret && SUPABASE_KEY && !existingWorkerToken) {
   try {
+    await probePostgrest();
     const client = createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false }
     });

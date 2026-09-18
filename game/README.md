@@ -1,46 +1,55 @@
-# TRU GO GETTA Game V1.20
+# TRU GO GETTA Game V1.21
 
-V1.20 turns earned NPC relationships into local contact opportunities that reuse existing city events instead of creating a second reward system.
+V1.21 replaces the flat city play surface with a real WebGL third-person 3D foundation while preserving the verified V1.20 gameplay systems underneath.
 
-## Contact opportunities
+## True 3D foundation
 
-- Manager Introduction — M — requires TRUSTED — complete through Release Rush
-- Producer Lock-In — Kane — requires FAMILIAR — complete through Studio Pop-In
-- DJ Test Spin — DJ V — requires FAMILIAR — complete through Release Rush
+- Three.js 0.186.0 pinned through jsDelivr
+- real WebGL canvas
+- perspective camera
+- third-person follow camera
+- 3D humanoid player
+- 3D NPC marker for M
+- 3D roads and city grid
+- 30+ procedural building blocks
+- directional, hemisphere and neon point lighting
+- shadows, fog and tone mapping
+- player position synchronized from the existing TGG game state
+- 2.5D fallback retained when WebGL cannot initialize
 
-Opportunity state is stored inside the existing `tgg-route-memory-v1` object under `opportunities`.
+## Preserved gameplay
 
-## Completion rules
+The V1.20 systems stay intact:
 
-Starting an opportunity records the linked event's current run count. The opportunity only completes after that existing event successfully runs again and its run count advances.
-
-The opportunity layer itself:
-
-- awards no cash;
-- awards no XP;
-- awards no reputation;
-- calls no economy reward API;
-- creates no separate localStorage key;
-- adds no remote mutation API.
+- create / continue / save
+- keyboard and D-pad movement
+- missions and rewards
+- city activities and mastery
+- circuits and district story routes
+- M / Kane / DJ V memory
+- relationships and dialogue
+- contact opportunities
+- read-only property / vehicle discovery
+- existing economy and safety boundaries
 
 ## Verification
 
-- [x] Manager Introduction unlocks at M = Trusted
-- [x] Producer Lock-In unlocks at Kane = Familiar
-- [x] DJ Test Spin remains locked while DJ V = Intro
-- [x] opportunity UI auto-renders in City Events
-- [x] Manager Introduction starts successfully
-- [x] Release Rush completes Manager Introduction
-- [x] completion adds exactly the existing 450 cash
-- [x] no opportunity bonus payout
-- [x] no separate opportunity save store
-- [x] Opportunity Knocks achievement unlocks
+- [x] V1.21 static contract
+- [x] Three.js revision 186
+- [x] WebGL renderer + canvas
+- [x] perspective third-person camera
+- [x] 30+ 3D buildings
+- [x] 3D road network
+- [x] 3D player movement follows existing game coordinates
+- [x] 3D NPC marker
+- [x] fallback surface retained
+- [x] existing V1.20 gameplay smoke still passes
 - [x] Static CI PASS
-- [x] Chromium Smoke PASS on `6095ecc`
+- [x] WebGL Chromium Smoke PASS
 - [x] production remains gated
 
 ## Release status
 
-**V1.20-NPC-FAVOR-HOOKS-CONTACT-OPPORTUNITIES-VERIFIED.**
+**V1.21-TRUE-3D-CITY-FOUNDATION-VERIFIED.**
 
-Next internal development layer: **V1.21 Contact Chains + Opportunity History**.
+Next internal development layer: **V1.22 3D Collision + Camera Orbit**.

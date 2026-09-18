@@ -12,13 +12,13 @@
   function load(){
     try{
       const saved=JSON.parse(localStorage.getItem(KEY)||'{}');
-      state={...state,...saved};
+      if(saved&&typeof saved==='object')Object.assign(state,saved);
       if(!Array.isArray(state.actions))state.actions=[];
     }catch{}
     return state;
   }
   function reset(){
-    state={started:false,route:null,score:0,actions:[],completed:false,rewardClaimed:false,updatedAt:0};
+    Object.assign(state,{started:false,route:null,score:0,actions:[],completed:false,rewardClaimed:false,updatedAt:0});
     save();
     render();
     return state;

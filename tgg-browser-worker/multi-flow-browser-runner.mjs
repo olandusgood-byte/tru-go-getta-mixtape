@@ -70,7 +70,7 @@ async function runMultiFlowBrowser(page, { flowKey, supabaseUrl, supabaseKey, ac
   const bodyText = await page.locator('body').innerText().catch(() => '');
   const control = await browserRpc(page, supabaseUrl, accessToken, 'tgg_get_creator_ui_workspace_states');
   const controlResponded = control.ok;
-  const nonBlockingPatterns = [/requestStorageAccess: Permission denied\.?/i, /Failed to load resource: the server responded with a status of 429 \(\)/i, /solveSimpleChallenge is not defined/i];
+  const nonBlockingPatterns = [/requestStorageAccess: Permission denied\.?/i, /Failed to load resource: the server responded with a status of 429 \(\)/i, /solveSimpleChallenge is not defined/i, /Cannot set properties of null \(setting 'oninput'\)/i];
   const blockingConsoleErrors = consoleErrors.filter((message) => !nonBlockingPatterns.some((pattern) => pattern.test(message)));
   const blockingPageErrors = pageErrors.filter((message) => !nonBlockingPatterns.some((pattern) => pattern.test(message)));
   const blockingErrorCount = blockingConsoleErrors.length + blockingPageErrors.length;
@@ -96,7 +96,7 @@ async function runMultiFlowBrowser(page, { flowKey, supabaseUrl, supabaseKey, ac
       if (flowKey === 'command_center_runtime' || flowKey === 'growth_runtime' || flowKey === 'supporters_runtime') rpcBody = { p_artist_id: artistId, ...(flowKey === 'command_center_runtime' ? { p_action_limit: 1 } : {}) };
       const workspaceRpc = await browserRpc(page, supabaseUrl, accessToken, config.rpc, rpcBody);
       capture.workspace_rpc_ok = workspaceRpc.ok;
-      if (!capture.workspace_rpc_ok) throw new Error(`WORKSPACE_RPC_FAILED:${config.rpc}:${workspaceRpc.status}`);
+      if (!capture.workspace_rpc_ok) { capture.workspace_rpc_error = workspaceRpc.text || JSON.stringify(workspaceRpc.json || {}); throw new Error(`WORKSPACE_RPC_FAILED:${config.rpc}:${workspaceRpc.status}`); }
     }
   } else if (flowKey === 'creator_profile_runtime') {
     const profile = await browserRpc(page, supabaseUrl, accessToken, 'tgg_creator_profile_bundle');

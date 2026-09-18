@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.20",
-  "module": "GAME-V1.20",
-  "name": "NPC Favor Hooks + Contact Opportunities Checkpoint",
+  "version": "1.29",
+  "module": "GAME-V1.29",
+  "name": "Bulk World Upgrade Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -72,10 +72,22 @@
     "event_run_completion_hook": true,
     "contact_ops_no_bonus_rewards": true,
     "opportunities_single_memory_store": true,
-    "first_opportunity_achievement": true
+    "first_opportunity_achievement": true,
+    "garage_api": true,
+    "garage_persistence": true,
+    "car_appearance_runtime": true,
+    "handling_preset_runtime": true,
+    "vehicle_collision_margin": true,
+    "studio_3d_renderer": true,
+    "studio_3d_entry": true,
+    "manager_dialogue_proximity": true,
+    "mobile_drift_control": true,
+    "mobile_horn_control": true,
+    "local_three_runtime": true,
+    "studio_dom_ready_boot": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.21 CONTACT CHAINS + OPPORTUNITY HISTORY",
-  "verification": "passed"
+  "next": "V1.30 CITY INTERIORS + TRAFFIC INTERACTION",
+  "verification": "pending_ci"
 }

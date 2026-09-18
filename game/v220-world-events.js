@@ -29,7 +29,7 @@
     sequenceStartedAt:0,lastStepAt:0,combo:0,bestCombo:0,history:[],lastResult:null,sessionRuns:0,
     panelOpen:false,sequenceEventId:null,nearestDistance:null,flow:'READY'
   };
-  let group=null,panel=null,hud=null,live=null,actionBtn=null,lastRender=0;
+  let group=null,panel=null,hud=null,live=null,actionBtn=null,lastRender=0,originalInteract=null;
   const T=()=>window.THREE;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const now=()=>Date.now();
@@ -98,6 +98,17 @@
     const ci=window.TGGV219?.status?.()?.nearest;
     if(ci&&ci.distance<=4.8)return true;
     return false;
+  }
+  function wrapInteract(){
+    if(originalInteract||!window.TGG3D?.interactNearest)return;
+    originalInteract=window.TGG3D.interactNearest.bind(window.TGG3D);
+    window.TGG3D.interactNearest=()=>{
+      if(window.TGGGame?.getActiveScreen?.()!=='game')return originalInteract?.()??false;
+      if(blockedByPriority())return originalInteract?.()??false;
+      if(state.panelOpen)return performStep();
+      if(distance()<=5.5)return openPanel();
+      return originalInteract?.()??false;
+    };
   }
   function requirementsMet(e=activeEvent()){return !!e&&(!window.TGGEvents?.requirementsMet||window.TGGEvents.requirementsMet(e))}
   function requirementsText(e=activeEvent()){return e&&window.TGGEvents?.requirementText?window.TGGEvents.requirementText(e):''}
@@ -220,16 +231,15 @@
   function keyHandler(e){
     const target=e.target,typing=target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement||target instanceof HTMLSelectElement||target?.isContentEditable;
     if(typing)return;
-    if((e.key==='f'||e.key==='F'||e.key==='Enter')){
-      if(state.panelOpen){e.preventDefault();performStep();return}
-      if(window.TGGGame?.getActiveScreen?.()==='game'&&!blockedByPriority()&&distance()<=5.5){e.preventDefault();openPanel()}
+    if(e.key==='Enter'&&state.panelOpen){
+      e.preventDefault();performStep();
     }
   }
 
   document.addEventListener('keydown',keyHandler);
 
   function tick(ts=performance.now()){
-    requestAnimationFrame(tick);ensureUI();rebuildHotspot();updateHud(ts);renderPanel(false);state.ready=!!group&&currentEvents().length>0;
+    requestAnimationFrame(tick);ensureUI();rebuildHotspot();wrapInteract();updateHud(ts);renderPanel(false);state.ready=!!group&&currentEvents().length>0;
     const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.20 WORLD EVENTS + CAREER 100';
   }
   function status(){

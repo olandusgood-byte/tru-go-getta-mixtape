@@ -416,19 +416,45 @@
       human.userData.routeIndex=(idx+1)%route.length;
       return;
     }
-    const step=Math.min(dist,human.userData.speed*60*dt);
+    const gameState=window.TGGGame?.getState?.();
+    const carDist=Math.hypot(human.position.x-car.position.x,human.position.z-car.position.z);
+    const hornReact=performance.now()<(Number(human.userData.hornReactUntil)||0);
+    const carReact=!!gameState?.inVehicle&&carDist<5.4;
+    const reacting=hornReact||carReact;
+    const step=Math.min(dist,human.userData.speed*60*dt*(reacting?2.25:1));
     human.position.x+=dx/dist*step;
     human.position.z+=dz/dist*step;
+    if(reacting&&carDist>.05){
+      const awayX=(human.position.x-car.position.x)/carDist;
+      const awayZ=(human.position.z-car.position.z)/carDist;
+      human.position.x+=awayX*dt*1.35;
+      human.position.z+=awayZ*dt*1.35;
+    }
     human.rotation.y=Math.atan2(dx,dz);
-    human.userData.walkPhase+=dt*7.5;
+    human.userData.walkPhase+=dt*(reacting?12:7.5);
     const p=human.userData.parts;
     if(p){
-      const swing=Math.sin(human.userData.walkPhase)*.62;
+      const swing=Math.sin(human.userData.walkPhase)*(reacting?.88:.62);
       p.leftArm.rotation.x=swing;
       p.rightArm.rotation.x=-swing;
       p.leftLeg.rotation.x=-swing*.82;
       p.rightLeg.rotation.x=swing*.82;
+      p.body.rotation.z=THREE.MathUtils.lerp(p.body.rotation.z,reacting?Math.sin(human.userData.walkPhase)*.08:0,.18);
     }
+  }
+
+  function reactToHorn(){
+    if(!window.TGGGame?.getState?.()?.inVehicle)return 0;
+    const now=performance.now();
+    let count=0;
+    pedestrians.forEach(human=>{
+      const d=Math.hypot(human.position.x-car.position.x,human.position.z-car.position.z);
+      if(d<=14){
+        human.userData.hornReactUntil=now+1050+Math.random()*450;
+        count++;
+      }
+    });
+    return count;
   }
 
   function animateTraffic(vehicle,t,dt){
@@ -645,6 +671,7 @@
     interactNearest,
     pedestrians,
     traffic,
+    reactToHorn,
     cycleCamera,
     setCameraMode,
     getCameraMode,

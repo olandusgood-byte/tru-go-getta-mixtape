@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.24",
-  "module": "GAME-V1.24",
-  "name": "Unified 3D Gameplay Slice Checkpoint",
+  "version": "1.25",
+  "module": "GAME-V1.25",
+  "name": "Starter Car + Drive Mode Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -97,10 +97,19 @@
     "hub_enter_action": true,
     "single_e_action": true,
     "walk_animation_preserved": true,
-    "mission_interaction_preserved": true
+    "mission_interaction_preserved": true,
+    "starter_car_mesh": true,
+    "vehicle_saved_state": true,
+    "vehicle_proximity_gate": true,
+    "drive_speed": true,
+    "vehicle_collision": true,
+    "car_follow_camera": true,
+    "wheel_animation": true,
+    "single_e_vehicle_action": true,
+    "vehicle_no_reward_path": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.25 STARTER CAR + DRIVE MODE",
-  "verification": "passed"
+  "next": "V1.26 VEHICLE HANDLING + GARAGE",
+  "verification": "pending_ci"
 }

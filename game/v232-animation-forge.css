@@ -1,0 +1,22 @@
+/* V2.32 TGG ANIMATION FORGE 100 */
+body.tgg-v232 .v232-forge-btn{height:32px;margin-left:6px;padding:0 10px;border:1px solid #ff466d33;border-radius:999px;background:#160a10;color:#ffd5df;font-size:8px;font-weight:1000;letter-spacing:.1em;cursor:pointer}
+body.tgg-v232 .v232-forge-panel{position:fixed;right:16px;top:58px;z-index:250;display:grid;gap:10px;width:min(380px,calc(100vw - 24px));max-height:calc(100vh - 76px);overflow:auto;padding:15px;transform:translateX(22px);opacity:0;pointer-events:none;border:1px solid #ff466d24;border-radius:22px;background:linear-gradient(155deg,#160a10fb,#101827fb);box-shadow:0 32px 110px #000e;transition:.22s ease}
+body.tgg-v232 .v232-forge-panel.active{opacity:1;pointer-events:auto;transform:translateX(0)}
+body.tgg-v232 .v232-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+body.tgg-v232 .v232-head div{display:grid;gap:2px}
+body.tgg-v232 .v232-head small{font-size:7px;font-weight:900;letter-spacing:.18em;color:#ff466d}
+body.tgg-v232 .v232-head b{font-size:13px;color:#fff}
+body.tgg-v232 .v232-head button{width:32px;height:32px;border:1px solid #ffffff18;border-radius:50%;background:#111722;color:#fff;font-size:18px}
+body.tgg-v232 .v232-clips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+body.tgg-v232 .v232-clips button,body.tgg-v232 .v232-actions button{min-height:40px;border:1px solid #ffffff14;border-radius:10px;background:#111722;color:#fff;font-size:8px;font-weight:900;cursor:pointer}
+body.tgg-v232 .v232-clips button.active{border-color:#ff466d;color:#ffd6df;background:#251019}
+body.tgg-v232 .v232-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+body.tgg-v232 #v232Restore{grid-column:1/-1}
+body.tgg-v232 .v232-stats{padding:8px;border:1px solid #ffffff0d;border-radius:9px;background:#ffffff04;color:#7f8a9d;font-size:7px}
+body.tgg-v232 .v232-forge-hud{position:absolute;right:18px;top:332px;z-index:13;display:grid;gap:2px;padding:8px 10px;border:1px solid #ff466d2d;border-radius:11px;background:#070b12dd}
+body.tgg-v232 .v232-forge-hud small{font-size:6px;font-weight:900;letter-spacing:.15em;color:#ff466d}
+body.tgg-v232 .v232-forge-hud b{font-size:8px;color:#fff}
+body.tgg-v232 .v232-forge-hud span{font-size:7px;color:#95a1b4}
+@media(prefers-reduced-motion:reduce){body.tgg-v232 .v232-forge-panel{transition:none!important}}
+@media(max-width:700px){body.tgg-v232 .v232-forge-panel{right:8px;top:50px;width:calc(100vw - 16px);padding:12px;border-radius:17px}body.tgg-v232 .v232-clips{grid-template-columns:1fr 1fr}body.tgg-v232 .v232-forge-hud{right:10px;top:286px}}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v232 .v232-forge-panel{left:8px;right:auto;top:8px;width:min(400px,48vw);max-height:calc(100vh - 16px)}body.tgg-v232 .v232-forge-hud{top:168px;right:8px}}

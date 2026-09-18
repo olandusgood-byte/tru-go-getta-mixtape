@@ -8,7 +8,7 @@
     if(topbar && !document.querySelector('.v201-badge')){
       const badge=document.createElement('span');
       badge.className='v201-badge';
-      badge.textContent='V2.01 UX';
+      badge.textContent='V2.05 DRIVE';
       const hud=$('hud');
       topbar.insertBefore(badge,hud||null);
     }
@@ -17,7 +17,7 @@
     const actions=deck?.querySelector('.actions');
     if(deck&&actions){
       const groups={
-        core:['missionBtn','vehicleBtn','interact3dBtn','camera3dBtn','driftBtn','hornBtn','characterBtn'],
+        core:['missionBtn','vehicleBtn','interact3dBtn','camera3dBtn','driftBtn','hornBtn','recoverCarBtn','characterBtn'],
         places:['studioBtn','parkBtn','shopsBtn','homeBtn','mediaBtn','garageBtn'],
         career:['businessBtn','careerBtn','eventsBtn','contentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','bridgeBtn'],
         utility:['saveBtn','pauseBtn']

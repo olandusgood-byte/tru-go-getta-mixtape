@@ -1,0 +1,34 @@
+/* V2.24 CREW HQ + TEAM SYSTEMS 100 */
+body.tgg-v224 .v224-crew-panel{position:fixed;right:16px;top:58px;z-index:210;display:grid;gap:10px;width:min(430px,calc(100vw - 24px));max-height:calc(100vh - 76px);overflow:auto;padding:15px;transform:translateX(22px);opacity:0;pointer-events:none;border:1px solid #ffffff20;border-radius:22px;background:linear-gradient(155deg,#090d15fb,#111827fb);box-shadow:0 32px 110px #000e;transition:.22s ease}
+body.tgg-v224 .v224-crew-panel.active{opacity:1;pointer-events:auto;transform:translateX(0)}
+body.tgg-v224 .v224-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+body.tgg-v224 .v224-head div{display:grid;gap:3px}
+body.tgg-v224 .v224-head small{font-size:7px;font-weight:900;letter-spacing:.18em;color:#c7ff00}
+body.tgg-v224 .v224-head b{font-size:12px;color:#fff}
+body.tgg-v224 .v224-head button{width:32px;height:32px;border:1px solid #ffffff18;border-radius:50%;background:#111722;color:#fff;font-size:18px}
+body.tgg-v224 .v224-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+body.tgg-v224 .v224-stats span{display:grid;gap:2px;padding:7px;border:1px solid #ffffff0e;border-radius:9px;background:#ffffff04}
+body.tgg-v224 .v224-stats small{font-size:6px;font-weight:900;color:#808a9c}
+body.tgg-v224 .v224-stats b{font-size:9px;color:#fff}
+body.tgg-v224 .v224-bonuses{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+body.tgg-v224 .v224-bonuses span{padding:7px;border:1px solid #c7ff0014;border-radius:9px;background:#c7ff0006;font-size:7px;color:#8993a5}
+body.tgg-v224 .v224-bonuses b{display:block;margin-top:2px;color:#c7ff00;font-size:9px}
+body.tgg-v224 .v224-contracts{display:grid;gap:6px}
+body.tgg-v224 .v224-contracts button{display:grid;gap:3px;text-align:left;padding:10px;border:1px solid #ffffff14;border-radius:11px;background:#111722;color:#fff;cursor:pointer}
+body.tgg-v224 .v224-contracts button:disabled{opacity:.42;cursor:not-allowed}
+body.tgg-v224 .v224-contracts b{font-size:9px}
+body.tgg-v224 .v224-contracts span,body.tgg-v224 .v224-contracts small{font-size:7px;color:#929cad}
+body.tgg-v224 .v224-active{display:grid;gap:5px;padding:10px;border:1px solid #61d9ff22;border-radius:12px;background:#61d9ff06}
+body.tgg-v224 .v224-active small{font-size:6px;font-weight:900;letter-spacing:.15em;color:#61d9ff}
+body.tgg-v224 .v224-active b{font-size:10px;color:#fff}
+body.tgg-v224 .v224-active span{font-size:8px;color:#b5bdca}
+body.tgg-v224 #v224StepBtn{min-height:44px;border:1px solid #61d9ff4c;border-radius:10px;background:#101b25;color:#d9f7ff;font-size:8px;font-weight:1000;letter-spacing:.09em}
+body.tgg-v224 .v224-crew-panel>.secondary{min-height:40px;border:1px solid #ffffff18;border-radius:10px;background:#111722;color:#fff;font-size:8px;font-weight:900}
+body.tgg-v224 .v224-near-hud{position:absolute;right:18px;top:146px;z-index:13;display:none;gap:3px;padding:8px 10px;border:1px solid #c7ff002b;border-radius:11px;background:#070b12dd}
+body.tgg-v224 .v224-near-hud.active{display:grid}
+body.tgg-v224 .v224-near-hud small{font-size:6px;font-weight:900;letter-spacing:.15em;color:#c7ff00}
+body.tgg-v224 .v224-near-hud b{font-size:8px;color:#fff}
+body.tgg-v224 .sr-only{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(prefers-reduced-motion:reduce){body.tgg-v224 .v224-crew-panel{transition:none!important}}
+@media(max-width:700px){body.tgg-v224 .v224-crew-panel{right:8px;top:50px;width:calc(100vw - 16px);padding:12px;border-radius:17px}body.tgg-v224 .v224-stats{grid-template-columns:1fr 1fr}body.tgg-v224 .v224-bonuses{grid-template-columns:1fr 1fr 1fr}body.tgg-v224 .v224-near-hud{right:10px;top:112px}}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v224 .v224-crew-panel{left:8px;right:auto;top:8px;width:min(430px,49vw);max-height:calc(100vh - 16px)}}

@@ -467,6 +467,133 @@ async function runSmoke(target) {
       return {present:true,passed:checks.length>0&&checks.every(x=>x.pass),checks};
     });
 
+    const storyMission04 = await page.evaluate(() => {
+      const api=window.TGGStoryMission04;
+      const performance=window.TGGPerformance;
+      if(!api||!performance)return {present:false,passed:true,checks:[]};
+      const checks=[];
+      const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      try{
+        localStorage.setItem('tgg-story-mission-v3',JSON.stringify({
+          accepted:true,choice:'indie',step:'complete',completed:true,rewardClaimed:true,
+          consequence:'INDEPENDENT',priorConsequence:'AIRWAVES',updatedAt:Date.now()
+        }));
+        localStorage.removeItem('tgg-story-mission-v4');
+        Object.assign(api.state,{
+          accepted:false,choice:null,step:'locked',completed:false,rewardClaimed:false,
+          consequence:null,priorCareer:null,performanceScore:0,updatedAt:0
+        });
+        api.save();
+        performance.reset();
+        api.sync(false);
+
+        record('story04-api',api.mission?.id==='the-headliner');
+        record('story04-ui',
+          Boolean(document.getElementById('mission04Btn')) &&
+          Boolean(document.getElementById('mission04Club')) &&
+          Boolean(document.getElementById('mission04Festival')) &&
+          Boolean(document.getElementById('showBoard'))
+        );
+        record('story04-unlocked',api.mission03Complete()===true);
+        record('story04-prior-career',api.state.priorCareer==='INDEPENDENT');
+        record('story04-accept',api.accept()===true&&api.state.accepted===true);
+
+        const clubChoice=api.choose('club');
+        record('story04-club-choice',
+          clubChoice===true &&
+          api.state.choice==='club' &&
+          api.state.consequence==='CLUB_HEADLINER'
+        );
+
+        Object.assign(api.state,{
+          accepted:true,choice:null,step:'choice',completed:false,rewardClaimed:false,
+          consequence:null,priorCareer:'INDEPENDENT',performanceScore:0
+        });
+        api.save();
+        performance.reset();
+
+        const festivalChoice=api.choose('festival');
+        record('story04-festival-choice',
+          festivalChoice===true &&
+          api.state.choice==='festival' &&
+          api.state.consequence==='FESTIVAL_BREAKOUT'
+        );
+        record('story04-choice-persist',
+          JSON.parse(localStorage.getItem('tgg-story-mission-v4')||'{}')?.choice==='festival'
+        );
+        record('story04-distinct-rewards',
+          api.mission.routes.club.reward.cash>api.mission.routes.festival.reward.cash &&
+          api.mission.routes.festival.reward.rep>api.mission.routes.club.reward.rep
+        );
+
+        window.TGGInventory?.mission04Pack?.();
+        window.TGGContent.state.active=null;
+        window.TGGContent.state.progress=0;
+        window.TGGContent.state.completed=[
+          'flyer-run','studio-session','mixtape-promo','radio-run','city-showdown',
+          'indie-rollout','release-night'
+        ];
+        window.TGGContent.save();
+        api.sync(false);
+
+        const routeStarted=api.act();
+        record('story04-route-start',
+          routeStarted===true&&window.TGGContent.state.active==='festival-push'
+        );
+
+        window.TGGContent.state.active=null;
+        window.TGGContent.state.completed=[
+          'flyer-run','studio-session','mixtape-promo','radio-run','city-showdown',
+          'indie-rollout','release-night','festival-push'
+        ];
+        window.TGGContent.save();
+        api.sync(false);
+        record('story04-performance-step',api.state.step==='performance');
+
+        const showStarted=api.act();
+        record('performance-start',
+          showStarted===true &&
+          performance.state.started===true &&
+          performance.state.route==='festival' &&
+          document.getElementById('showBoard')?.classList.contains('active')===true
+        );
+
+        const intro=performance.act('intro');
+        const crowd=performance.act('crowd');
+        const closer=performance.act('closer');
+        record('performance-three-moves',intro===true&&crowd===true&&closer===true&&performance.state.actions.length===3);
+        record('performance-crowd-threshold',performance.state.score>=90, String(performance.state.score));
+        record('performance-complete',performance.state.completed===true&&performance.state.rewardClaimed===true);
+
+        const scoreBeforeRepeat=performance.state.score;
+        const repeat=performance.act('crowd');
+        record('performance-no-repeat',repeat===false&&performance.state.score===scoreBeforeRepeat);
+
+        api.sync(false);
+        record('story04-return-step',api.state.step==='return');
+
+        const cashBefore=Number(window.TGGGame?.getState?.()?.cash||0);
+        const claimed=api.claim();
+        const cashAfter=Number(window.TGGGame?.getState?.()?.cash||0);
+        record('story04-claim',
+          claimed===true &&
+          api.state.completed===true &&
+          api.state.rewardClaimed===true &&
+          api.state.consequence==='FESTIVAL_BREAKOUT' &&
+          api.state.performanceScore>=90
+        );
+        record('story04-route-bonus',cashAfter>=cashBefore+1100,`${cashBefore}->${cashAfter}`);
+
+        const beforeSecond=Number(window.TGGGame?.getState?.()?.cash||0);
+        const second=api.claim();
+        const afterSecond=Number(window.TGGGame?.getState?.()?.cash||0);
+        record('story04-reward-once',second===false&&afterSecond===beforeSecond);
+      }catch(error){
+        record('story04-exception',false,error?.message||String(error));
+      }
+      return {present:true,passed:checks.length>0&&checks.every(x=>x.pass),checks};
+    });
+
     const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
     await context.close();
 
@@ -499,6 +626,7 @@ async function runSmoke(target) {
       storyMission?.passed === true &&
       storyMission02?.passed === true &&
       storyMission03?.passed === true &&
+      storyMission04?.passed === true &&
       pageErrors.length === 0 &&
       consoleErrors.length === 0 &&
       failedResources.length === 0 &&
@@ -525,6 +653,7 @@ async function runSmoke(target) {
       story_mission: storyMission,
       story_mission_02: storyMission02,
       story_mission_03: storyMission03,
+      story_mission_04: storyMission04,
       gameplay,
       dom,
       console_errors: consoleErrors,

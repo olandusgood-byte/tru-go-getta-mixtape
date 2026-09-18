@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.25",
-  "module": "GAME-V1.25",
-  "name": "Starter Car + Drive Mode Checkpoint",
+  "version": "1.26",
+  "module": "GAME-V1.26",
+  "name": "Fixed Driving Controls Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -106,10 +106,16 @@
     "car_follow_camera": true,
     "wheel_animation": true,
     "single_e_vehicle_action": true,
-    "vehicle_no_reward_path": true
+    "vehicle_no_reward_path": true,
+    "drive_vehicle_api": true,
+    "forward_relative_drive": true,
+    "reverse_relative_drive": true,
+    "steering_heading": true,
+    "steering_no_strafe": true,
+    "vehicle_collision_preserved": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.26 VEHICLE HANDLING + GARAGE",
+  "next": "V1.27 CINEMATIC CAMERA + RADAR",
   "verification": "pending_ci"
 }

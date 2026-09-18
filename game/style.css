@@ -42,3 +42,72 @@
 .asset-readonly small{margin:0;color:#c7ff00;font-size:10px;letter-spacing:.08em}
 #liveCityPanel{max-height:190px;overflow:auto}
 #worldProperties,#worldVehicles{display:grid;gap:6px;margin-top:10px}
+
+/* V1.20 PLAYTEST UX HOTFIX — readable controls + deeper 2.5D city */
+#game.active{align-items:flex-start;overflow:auto;padding:18px 20px 28px}
+.game-shell{width:min(1180px,96vw);display:grid;grid-template-rows:minmax(390px,58vh) auto;gap:16px;margin:0 auto}
+.game-shell .city{width:100%;height:100%;min-height:390px;border-radius:26px;overflow:hidden;transform-style:preserve-3d;background:linear-gradient(180deg,#111625 0,#090c13 48%,#06070b 100%)}
+.game-shell .city:before{transform:rotateX(58deg) scale(1.5) translateY(16%);filter:saturate(1.05) contrast(1.08)}
+.city-depth{position:absolute;inset:0;z-index:2;pointer-events:none;transform-style:preserve-3d;perspective:900px}
+.city-depth .tower{position:absolute;display:block;width:110px;height:170px;border:1px solid #ffffff20;background:linear-gradient(100deg,#111522,#30384d 45%,#0b0e17);box-shadow:18px 30px 30px #000b,inset 10px 0 22px #ffffff0b;clip-path:polygon(8% 0,100% 10%,90% 100%,0 92%);opacity:.92}
+.city-depth .tower:after{content:"";position:absolute;inset:12px;background:repeating-linear-gradient(180deg,#86b7ff35 0 4px,transparent 5px 16px),repeating-linear-gradient(90deg,#86b7ff20 0 4px,transparent 5px 18px)}
+.city-depth .t1{left:5%;top:19%;transform:skewY(-5deg) scale(.72)}
+.city-depth .t2{left:22%;top:10%;height:210px;transform:skewY(-5deg) scale(.82)}
+.city-depth .t3{right:17%;top:18%;height:190px;transform:skewY(5deg) scale(.78)}
+.city-depth .t4{right:3%;top:29%;height:135px;transform:skewY(5deg) scale(.65)}
+.city-depth .street-glow{position:absolute;left:18%;right:14%;bottom:9%;height:32%;background:linear-gradient(90deg,transparent,#c7ff0012 20%,#ffffff16 50%,#c7ff0012 80%,transparent);transform:perspective(500px) rotateX(68deg);filter:blur(4px)}
+.city-title{backdrop-filter:blur(12px);background:#070912d9;border-color:#6e718e}
+.district{z-index:7;padding:10px 14px;border:1px solid #ffffff18;border-radius:999px;background:#080a11c9;backdrop-filter:blur(8px);box-shadow:0 10px 30px #0008}
+.player{width:64px;height:96px;border:0;border-radius:0;background:transparent;box-shadow:none;transform:translate(-50%,-70%) perspective(500px) rotateY(var(--player-turn,0deg));transform-origin:50% 80%;transition:left .08s linear,top .08s linear,transform .08s linear;filter:drop-shadow(0 16px 10px #000a)}
+.player:after{bottom:-3px;width:44px;height:12px;background:#000a;filter:blur(5px)}
+.player .mini-avatar{inset:0;transform-style:preserve-3d}
+.player .mini-head{left:19px;top:4px;width:27px;height:27px;border:2px solid #ffffff22;box-shadow:inset -7px -4px 9px #0005,6px 7px 12px #0007}
+.player .mini-body{left:13px;top:30px;width:39px;height:38px;border-radius:12px 12px 8px 8px;background:linear-gradient(120deg,#151824 0,var(--accent) 55%,#10121a 100%);box-shadow:inset -10px -5px 12px #0005,7px 8px 12px #0008}
+.player .mini-body:before,.player .mini-body:after{content:"";position:absolute;top:4px;width:10px;height:35px;border-radius:8px;background:linear-gradient(#2b3040,#10121a)}
+.player .mini-body:before{left:-9px;transform:rotate(9deg)}
+.player .mini-body:after{right:-9px;transform:rotate(-9deg)}
+.player .mini-legs{left:16px;top:66px;width:34px;height:27px;background:transparent}
+.player .mini-legs:before,.player .mini-legs:after{content:"";position:absolute;top:0;width:13px;height:28px;border-radius:5px 5px 8px 8px;background:linear-gradient(#242936,#0d0f15)}
+.player .mini-legs:before{left:1px}.player .mini-legs:after{right:1px}
+.npc{width:60px;height:74px;border-radius:18px;z-index:7;transform:translate(-50%,-65%) perspective(500px) rotateY(-10deg);font-size:18px;background:linear-gradient(145deg,#636a80,#171a25);box-shadow:12px 18px 28px #000b,inset -8px -6px 14px #0005}
+.game-controls{display:grid;grid-template-columns:210px minmax(0,1fr);gap:14px;width:100%;min-height:178px}
+.move-pad,.action-deck{border:1px solid #35384b;border-radius:20px;background:linear-gradient(145deg,#151823,#080a10);box-shadow:0 18px 45px #0009,inset 0 1px #ffffff12}
+.move-pad{padding:13px 16px 14px}
+.action-deck{padding:13px 14px 14px;min-width:0}
+.control-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.control-title b{font-size:11px;letter-spacing:2px}
+.control-title small{font-size:10px;color:#8f93a8}
+.dpad{width:150px;height:116px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:5px}
+.dpad button{margin:0;width:auto;height:auto;min-width:0;border:1px solid #555a73;border-radius:12px;background:linear-gradient(#31374a,#11141d);color:#fff;font-size:17px;box-shadow:0 8px 16px #0009;cursor:pointer}
+.dpad button:active{transform:translateY(2px);box-shadow:0 3px 8px #000b}
+.d-up{grid-column:2;grid-row:1}.d-left{grid-column:1;grid-row:2}.d-right{grid-column:3;grid-row:2}.d-down{grid-column:2;grid-row:3}
+.d-core{grid-column:2;grid-row:2;display:grid;place-items:center;border-radius:50%;border:1px solid #c7ff0040;background:#c7ff000d;color:#c7ff00;font-size:9px;font-weight:900;letter-spacing:1px}
+.action-deck .actions{position:static;display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;max-height:134px;overflow:auto;padding:1px 5px 5px 1px;justify-content:stretch}
+.action-deck .actions button{margin:0;min-height:52px;padding:10px 11px;border-radius:12px;font-size:11px;line-height:1.15;text-align:left;white-space:normal;background:linear-gradient(145deg,#222635,#10131c);border:1px solid #44495f;box-shadow:0 7px 14px #0008}
+.action-deck .actions button:hover,.action-deck .actions button:focus-visible{border-color:#c7ff00;outline:none;transform:translateY(-1px)}
+.action-deck .actions .action-primary{background:linear-gradient(145deg,#d9ff54,#8fb800);color:#071000;border-color:#dfff73}
+.action-deck .actions .utility-action{background:linear-gradient(145deg,#303346,#171923)}
+.city-asset-hotspot{bottom:4%;right:3%;z-index:9}
+
+@media(max-width:900px){
+  #game.active{padding:12px}
+  .game-shell{width:100%;grid-template-rows:minmax(360px,52vh) auto}
+  .game-controls{grid-template-columns:180px minmax(0,1fr)}
+  .action-deck .actions{grid-template-columns:repeat(3,minmax(112px,1fr));max-height:160px}
+  .dpad{width:135px}
+}
+@media(max-width:650px){
+  body{overflow:auto}
+  main{height:auto;min-height:calc(100vh - 68px)}
+  #game.active{min-height:calc(100vh - 68px);overflow:visible}
+  .game-shell{grid-template-rows:minmax(330px,50vh) auto}
+  .game-controls{grid-template-columns:1fr;gap:10px}
+  .move-pad{padding:10px}
+  .dpad{width:170px;height:128px}
+  .action-deck .actions{grid-template-columns:repeat(2,minmax(0,1fr));max-height:260px}
+  .action-deck .actions button{min-height:56px;font-size:12px}
+  .city-title{left:10px;right:10px;top:10px;padding:10px 12px}
+  .city-title small{max-width:55%;text-align:right;font-size:10px}
+  .city-depth .tower{opacity:.65}
+}
+

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.18 NPC Route Encounters + District Memory",
-  "base": "V1.17 District Circuits + Story Routing",
+  "release": "V1.19 NPC Dialogue States + Relationship Memory",
+  "base": "V1.18 NPC Route Encounters + District Memory",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -61,7 +61,11 @@
     "V1.18-NPC-ROUTE-ENCOUNTERS",
     "V1.18-DISTRICT-MEMORY",
     "V1.18-AUTO-RENDER-STORY-UI",
-    "V1.18-READONLY-REMOTE-MEMORY"
+    "V1.18-READONLY-REMOTE-MEMORY",
+    "V1.19-RELATIONSHIP-STATES",
+    "V1.19-MASTERY-DIALOGUE",
+    "V1.19-TRUSTED-CONTACT",
+    "V1.19-SAME-MEMORY-STORE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -160,10 +164,17 @@
     "story_ui_auto_render",
     "remote_memory_readonly",
     "route_memory_no_rewards",
-    "npc_memory_achievement"
+    "npc_memory_achievement",
+    "relationship_api",
+    "relationship_persistence",
+    "mastery_driven_dialogue",
+    "repeat_talk_no_progress",
+    "relationship_no_rewards",
+    "trusted_contact_achievement",
+    "single_memory_store"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.18-NPC-ROUTE-ENCOUNTERS-DISTRICT-MEMORY-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.19-NPC-DIALOGUE-RELATIONSHIP-MEMORY-CANDIDATE",
   "production": "gated"
 }

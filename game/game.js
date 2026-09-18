@@ -4,7 +4,7 @@
   let state={name:'PLAYER',style:'Artist',x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0,inVehicle:false};
   let activeScreen='menu';
   const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false};
-  const driveRuntime={speed:0,steer:0,lastTime:performance.now(),braking:false,handbrake:false};
+  const driveRuntime={speed:0,steer:0,lastTime:performance.now(),braking:false,handbrake:false,blocked:false};
   const DRIVE={maxForward:9.4,maxReverse:-4.2,accel:6.6,reverseAccel:5.0,brake:11.2,coast:2.8,turnRate:92};
 
   const walkKeys={up:false,down:false,left:false,right:false,sprint:false};
@@ -123,7 +123,7 @@
       npcDialogue.textContent=line;
       npcDialogue.classList.toggle('show',activeScreen==='game'&&md<16);
     }
-    const driveState=driveRuntime.handbrake&&Math.abs(driveRuntime.speed)>2?'DRIFT':driveRuntime.braking?'BRAKE':Math.abs(driveRuntime.speed)>.3?'CRUISE':'IDLE';
+    const driveState=driveRuntime.blocked?'CONTACT':driveRuntime.handbrake&&Math.abs(driveRuntime.speed)>2?'DRIFT':driveRuntime.braking?'BRAKE':Math.abs(driveRuntime.speed)>.3?'CRUISE':'IDLE';
     $('driveStateValue') && ($('driveStateValue').textContent=state.inVehicle?driveState:'PARK');
   }
 
@@ -193,6 +193,31 @@
     return false;
   }
 
+  function recoverVehicle(){
+    if(activeScreen!=='game'||!state.inVehicle){toast('ENTER THE CAR FIRST');return false;}
+    const wx=(Number(state.x)-50)*.92;
+    const wz=(Number(state.y)-50)*.92;
+    const roads=[-24,0,24];
+    const nearest=(v)=>roads.reduce((best,r)=>Math.abs(v-r)<Math.abs(v-best)?r:best,roads[0]);
+    const candidates=[
+      {x:nearest(wx),z:wz},
+      {x:wx,z:nearest(wz)},
+      ...roads.flatMap(x=>roads.map(z=>({x,z})))
+    ].sort((a,b)=>Math.hypot(a.x-wx,a.z-wz)-Math.hypot(b.x-wx,b.z-wz));
+    const safe=candidates.find(p=>{
+      const px=50+p.x/.92,py=50+p.z/.92;
+      return window.TGG3D?.canMovePercent?.(px,py,true)!==false;
+    })||{x:0,z:0};
+    state.x=Math.max(3,Math.min(94,50+safe.x/.92));
+    state.y=Math.max(8,Math.min(88,50+safe.z/.92));
+    driveRuntime.speed=0;driveRuntime.steer=0;driveRuntime.blocked=false;
+    Object.keys(driveKeys).forEach(k=>driveKeys[k]=false);
+    window.TGG3D?.setVehicleDynamics?.({speed:0,steer:0,braking:false,handbrake:false,blocked:false});
+    window.TGG3D?.setCameraMode?.('chase',true);
+    update();save(true);toast('CAR RESET TO SAFE ROAD');
+    return true;
+  }
+
   function approach(value,target,amount){
     if(value<target)return Math.min(target,value+amount);
     if(value>target)return Math.max(target,value-amount);
@@ -208,7 +233,8 @@
       driveRuntime.steer=approach(driveRuntime.steer,0,6*dt);
       driveRuntime.braking=false;
       driveRuntime.handbrake=false;
-      window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:false,handbrake:false});
+      driveRuntime.blocked=false;
+      window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:false,handbrake:false,blocked:false});
       requestAnimationFrame(updateVehiclePhysics);
       return;
     }
@@ -249,14 +275,26 @@
       const nx=Math.max(3,Math.min(94,state.x+Math.cos(rad)*driveRuntime.speed*dt));
       const ny=Math.max(8,Math.min(88,state.y+Math.sin(rad)*driveRuntime.speed*dt));
       if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny,true)){
-        driveRuntime.speed*=.18;
+        const canX=window.TGG3D.canMovePercent(nx,state.y,true);
+        const canY=window.TGG3D.canMovePercent(state.x,ny,true);
+        if(canX||canY){
+          if(canX)state.x=nx;
+          if(canY)state.y=ny;
+          driveRuntime.speed*=.72;
+        }else{
+          driveRuntime.speed*=.16;
+        }
+        driveRuntime.blocked=true;
       }else{
         state.x=nx;
         state.y=ny;
+        driveRuntime.blocked=false;
       }
+    }else{
+      driveRuntime.blocked=false;
     }
 
-    window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:driveRuntime.braking,handbrake:driveRuntime.handbrake});
+    window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:driveRuntime.braking,handbrake:driveRuntime.handbrake,blocked:driveRuntime.blocked});
     update();
     requestAnimationFrame(updateVehiclePhysics);
   }
@@ -485,6 +523,7 @@
     $('interact3dBtn')?.addEventListener('click',()=>window.TGG3D?.interactNearest?.());
     $('camera3dBtn')?.addEventListener('click',()=>window.TGG3D?.cycleCamera?.());
     $('hornBtn')?.addEventListener('click',horn);
+    $('recoverCarBtn')?.addEventListener('click',recoverVehicle);
     const driftBtn=$('driftBtn');
     if(driftBtn){
       driftBtn.addEventListener('pointerdown',e=>{if(state.inVehicle){e.preventDefault();setDriveKey('handbrake',true);driftBtn.setPointerCapture?.(e.pointerId)}});
@@ -547,6 +586,7 @@
       if(k==='f'){e.preventDefault();window.TGG3D?.interactNearest?.();return;}
       if(k==='c'){e.preventDefault();window.TGG3D?.cycleCamera?.();return;}
       if(k==='h'){e.preventDefault();horn();return;}
+      if(k==='r'&&state.inVehicle){e.preventDefault();recoverVehicle();return;}
       if(k==='Shift'){
         if(!state.inVehicle){e.preventDefault();setWalkKey('sprint',true);}
         return;
@@ -615,7 +655,7 @@
     getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,
     driveVehicle,setDriveKey,getDrivingState:()=>({...driveRuntime}),setDriveTuning,getDriveTuning,
     setWalkKey,getWalkingState:()=>({...walkRuntime}),setWalkTuning,getWalkTuning,
-    horn,mission,toggleVehicle,resetForNewGame
+    horn,mission,toggleVehicle,recoverVehicle,resetForNewGame
   };
 
   load();

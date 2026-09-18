@@ -5,12 +5,12 @@
   let activeScreen='menu';
   const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false};
   const driveRuntime={speed:0,steer:0,lastTime:performance.now(),braking:false,handbrake:false};
-  const DRIVE={maxForward:10,maxReverse:-4.5,accel:7.5,reverseAccel:5.5,brake:12,coast:3.4,turnRate:112};
+  const DRIVE={maxForward:9.4,maxReverse:-4.2,accel:6.6,reverseAccel:5.0,brake:11.2,coast:2.8,turnRate:92};
 
   const walkKeys={up:false,down:false,left:false,right:false,sprint:false};
   const walkReleaseTimers={up:null,down:null,left:null,right:null,sprint:null};
   const walkRuntime={vx:0,vy:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false};
-  const WALK={walkSpeed:6.8,sprintSpeed:10.5,accel:27,decel:33,turnResponse:15,stopEpsilon:.025};
+  const WALK={walkSpeed:6.4,sprintSpeed:9.8,accel:22,decel:27,turnResponse:11.5,stopEpsilon:.025};
   function setDriveTuning(next={}){
     ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))DRIVE[k]=Number(next[k]);
@@ -234,13 +234,13 @@
     }
 
     const steerTarget=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
-    driveRuntime.steer=approach(driveRuntime.steer,Math.max(-1,Math.min(1,steerTarget)),5.5*dt);
+    driveRuntime.steer=approach(driveRuntime.steer,Math.max(-1,Math.min(1,steerTarget)),4.35*dt);
 
     const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/DRIVE.maxForward);
     if(Math.abs(driveRuntime.steer)>.01&&Math.abs(driveRuntime.speed)>.08){
       const reverseSign=driveRuntime.speed<0?-1:1;
-      const turnFactor=.25+speedRatio*.75;
-      const driftBoost=driveRuntime.handbrake?1.65:1;
+      const turnFactor=.62-speedRatio*.30;
+      const driftBoost=driveRuntime.handbrake?1.45:1;
       state.heading=(Number(state.heading||0)+driveRuntime.steer*DRIVE.turnRate*turnFactor*reverseSign*driftBoost*dt+360)%360;
     }
 

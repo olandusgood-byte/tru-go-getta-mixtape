@@ -88,6 +88,145 @@ async function restoreOwnerSessionFromRefreshToken() {
 }
 
 app.get('/health', (_req, res) => res.json({ ok: true, version: RUNTIME_VERSION, worker_configured: Boolean(workerId && workerToken), session_bootstrapped: Boolean(ownerSession?.access_token), capabilities: { playwright:true, chromium:true, protected_audio_runtime:true, multi_flow_browser_runtime:true }, last }));
+
+const QA_API_KEY = process.env.TGG_QA_API_KEY || '';
+
+function qaAuthorized(req) {
+  const presented = String(req.headers['x-tgg-qa-key'] || '');
+  if (!QA_API_KEY || !presented) return false;
+  const a = Buffer.from(QA_API_KEY);
+  const b = Buffer.from(presented);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function allowedGameTarget(raw) {
+  try {
+    const url = new URL(String(raw || ''));
+    if (url.protocol !== 'https:') return null;
+    const host = url.hostname.toLowerCase();
+    if (!/^tru-go-getta-world(?:-v\d+(?:-rc|-staging)?)?\.onrender\.com$/.test(host)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+async function runGameSmokeTarget(target) {
+  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+  const started = Date.now();
+  const consoleErrors = [];
+  const pageErrors = [];
+  const failedResources = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    const page = await context.newPage();
+    page.on('console', msg => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text().slice(0, 500));
+    });
+    page.on('pageerror', err => pageErrors.push(String(err?.message || err).slice(0, 500)));
+    page.on('response', response => {
+      if (response.status() >= 400) failedResources.push({ url: response.url(), status: response.status() });
+    });
+
+    const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.waitForTimeout(1200);
+
+    const title = await page.title();
+    const releaseQa = await page.evaluate(() => {
+      try {
+        if (window.TGGReleaseQA && typeof window.TGGReleaseQA.run === 'function') {
+          return window.TGGReleaseQA.run();
+        }
+        return null;
+      } catch (error) {
+        return { passed: false, error: error?.message || String(error), checks: [] };
+      }
+    });
+
+    const foundationQa = await page.evaluate(() => {
+      try {
+        if (window.TGGQA && typeof window.TGGQA.run === 'function') return window.TGGQA.run();
+        return window.TGGQA || null;
+      } catch (error) {
+        return { passed: false, error: error?.message || String(error) };
+      }
+    });
+
+    const dom = await page.evaluate(() => ({
+      title: document.title,
+      menu: Boolean(document.getElementById('menu')),
+      createPlayer: Boolean(document.getElementById('newGame')),
+      gameScreen: Boolean(document.getElementById('game')),
+      businessBoard: Boolean(document.getElementById('businessBoard')),
+      businessApi: Boolean(window.TGGBusiness),
+      worldSyncApi: Boolean(window.TGGWorldSync)
+    }));
+
+    const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
+    await context.close();
+
+    const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
+    const mobilePage = await mobile.newPage();
+    const mobileResponse = await mobilePage.goto(target, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await mobilePage.waitForTimeout(700);
+    const mobileLayout = await mobilePage.evaluate(() => ({
+      width: innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      overflowX: document.documentElement.scrollWidth > innerWidth + 1
+    }));
+    await mobile.close();
+
+    const releasePassed = releaseQa?.passed === true;
+    const pass =
+      (response?.status() || 0) >= 200 &&
+      (response?.status() || 0) < 400 &&
+      (mobileResponse?.status() || 0) >= 200 &&
+      (mobileResponse?.status() || 0) < 400 &&
+      releasePassed &&
+      pageErrors.length === 0 &&
+      consoleErrors.length === 0 &&
+      failedResources.length === 0 &&
+      mobileLayout.overflowX === false &&
+      dom.menu && dom.createPlayer && dom.gameScreen && dom.businessBoard && dom.businessApi && dom.worldSyncApi;
+
+    return {
+      ok: pass,
+      target,
+      version: RUNTIME_VERSION,
+      http_status: response?.status() || 0,
+      mobile_http_status: mobileResponse?.status() || 0,
+      title,
+      release_qa_passed: releasePassed,
+      release_qa_failed_checks: Array.isArray(releaseQa?.checks) ? releaseQa.checks.filter(x => !x.pass).slice(0, 20) : [],
+      foundation_qa: foundationQa,
+      dom,
+      console_errors: consoleErrors,
+      page_errors: pageErrors,
+      failed_resources: failedResources.slice(0, 20),
+      mobile: mobileLayout,
+      screenshot_sha256: sha256(screenshot),
+      elapsed_ms: Date.now() - started
+    };
+  } finally {
+    await browser.close();
+  }
+}
+
+app.post('/qa/game-smoke', async (req, res) => {
+  if (!qaAuthorized(req)) return res.status(403).json({ ok: false, error: 'qa_auth_required' });
+  const target = allowedGameTarget(req.body?.target);
+  if (!target) return res.status(400).json({ ok: false, error: 'target_not_allowed' });
+  try {
+    const result = await runGameSmokeTarget(target);
+    last = { status: result.ok ? 'game_smoke_passed' : 'game_smoke_failed', target, updated_at: new Date().toISOString() };
+    return res.status(result.ok ? 200 : 422).json(result);
+  } catch (error) {
+    const failure = { ok: false, error: error?.message || String(error), target, updated_at: new Date().toISOString() };
+    last = { status: 'game_smoke_error', ...failure };
+    return res.status(500).json(failure);
+  }
+});
+
 app.get('/enroll', (_req, res) => res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><title>TGG Browser Worker Enrollment</title><style>body{font-family:Arial;background:#080808;color:#fff;max-width:720px;margin:50px auto;padding:24px}button{background:#e50914;color:#fff;border:0;padding:12px 18px;border-radius:8px;font-weight:700}input{display:block;width:100%;margin:8px 0;padding:12px;background:#151515;color:#fff;border:1px solid #333;border-radius:8px;box-sizing:border-box}pre{white-space:pre-wrap;background:#111;padding:15px;border-radius:8px}</style></head><body><h1>TGG Self-Hosted Browser Worker</h1><p>Owner-only enrollment. The authenticated Supabase session is handed directly to this worker and its refresh session is securely persisted for worker restarts.</p><input id="email" type="email" placeholder="Owner email"><input id="password" type="password" placeholder="Owner password"><button id="go">Enroll Worker</button><pre id="out">Waiting…</pre><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>(async()=>{const S=window.supabase.createClient(${JSON.stringify(SUPABASE_URL)},${JSON.stringify(SUPABASE_KEY)});document.querySelector('#go').onclick=async()=>{const out=document.querySelector('#out');try{const email=document.querySelector('#email').value.trim(),password=document.querySelector('#password').value;const a=await S.auth.signInWithPassword({email,password});if(a.error)throw a.error;const sess=a.data?.session;if(!sess)throw new Error('No authenticated session returned.');const r=await S.rpc('tgg_browser_cert_worker_enroll',{p_worker_name:'tgg-render-browser-worker',p_capabilities:{playwright:true,chromium:true,protected_audio_runtime:true,multi_flow_browser_runtime:true,command_center_runtime:true,creator_profile_runtime:true,expansion_runtime:true,growth_runtime:true,messenger_runtime:true,music_library_runtime:true,notifications_runtime:true,release_pro_runtime:true,session_recovery_runtime:true,supporters_runtime:true},p_metadata:{host:'render',version:${JSON.stringify(RUNTIME_VERSION)}}});if(r.error)throw r.error;const d=r.data&&Array.isArray(r.data)?r.data[0]:r.data;if(!d?.worker_id||!d?.worker_token)throw new Error('Enrollment did not return worker credentials.');const b=await fetch('/bootstrap',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({worker_id:d.worker_id,worker_token:d.worker_token,access_token:sess.access_token,refresh_token:sess.refresh_token})});const bj=await b.json();if(!b.ok)throw new Error(bj.error||'Worker bootstrap failed');out.textContent='Worker enrolled and browser session bootstrapped. Refresh session persisted. TGG certification started.'}catch(e){out.textContent='ERROR: '+(e.message||String(e))}}})();</script></body></html>`));
 app.post('/bootstrap', async (req, res) => { const authz = await authorizeBootstrap(req.body, { verifyOwner: verifyOwnerSession, verifyWorker: verifyWorkerCredential }); if (!authz.ok) return res.status(authz.error === 'invalid_bootstrap' ? 400 : 403).json({ error: authz.error }); const { worker_id:id, worker_token:token, access_token:access, refresh_token:refresh }=authz.value; workerId=id; workerToken=token; ownerSession={access_token:access,refresh_token:refresh}; try { await persistOwnerRefreshToken(id,token,refresh); } catch (_error) { return res.status(500).json({ error:'owner_session_persist_failed' }); } last={status:'bootstrapped',worker_id:id,updated_at:new Date().toISOString()}; scheduleBootstrapLoop(loop); return res.json({ok:true,worker_id:id,version:RUNTIME_VERSION,certification_started:true,session_persisted:true}); });
 async function complete(job, verdict, result, evidence) { const r=await rpc.rpc('tgg_browser_cert_worker_complete',{p_worker_id:workerId,p_token:workerToken,p_job_id:job.id,p_lease_token:job.lease_token,p_verdict:verdict,p_result:result,p_evidence:evidence}); if(r.error)throw r.error; return r.data; }

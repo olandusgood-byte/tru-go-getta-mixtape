@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.19",
-  "module": "GAME-V1.19-QA",
-  "name": "NPC Dialogue States + Relationship Memory",
+  "version": "1.20",
+  "module": "GAME-V1.20-QA",
+  "name": "NPC Favor Hooks + Contact Opportunities",
   "checks": [
     "storage",
     "game_api",
@@ -63,7 +63,14 @@
     "repeat_talk_no_progress",
     "relationship_no_rewards",
     "trusted_contact_achievement",
-    "single_memory_store"
+    "single_memory_store",
+    "contact_ops_api",
+    "contact_ops_catalog",
+    "relationship_gated_opportunities",
+    "event_run_completion_hook",
+    "contact_ops_no_bonus_rewards",
+    "opportunities_single_memory_store",
+    "first_opportunity_achievement"
   ],
   "workflow": [
     "BUILD",
@@ -76,6 +83,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.20 NPC FAVOR HOOKS + CONTACT OPPORTUNITIES",
-  "verification": "passed"
+  "next": "V1.21 CONTACT CHAINS + OPPORTUNITY HISTORY",
+  "verification": "pending_ci"
 }

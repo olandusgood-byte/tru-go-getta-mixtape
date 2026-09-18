@@ -12,6 +12,8 @@ const REQUIRE_PLAYER_SMOOTH=String(process.env.TGG_3D_REQUIRE_PLAYER_SMOOTH||'0'
 const PLAYER_SMOOTH_ONLY=String(process.env.TGG_3D_PLAYER_SMOOTH_ONLY||'0')==='1';
 const WORLD_ONLY=String(process.env.TGG_3D_WORLD_ONLY||'0')==='1';
 const GAMEPAD_ONLY=String(process.env.TGG_3D_GAMEPAD_ONLY||'0')==='1';
+const DESKTOP_DRIVE_ONLY=String(process.env.TGG_3D_DESKTOP_DRIVE_ONLY||'0')==='1';
+const MOBILE_LAYOUT_ONLY=String(process.env.TGG_3D_MOBILE_LAYOUT_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -19,6 +21,49 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(MOBILE_LAYOUT_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,cssResponse]=await Promise.all([fetch(base+'/index.html'),fetch(base+'/style.css')]);
+      if(!htmlResponse.ok||!cssResponse.ok)throw new Error('Mobile layout harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status);
+      let html=await htmlResponse.text();
+      const css=await cssResponse.text();
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      await mp.setContent(html,{waitUntil:'domcontentloaded'});
+      const layout=await mp.evaluate(()=>{
+        document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
+        document.getElementById('game')?.classList.add('active');
+        const dpad=document.querySelector('.dpad')?.getBoundingClientRect();
+        const move=document.querySelector('.move-pad')?.getBoundingClientRect();
+        const deck=document.querySelector('.action-deck')?.getBoundingClientRect();
+        const buttons=[...document.querySelectorAll('.action-deck .actions button')].map(b=>b.getBoundingClientRect());
+        return {
+          width:innerWidth,
+          scrollWidth:document.documentElement.scrollWidth,
+          overflowX:document.documentElement.scrollWidth>innerWidth+1,
+          dpad:dpad?{w:dpad.width,h:dpad.height,left:dpad.left,right:dpad.right}:null,
+          move:move?{top:move.top,bottom:move.bottom,left:move.left,right:move.right}:null,
+          deck:deck?{top:deck.top,bottom:deck.bottom,left:deck.left,right:deck.right}:null,
+          actionCount:buttons.length,
+          minButtonHeight:buttons.length?Math.min(...buttons.map(x=>x.height)):0,
+          controlText:document.querySelector('.move-pad .control-title small')?.textContent||''
+        };
+      });
+      const checks=[];
+      const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      record('mobile-source-http',htmlResponse.status===200&&cssResponse.status===200,'html='+htmlResponse.status+',css='+cssResponse.status);
+      record('mobile-no-horizontal-overflow',layout.overflowX===false,JSON.stringify(layout));
+      record('mobile-dpad-contained',!!layout.dpad&&layout.dpad.left>=0&&layout.dpad.right<=layout.width+1&&layout.dpad.w>=160,JSON.stringify(layout.dpad));
+      record('mobile-controls-stacked',!!layout.move&&!!layout.deck&&layout.deck.top>=layout.move.bottom-2,JSON.stringify({move:layout.move,deck:layout.deck}));
+      record('mobile-action-buttons-readable',layout.actionCount>=12&&layout.minButtonHeight>=50,JSON.stringify({count:layout.actionCount,minHeight:layout.minButtonHeight}));
+      record('mobile-control-help',/hold|sprint|gamepad/i.test(layout.controlText),layout.controlText);
+      result={ok:checks.every(x=>x.pass),status:'done',mode:'mobile_layout_harness',target:TARGET,checks,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
 
     if(GAMEPAD_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
@@ -585,6 +630,22 @@ async function run(){
     record('vehicle-hud-dims-on-exit',exited.hudActive===false);
 
     console.log(JSON.stringify({tgg_3d_smoke_step:'desktop-complete'}));
+    if(DESKTOP_DRIVE_ONLY){
+      result={
+        ok:(res?.status()===200)&&checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&failedResources.length===0,
+        status:'done',
+        mode:'desktop_driving_only',
+        target:TARGET,
+        http_status:res?.status()||0,
+        checks,
+        console_errors:consoleErrors,
+        page_errors:pageErrors,
+        failed_resources:failedResources,
+        updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();return;
+    }
     const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
     const mp=await mobile.newPage();
     const mr=await mp.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});

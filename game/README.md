@@ -33,7 +33,7 @@ CREATE PLAYER → ENTER CITY → MOVE → TALK TO M → TAKE MISSION → MOVE TO
 - [x] Cash rewards
 - [x] XP and levels
 - [x] Save/load via localStorage
-- [ ] Automated browser smoke test
+- [x] Automated browser smoke test
 - [ ] Release checkpoint
 
 No external libraries are required for the foundation.

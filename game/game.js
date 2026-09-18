@@ -15,6 +15,7 @@
     window.TGGInventory?.render?.();
     window.TGGCrew?.render?.();
     window.TGGEvents?.render?.();
+    if(id==='game')requestAnimationFrame(()=>window.TGGWorld3D?.resize?.());
   }
 
   function toast(t){

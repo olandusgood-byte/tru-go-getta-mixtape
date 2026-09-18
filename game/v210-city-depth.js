@@ -115,7 +115,7 @@
       s.green.material.emissiveIntensity=green?5.8:.18;
     });
     billboards.forEach((b,i)=>{b.children[1].material.emissiveIntensity=.38+Math.sin(t*.0018+i)*.12});
-    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.11 LIVING TRAFFIC';
+    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.12 MEGA 100';
     requestAnimationFrame(animate);
   }
 

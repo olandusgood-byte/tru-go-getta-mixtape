@@ -194,6 +194,15 @@
   const car=makeCar();
   car.position.set(5.7,0,4.6);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
   const vehicleDynamics={speed:0,steer:0,braking:false,handbrake:false};
+  const playerDynamics={speed:0,vx:0,vy:0,sprinting:false,blocked:false};
+  function setPlayerDynamics(next={}){
+    playerDynamics.speed=Math.max(0,Number(next.speed)||0);
+    playerDynamics.vx=Number(next.vx)||0;
+    playerDynamics.vy=Number(next.vy)||0;
+    playerDynamics.sprinting=!!next.sprinting;
+    playerDynamics.blocked=!!next.blocked;
+    return {...playerDynamics};
+  }
   function setVehicleDynamics(next={}){
     vehicleDynamics.speed=Number(next.speed)||0;
     vehicleDynamics.steer=Math.max(-1,Math.min(1,Number(next.steer)||0));
@@ -452,23 +461,31 @@
       syncCarFromState(s);
     }else{
       player.visible=true;
-      player.position.x=THREE.MathUtils.lerp(player.position.x,p.x,.18);
-      player.position.z=THREE.MathUtils.lerp(player.position.z,p.z,.18);
-      player.rotation.y=-((Number(s.heading)||0)*Math.PI/180)+Math.PI/2;
+      const followRate=playerDynamics.sprinting?.26:.21;
+      player.position.x=THREE.MathUtils.lerp(player.position.x,p.x,followRate);
+      player.position.z=THREE.MathUtils.lerp(player.position.z,p.z,followRate);
+      const desiredRot=-((Number(s.heading)||0)*Math.PI/180)+Math.PI/2;
+      let rotationDelta=((desiredRot-player.rotation.y+Math.PI*3)%(Math.PI*2))-Math.PI;
+      player.rotation.y+=rotationDelta*Math.min(1,dt*(playerDynamics.sprinting?16:12));
     }
 
     const vx=player.position.x-lastPlayerX,vz=player.position.z-lastPlayerZ;
-    const speed=Math.min(1,Math.hypot(vx,vz)*8);
+    const measuredSpeed=Math.hypot(vx,vz)*8;
+    const speed=Math.min(1,Math.max(measuredSpeed,playerDynamics.speed/10.5));
     lastPlayerX=player.position.x;lastPlayerZ=player.position.z;
     const parts=player.userData.parts;
     if(parts){
-      if(speed>.025&&!s.inVehicle)walkPhase+=dt*(7+speed*8);
-      const swing=!s.inVehicle?Math.sin(walkPhase)*.72*speed:0;
-      parts.leftArm.rotation.x=THREE.MathUtils.lerp(parts.leftArm.rotation.x,swing,.22);
-      parts.rightArm.rotation.x=THREE.MathUtils.lerp(parts.rightArm.rotation.x,-swing,.22);
-      parts.leftLeg.rotation.x=THREE.MathUtils.lerp(parts.leftLeg.rotation.x,-swing*.85,.22);
-      parts.rightLeg.rotation.x=THREE.MathUtils.lerp(parts.rightLeg.rotation.x,swing*.85,.22);
-      parts.body.rotation.z=THREE.MathUtils.lerp(parts.body.rotation.z,Math.sin(walkPhase*2)*.025*speed,.18);
+      if(speed>.025&&!s.inVehicle)walkPhase+=dt*((playerDynamics.sprinting?11:7)+speed*(playerDynamics.sprinting?10:8));
+      const stride=playerDynamics.sprinting?1.08:.72;
+      const swing=!s.inVehicle?Math.sin(walkPhase)*stride*speed:0;
+      parts.leftArm.rotation.x=THREE.MathUtils.lerp(parts.leftArm.rotation.x,swing,.24);
+      parts.rightArm.rotation.x=THREE.MathUtils.lerp(parts.rightArm.rotation.x,-swing,.24);
+      parts.leftLeg.rotation.x=THREE.MathUtils.lerp(parts.leftLeg.rotation.x,-swing*(playerDynamics.sprinting?.95:.85),.24);
+      parts.rightLeg.rotation.x=THREE.MathUtils.lerp(parts.rightLeg.rotation.x,swing*(playerDynamics.sprinting?.95:.85),.24);
+      const sideLean=!s.inVehicle?Math.max(-.08,Math.min(.08,-playerDynamics.vy*.004+playerDynamics.vx*.0025)):0;
+      parts.body.rotation.z=THREE.MathUtils.lerp(parts.body.rotation.z,sideLean+Math.sin(walkPhase*2)*.025*speed,.2);
+      parts.body.position.y=THREE.MathUtils.lerp(parts.body.position.y,2.05+(speed>.04?Math.abs(Math.sin(walkPhase))*0.07*(playerDynamics.sprinting?1.45:1):0),.22);
+      parts.head.rotation.z=THREE.MathUtils.lerp(parts.head.rotation.z,-sideLean*.45,.16);
     }
 
     const visualSpeed=s.inVehicle?vehicleDynamics.speed:0;
@@ -492,7 +509,12 @@
     traffic.forEach(v=>animateTraffic(v,t,dt));
 
     const subject=s.inVehicle?car.position:player.position;
-    const target=new THREE.Vector3(subject.x,s.inVehicle?1.5:2.2,subject.z);
+    const footLookX=!s.inVehicle?playerDynamics.vx*.11:0;
+    const footLookZ=!s.inVehicle?playerDynamics.vy*.11:0;
+    const target=new THREE.Vector3(subject.x+footLookX,s.inVehicle?1.5:2.2,subject.z+footLookZ);
+    const targetFov=s.inVehicle?60:(playerDynamics.sprinting?64:58);
+    camera.fov=THREE.MathUtils.lerp(camera.fov,targetFov,.08);
+    camera.updateProjectionMatrix();
     let desired;
     let cameraLerp=.09;
     if(cameraMode==='top'){
@@ -500,13 +522,13 @@
       cameraLerp=.14;
     }else if(cameraMode==='chase'){
       const heading=(Number(s.heading)||0)*Math.PI/180;
-      const chaseDistance=s.inVehicle?18:13;
+      const chaseDistance=s.inVehicle?18:(playerDynamics.sprinting?14.5:13);
       desired=new THREE.Vector3(
         target.x-Math.cos(heading)*chaseDistance,
-        target.y+(s.inVehicle?7.5:6.2),
+        target.y+(s.inVehicle?7.5:(playerDynamics.sprinting?6.8:6.2)),
         target.z-Math.sin(heading)*chaseDistance
       );
-      cameraLerp=s.inVehicle ? .16 : .12;
+      cameraLerp=s.inVehicle ? .16 : (playerDynamics.sprinting?.15:.12);
     }else{
       const cp=Math.cos(pitch),sp=Math.sin(pitch);
       const followDistance=s.inVehicle?Math.max(12,distance):distance;
@@ -570,6 +592,8 @@
     getCarHeading:()=>Number(car.userData.headingDeg)||0,
     setVehicleDynamics,
     getVehicleDynamics:()=>({...vehicleDynamics}),
+    setPlayerDynamics,
+    getPlayerDynamics:()=>({...playerDynamics}),
     setCarAppearance,
     destinations,
     nearbyDestination,

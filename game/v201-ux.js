@@ -73,7 +73,7 @@
           setPad(left,'◀','STEER L');
           setPad(right,'▶','STEER R');
           if(sprint){sprint.innerHTML='<span>●</span><small>CAR</small>';sprint.setAttribute('aria-label','Driving mode');}
-          if(moveHelp)moveHelp.textContent='Hold GAS to move. Tap or hold STEER. High-speed steering is softened automatically. Space / DRIFT button = handbrake.';
+          if(moveHelp)moveHelp.textContent='Tap or hold GAS to move • BRAKE / REV backs up • STEER stays softer at speed • Space / DRIFT = handbrake.';
         }else{
           setPad(up,'▲','FORWARD');
           setPad(down,'▼','BACK');

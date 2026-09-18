@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.20",
-  "module": "GAME-V1.20",
-  "name": "NPC Favor Hooks + Contact Opportunities Checkpoint",
+  "version": "1.28",
+  "module": "GAME-V1.28",
+  "name": "Drift + Horn Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -72,10 +72,16 @@
     "event_run_completion_hook": true,
     "contact_ops_no_bonus_rewards": true,
     "opportunities_single_memory_store": true,
-    "first_opportunity_achievement": true
+    "first_opportunity_achievement": true,
+    "handbrake_drift": true,
+    "vehicle_horn": true,
+    "drift_visuals": true,
+    "drive_state_hud": true,
+    "vehicle_physics_loop": true,
+    "starter_car_preserved": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.21 CONTACT CHAINS + OPPORTUNITY HISTORY",
-  "verification": "passed"
+  "next": "V1.29 BULK WORLD UPGRADE",
+  "verification": "pending_ci"
 }

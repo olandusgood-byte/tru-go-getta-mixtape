@@ -1,6 +1,7 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { chromium } from 'playwright';
+import { spawnSync } from 'node:child_process';
 
 const PORT = Number(process.env.PORT || 10000);
 const TARGET = String(process.env.TGG_GAME_SMOKE_TARGET || '').trim();
@@ -28,11 +29,30 @@ let result = {
   updated_at: new Date().toISOString()
 };
 
-async function runSmoke(target) {
-  const browser = await chromium.launch({
+async function launchChromium() {
+  const options = {
     headless: true,
     args: ['--no-sandbox', '--disable-dev-shm-usage']
-  });
+  };
+  try {
+    return await chromium.launch(options);
+  } catch (error) {
+    const message = error?.message || String(error);
+    if (!message.includes("Executable doesn't exist")) throw error;
+    console.log(JSON.stringify({ tgg_game_smoke_browser_repair: true, action: 'install_chromium_runtime' }));
+    const install = spawnSync('npx', ['playwright', 'install', 'chromium'], {
+      stdio: 'inherit',
+      env: process.env
+    });
+    if (install.status !== 0) {
+      throw new Error(`runtime_chromium_install_failed_${install.status ?? 'unknown'}`);
+    }
+    return await chromium.launch(options);
+  }
+}
+
+async function runSmoke(target) {
+  const browser = await launchChromium();
   const started = Date.now();
   const consoleErrors = [];
   const pageErrors = [];

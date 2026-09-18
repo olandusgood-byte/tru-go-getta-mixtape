@@ -33,19 +33,13 @@ const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 
 async function verifyOwnerSession(accessToken) {
   try {
-    const authClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${accessToken}` } }
-    });
-    const { data: userData, error: userError } = await authClient.auth.getUser(accessToken);
-    if (userError || !userData?.user?.id) return { ok: false, error: 'owner_auth_failed' };
-    const { data, error } = await authClient.rpc('tgg_browser_cert_status', { p_flow_key: null });
-    if (error) return { ok: false, error: 'owner_status_rpc_failed' };
-    if (data === null || data === undefined) return { ok: false, error: 'owner_status_empty' };
-    return { ok: true };
-  } catch (_error) {
-    return { ok: false, error: 'owner_validation_exception' };
-  }
+    const core=String(process.env.TGG_CORE_URL||'').replace(/\/$/,'');
+    if(!core)return {ok:false,error:'tgg_core_not_configured'};
+    const r=await fetch(core+'/v1/me',{headers:{Authorization:`Bearer ${accessToken}`},signal:AbortSignal.timeout(10000)});
+    if(!r.ok)return {ok:false,error:'owner_auth_failed'};
+    const body=await r.json();
+    return body?.user?.id?{ok:true,user:body.user}:{ok:false,error:'owner_auth_empty'};
+  } catch(e){return {ok:false,error:e?.message||'owner_auth_exception'};}
 }
 
 async function verifyWorkerCredential(id, token) {

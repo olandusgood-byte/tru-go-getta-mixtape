@@ -5,7 +5,7 @@ const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || '';
 const workerId = process.env.TGG_WORKER_ID || '';
 const bootstrapSecret = process.env.TGG_WORKER_BOOTSTRAP_SECRET || '';
 
-if (workerId && bootstrapSecret && SUPABASE_KEY) {
+// A persisted worker token is already authoritative. Only perform bootstrap-secret rotation when no worker token is present; this prevents a stale secret from disrupting a valid worker credential during restarts.\nif (workerId && bootstrapSecret && SUPABASE_KEY && !process.env.TGG_WORKER_TOKEN) {
   try {
     const client = createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false }

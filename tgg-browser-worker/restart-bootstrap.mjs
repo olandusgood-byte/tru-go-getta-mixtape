@@ -4,8 +4,9 @@ const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvl
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || '';
 const workerId = process.env.TGG_WORKER_ID || '';
 const bootstrapSecret = process.env.TGG_WORKER_BOOTSTRAP_SECRET || '';
+const existingWorkerToken = process.env.TGG_WORKER_TOKEN || '';
 
-// A persisted worker token is already authoritative. Only perform bootstrap-secret rotation when no worker token is present; this prevents a stale secret from disrupting a valid worker credential during restarts.\nif (workerId && bootstrapSecret && SUPABASE_KEY && !process.env.TGG_WORKER_TOKEN) {
+if (workerId && bootstrapSecret && SUPABASE_KEY && !existingWorkerToken) {
   try {
     const client = createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false }
@@ -44,10 +45,11 @@ const bootstrapSecret = process.env.TGG_WORKER_BOOTSTRAP_SECRET || '';
 } else {
   console.log(JSON.stringify({
     tgg_worker_bootstrap: true,
-    ok: false,
+    ok: Boolean(existingWorkerToken),
     worker_id_configured: Boolean(workerId),
+    worker_token_configured: Boolean(existingWorkerToken),
     bootstrap_secret_configured: Boolean(bootstrapSecret),
     supabase_key_configured: Boolean(SUPABASE_KEY),
-    reason: 'bootstrap_configuration_missing'
+    reason: existingWorkerToken ? 'existing_worker_token' : 'bootstrap_configuration_missing'
   }));
 }

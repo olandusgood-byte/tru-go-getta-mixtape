@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.31 TGG LIGHTING + MATERIAL FORGE 100';
+  const VERSION='V2.32 TGG ANIMATION FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

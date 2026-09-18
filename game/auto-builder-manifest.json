@@ -29,9 +29,13 @@
     "live_city_activity_snapshot": true,
     "property_readonly_inspect": true,
     "vehicle_readonly_inspect": true,
-    "remote_label_escape": true
+    "remote_label_escape": true,
+    "core_control_bindings": true,
+    "pause_input_lock": true,
+    "secondary_world_navigation": true,
+    "browser_smoke_automated": true
   },
-  "browserPolicy": "manual_only",
+  "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
   "next": "V1.15 CITY ACTIVITY DEPTH + SAFE LOCAL PROGRESSION"
 }

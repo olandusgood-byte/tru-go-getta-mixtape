@@ -132,3 +132,9 @@
 .district3d-badge{display:inline-flex;align-items:center;margin-left:6px;padding:4px 7px;border-radius:999px;border:1px solid #ffffff25;background:#060810d9;color:#fff;font-size:9px;letter-spacing:1px;vertical-align:middle}
 .tgg-webgl-ready .district3d-badge{border-color:#7fd0ff55;color:#bfe9ff;box-shadow:0 0 16px #56bfff14}
 
+/* V1.23 3D ANIMATION + PROXIMITY INTERACTION */
+.interaction-prompt{position:absolute;z-index:12;left:50%;bottom:22px;transform:translateX(-50%);min-width:170px;padding:12px 18px;border:1px solid #dfff73;border-radius:999px;background:linear-gradient(180deg,#d8ff59,#95bd00);color:#071000;font-weight:950;font-size:12px;letter-spacing:1.2px;box-shadow:0 12px 35px #000b,0 0 28px #c7ff0030;cursor:pointer;animation:tggPromptPulse 1.5s ease-in-out infinite}
+.interaction-prompt:hover,.interaction-prompt:focus-visible{outline:none;filter:brightness(1.08);transform:translateX(-50%) translateY(-2px)}
+@keyframes tggPromptPulse{0%,100%{box-shadow:0 12px 35px #000b,0 0 18px #c7ff0020}50%{box-shadow:0 12px 35px #000b,0 0 36px #c7ff0050}}
+@media(max-width:650px){.interaction-prompt{bottom:14px;min-width:150px;padding:11px 15px;font-size:11px}}
+

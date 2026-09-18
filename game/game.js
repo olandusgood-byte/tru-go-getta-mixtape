@@ -3,6 +3,9 @@
   const $=id=>document.getElementById(id);
   let state={name:'PLAYER',style:'Artist',x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0,inVehicle:false};
   let activeScreen='menu';
+  const driveKeys={forward:false,reverse:false,left:false,right:false};
+  const driveRuntime={speed:0,steer:0,lastTime:performance.now(),braking:false};
+  const DRIVE={maxForward:10,maxReverse:-4.5,accel:7.5,reverseAccel:5.5,brake:12,coast:3.4,turnRate:112};
   const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','avatar','park','studio','shops','home','media','businessBoard'];
 
   function show(id){
@@ -80,6 +83,9 @@
     $('missionStatus') && ($('missionStatus').textContent=state.accepted?'Mission active — finish the job.':'Find M and start a mission.');
     $('missionBtn') && ($('missionBtn').textContent=state.mission?(state.accepted?'COMPLETE MISSION':'TAKE MISSION'):'TALK TO M');
     $('vehicleBtn') && ($('vehicleBtn').textContent=state.inVehicle?'EXIT CAR':'ENTER CAR');
+    const speedMph=Math.round(Math.abs(driveRuntime.speed)*7.2);
+    $('speedValue') && ($('speedValue').textContent=String(speedMph));
+    $('gearValue') && ($('gearValue').textContent=state.inVehicle?(driveRuntime.speed<-.2?'R':driveRuntime.speed>.2?'D':'N'):'P');
   }
 
   function addXp(n){
@@ -100,32 +106,89 @@
     return {cash:state.cash,xp:state.xp,level:state.level};
   }
 
+  function setDriveKey(control,on){
+    if(!(control in driveKeys))return false;
+    driveKeys[control]=!!on;
+    return true;
+  }
+
   function driveVehicle(control){
     if(activeScreen!=='game'||!state.inVehicle)return false;
-    const turnStep=12;
-    const driveStep=3.1;
-
     if(control==='left'||control==='right'){
-      const delta=control==='left'?-turnStep:turnStep;
+      const delta=control==='left'?-8:8;
       state.heading=(Number(state.heading||0)+delta+360)%360;
+      driveRuntime.steer=control==='left'?-1:1;
       update();
       return true;
     }
-
-    if(control!=='forward'&&control!=='reverse')return false;
-    const direction=control==='reverse'?-1:1;
-    const rad=(Number(state.heading)||0)*Math.PI/180;
-    const nx=Math.max(3,Math.min(94,state.x+Math.cos(rad)*driveStep*direction));
-    const ny=Math.max(8,Math.min(88,state.y+Math.sin(rad)*driveStep*direction));
-    if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny)){
-      toast('CAR BLOCKED');
-      return false;
+    if(control==='forward'||control==='reverse'){
+      const impulse=control==='forward'?1.8:-1.25;
+      driveRuntime.speed=Math.max(DRIVE.maxReverse,Math.min(DRIVE.maxForward,driveRuntime.speed+impulse));
+      return true;
     }
-    state.x=nx;
-    state.y=ny;
+    return false;
+  }
+
+  function approach(value,target,amount){
+    if(value<target)return Math.min(target,value+amount);
+    if(value>target)return Math.max(target,value-amount);
+    return target;
+  }
+
+  function updateVehiclePhysics(now){
+    const dt=Math.min(.05,Math.max(.001,(now-driveRuntime.lastTime)/1000));
+    driveRuntime.lastTime=now;
+
+    if(activeScreen!=='game'||!state.inVehicle){
+      driveRuntime.speed=approach(driveRuntime.speed,0,DRIVE.brake*dt);
+      driveRuntime.steer=approach(driveRuntime.steer,0,6*dt);
+      driveRuntime.braking=false;
+      window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:false});
+      requestAnimationFrame(updateVehiclePhysics);
+      return;
+    }
+
+    const wantsForward=driveKeys.forward&&!driveKeys.reverse;
+    const wantsReverse=driveKeys.reverse&&!driveKeys.forward;
+    const movingForward=driveRuntime.speed>.15;
+    const movingReverse=driveRuntime.speed<-.15;
+    driveRuntime.braking=(wantsReverse&&movingForward)||(wantsForward&&movingReverse);
+
+    if(wantsForward){
+      const rate=movingReverse?DRIVE.brake:DRIVE.accel;
+      driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxForward,rate*dt);
+    }else if(wantsReverse){
+      const rate=movingForward?DRIVE.brake:DRIVE.reverseAccel;
+      driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxReverse,rate*dt);
+    }else{
+      driveRuntime.speed=approach(driveRuntime.speed,0,DRIVE.coast*dt);
+    }
+
+    const steerTarget=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
+    driveRuntime.steer=approach(driveRuntime.steer,Math.max(-1,Math.min(1,steerTarget)),5.5*dt);
+
+    const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/DRIVE.maxForward);
+    if(Math.abs(driveRuntime.steer)>.01&&Math.abs(driveRuntime.speed)>.08){
+      const reverseSign=driveRuntime.speed<0?-1:1;
+      const turnFactor=.25+speedRatio*.75;
+      state.heading=(Number(state.heading||0)+driveRuntime.steer*DRIVE.turnRate*turnFactor*reverseSign*dt+360)%360;
+    }
+
+    if(Math.abs(driveRuntime.speed)>.02){
+      const rad=(Number(state.heading)||0)*Math.PI/180;
+      const nx=Math.max(3,Math.min(94,state.x+Math.cos(rad)*driveRuntime.speed*dt));
+      const ny=Math.max(8,Math.min(88,state.y+Math.sin(rad)*driveRuntime.speed*dt));
+      if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny)){
+        driveRuntime.speed*=.18;
+      }else{
+        state.x=nx;
+        state.y=ny;
+      }
+    }
+
+    window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:driveRuntime.braking});
     update();
-    if(state.accepted&&Math.abs(state.x-72)<5&&Math.abs(state.y-36)<6)toast('You found the mission spot — hit COMPLETE MISSION');
-    return true;
+    requestAnimationFrame(updateVehiclePhysics);
   }
 
   function move(dx,dy){
@@ -152,6 +215,9 @@
     if(activeScreen!=='game')return false;
     if(state.inVehicle){
       state.inVehicle=false;
+      driveRuntime.speed=0;
+      Object.keys(driveKeys).forEach(k=>driveKeys[k]=false);
+      window.TGG3D?.setVehicleDynamics?.({speed:0,steer:0,braking:false});
       window.TGG3D?.setCameraMode?.('orbit',true);
       update();save(true);toast('EXITED STARTER CAR');
       return true;
@@ -164,8 +230,12 @@
     const carHeading=window.TGG3D?.getCarHeading?.();
     if(Number.isFinite(carHeading))state.heading=carHeading;
     state.inVehicle=true;
+    driveRuntime.speed=0;
+    driveRuntime.steer=0;
+    driveRuntime.lastTime=performance.now();
     window.TGG3D?.setCameraMode?.('chase',true);
-    update();save(true);toast('STARTER CAR — ↑ GAS • ↓ REVERSE • ←/→ STEER');
+    window.TGG3D?.setVehicleDynamics?.({speed:0,steer:0,braking:false});
+    update();save(true);toast('STARTER CAR — HOLD GAS • SMOOTH STEERING ON');
     return true;
   }
 
@@ -280,21 +350,45 @@
       if(k==='c'){e.preventDefault();window.TGG3D?.cycleCamera?.();return;}
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(k)){
         e.preventDefault();
-        move(k==='a'||k==='ArrowLeft'?-2:k==='d'||k==='ArrowRight'?2:0,k==='w'||k==='ArrowUp'?-2:k==='s'||k==='ArrowDown'?2:0);
+        if(state.inVehicle){
+          const control=(k==='w'||k==='ArrowUp')?'forward':(k==='s'||k==='ArrowDown')?'reverse':(k==='a'||k==='ArrowLeft')?'left':'right';
+          setDriveKey(control,true);
+        }else{
+          move(k==='a'||k==='ArrowLeft'?-2:k==='d'||k==='ArrowRight'?2:0,k==='w'||k==='ArrowUp'?-2:k==='s'||k==='ArrowDown'?2:0);
+        }
       }
     });
-    document.querySelectorAll('[data-key]').forEach(b=>b.addEventListener('click',()=>{
-      if(activeScreen!=='game')return;
-      const k=b.dataset.key;
-      move(k==='ArrowLeft'?-2:k==='ArrowRight'?2:0,k==='ArrowUp'?-2:k==='ArrowDown'?2:0);
-    }));
+    document.addEventListener('keyup',e=>{
+      const k=e.key.length===1?e.key.toLowerCase():e.key;
+      const control=(k==='w'||k==='ArrowUp')?'forward':(k==='s'||k==='ArrowDown')?'reverse':(k==='a'||k==='ArrowLeft')?'left':(k==='d'||k==='ArrowRight')?'right':null;
+      if(control)setDriveKey(control,false);
+    });
+    document.querySelectorAll('[data-key]').forEach(b=>{
+      const control=b.dataset.key==='ArrowUp'?'forward':b.dataset.key==='ArrowDown'?'reverse':b.dataset.key==='ArrowLeft'?'left':'right';
+      b.addEventListener('pointerdown',e=>{
+        if(activeScreen!=='game'||!state.inVehicle)return;
+        e.preventDefault();
+        setDriveKey(control,true);
+        b.setPointerCapture?.(e.pointerId);
+      });
+      const release=()=>setDriveKey(control,false);
+      b.addEventListener('pointerup',release);
+      b.addEventListener('pointercancel',release);
+      b.addEventListener('pointerleave',release);
+      b.addEventListener('click',()=>{
+        if(activeScreen!=='game'||state.inVehicle)return;
+        const k=b.dataset.key;
+        move(k==='ArrowLeft'?-2:k==='ArrowRight'?2:0,k==='ArrowUp'?-2:k==='ArrowDown'?2:0);
+      });
+    });
   }
 
   window.__tggToast=toast;
   window.TGGAutoMode={enabled:()=>true,toggle:()=>true};
-  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,driveVehicle,mission,toggleVehicle,resetForNewGame};
+  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,driveVehicle,setDriveKey,getDrivingState:()=>({...driveRuntime}),mission,toggleVehicle,resetForNewGame};
 
   load();
+  requestAnimationFrame(updateVehiclePhysics);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindControls,{once:true});
   else bindControls();
 })();

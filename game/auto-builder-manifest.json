@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.26",
-  "module": "GAME-V1.26",
-  "name": "Fixed Driving Controls Checkpoint",
+  "version": "1.27",
+  "module": "GAME-V1.27",
+  "name": "Cinematic Camera + Radar Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -112,10 +112,20 @@
     "reverse_relative_drive": true,
     "steering_heading": true,
     "steering_no_strafe": true,
-    "vehicle_collision_preserved": true
+    "vehicle_collision_preserved": true,
+    "camera_mode_api": true,
+    "camera_orbit_mode": true,
+    "camera_chase_mode": true,
+    "camera_top_mode": true,
+    "camera_c_key": true,
+    "live_radar": true,
+    "radar_player_tracking": true,
+    "radar_car_tracking": true,
+    "radar_five_hubs": true,
+    "camera_radar_no_rewards": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.27 CINEMATIC CAMERA + RADAR",
-  "verification": "passed"
+  "next": "V1.28 SMOOTH DRIVING + LIVING TRAFFIC",
+  "verification": "pending_ci"
 }

@@ -1,46 +1,36 @@
-# TRU GO GETTA Game V1.20
+# TRU GO GETTA Game V1.28
 
-V1.20 turns earned NPC relationships into local contact opportunities that reuse existing city events instead of creating a second reward system.
+V1.28 adds verified driving feel upgrades on top of the existing 3D city and starter-car stack.
 
-## Contact opportunities
+## Driving upgrades
 
-- Manager Introduction — M — requires TRUSTED — complete through Release Rush
-- Producer Lock-In — Kane — requires FAMILIAR — complete through Studio Pop-In
-- DJ Test Spin — DJ V — requires FAMILIAR — complete through Release Rush
-
-Opportunity state is stored inside the existing `tgg-route-memory-v1` object under `opportunities`.
-
-## Completion rules
-
-Starting an opportunity records the linked event's current run count. The opportunity only completes after that existing event successfully runs again and its run count advances.
-
-The opportunity layer itself:
-
-- awards no cash;
-- awards no XP;
-- awards no reputation;
-- calls no economy reward API;
-- creates no separate localStorage key;
-- adds no remote mutation API.
+- SPACE handbrake state
+- handbrake steering boost for tighter drift rotation
+- visible skid-mark fade-in while drifting above speed threshold
+- H horn input with in-browser audio fallback
+- live DRIVE MODE HUD: PARK / IDLE / CRUISE / BRAKE / DRIFT
+- starter car, chase camera, radar, speedometer, steering, headlights and brake lights preserved
 
 ## Verification
 
-- [x] Manager Introduction unlocks at M = Trusted
-- [x] Producer Lock-In unlocks at Kane = Familiar
-- [x] DJ Test Spin remains locked while DJ V = Intro
-- [x] opportunity UI auto-renders in City Events
-- [x] Manager Introduction starts successfully
-- [x] Release Rush completes Manager Introduction
-- [x] completion adds exactly the existing 450 cash
-- [x] no opportunity bonus payout
-- [x] no separate opportunity save store
-- [x] Opportunity Knocks achievement unlocks
+- [x] V1.28 static contract
+- [x] starter car exists and is reachable
+- [x] enter car switches to chase camera
+- [x] forward driving exceeds drift threshold
+- [x] SPACE sets handbrake in authoritative driving state
+- [x] handbrake state syncs into 3D vehicle dynamics
+- [x] HUD reports DRIFT
+- [x] skid visuals activate
+- [x] H horn returns success and shows HONK
+- [x] handbrake releases cleanly
+- [x] exit car restores orbit camera
+- [x] mission and save controls remain present
 - [x] Static CI PASS
-- [x] Chromium Smoke PASS on `6095ecc`
+- [x] Chromium Smoke PASS on `11a2944`
 - [x] production remains gated
 
 ## Release status
 
-**V1.20-NPC-FAVOR-HOOKS-CONTACT-OPPORTUNITIES-VERIFIED.**
+**V1.28-DRIFT-HORN-VERIFIED.**
 
-Next internal development layer: **V1.21 Contact Chains + Opportunity History**.
+Next internal development layer: **V1.29 Bulk World Upgrade**.

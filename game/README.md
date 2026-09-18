@@ -1,48 +1,45 @@
-# TRU GO GETTA Game V1.30
+# TRU GO GETTA Game V1.31
 
-V1.30 promotes the City Life 3D experiment into the verified game stack on top of V1.29.
+V1.31 turns the V1.30 living-city layer into an interactive street layer without adding another economy or remote mutation path.
 
-## City Life 3D
+## Street Life
 
-The city now includes real WebGL interior scenes for:
+- six ambient pedestrian contacts are proximity-aware;
+- walking near a local surfaces a contextual F-to-talk prompt;
+- talks persist in `tgg-street-life-v1`;
+- repeated street conversations record local contact history but add no cash, XP or reputation;
+- driving near ambient traffic surfaces distance awareness;
+- horn input can trigger a nearby-traffic reaction state;
+- street prompts remain contextual instead of crowding the permanent controller deck.
 
-- My Apartment
-- Media District
-- Shop District
-- The Park
-- Recording Studio
-- TGG Custom Garage
+## Preserved 3D stack
 
-The V1.29 garage paint, wheel finish, handling presets, drift/horn controls and local Three.js runtime remain intact.
-
-## Navigation + living city
-
-- live navigation HUD points to an accepted mission or nearest city destination;
-- six animated pedestrians move through city routes;
-- six ambient traffic vehicles continuously travel the street grid;
-- radar, cinematic camera modes and driving systems remain active;
-- traffic and pedestrians are presentation-only and do not create a second save, economy or reward authority.
+- local Three.js runtime;
+- smooth car controls, drift, horn and speedometer;
+- cinematic camera + radar;
+- garage customization and handling presets;
+- 3D apartment, media, shops, park, garage and recording studio;
+- live mission navigation;
+- six ambient traffic vehicles and six pedestrians;
+- mission, save/continue, city events, circuits, story, NPC memory and contact opportunities.
 
 ## Verification
 
-- [x] V1.30 static contract
-- [x] local Three.js revision 152
-- [x] Apartment 3D canvas
-- [x] Media 3D canvas
-- [x] Shops 3D canvas
-- [x] Park 3D canvas
-- [x] Garage 3D preserved
-- [x] Recording Studio 3D preserved
-- [x] live mission navigation
-- [x] six ambient traffic vehicles present and moving
-- [x] six animated pedestrians present
-- [x] mission and save controls preserved
-- [x] Static CI PASS on `1ae5566`
-- [x] Chromium Smoke PASS on `1ae5566`
+- [x] Street Life API
+- [x] six local street contacts
+- [x] pedestrian proximity talk
+- [x] contact memory persistence
+- [x] street talk adds no cash or XP
+- [x] traffic proximity HUD
+- [x] horn reaction
+- [x] horn reaction adds no reward
+- [x] mission + save controls preserved
+- [x] Static CI PASS on `42348c1`
+- [x] Chromium Smoke PASS on `42348c1`
 - [x] production remains gated
 
 ## Release status
 
-**V1.30-CITY-LIFE-3D-VERIFIED.**
+**V1.31-STREET-LIFE-TRAFFIC-PROXIMITY-VERIFIED.**
 
-Next internal development layer: **V1.31 Traffic Proximity + Street Interactions**.
+Next internal development layer: **V1.32 Street Events + Crowd Reactions**.

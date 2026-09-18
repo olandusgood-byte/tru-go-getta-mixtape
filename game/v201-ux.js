@@ -8,7 +8,7 @@
     if(topbar && !document.querySelector('.v201-badge')){
       const badge=document.createElement('span');
       badge.className='v201-badge';
-      badge.textContent='V2.06 DRIVE + JOBS';
+      badge.textContent='V2.07 BOOST';
       const hud=$('hud');
       topbar.insertBefore(badge,hud||null);
     }

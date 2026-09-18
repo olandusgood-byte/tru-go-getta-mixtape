@@ -1,9 +1,9 @@
 name: Game Static Gate
-# V1.20 contact-opportunity isolated validation
+# V1.20 playtest UX hotfix validation
 
 on:
   push:
-    branches: [feat/game-v1-20-contact-opportunities-20260918]
+    branches: [fix/game-v120-playtest-ux-20260918]
     paths:
       - 'game/**'
       - '.github/workflows/game-static-gate.yml'

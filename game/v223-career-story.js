@@ -110,7 +110,10 @@
 
   function sync(){
     install();
-    CHAPTERS.forEach(claim);
+    for(const c of CHAPTERS){
+      if(!isComplete(c))break;
+      claim(c);
+    }
     const next=activeChapter();
     const changed=state.activeId!==next.id;
     state.activeId=next.id;

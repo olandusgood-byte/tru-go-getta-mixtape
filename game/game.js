@@ -1,7 +1,7 @@
 (() => {
   const KEY='tgg-game-v1';
   const $=id=>document.getElementById(id);
-  let state={name:'PLAYER',style:'Artist',x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0};
+  let state={name:'PLAYER',style:'Artist',x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0,inVehicle:false};
   let activeScreen='menu';
   const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','avatar','park','studio','shops','home','media','businessBoard'];
 
@@ -79,6 +79,7 @@
     window.TGGAvatar?.renderMini?.();
     $('missionStatus') && ($('missionStatus').textContent=state.accepted?'Mission active — finish the job.':'Find M and start a mission.');
     $('missionBtn') && ($('missionBtn').textContent=state.mission?(state.accepted?'COMPLETE MISSION':'TAKE MISSION'):'TALK TO M');
+    $('vehicleBtn') && ($('vehicleBtn').textContent=state.inVehicle?'EXIT CAR':'ENTER CAR');
   }
 
   function addXp(n){
@@ -101,11 +102,35 @@
 
   function move(dx,dy){
     if(activeScreen!=='game')return false;
-    if(dx||dy)state.heading=Math.atan2(dy,dx)*180/Math.PI;
-    state.x=Math.max(3,Math.min(94,state.x+dx));
-    state.y=Math.max(8,Math.min(88,state.y+dy));
+    const speed=state.inVehicle?1.75:1;
+    const sx=dx*speed,sy=dy*speed;
+    if(sx||sy)state.heading=Math.atan2(sy,sx)*180/Math.PI;
+    const nx=Math.max(3,Math.min(94,state.x+sx));
+    const ny=Math.max(8,Math.min(88,state.y+sy));
+    if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny)){
+      toast(state.inVehicle?'CAR BLOCKED':'CAN’T WALK THROUGH THAT');
+      return false;
+    }
+    state.x=nx;state.y=ny;
     update();
     if(state.accepted&&Math.abs(state.x-72)<5&&Math.abs(state.y-36)<6)toast('You found the mission spot — hit COMPLETE MISSION');
+    return true;
+  }
+
+  function toggleVehicle(){
+    if(activeScreen!=='game')return false;
+    if(state.inVehicle){
+      state.inVehicle=false;
+      update();save(true);toast('EXITED STARTER CAR');
+      return true;
+    }
+    const d=window.TGG3D?.distanceToCarPercent?.(state);
+    if(Number.isFinite(d) && d>8){
+      toast('MOVE CLOSER TO THE STARTER CAR');
+      return false;
+    }
+    state.inVehicle=true;
+    update();save(true);toast('STARTER CAR — DRIVE MODE ON');
     return true;
   }
 
@@ -135,7 +160,7 @@
     state={
       name:($('stageName')?.value.trim()||'PLAYER'),
       style:$('styleChoice')?.value||'Artist',
-      x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0
+      x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0,inVehicle:false
     };
     update();
     save(true);
@@ -163,6 +188,7 @@
       window.TGGAvatar?.open?.();
     });
     $('missionBtn')?.addEventListener('click',mission);
+    $('vehicleBtn')?.addEventListener('click',toggleVehicle);
     $('saveBtn')?.addEventListener('click',()=>save(false));
     $('pauseBtn')?.addEventListener('click',()=>show('pause'));
     $('resumeBtn')?.addEventListener('click',()=>show('game'));
@@ -212,6 +238,7 @@
       const typing=t instanceof HTMLInputElement||t instanceof HTMLTextAreaElement||t instanceof HTMLSelectElement||t?.isContentEditable;
       if(typing)return;
       const k=e.key.length===1?e.key.toLowerCase():e.key;
+      if(k==='e'){e.preventDefault();toggleVehicle();return;}
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(k)){
         e.preventDefault();
         move(k==='a'||k==='ArrowLeft'?-2:k==='d'||k==='ArrowRight'?2:0,k==='w'||k==='ArrowUp'?-2:k==='s'||k==='ArrowDown'?2:0);
@@ -226,7 +253,7 @@
 
   window.__tggToast=toast;
   window.TGGAutoMode={enabled:()=>true,toggle:()=>true};
-  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,mission,resetForNewGame};
+  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,mission,toggleVehicle,resetForNewGame};
 
   load();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindControls,{once:true});

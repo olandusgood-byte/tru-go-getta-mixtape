@@ -25,7 +25,7 @@
     });
     return {...WALK};
   }
-  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','avatar','park','studio','shops','home','media','garage','businessBoard'];
+  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','worldLifeBoard','bridge','avatar','park','studio','shops','home','media','garage','businessBoard'];
 
   function show(id){
     if(id!=='game'){
@@ -34,13 +34,13 @@
     }
     activeScreen=id;
     screens.forEach(s=>$(s)?.classList.toggle('active',s===id));
-    $('hud')?.classList.toggle('hidden',!['game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','businessBoard'].includes(id));
+    $('hud')?.classList.toggle('hidden',!['game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','worldLifeBoard','bridge','businessBoard'].includes(id));
     window.TGGCareer?.render?.();
     window.TGGBridge?.render?.();
     window.TGGProgression?.render?.();
     window.TGGInventory?.render?.();
     window.TGGCrew?.render?.();
-    window.TGGEvents?.render?.();
+    window.TGGEvents?.render?.();\n    window.TGGWorldLife?.render?.();
   }
 
   function toast(t){
@@ -511,7 +511,7 @@
     $('homeBtn')?.addEventListener('click',()=>show('home'));
     $('mediaBtn')?.addEventListener('click',()=>show('media'));
     $('businessBtn')?.addEventListener('click',()=>window.TGGBusiness?.open?.());
-    $('garageBtn')?.addEventListener('click',()=>show('garage'));
+    $('garageBtn')?.addEventListener('click',()=>show('garage'));\n    $('worldLifeBtn')?.addEventListener('click',()=>show('worldLifeBoard'));
     $('cityAssetsBtn')?.addEventListener('click',()=>{window.TGGBusiness?.open?.();window.TGGBusiness?.loadAssets?.()});
 
     $('mediaBack')?.addEventListener('click',()=>show('game'));

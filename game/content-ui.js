@@ -17,9 +17,10 @@
     window.TGGGame?.show?.('contentBoard');
   });
   $('advanceContentBtn')?.addEventListener('click',()=>{
-    window.TGGContent?.advance?.();
-    render();
-    window.TGGGame?.refresh?.();
+    const mission=window.TGGContent?.current?.();
+    if(!mission){window.__tggToast?.('NO ACTIVE JOB');return;}
+    window.TGGGame?.show?.('game');
+    window.__tggToast?.('FOLLOW THE LIVE MARKER • COMPLETE THE JOB IN THE CITY');
   });
   $('contentBack')?.addEventListener('click',()=>window.TGGGame?.show?.('game'));
   window.TGGContentUI={render,advance:()=>{

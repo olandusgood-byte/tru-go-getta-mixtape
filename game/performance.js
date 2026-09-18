@@ -25,11 +25,25 @@
   }
   function start(route){
     if(state.completed)return false;
-    if(!window.TGGInventory?.has?.('headline-pass',1)){
-      notify('NEED INVENTORY — HEADLINE PASS');
-      return false;
-    }
     if(!['club','festival'].includes(route))return false;
+    if(!window.TGGInventory?.has?.('headline-pass',1)){
+      const story=window.TGGStoryMission04?.state;
+      const validStoryHandoff=
+        story?.accepted===true &&
+        story?.choice===route &&
+        story?.completed!==true &&
+        story?.step==='performance';
+      if(validStoryHandoff){
+        window.TGGInventory?.mission04Pack?.();
+        if(!window.TGGInventory?.has?.('headline-pass',1)){
+          window.TGGInventory?.add?.('headline-pass',1);
+        }
+      }
+      if(!window.TGGInventory?.has?.('headline-pass',1)){
+        notify('NEED INVENTORY — HEADLINE PASS');
+        return false;
+      }
+    }
     state.started=true;
     state.route=route;
     state.score=0;

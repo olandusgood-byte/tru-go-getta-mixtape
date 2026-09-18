@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.21",
-  "module": "GAME-V1.21",
-  "name": "True 3D City Foundation Checkpoint",
+  "version": "1.22",
+  "module": "GAME-V1.22",
+  "name": "3D Collision + Camera Orbit Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -79,10 +79,14 @@
     "third_person_camera": true,
     "world3d_buildings": true,
     "world3d_player_sync": true,
-    "world3d_fallback": true
+    "world3d_fallback": true,
+    "world3d_collision": true,
+    "world3d_orbit_camera": true,
+    "world3d_zoom": true,
+    "mission_path_clear": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.22 3D COLLISION + CAMERA ORBIT",
-  "verification": "passed"
+  "next": "V1.23 3D DISTRICT LANDMARKS + ENTERABLE HUBS",
+  "verification": "pending_ci"
 }

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.27 Smooth Driving Feel Playtest",
-  "base": "V1.26 Fixed Car Steering Playtest",
+  "release": "V1.28 Drift + Horn Playtest",
+  "base": "V1.27 Smooth Driving Feel Playtest",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -101,7 +101,11 @@
     "V1.27-WHEEL-STEER-ANIMATION",
     "V1.27-BODY-LEAN",
     "V1.27-HEADLIGHTS-BRAKE-LIGHTS",
-    "V1.27-SPEEDOMETER"
+    "V1.27-SPEEDOMETER",
+    "V1.28-HANDBRAKE-DRIFT",
+    "V1.28-HORN",
+    "V1.28-DRIFT-VISUALS",
+    "V1.28-DRIVE-STATE-HUD"
   ],
   "gates": [
     "runtime_api_presence",
@@ -252,10 +256,14 @@
     "vehicle_body_lean",
     "headlights",
     "brake_lights",
-    "speedometer_hud"
+    "speedometer_hud",
+    "handbrake_drift",
+    "vehicle_horn",
+    "drift_visuals",
+    "drive_state_hud"
   ],
   "static_gate": "passed",
   "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.27-SMOOTH-DRIVING-FEEL",
+  "release_checkpoint": "V1.28-DRIFT-HORN",
   "production": "playtest"
-}
+}\n

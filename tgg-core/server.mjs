@@ -188,7 +188,33 @@ app.post('/v1/realtime/publish', auth, async (req,res,next)=>{
   } catch(e){ next(e); }
 });
 
-app.get('/v1/realtime/stream', auth, async (req,res,next)=>{\n  const topic=String(req.query.topic||'');\n  const after=Math.max(0,Number(req.query.after||0));\n  if(!topic) return res.status(400).json({error:'topic_required'});\n  const client=await pool.connect();\n  let closed=false;\n  const send=(event)=>{ if(!closed) res.write('data: '+JSON.stringify(event)+'\\n\\n'); };\n  try {\n    await client.query('listen tgg_realtime');\n    res.status(200);\n    res.set({'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});\n    res.flushHeaders?.();\n    const backlog=await pool.query('select * from realtime_events where id>$1 and topic=$2 and (user_id=$3 or user_id is null) order by id asc limit 100',[after,topic,req.user.id]);\n    for(const event of backlog.rows) send({id:event.id,topic:event.topic,user_id:event.user_id,payload:event.payload,created_at:event.created_at});\n    const heartbeat=setInterval(()=>{ if(!closed) res.write(': tgg-heartbeat\\n\\n'); },25000);\n    const onNotification=(msg)=>{ try { const event=JSON.parse(msg.payload||'{}'); if(event.topic!==topic) return; if(event.user_id && event.user_id!==req.user.id) return; send(event); } catch {} };\n    client.on('notification',onNotification);\n    const close=async()=>{ if(closed) return; closed=true; clearInterval(heartbeat); client.off('notification',onNotification); try { await client.query('unlisten tgg_realtime'); } catch {} client.release(); if(!res.writableEnded) res.end(); };\n    req.on('close',close);\n  } catch(e) { client.release(); next(e); }\n});\n\napp.get('/v1/realtime/events', auth, async (req,res,next)=>{
+app.get('/v1/realtime/stream', auth, async (req,res,next)=>{
+  const topic=String(req.query.topic||'');
+  const after=Math.max(0,Number(req.query.after||0));
+  if(!topic) return res.status(400).json({error:'topic_required'});
+  const client=await pool.connect();
+  let closed=false;
+  const send=(event)=>{ if(!closed) res.write('data: '+JSON.stringify(event)+'\
+\
+'); };
+  try {
+    await client.query('listen tgg_realtime');
+    res.status(200);
+    res.set({'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});
+    res.flushHeaders?.();
+    const backlog=await pool.query('select * from realtime_events where id>$1 and topic=$2 and (user_id=$3 or user_id is null) order by id asc limit 100',[after,topic,req.user.id]);
+    for(const event of backlog.rows) send({id:event.id,topic:event.topic,user_id:event.user_id,payload:event.payload,created_at:event.created_at});
+    const heartbeat=setInterval(()=>{ if(!closed) res.write(': tgg-heartbeat\
+\
+'); },25000);
+    const onNotification=(msg)=>{ try { const event=JSON.parse(msg.payload||'{}'); if(event.topic!==topic) return; if(event.user_id && event.user_id!==req.user.id) return; send(event); } catch {} };
+    client.on('notification',onNotification);
+    const close=async()=>{ if(closed) return; closed=true; clearInterval(heartbeat); client.off('notification',onNotification); try { await client.query('unlisten tgg_realtime'); } catch {} client.release(); if(!res.writableEnded) res.end(); };
+    req.on('close',close);
+  } catch(e) { client.release(); next(e); }
+});
+
+app.get('/v1/realtime/events', auth, async (req,res,next)=>{
   try {
     const after=Number(req.query.after||0);
     const r=await pool.query(

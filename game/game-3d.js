@@ -260,6 +260,85 @@
     }
   }
 
+  const pedestrianColors=[0xff5f6d,0x5f8cff,0xffc857,0x8e6cff,0x42d392,0xf78cff];
+  const pedestrianRoutes=[
+    [[-18,-7],[-7,-7],[-7,7],[-18,7]],
+    [[7,-18],[18,-18],[18,-7],[7,-7]],
+    [[7,7],[18,7],[18,18],[7,18]],
+    [[-18,7],[-7,7],[-7,18],[-18,18]],
+    [[-30,-4],[-10,-4],[-10,4],[-30,4]],
+    [[10,-4],[30,-4],[30,4],[10,4]]
+  ];
+
+  const pedestrians=pedestrianRoutes.map((route,i)=>{
+    const human=makeHuman(pedestrianColors[i%pedestrianColors.length],i%2?0x8c5d40:0xb98562);
+    human.scale.set(.78,.78,.78);
+    human.position.set(route[0][0],0,route[0][1]);
+    human.userData.route=route;
+    human.userData.routeIndex=1;
+    human.userData.speed=.018+(i%3)*.004;
+    human.userData.walkPhase=i*.9;
+    scene.add(human);
+    return human;
+  });
+
+  const trafficDefs=[
+    {axis:'x',lane:-24,dir:1,speed:5.4,offset:4,color:0xff4d67},
+    {axis:'x',lane:24,dir:-1,speed:4.9,offset:28,color:0x5f8cff},
+    {axis:'x',lane:0,dir:1,speed:6.1,offset:58,color:0xffffff},
+    {axis:'z',lane:-24,dir:-1,speed:5.1,offset:16,color:0xffc857},
+    {axis:'z',lane:24,dir:1,speed:5.7,offset:42,color:0x42d392},
+    {axis:'z',lane:0,dir:-1,speed:4.6,offset:70,color:0xb36cff}
+  ];
+  const traffic=trafficDefs.map(def=>{
+    const vehicle=makeCar(def.color);
+    vehicle.scale.set(.72,.72,.72);
+    vehicle.userData.traffic=def;
+    scene.add(vehicle);
+    return vehicle;
+  });
+
+  function animatePedestrian(human,dt){
+    const route=human.userData.route;
+    const idx=human.userData.routeIndex||0;
+    const target=route[idx];
+    const dx=target[0]-human.position.x;
+    const dz=target[1]-human.position.z;
+    const dist=Math.hypot(dx,dz);
+    if(dist<.32){
+      human.userData.routeIndex=(idx+1)%route.length;
+      return;
+    }
+    const step=Math.min(dist,human.userData.speed*60*dt);
+    human.position.x+=dx/dist*step;
+    human.position.z+=dz/dist*step;
+    human.rotation.y=Math.atan2(dx,dz);
+    human.userData.walkPhase+=dt*7.5;
+    const p=human.userData.parts;
+    if(p){
+      const swing=Math.sin(human.userData.walkPhase)*.62;
+      p.leftArm.rotation.x=swing;
+      p.rightArm.rotation.x=-swing;
+      p.leftLeg.rotation.x=-swing*.82;
+      p.rightLeg.rotation.x=swing*.82;
+    }
+  }
+
+  function animateTraffic(vehicle,t,dt){
+    const def=vehicle.userData.traffic;
+    const span=96;
+    const raw=(t*def.speed+def.offset)%span;
+    const pos=raw-48;
+    if(def.axis==='x'){
+      vehicle.position.set(def.dir>0?pos:-pos,0,def.lane);
+      vehicle.rotation.y=def.dir>0?0:Math.PI;
+    }else{
+      vehicle.position.set(def.lane,0,def.dir>0?pos:-pos);
+      vehicle.rotation.y=def.dir>0?-Math.PI/2:Math.PI/2;
+    }
+    vehicle.userData.wheels?.forEach(w=>w.rotation.z-=dt*9*def.dir);
+  }
+
   const clock=new THREE.Clock();
   function animate(){
     requestAnimationFrame(animate);
@@ -293,6 +372,8 @@
     }
 
     car.userData.wheels?.forEach(w=>{if(s.inVehicle)w.rotation.z-=dt*10});
+    pedestrians.forEach(h=>animatePedestrian(h,dt));
+    traffic.forEach(v=>animateTraffic(v,t,dt));
 
     const subject=s.inVehicle?car.position:player.position;
     const target=new THREE.Vector3(subject.x,s.inVehicle?1.5:2.2,subject.z);
@@ -350,6 +431,8 @@
     distanceToCarPercent,
     destinations,
     nearbyDestination,
-    interactNearest
+    interactNearest,
+    pedestrians,
+    traffic
   };
 })();

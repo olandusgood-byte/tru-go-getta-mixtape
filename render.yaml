@@ -8,6 +8,7 @@ services:
     autoDeploy: true
     buildCommand: npm install
     startCommand: node tgg-core/server.mjs
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -17,6 +18,20 @@ services:
         value: "true"
       - key: TGG_TOKEN_SECRET
         generateValue: true
+
+  - type: web
+    name: tgg-self-hosted-browser-worker
+    runtime: node
+    region: oregon
+    plan: free
+    branch: main
+    autoDeploy: true
+    buildCommand: cd tgg-browser-worker && npm install && npx playwright install chromium
+    startCommand: cd tgg-browser-worker && node worker.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: TGG_CORE_URL
+        value: https://tgg-core.onrender.com
 
 databases:
   - name: tgg-core-db

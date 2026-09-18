@@ -6,7 +6,7 @@ const workerId = process.env.TGG_WORKER_ID || '';
 const bootstrapSecret = process.env.TGG_WORKER_BOOTSTRAP_SECRET || '';
 const existingWorkerToken = process.env.TGG_WORKER_TOKEN || '';
 
-if (workerId && bootstrapSecret && SUPABASE_KEY && !existingWorkerToken) {
+if (workerId && bootstrapSecret && SUPABASE_KEY) {
   try {
     const client = createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false }

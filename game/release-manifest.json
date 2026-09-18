@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
   "release": "V1.29 Bulk World Upgrade",
-  "base": "V1.28 Drift + Horn Playtest",
+  "base": "V1.28 Drift + Horn Verified",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -284,8 +284,8 @@
     "local_three_runtime",
     "studio_dom_ready_boot"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "pending_runtime_verification",
-  "release_checkpoint": "V1.29-BULK-WORLD-UPGRADE-RC2",
-  "production": "playtest"
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.29-BULK-WORLD-UPGRADE-CANDIDATE",
+  "production": "gated"
 }

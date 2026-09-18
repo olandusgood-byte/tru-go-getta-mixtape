@@ -457,6 +457,15 @@
     return count;
   }
 
+  function nearestTraffic(){
+    let best=null,bestDist=Infinity;
+    traffic.forEach(vehicle=>{
+      const d=Math.hypot(car.position.x-vehicle.position.x,car.position.z-vehicle.position.z);
+      if(d<bestDist){bestDist=d;best=vehicle}
+    });
+    return best?{vehicle:best,distance:bestDist}:null;
+  }
+
   function animateTraffic(vehicle,t,dt){
     const def=vehicle.userData.traffic;
     const span=96;
@@ -672,6 +681,7 @@
     pedestrians,
     traffic,
     reactToHorn,
+    nearestTraffic,
     cycleCamera,
     setCameraMode,
     getCameraMode,

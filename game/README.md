@@ -69,11 +69,11 @@ V1.14 does not expose:
 - [x] V1.14 remote-label escaping
 - [x] V1.14 runtime/release QA targets
 - [x] V1.14 static contract target
-- [ ] V1.14 static CI confirmation
-- [ ] V1.14 manual browser confirmation
+- [x] V1.14 static CI confirmation
+- [x] V1.14 automated Chromium confirmation
 - [ ] Trusted Creator OS transport connection
 - [ ] Production game deployment/release
 
 ## Release status
 
-**V1.14-LIVE-CITY-READONLY-ASSETS-STATIC-CANDIDATE.** The branch is intentionally not a production release. Static CI and manual browser validation remain required before this checkpoint advances.
+**V1.14-LIVE-CITY-READONLY-ASSETS-VERIFIED.** Static CI passed, the missing core control bindings were repaired, and the automated Chromium smoke gate passed on GitHub. Production remains gated; the next development layer is V1.15 City Activity Depth + Safe Local Progression.

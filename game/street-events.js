@@ -158,7 +158,8 @@
     if(active)return {ok:false,status:'event_already_active',active:{...active}};
 
     const v=variant(id);
-    const desiredCrowd=v.runs>=5?6:v.runs>=2?5:4;
+    const baseCrowd=v.runs>=5?6:v.runs>=2?5:4;
+    const desiredCrowd=Math.min(6,baseCrowd+(Number(window.TGGStreetSets?.crowdBonus?.())||0));
     const crowdCount=captureCrowd(event,desiredCrowd);
     active={
       id:event.id,
@@ -192,6 +193,7 @@
     state.crowdHype=Math.min(100,state.crowdHype+8+done.crowdCount*2);
     updateStreetRep();
     save();
+    window.TGGStreetSets?.onEventComplete?.(done.id);
     active=null;
     clearTimeout(activeTimer);
     activeTimer=null;

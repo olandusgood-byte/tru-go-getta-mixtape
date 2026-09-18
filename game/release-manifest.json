@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.17 District Circuits + Story Routing",
-  "base": "V1.16 City Circuits + Event Variants",
+  "release": "V1.18 NPC Route Encounters + District Memory",
+  "base": "V1.17 District Circuits + Story Routing",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -57,7 +57,11 @@
     "V1.17-DISTRICT-STORY-ROUTING",
     "V1.17-DISTRICT-LOCK-GATE",
     "V1.17-READONLY-STORY-SUMMARY",
-    "V1.17-STORY-ROUTE-PERSISTENCE"
+    "V1.17-STORY-ROUTE-PERSISTENCE",
+    "V1.18-NPC-ROUTE-ENCOUNTERS",
+    "V1.18-DISTRICT-MEMORY",
+    "V1.18-AUTO-RENDER-STORY-UI",
+    "V1.18-READONLY-REMOTE-MEMORY"
   ],
   "gates": [
     "runtime_api_presence",
@@ -148,10 +152,18 @@
     "story_route_completion",
     "remote_story_readonly",
     "no_story_mutation_bridge",
-    "story_router_no_rewards"
+    "story_router_no_rewards",
+    "route_memory_api",
+    "route_memory_persistence",
+    "route_npc_encounters",
+    "district_memory",
+    "story_ui_auto_render",
+    "remote_memory_readonly",
+    "route_memory_no_rewards",
+    "npc_memory_achievement"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.17-DISTRICT-CIRCUITS-STORY-ROUTING-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.18-NPC-ROUTE-ENCOUNTERS-DISTRICT-MEMORY-CANDIDATE",
   "production": "gated"
 }

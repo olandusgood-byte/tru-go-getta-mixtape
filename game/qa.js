@@ -53,6 +53,9 @@ const inventory=window.TGGInventory?.catalog||[];check('inventory-catalog',inven
     check('world3d-interaction-prompt',!!document.getElementById('interactionPrompt'),'V1.23 in-world interaction prompt available');
     check('world3d-hub-catalog',Array.isArray(window.TGGWorld3D?.hubs)&&window.TGGWorld3D.hubs.length===5,'V1.24 five 3D hubs registered');
     check('world3d-unified-interaction',window.TGGWorld3D?.hubs?.every(h=>h.id&&h.name&&h.screen&&Number.isFinite(h.x)&&Number.isFinite(h.z)),'V1.24 hub interactions share one proximity system');
+    check('starter-car-api',!!window.TGGWorld3D?.car&&typeof window.TGGWorld3D?.distanceToCarPercent==='function'&&typeof window.TGGGame?.toggleVehicle==='function','V1.25 starter car APIs available');
+    check('vehicle-state',typeof window.TGGGame?.getState?.()?.inVehicle==='boolean','V1.25 drive state is save-compatible');
+    check('vehicle-control',!!document.getElementById('vehicleBtn'),'V1.25 starter car action control available');
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:20,rep:5});check('economy-reward-shape',!!economy&&economy.cash>=100&&economy.xp>=20&&economy.rep>=5&&!!economy.crew,'shared economy reward normalization available');
     const integrity=window.TGGV12Integrity?.run?.();check('v12-integrity',!!integrity?.passed,'V1.2 integrity gate passes');
     const bad=report.filter(x=>x.status==='FAIL');window.TGGQA={report,passed:bad.length===0,repair(){window.TGGSave?.repair?.();return !!document.getElementById('hud')&&!!window.TGGGame&&!!window.TGGProgression&&!!window.TGGChains&&!!window.TGGDistricts&&!!window.TGGSave&&!!window.TGGInventory&&!!window.TGGCrew&&!!window.TGGEconomy&&!!window.TGGEvents&&!!window.TGGAvatar&&!!window.TGGWorldSync}};return window.TGGQA;

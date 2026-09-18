@@ -11,6 +11,7 @@ const REQUIRE_WORLD_BULK=String(process.env.TGG_3D_REQUIRE_WORLD_BULK||'0')==='1
 const REQUIRE_PLAYER_SMOOTH=String(process.env.TGG_3D_REQUIRE_PLAYER_SMOOTH||'0')==='1';
 const PLAYER_SMOOTH_ONLY=String(process.env.TGG_3D_PLAYER_SMOOTH_ONLY||'0')==='1';
 const WORLD_ONLY=String(process.env.TGG_3D_WORLD_ONLY||'0')==='1';
+const GAMEPAD_ONLY=String(process.env.TGG_3D_GAMEPAD_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -18,6 +19,88 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(GAMEPAD_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const response=await fetch(base+'/gamepad.js');
+      if(!response.ok)throw new Error('Gamepad harness could not fetch deployed gamepad.js: '+response.status);
+      const source=await response.text();
+      const harnessErrors=[];
+      page.on('pageerror',e=>harnessErrors.push(e.message||String(e)));
+      await page.setContent('<!doctype html><html><head><title>TGG V2 GAMEPAD QA</title></head><body></body></html>');
+      await page.evaluate(()=>{
+        window.__qaState={inVehicle:false};
+        window.__qaCalls=[];
+        window.__qaActions=[];
+        window.__qaPad={
+          connected:true,
+          axes:[0,0,0,0],
+          buttons:Array.from({length:16},()=>({pressed:false,value:0}))
+        };
+        Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.__qaPad]});
+        window.TGGGame={
+          getState:()=>window.__qaState,
+          setWalkKey:(k,v)=>window.__qaCalls.push(['walk',k,!!v]),
+          setDriveKey:(k,v)=>window.__qaCalls.push(['drive',k,!!v]),
+          toggleVehicle:()=>window.__qaActions.push('vehicle'),
+          horn:()=>window.__qaActions.push('horn')
+        };
+        window.TGG3D={
+          interactNearest:()=>window.__qaActions.push('interact'),
+          cycleCamera:()=>window.__qaActions.push('camera')
+        };
+        window.__tggToast=()=>{};
+      });
+      await page.addScriptTag({content:source});
+      await page.waitForTimeout(100);
+      const checks=[];
+      const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      record('gamepad-api',await page.evaluate(()=>typeof window.TGGGamepad?.isConnected==='function'));
+
+      await page.evaluate(()=>{window.__qaCalls.length=0;window.__qaPad.axes[0]=.8;});
+      await page.waitForTimeout(100);
+      let snap=await page.evaluate(()=>({calls:[...window.__qaCalls],actions:[...window.__qaActions]}));
+      record('gamepad-walk-right',snap.calls.some(x=>x[0]==='walk'&&x[1]==='right'&&x[2]===true),JSON.stringify(snap.calls));
+
+      await page.evaluate(()=>{window.__qaCalls.length=0;window.__qaPad.buttons[7].pressed=true;window.__qaPad.buttons[7].value=1;});
+      await page.waitForTimeout(100);
+      snap=await page.evaluate(()=>({calls:[...window.__qaCalls]}));
+      record('gamepad-sprint',snap.calls.some(x=>x[0]==='walk'&&x[1]==='sprint'&&x[2]===true),JSON.stringify(snap.calls));
+
+      await page.evaluate(()=>{
+        window.__qaCalls.length=0;
+        window.__qaState.inVehicle=true;
+        window.__qaPad.axes[0]=-.8;
+        window.__qaPad.buttons[7].pressed=true;window.__qaPad.buttons[7].value=1;
+        window.__qaPad.buttons[4].pressed=true;window.__qaPad.buttons[4].value=1;
+      });
+      await page.waitForTimeout(120);
+      snap=await page.evaluate(()=>({calls:[...window.__qaCalls]}));
+      record('gamepad-car-steer',snap.calls.some(x=>x[0]==='drive'&&x[1]==='left'&&x[2]===true),JSON.stringify(snap.calls));
+      record('gamepad-car-gas',snap.calls.some(x=>x[0]==='drive'&&x[1]==='forward'&&x[2]===true),JSON.stringify(snap.calls));
+      record('gamepad-handbrake',snap.calls.some(x=>x[0]==='drive'&&x[1]==='handbrake'&&x[2]===true),JSON.stringify(snap.calls));
+
+      await page.evaluate(()=>{
+        window.__qaActions.length=0;
+        [0,1,2,3].forEach(i=>{window.__qaPad.buttons[i].pressed=true;window.__qaPad.buttons[i].value=1;});
+      });
+      await page.waitForTimeout(120);
+      snap=await page.evaluate(()=>({actions:[...window.__qaActions]}));
+      record('gamepad-actions', ['interact','vehicle','horn','camera'].every(x=>snap.actions.includes(x)),JSON.stringify(snap.actions));
+
+      result={
+        ok:checks.every(x=>x.pass)&&harnessErrors.length===0,
+        status:'done',
+        mode:'gamepad_logic_harness',
+        target:TARGET,
+        checks,
+        page_errors:harnessErrors,
+        updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();
+      return;
+    }
 
     if(PLAYER_SMOOTH_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');

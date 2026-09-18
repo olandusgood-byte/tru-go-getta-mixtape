@@ -94,11 +94,41 @@ async function run(){
     const entered=await page.evaluate(()=>window.TGGGame?.getState?.());
     record('enter-car',entered?.inVehicle===true);
 
-    const carX0=Number(entered?.x);
+    const driveStart=await page.evaluate(()=>window.TGGGame?.getState?.());
+    const startHeading=Number(driveStart?.heading)||0;
+    const startX=Number(driveStart?.x)||0;
+    const startY=Number(driveStart?.y)||0;
+
     await page.keyboard.press('ArrowRight');
-    await page.waitForTimeout(150);
-    const driven=await page.evaluate(()=>window.TGGGame?.getState?.());
-    record('drive-movement',Number(driven?.x)>=carX0+3,`${carX0}->${driven?.x}`);
+    await page.waitForTimeout(120);
+    const steered=await page.evaluate(()=>window.TGGGame?.getState?.());
+    const steeredHeading=Number(steered?.heading)||0;
+    record('drive-steer-right',steeredHeading!==startHeading,`${startHeading}->${steeredHeading}`);
+    record('steer-does-not-translate',Math.hypot(Number(steered?.x)-startX,Number(steered?.y)-startY)<0.05);
+
+    await page.keyboard.press('ArrowUp');
+    await page.waitForTimeout(220);
+    const driven=await page.evaluate(()=>({
+      state:window.TGGGame?.getState?.(),
+      carRotation:window.TGG3D?.car?.rotation?.y,
+      carHeading:window.TGG3D?.getCarHeading?.()
+    }));
+    const drivenState=driven.state||{};
+    const forwardDistance=Math.hypot(Number(drivenState.x)-startX,Number(drivenState.y)-startY);
+    record('drive-forward-relative',forwardDistance>2.5,`${startX},${startY}->${drivenState.x},${drivenState.y}`);
+
+    const expectedRotation=-(Number(drivenState.heading)||0)*Math.PI/180;
+    let rotationDiff=Math.abs((Number(driven.carRotation)||0)-expectedRotation)%(Math.PI*2);
+    rotationDiff=Math.min(rotationDiff,Math.PI*2-rotationDiff);
+    record('car-mesh-heading-aligned',rotationDiff<0.2,`diff=${rotationDiff}`);
+
+    const forwardX=Number(drivenState.x)||0;
+    const forwardY=Number(drivenState.y)||0;
+    await page.keyboard.press('ArrowDown');
+    await page.waitForTimeout(180);
+    const reversed=await page.evaluate(()=>window.TGGGame?.getState?.());
+    const reverseDistance=Math.hypot(Number(reversed?.x)-forwardX,Number(reversed?.y)-forwardY);
+    record('drive-reverse-relative',reverseDistance>2.5,`${forwardX},${forwardY}->${reversed?.x},${reversed?.y}`);
 
     await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());
     const exited=await page.evaluate(()=>window.TGGGame?.getState?.());

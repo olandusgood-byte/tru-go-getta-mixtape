@@ -269,7 +269,9 @@
       buildings:world.buildings.length,
       roads:world.roads.length,
       lights:world.lights.length,
-      frame:state.frame
+      frame:state.frame,
+      player:player?{x:player.position.x,y:player.position.y,z:player.position.z,yaw:player.rotation.y}:null,
+      camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z}:null
     };
   }
 

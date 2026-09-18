@@ -6,6 +6,7 @@ const TARGET=String(process.env.TGG_3D_SMOKE_TARGET||'').trim();
 const EXPECT_VERSION=String(process.env.TGG_3D_EXPECT_VERSION||'V1.22 3D').trim();
 const REQUIRE_DESTINATIONS=String(process.env.TGG_3D_REQUIRE_DESTINATIONS||'0')==='1';
 const REQUIRE_LIVING_CITY=String(process.env.TGG_3D_REQUIRE_LIVING_CITY||'0')==='1';
+const REQUIRE_CINEMATIC=String(process.env.TGG_3D_REQUIRE_CINEMATIC||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -45,7 +46,12 @@ async function run(){
       interactApi:typeof window.TGG3D?.interactNearest==='function',
       interactButton:!!document.getElementById('interact3dBtn'),
       pedestrians:Array.isArray(window.TGG3D?.pedestrians)?window.TGG3D.pedestrians.length:0,
-      traffic:Array.isArray(window.TGG3D?.traffic)?window.TGG3D.traffic.length:0
+      traffic:Array.isArray(window.TGG3D?.traffic)?window.TGG3D.traffic.length:0,
+      cameraApi:typeof window.TGG3D?.cycleCamera==='function'&&typeof window.TGG3D?.getCameraMode==='function',
+      cameraMode:window.TGG3D?.getCameraMode?.()||null,
+      radar:!!document.getElementById('radar3d'),
+      radarPlayer:!!document.getElementById('radarPlayer'),
+      radarCar:!!document.getElementById('radarCar')
     }));
     record('title-version',initial.title.includes(EXPECT_VERSION),initial.title);
     record('webgl-canvas',initial.canvas);
@@ -61,6 +67,20 @@ async function run(){
     if(REQUIRE_LIVING_CITY){
       record('pedestrian-population',initial.pedestrians>=6,String(initial.pedestrians));
       record('traffic-population',initial.traffic>=6,String(initial.traffic));
+    }
+    if(REQUIRE_CINEMATIC){
+      record('camera-api',initial.cameraApi);
+      record('camera-default-orbit',initial.cameraMode==='orbit',String(initial.cameraMode));
+      record('radar-host',initial.radar&&initial.radarPlayer&&initial.radarCar);
+      const cameraModes=await page.evaluate(()=>{
+        const a=window.TGG3D?.cycleCamera?.();
+        const b=window.TGG3D?.cycleCamera?.();
+        const c=window.TGG3D?.cycleCamera?.();
+        return [a,b,c,window.TGG3D?.getCameraMode?.()];
+      });
+      record('camera-chase',cameraModes[0]==='chase',JSON.stringify(cameraModes));
+      record('camera-top',cameraModes[1]==='top',JSON.stringify(cameraModes));
+      record('camera-orbit-return',cameraModes[2]==='orbit'&&cameraModes[3]==='orbit',JSON.stringify(cameraModes));
     }
 
     const x0=Number(initial.state?.x);

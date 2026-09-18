@@ -8,7 +8,7 @@
     if(topbar && !document.querySelector('.v201-badge')){
       const badge=document.createElement('span');
       badge.className='v201-badge';
-      badge.textContent='V2.05 DRIVE';
+      badge.textContent='V2.06 DRIVE + JOBS';
       const hud=$('hud');
       topbar.insertBefore(badge,hud||null);
     }
@@ -72,8 +72,8 @@
           setPad(down,'▼','BRAKE / REV');
           setPad(left,'◀','STEER L');
           setPad(right,'▶','STEER R');
-          if(sprint){sprint.innerHTML='<span>●</span><small>CAR</small>';sprint.setAttribute('aria-label','Driving mode');}
-          if(moveHelp)moveHelp.textContent='Tap or hold GAS to move • BRAKE / REV backs up • STEER stays softer at speed • Space / DRIFT = handbrake.';
+          if(sprint){sprint.innerHTML='<span>NOS</span><small>BOOST</small>';sprint.setAttribute('aria-label','Hold for vehicle boost');}
+          if(moveHelp)moveHelp.textContent='Tap or hold GAS • BRAKE / REV backs up • hold SHIFT or BOOST for NOS • Space / DRIFT = handbrake • R = reset car.';
         }else{
           setPad(up,'▲','FORWARD');
           setPad(down,'▼','BACK');

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.25 Starter Car + Drive Mode",
-  "base": "V1.24 Unified 3D Gameplay Slice",
+  "release": "V1.26 Fixed Driving Controls",
+  "base": "V1.25 Starter Car + Drive Mode",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -89,7 +89,11 @@
     "V1.25-STARTER-CAR",
     "V1.25-DRIVE-MODE",
     "V1.25-CAR-FOLLOW-CAMERA",
-    "V1.25-UNIFIED-VEHICLE-INTERACTION"
+    "V1.25-UNIFIED-VEHICLE-INTERACTION",
+    "V1.26-CAR-RELATIVE-CONTROLS",
+    "V1.26-FORWARD-REVERSE",
+    "V1.26-STEERING",
+    "V1.26-VEHICLE-COLLISION-PRESERVED"
   ],
   "gates": [
     "runtime_api_presence",
@@ -236,10 +240,16 @@
     "car_follow_camera",
     "wheel_animation",
     "single_e_vehicle_action",
-    "vehicle_no_reward_path"
+    "vehicle_no_reward_path",
+    "drive_vehicle_api",
+    "forward_relative_drive",
+    "reverse_relative_drive",
+    "steering_heading",
+    "steering_no_strafe",
+    "vehicle_collision_preserved"
   ],
   "static_gate": "candidate_pending_ci",
   "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.25-STARTER-CAR-DRIVE-MODE-CANDIDATE",
+  "release_checkpoint": "V1.26-FIXED-DRIVING-CONTROLS-CANDIDATE",
   "production": "gated"
 }

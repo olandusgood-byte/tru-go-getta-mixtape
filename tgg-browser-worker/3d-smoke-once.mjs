@@ -13,7 +13,8 @@ const PLAYER_SMOOTH_ONLY=String(process.env.TGG_3D_PLAYER_SMOOTH_ONLY||'0')==='1
 const WORLD_ONLY=String(process.env.TGG_3D_WORLD_ONLY||'0')==='1';
 const GAMEPAD_ONLY=String(process.env.TGG_3D_GAMEPAD_ONLY||'0')==='1';
 const DESKTOP_DRIVE_ONLY=String(process.env.TGG_3D_DESKTOP_DRIVE_ONLY||'0')==='1';
-const MOBILE_LAYOUT_ONLY=String(process.env.TGG_3D_MOBILE_LAYOUT_ONLY||'0')==='1';\nconst WORLD_LIFE_ONLY=String(process.env.TGG_3D_WORLD_LIFE_ONLY||'0')==='1';
+const MOBILE_LAYOUT_ONLY=String(process.env.TGG_3D_MOBILE_LAYOUT_ONLY||'0')==='1';
+const WORLD_LIFE_ONLY=String(process.env.TGG_3D_WORLD_LIFE_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){

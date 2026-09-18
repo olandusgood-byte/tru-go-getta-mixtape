@@ -23,7 +23,6 @@ jobs:
   deploy:
     name: Deploy TGG Core to Railway
     runs-on: ubuntu-latest
-    container: ghcr.io/railwayapp/cli:latest
     env:
       RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
       RAILWAY_PROJECT_ID: "49db9e70-3a4b-4737-ac74-716bebd5ad28"
@@ -32,6 +31,10 @@ jobs:
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        shell: bash
+        run: npm install -g @railway/cli
 
       - name: Validate Railway credentials
         shell: bash
@@ -42,15 +45,11 @@ jobs:
             exit 1
           }
 
-      - name: Deploy exact GitHub commit to TGG Core
+      - name: Deploy TGG Core
         shell: bash
         run: |
           set -euo pipefail
-          railway up \
-            --project "${RAILWAY_PROJECT_ID}" \
-            --environment "${RAILWAY_ENVIRONMENT}" \
-            --service "${RAILWAY_SERVICE}" \
-            --ci
+          railway up --project "${RAILWAY_PROJECT_ID}" --environment "${RAILWAY_ENVIRONMENT}" --service "${RAILWAY_SERVICE}" --ci
 
       - name: Report deployed commit
         shell: bash

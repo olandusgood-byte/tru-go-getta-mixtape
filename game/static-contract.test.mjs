@@ -230,7 +230,7 @@ assert.equal(release.release,'V1.21 3D World Foundation');
 assert.equal(release.base,'V1.20 NPC Favor Hooks + Contact Opportunities');
 assert.equal(auto.version,'1.21');
 assert.equal(qaManifest.version,'1.21');
-assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
+assert.ok(['candidate_pending_ci','automated_ci_pass','automated_webgl_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
 assert.equal(qaManifest.browserPolicy,'automated_ci_required');

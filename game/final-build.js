@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.14 PLAYTEST HARDENING 100';
+  const VERSION='V2.15 CHARACTER + MISSION DEPTH 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

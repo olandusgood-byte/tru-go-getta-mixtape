@@ -418,6 +418,8 @@
     const root=$('storyMissionsBoard');
     if(!root){renderWorldHud();return;}
     const st=status();
+    const chapterHeading=$('storyMissionChapterHeading');
+    const chapterCopy=$('storyMissionChapterCopy');
     const title=$('storyMissionTitle');
     const detail=$('storyMissionDetail');
     const progress=$('storyMissionProgress');
@@ -426,6 +428,10 @@
     const action=$('storyMissionAction');
 
     const firstComplete=state.completed&&!state.chapter2.active&&!state.chapter2.completed;
+    if(chapterHeading)chapterHeading.textContent=st.chapter===2?'CITY BUZZ.':'FIRST CONTRACT.';
+    if(chapterCopy)chapterCopy.textContent=st.chapter===2
+      ?'Move through the city for real — manager, producer, cypher, stage, media district and your first visual.'
+      :'One connected artist run through the city — manager, street work, studio, battle, stage and release.';
     if(title)title.textContent=st.completed?(st.chapter===2?'CITY BUZZ COMPLETE':'FIRST CONTRACT COMPLETE'):(st.current?.title||st.chapterName);
     if(detail)detail.textContent=st.completed
       ?(st.chapter===2?'Your name is moving through every side of the city.':'You built your first complete artist run through the city.')

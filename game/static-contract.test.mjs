@@ -8,16 +8,18 @@ const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
 const events=fs.readFileSync(new URL('./events.js',import.meta.url),'utf8');
 const progression=fs.readFileSync(new URL('./progression.js',import.meta.url),'utf8');
 const circuits=fs.readFileSync(new URL('./circuits.js',import.meta.url),'utf8');
+const districtStory=fs.readFileSync(new URL('./district-story.js',import.meta.url),'utf8');
 const qa=fs.readFileSync(new URL('./qa.js',import.meta.url),'utf8');
 const releaseQa=fs.readFileSync(new URL('./release-qa.js',import.meta.url),'utf8');
 const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.16/);
-assert.match(html,/GAME V1\.16 • CITY CIRCUITS \+ EVENT VARIANTS/);
+assert.match(html,/Game V1\.17/);
+assert.match(html,/GAME V1\.17 • DISTRICT CIRCUITS \+ STORY ROUTING/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
+assert.match(html,/<script src="district-story\.js"><\/script>/);
 assert.match(html,/id="businessBoard"/);
 assert.match(html,/id="businessBtn"/);
 assert.match(html,/id="cityAssetsBtn"/);
@@ -80,6 +82,29 @@ assert.match(events,/TGGCircuits\?\.variant/);
 assert.match(events,/TGGCircuits\?\.render/);
 for (const achievement of ['first-circuit','city-circuit']) assert.match(progression,new RegExp(achievement));
 
+
+assert.match(districtStory,/tgg-district-story-v1/);
+assert.match(districtStory,/window\.TGGDistrictStory/);
+assert.match(districtStory,/city-story-lap/);
+assert.match(districtStory,/missionStoryBundle/);
+for (const api of ['districtState','currentBeat','status','start','onCircuitResult','summarizeRemoteStory','refreshRemoteStory','render']) {
+  assert.match(districtStory,new RegExp('function '+api+'\\b'));
+}
+assert.match(circuits,/TGGDistrictStory\?\.onCircuitResult/);
+assert.equal(districtStory.includes('TGGGame?.reward'),false);
+assert.equal(districtStory.includes('TGGCareer?.addRep'),false);
+for (const forbiddenStoryWrite of [
+  'tgg_world_mvp_v1_accept_mission',
+  'tgg_world_mvp_v1_complete_mission',
+  'tgg_world_start_story_arc',
+  'tgg_world_claim_story_chapter',
+  'tgg_world_join_location',
+  'tgg_world_join_location_at',
+  'tgg_world_v4_record_mission_evidence',
+  'tgg_world_v4_verify_and_complete_mission'
+]) assert.equal(districtStory.includes(forbiddenStoryWrite),false,'story router must remain read-only: '+forbiddenStoryWrite);
+assert.match(progression,/district-story/);
+
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
 }
@@ -117,10 +142,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.16 City Circuits + Event Variants');
-assert.equal(release.base,'V1.15 City Activity Mastery');
-assert.equal(auto.version,'1.16');
-assert.equal(qaManifest.version,'1.16');
+assert.equal(release.release,'V1.17 District Circuits + Story Routing');
+assert.equal(release.base,'V1.16 City Circuits + Event Variants');
+assert.equal(auto.version,'1.17');
+assert.equal(qaManifest.version,'1.17');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -135,5 +160,8 @@ assert.ok(release.gates.includes('base_event_economy_unchanged'));
 assert.ok(release.gates.includes('circuit_api'));
 assert.ok(release.gates.includes('circuit_ordering'));
 assert.ok(release.gates.includes('event_variants_cosmetic_only'));
+assert.ok(release.gates.includes('district_story_api'));
+assert.ok(release.gates.includes('remote_story_readonly'));
+assert.ok(release.gates.includes('story_router_no_rewards'));
 
-console.log('GAME_V1_16_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_17_STATIC_CONTRACT_PASS');

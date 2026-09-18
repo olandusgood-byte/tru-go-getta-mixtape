@@ -109,7 +109,7 @@ assert.match(fs.readFileSync(new URL('./progression.js',import.meta.url),'utf8')
 for(const eventId of ['downtown-cypher','studio-sidewalk','mixtape-popout']) assert.match(streetEvents,new RegExp(eventId));
 assert.match(streetEvents,/streetEventMode/);
 assert.match(streetEvents,/CROWD BUILDING/);
-assert.match(streetEvents,/CROWD FELT THAT/);
+assert.match(streetEvents,/repRank\(\)/);
 assert.equal(streetEvents.includes('TGGGame?.reward'),false);
 assert.equal(streetEvents.includes('TGGCareer?.addRep'),false);
 assert.equal(streetEvents.includes('TGGEconomy?.apply'),false);

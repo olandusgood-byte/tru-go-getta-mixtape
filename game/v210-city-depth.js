@@ -95,6 +95,12 @@
     ready=true;return true;
   }
 
+  function signalForAxis(axis,t=performance.now()){
+    const cycle=(t/1000)%12;
+    const local=axis==='z'?(cycle+6)%12:cycle;
+    return local<5?'green':local<6?'yellow':'red';
+  }
+
   function animate(t=0){
     if(!boot()){requestAnimationFrame(animate);return}
     const cycle=(t/1000)%12;
@@ -109,11 +115,11 @@
       s.green.material.emissiveIntensity=green?5.8:.18;
     });
     billboards.forEach((b,i)=>{b.children[1].material.emissiveIntensity=.38+Math.sin(t*.0018+i)*.12});
-    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.10 CITY DEPTH';
+    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.11 LIVING TRAFFIC';
     requestAnimationFrame(animate);
   }
 
   function status(){return {ready,trafficLights:trafficLights.length,billboards:billboards.length,objects:objects.length}}
-  window.TGGCityDepth={status,boot,trafficLights,billboards};
+  window.TGGCityDepth={status,boot,signalForAxis,trafficLights,billboards};
   requestAnimationFrame(animate);
 })();

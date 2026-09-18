@@ -18,7 +18,9 @@
     {id:'district-story',name:'Across The City',detail:'Complete the district story route.',test:(p,c,content,exp,events,circuits,districtStory)=>Array.isArray(districtStory.completed)&&districtStory.completed.includes('city-story-lap')},
     {id:'know-the-city',name:'Know The City',detail:'Meet M, Kane and DJ V through the district route.',test:(p,c,content,exp,events,circuits,districtStory,routeMemory)=>['m','producer','dj'].every(id=>(routeMemory.encounters||[]).some(x=>x.npcId===id))},
     {id:'trusted-contact',name:'Trusted Contact',detail:'Build any city contact relationship to Trusted.',test:(p,c,content,exp,events,circuits,districtStory,routeMemory)=>Object.values(routeMemory.relationships||{}).some(x=>x&&['TRUSTED','INNER CIRCLE'].includes(x.tier))},
-    {id:'first-opportunity',name:'Opportunity Knocks',detail:'Complete your first relationship-gated contact opportunity.',test:(p,c,content,exp,events,circuits,districtStory,routeMemory)=>Array.isArray(routeMemory.opportunities?.completed)&&routeMemory.opportunities.completed.length>=1}
+    {id:'first-opportunity',name:'Opportunity Knocks',detail:'Complete your first relationship-gated contact opportunity.',test:(p,c,content,exp,events,circuits,districtStory,routeMemory)=>Array.isArray(routeMemory.opportunities?.completed)&&routeMemory.opportunities.completed.length>=1},
+    {id:'street-known',name:'Street Known',detail:'Reach 30 local street reputation.',test:(p,c,content,exp,events,circuits,districtStory,routeMemory,streetEvents)=>(Number(streetEvents.streetRep)||0)>=30},
+    {id:'street-headliner',name:'Street Headliner',detail:'Reach 80 local street reputation.',test:(p,c,content,exp,events,circuits,districtStory,routeMemory,streetEvents)=>(Number(streetEvents.streetRep)||0)>=80}
   ];
   let state={unlocked:[],updatedAt:0};
   function load(){try{const saved=JSON.parse(localStorage.getItem(KEY)||'{}');state={...state,...saved};if(!Array.isArray(state.unlocked))state.unlocked=[]}catch(e){state={unlocked:[],updatedAt:0}}}
@@ -32,8 +34,9 @@
     const circuits=window.TGGCircuits?.state||{completed:[]};
     const districtStory=window.TGGDistrictStory?.state||{completed:[]};
     const routeMemory=window.TGGRouteMemory?.state||{encounters:[]};
+    const streetEvents=window.TGGStreetEvents?.state||{streetRep:0};
     let changed=false;
-    achievements.forEach(a=>{if(!state.unlocked.includes(a.id)&&a.test(p,c,content,expansion,events,circuits,districtStory,routeMemory)){state.unlocked.push(a.id);changed=true;window.__tggToast?.('ACHIEVEMENT UNLOCKED — '+a.name)}});
+    achievements.forEach(a=>{if(!state.unlocked.includes(a.id)&&a.test(p,c,content,expansion,events,circuits,districtStory,routeMemory,streetEvents)){state.unlocked.push(a.id);changed=true;window.__tggToast?.('ACHIEVEMENT UNLOCKED — '+a.name)}});
     if(changed)save();
     render();
     return state;
@@ -50,7 +53,8 @@
     const routeMemory=window.TGGRouteMemory?.memorySnapshot?.()||{uniqueNpcIds:[],relationships:{}};
     const trustedContacts=Object.values(routeMemory.relationships||{}).filter(x=>x&&['TRUSTED','INNER CIRCLE'].includes(x.tier)).length;
     const completedOpportunities=routeMemory.opportunities?.completed?.length||0;
-    el.innerHTML=`<div><b>LEVEL</b><span>${p.level||1}</span></div><div><b>CASH</b><span>${p.cash||0}</span></div><div><b>REP</b><span>${c.reputation||0}</span></div><div><b>TRACKS</b><span>${c.recordings||0}</span></div><div><b>MIXTAPES</b><span>${c.mixtapes||0}</span></div><div><b>UPGRADES</b><span>${c.upgrades||0}</span></div><div><b>STUDIO</b><span>${c.studioLevel||1}</span></div><div><b>CITY JOBS</b><span>${content.completed?.length||0}</span></div><div><b>EXPANSION</b><span>${expansion.completed?.length||0}</span></div><div><b>CITY RUNS</b><span>${city.totalRuns||0}</span></div><div><b>CITY RANK</b><span>${city.rank||'STREET ROOKIE'}</span></div><div><b>CIRCUITS</b><span>${circuits.completed?.length||0}</span></div><div><b>STORY ROUTES</b><span>${districtStory.completed?.length||0}</span></div><div><b>CONTACTS MET</b><span>${routeMemory.uniqueNpcIds?.length||0}</span></div><div><b>TRUSTED CONTACTS</b><span>${trustedContacts}</span></div><div><b>OPPORTUNITIES</b><span>${completedOpportunities}</span></div>`;
+    const streetProfile=window.TGGStreetEvents?.streetProfile?.()||{reputation:0,rank:'NEW FACE',totalRuns:0};
+    el.innerHTML=`<div><b>LEVEL</b><span>${p.level||1}</span></div><div><b>CASH</b><span>${p.cash||0}</span></div><div><b>REP</b><span>${c.reputation||0}</span></div><div><b>TRACKS</b><span>${c.recordings||0}</span></div><div><b>MIXTAPES</b><span>${c.mixtapes||0}</span></div><div><b>UPGRADES</b><span>${c.upgrades||0}</span></div><div><b>STUDIO</b><span>${c.studioLevel||1}</span></div><div><b>CITY JOBS</b><span>${content.completed?.length||0}</span></div><div><b>EXPANSION</b><span>${expansion.completed?.length||0}</span></div><div><b>CITY RUNS</b><span>${city.totalRuns||0}</span></div><div><b>CITY RANK</b><span>${city.rank||'STREET ROOKIE'}</span></div><div><b>CIRCUITS</b><span>${circuits.completed?.length||0}</span></div><div><b>STORY ROUTES</b><span>${districtStory.completed?.length||0}</span></div><div><b>CONTACTS MET</b><span>${routeMemory.uniqueNpcIds?.length||0}</span></div><div><b>TRUSTED CONTACTS</b><span>${trustedContacts}</span></div><div><b>OPPORTUNITIES</b><span>${completedOpportunities}</span></div><div><b>STREET REP</b><span>${streetProfile.reputation||0}</span></div><div><b>STREET RANK</b><span>${streetProfile.rank||'NEW FACE'}</span></div><div><b>STREET EVENTS</b><span>${streetProfile.totalRuns||0}</span></div>`;
     const list=document.getElementById('achievementList');
     if(list)list.innerHTML=achievements.map(a=>`<div class="mission-card"><b>${state.unlocked.includes(a.id)?'✓':'○'} ${a.name}</b><span>${a.detail}</span></div>`).join('');
   }

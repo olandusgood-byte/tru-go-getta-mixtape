@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.21",
-  "module": "GAME-V1.21-QA",
-  "name": "True 3D City Foundation",
+  "version": "1.22",
+  "module": "GAME-V1.22-QA",
+  "name": "3D Collision + Camera Orbit",
   "checks": [
     "storage",
     "game_api",
@@ -77,7 +77,11 @@
     "third_person_camera",
     "world3d_buildings",
     "world3d_player_sync",
-    "world3d_fallback"
+    "world3d_fallback",
+    "world3d_collision",
+    "world3d_orbit_camera",
+    "world3d_zoom",
+    "mission_path_clear"
   ],
   "workflow": [
     "BUILD",
@@ -90,6 +94,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.22 3D COLLISION + CAMERA ORBIT",
-  "verification": "passed"
+  "next": "V1.23 3D DISTRICT LANDMARKS + ENTERABLE HUBS",
+  "verification": "pending_ci"
 }

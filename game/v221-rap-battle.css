@@ -1,0 +1,45 @@
+/* V2.21 RAP BATTLES + LIVE PERFORMANCE 100 */
+body.tgg-v221 .v221-battle-panel{position:fixed;left:50%;bottom:16px;z-index:180;display:grid;gap:8px;width:min(500px,calc(100vw - 24px));padding:15px;transform:translate(-50%,18px);opacity:0;pointer-events:none;border:1px solid #ffffff20;border-radius:21px;background:linear-gradient(145deg,#080b12f8,#17101df8);box-shadow:0 32px 110px #000e;transition:.2s ease}
+body.tgg-v221 .v221-battle-panel.active{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+body.tgg-v221 .v221-battle-panel>small{font-size:7px;font-weight:900;letter-spacing:.2em;color:#ffcf4a}
+body.tgg-v221 .v221-battle-panel>b{font-size:18px;color:#fff}
+body.tgg-v221 .v221-battle-panel>span{font-size:11px;font-weight:1000;letter-spacing:.12em;color:#61d9ff}
+body.tgg-v221 .v221-battle-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+body.tgg-v221 .v221-battle-stats i{display:grid;gap:2px;padding:7px;border:1px solid #ffffff10;border-radius:9px;background:#ffffff05;font-style:normal}
+body.tgg-v221 .v221-battle-stats small{font-size:6px;font-weight:900;letter-spacing:.13em;color:#818b9d}
+body.tgg-v221 .v221-battle-stats strong{font-size:10px;color:#fff}
+body.tgg-v221 .v221-heat-track{height:7px;overflow:hidden;border-radius:999px;background:#ffffff10}
+body.tgg-v221 .v221-heat-track i{display:block;width:35%;height:100%;background:linear-gradient(90deg,#48d7ff,#ffcf4a,#ff466d);transition:width .14s}
+body.tgg-v221 #v221Drop{min-height:52px;border:1px solid #ffcf4a66;border-radius:14px;background:linear-gradient(135deg,#2a1d09,#17100a);color:#ffe39a;font-size:11px;font-weight:1000;letter-spacing:.13em;cursor:pointer}
+body.tgg-v221 .v221-battle-panel .secondary{min-height:34px;border:1px solid #ffffff14;border-radius:11px;background:#111722;color:#fff;font-size:8px;font-weight:900;cursor:pointer}
+body.tgg-v221 .v221-result-card{position:fixed;left:50%;top:50%;z-index:190;display:grid;gap:9px;width:min(420px,calc(100vw - 24px));padding:18px;transform:translate(-50%,-46%) scale(.96);opacity:0;pointer-events:none;border:1px solid #ffffff20;border-radius:24px;background:linear-gradient(145deg,#090d15fa,#18101efa);box-shadow:0 36px 120px #000f;transition:.24s ease}
+body.tgg-v221 .v221-result-card.active{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+body.tgg-v221 .v221-result-card>small{font-size:7px;font-weight:900;letter-spacing:.2em;color:#ffcf4a}
+body.tgg-v221 .v221-rank{font-size:72px;line-height:.9;font-weight:1000;color:#c7ff00;text-shadow:0 0 28px #c7ff0038}
+body.tgg-v221 .v221-result-card[data-rank="A"] .v221-rank{color:#61d9ff}
+body.tgg-v221 .v221-result-card[data-rank="B"] .v221-rank{color:#c56cff}
+body.tgg-v221 .v221-result-card[data-rank="C"] .v221-rank{color:#ffcf4a}
+body.tgg-v221 .v221-result-card[data-rank="D"] .v221-rank{color:#ff657a}
+body.tgg-v221 .v221-result-card>b{font-size:17px;color:#fff}
+body.tgg-v221 .v221-result-card>strong{font-size:12px;color:#c7ff00;letter-spacing:.12em}
+body.tgg-v221 .v221-result-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+body.tgg-v221 .v221-result-breakdown span{display:grid;gap:2px;padding:7px;border:1px solid #ffffff10;border-radius:9px;background:#ffffff05}
+body.tgg-v221 .v221-result-breakdown small{font-size:6px;font-weight:900;color:#7f899d}
+body.tgg-v221 .v221-result-breakdown b{font-size:9px;color:#fff}
+body.tgg-v221 #v221ResultClose{min-height:42px;border:1px solid #ffffff18;border-radius:11px;background:#111722;color:#fff;font-weight:900;cursor:pointer}
+body[data-v221-timing="perfect"] .v221-battle-panel{border-color:#c7ff00}
+body[data-v221-timing="great"] .v221-battle-panel{border-color:#61d9ff}
+body[data-v221-timing="miss"] .v221-battle-panel{border-color:#ff466d}
+body.tgg-v221 .sr-only{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(prefers-reduced-motion:reduce){body.tgg-v221 .v221-battle-panel,body.tgg-v221 .v221-result-card,body.tgg-v221 .v221-heat-track i{transition:none!important}}
+@media(max-width:700px){
+ body.tgg-v221 .v221-battle-panel{bottom:max(8px,env(safe-area-inset-bottom));padding:12px}
+ body.tgg-v221 .v221-battle-stats{grid-template-columns:1fr 1fr}
+ body.tgg-v221 #v221Drop{min-height:56px}
+ body.tgg-v221 .v221-result-breakdown{grid-template-columns:1fr 1fr}
+}
+@media(max-width:700px) and (orientation:landscape){
+ body.tgg-v221 .v221-battle-panel{left:8px;bottom:8px;width:min(410px,48vw);transform:translateY(16px);max-height:95vh;overflow:auto}
+ body.tgg-v221 .v221-battle-panel.active{transform:translateY(0)}
+ body.tgg-v221 .v221-result-card{width:min(460px,60vw);max-height:92vh;overflow:auto}
+}

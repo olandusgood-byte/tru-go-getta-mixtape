@@ -165,3 +165,5 @@ async function runMultiFlowBrowser(page, { flowKey, tggCoreUrl, tggCoreKey, acce
 }
 
 export { FLOW_CONFIG, runMultiFlowBrowser };
+
+// TGG_WORKER_DEPLOY_SYNC_2026-09-18: keep Railway source revision synchronized with main.

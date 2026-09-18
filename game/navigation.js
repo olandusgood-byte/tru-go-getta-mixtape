@@ -8,6 +8,8 @@
 
     function toWorld(s){return {x:((Number(s?.x)||50)-50)*.92,z:((Number(s?.y)||50)-50)*.92};}
     function targetFor(s){
+      const worldTarget=window.TGGWorldGameplay?.getNavTarget?.(s);
+      if(worldTarget)return worldTarget;
       if(s?.accepted)return {label:'MISSION',x:(72-50)*.92,z:(36-50)*.92,color:'#ff466d'};
       const p=toWorld(s);
       const ds=window.TGG3D?.destinations||[];

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.32",
-  "module": "GAME-V1.32-QA",
-  "name": "Street Events + Crowd Reactions",
+  "version": "1.33",
+  "module": "GAME-V1.33-QA",
+  "name": "Street Reputation + Event Variants",
   "checks": [
     "storage",
     "game_api",
@@ -107,7 +107,12 @@
     "crowd_reaction_animation",
     "street_event_no_rewards",
     "street_event_no_remote_mutations",
-    "contextual_event_hud"
+    "contextual_event_hud",
+    "street_reputation_api",
+    "street_rank",
+    "event_variant_catalog",
+    "street_rep_persistence",
+    "street_rep_achievements"
   ],
   "workflow": [
     "BUILD",
@@ -120,6 +125,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.33 STREET REPUTATION + EVENT VARIANTS",
-  "verification": "passed"
+  "next": "V1.34 STREET SETS + CROWD MOMENTUM",
+  "verification": "pending_ci"
 }

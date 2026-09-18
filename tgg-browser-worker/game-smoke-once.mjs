@@ -257,6 +257,104 @@ async function runSmoke(target) {
       return { present: true, passed: checks.length > 0 && checks.every(x => x.pass), checks };
     });
 
+    const storyMission02 = await page.evaluate(() => {
+      const api = window.TGGStoryMission02;
+      if (!api) return { present: false, passed: true, checks: [] };
+      const checks = [];
+      const record = (name, pass, detail='') => checks.push({ name, pass: Boolean(pass), detail });
+      try {
+        localStorage.setItem('tgg-story-mission-v1', JSON.stringify({
+          accepted:true, step:5, completed:true, rewardClaimed:true, updatedAt:Date.now()
+        }));
+        localStorage.removeItem('tgg-story-mission-v2');
+        Object.assign(api.state,{
+          accepted:false,choice:null,step:'locked',completed:false,rewardClaimed:false,consequence:null,updatedAt:0
+        });
+        api.save();
+        api.sync(false);
+
+        record('story02-api', api.mission?.id === 'pick-a-side');
+        record('story02-ui',
+          Boolean(document.getElementById('mission02Btn')) &&
+          Boolean(document.getElementById('mission02Dj')) &&
+          Boolean(document.getElementById('mission02Kane'))
+        );
+        record('story02-unlocked', api.mission1Complete() === true);
+        record('story02-accept', api.accept() === true && api.state.accepted === true);
+
+        const kaneChoice = api.choose('kane');
+        record('story02-kane-choice',
+          kaneChoice === true &&
+          api.state.choice === 'kane' &&
+          api.state.consequence === 'MASTERED'
+        );
+
+        Object.assign(api.state,{
+          accepted:true,choice:null,step:'choice',completed:false,rewardClaimed:false,consequence:null
+        });
+        api.save();
+        const djChoice = api.choose('dj');
+        record('story02-dj-choice',
+          djChoice === true &&
+          api.state.choice === 'dj' &&
+          api.state.consequence === 'AIRWAVES'
+        );
+        record('story02-choice-persist',
+          JSON.parse(localStorage.getItem('tgg-story-mission-v2')||'{}')?.choice === 'dj'
+        );
+        record('story02-distinct-rewards',
+          api.mission.routes.dj.reward.cash !== api.mission.routes.kane.reward.cash &&
+          api.mission.routes.dj.reward.xp !== api.mission.routes.kane.reward.xp
+        );
+
+        window.TGGInventory?.mission02Pack?.();
+        window.TGGContent.state.active = null;
+        window.TGGContent.state.progress = 0;
+        window.TGGContent.state.completed = ['flyer-run','studio-session','mixtape-promo'];
+        window.TGGContent.save();
+        api.sync(false);
+
+        const routeStarted = api.act();
+        record('story02-route-start',
+          routeStarted === true && window.TGGContent.state.active === 'radio-run'
+        );
+
+        window.TGGContent.state.active = null;
+        window.TGGContent.state.completed = ['flyer-run','studio-session','mixtape-promo','radio-run'];
+        window.TGGContent.save();
+        api.sync(false);
+        const finaleStarted = api.act();
+        record('story02-finale-start',
+          finaleStarted === true && window.TGGContent.state.active === 'city-showdown'
+        );
+
+        window.TGGContent.state.active = null;
+        window.TGGContent.state.completed = ['flyer-run','studio-session','mixtape-promo','radio-run','city-showdown'];
+        window.TGGContent.save();
+        api.sync(false);
+        record('story02-return-step', api.state.step === 'return');
+
+        const cashBefore = Number(window.TGGGame?.getState?.()?.cash || 0);
+        const claimed = api.claim();
+        const cashAfter = Number(window.TGGGame?.getState?.()?.cash || 0);
+        record('story02-claim',
+          claimed === true &&
+          api.state.completed === true &&
+          api.state.rewardClaimed === true &&
+          api.state.consequence === 'AIRWAVES'
+        );
+        record('story02-route-bonus', cashAfter >= cashBefore + 1000, `${cashBefore}->${cashAfter}`);
+
+        const beforeSecond = Number(window.TGGGame?.getState?.()?.cash || 0);
+        const second = api.claim();
+        const afterSecond = Number(window.TGGGame?.getState?.()?.cash || 0);
+        record('story02-reward-once', second === false && afterSecond === beforeSecond);
+      } catch (error) {
+        record('story02-exception', false, error?.message || String(error));
+      }
+      return { present:true, passed:checks.length>0 && checks.every(x=>x.pass), checks };
+    });
+
     const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
     await context.close();
 
@@ -287,6 +385,7 @@ async function runSmoke(target) {
       foundationQa?.passed === true &&
       gameplay?.passed === true &&
       storyMission?.passed === true &&
+      storyMission02?.passed === true &&
       pageErrors.length === 0 &&
       consoleErrors.length === 0 &&
       failedResources.length === 0 &&
@@ -311,6 +410,7 @@ async function runSmoke(target) {
         : [],
       foundation_qa_passed: foundationQa?.passed === true,
       story_mission: storyMission,
+      story_mission_02: storyMission02,
       gameplay,
       dom,
       console_errors: consoleErrors,

@@ -10,13 +10,14 @@ const interiors3d=fs.readFileSync(new URL('./interiors-3d.js',import.meta.url),'
 const garage3d=fs.readFileSync(new URL('./garage-3d.js',import.meta.url),'utf8');
 const navigation=fs.readFileSync(new URL('./navigation.js',import.meta.url),'utf8');
 const streetLife=fs.readFileSync(new URL('./street-life.js',import.meta.url),'utf8');
+const streetEvents=fs.readFileSync(new URL('./street-events.js',import.meta.url),'utf8');
 const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
 const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qa=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.31 3D/);
-assert.match(html,/GAME V1\.31 • STREET LIFE/);
+assert.match(html,/Game V1\.32 3D/);
+assert.match(html,/GAME V1\.32 • STREET EVENTS \+ CROWD REACTIONS/);
 assert.match(html,/vendor\/three-r152\.min\.js/);
 assert.match(html,/id="garage"/);
 assert.match(html,/id="garageBtn"/);
@@ -29,8 +30,11 @@ assert.match(html,/<script src="interiors-3d\.js"><\/script>/);
 assert.match(html,/<script src="garage-3d\.js"><\/script>/);
 assert.match(html,/<script src="navigation\.js"><\/script>/);
 assert.match(html,/<script src="street-life\.js"><\/script>/);
+assert.match(html,/<script src="street-events\.js"><\/script>/);
 assert.match(html,/id="streetLifePrompt"/);
 assert.match(html,/id="streetDialogue"/);
+assert.match(html,/id="streetEventPrompt"/);
+assert.match(html,/id="streetEventHud"/);
 
 assert.match(garage,/tgg-garage-v1/);
 assert.match(garage,/window\.TGGGarage/);
@@ -90,6 +94,20 @@ assert.equal(streetLife.includes('TGGEconomy?.apply'),false);
 assert.equal(streetLife.includes('TGGWorldSync'),false);
 
 
+
+assert.match(streetEvents,/tgg-street-events-v1/);
+assert.match(streetEvents,/window\.TGGStreetEvents/);
+for(const api of ['nearest','start','startNearest','finish','status','captureCrowd','releaseCrowd','render']) assert.match(streetEvents,new RegExp('function '+api+'\\b'));
+for(const eventId of ['downtown-cypher','studio-sidewalk','mixtape-popout']) assert.match(streetEvents,new RegExp(eventId));
+assert.match(streetEvents,/streetEventMode/);
+assert.match(streetEvents,/CROWD BUILDING/);
+assert.match(streetEvents,/CROWD FELT THAT/);
+assert.equal(streetEvents.includes('TGGGame?.reward'),false);
+assert.equal(streetEvents.includes('TGGCareer?.addRep'),false);
+assert.equal(streetEvents.includes('TGGEconomy?.apply'),false);
+assert.equal(streetEvents.includes('TGGWorldSync'),false);
+
+
 for(const forbidden of [
   'SUPABASE_SERVICE_ROLE_KEY',
   'sb_secret_',
@@ -105,10 +123,10 @@ for(const forbidden of [
   assert.equal(game3d.includes(forbidden),false,'3D runtime must exclude '+forbidden);
 }
 
-assert.equal(release.release,'V1.31 Street Life + Traffic Proximity');
-assert.equal(release.base,'V1.30 City Life 3D');
-assert.equal(auto.version,'1.31');
-assert.equal(qa.version,'1.31');
+assert.equal(release.release,'V1.32 Street Events + Crowd Reactions');
+assert.equal(release.base,'V1.31 Street Life + Traffic Proximity');
+assert.equal(auto.version,'1.32');
+assert.equal(qa.version,'1.32');
 assert.equal(release.production,'gated');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.ok(['candidate_pending_ci','passed'].includes(release.static_gate));
@@ -121,7 +139,8 @@ for(const gate of [
   'mobile_drift_control','mobile_horn_control','local_three_runtime','studio_dom_ready_boot',
   'interiors_3d_runtime','home_3d','media_3d','shops_3d','park_3d','garage_3d_runtime',
   'navigation_hud','traffic_population','traffic_animation','interior_no_reward_path',
-  'street_life_api','pedestrian_proximity','street_contact_memory','street_talk_no_rewards','traffic_proximity','horn_reaction','contextual_prompt'
+  'street_life_api','pedestrian_proximity','street_contact_memory','street_talk_no_rewards','traffic_proximity','horn_reaction','contextual_prompt',
+  'street_events_api','street_event_hotspots','street_event_local_state','crowd_gather_3d','crowd_reaction_animation','street_event_no_rewards','street_event_no_remote_mutations','contextual_event_hud'
 ]) assert.ok(release.gates.includes(gate),'missing V1.30 gate '+gate);
 
-console.log('GAME_V1_31_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_32_STATIC_CONTRACT_PASS');

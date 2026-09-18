@@ -222,6 +222,24 @@
     return true;
   }
 
+  function vehicleImpact(strength=.5){
+    if(activeScreen!=='game'||!state.inVehicle)return false;
+    const hit=Math.max(.15,Math.min(1,Number(strength)||.5));
+    const pre=Math.abs(driveRuntime.speed);
+    driveRuntime.speed*=Math.max(.12,1-hit*.82);
+    driveRuntime.steer*=.35;
+    driveRuntime.boosting=false;
+    driveRuntime.boostEnergy=Math.max(0,driveRuntime.boostEnergy-hit*18);
+    driveRuntime.blocked=true;
+    Object.keys(driveKeys).forEach(k=>{if(k!=='left'&&k!=='right')driveKeys[k]=false;});
+    window.TGG3D?.setVehicleDynamics?.({
+      speed:driveRuntime.speed,steer:driveRuntime.steer,braking:true,handbrake:false,
+      blocked:true,boosting:false,boostEnergy:driveRuntime.boostEnergy
+    });
+    update();
+    return {strength:hit,preSpeed:pre,speed:Math.abs(driveRuntime.speed),boostEnergy:driveRuntime.boostEnergy};
+  }
+
   function approach(value,target,amount){
     if(value<target)return Math.min(target,value+amount);
     if(value>target)return Math.max(target,value-amount);
@@ -669,7 +687,7 @@
     getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,
     driveVehicle,setDriveKey,getDrivingState:()=>({...driveRuntime}),setDriveTuning,getDriveTuning,
     setWalkKey,getWalkingState:()=>({...walkRuntime}),setWalkTuning,getWalkTuning,
-    horn,mission,toggleVehicle,recoverVehicle,resetForNewGame
+    horn,mission,toggleVehicle,recoverVehicle,vehicleImpact,resetForNewGame
   };
 
   load();

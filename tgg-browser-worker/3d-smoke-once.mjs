@@ -410,6 +410,12 @@ async function run(){
     record('walk-movement',Number(walk?.x)>x0,`${x0}->${walk?.x}`);
 
     console.log(JSON.stringify({tgg_3d_smoke_step:'walk-complete'}));
+    await page.evaluate(()=>{
+      const s=window.TGGGame?.getState?.();
+      if(s){s.x=50;s.y=55;s.heading=0;s.inVehicle=false;}
+      window.TGGGame?.refresh?.();
+    });
+    await page.waitForTimeout(120);
     await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());
     await page.waitForTimeout(150);
     const entered=await page.evaluate(()=>window.TGGGame?.getState?.());

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.30",
-  "module": "GAME-V1.30",
-  "name": "City Life 3D Checkpoint",
+  "version": "1.31",
+  "module": "GAME-V1.31",
+  "name": "Street Life + Traffic Proximity Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -94,10 +94,17 @@
     "navigation_hud": true,
     "traffic_population": true,
     "traffic_animation": true,
-    "interior_no_reward_path": true
+    "interior_no_reward_path": true,
+    "street_life_api": true,
+    "pedestrian_proximity": true,
+    "street_contact_memory": true,
+    "street_talk_no_rewards": true,
+    "traffic_proximity": true,
+    "horn_reaction": true,
+    "contextual_prompt": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.31 TRAFFIC PROXIMITY + STREET INTERACTIONS",
-  "verification": "passed"
+  "next": "V1.32 STREET EVENTS + CROWD REACTIONS",
+  "verification": "pending_ci"
 }

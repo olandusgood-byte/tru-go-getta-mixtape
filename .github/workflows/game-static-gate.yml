@@ -94,3 +94,9 @@ jobs:
           }
           console.log('V1.14 world sync + live-city read-only assets contract verified.');
           NODE
+      - name: Upload V1.14 game verification artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: v1-14-game-bundle
+          path: game
+          retention-days: 1

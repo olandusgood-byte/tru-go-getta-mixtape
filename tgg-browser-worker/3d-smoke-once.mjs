@@ -82,7 +82,8 @@ async function run(){
         state:window.TGGGame?.getState?.(),
         walkingApi:typeof window.TGGGame?.getWalkingState==='function'&&typeof window.TGGGame?.setWalkKey==='function',
         tune:window.TGGGame?.getWalkTuning?.(),
-        finalBuildVersion:window.TGGFinalBuild?.version||null
+        finalBuildVersion:window.TGGFinalBuild?.version||null,
+      gamepadApi:typeof window.TGGGamepad?.isConnected==='function'
       }));
       record('title-version',initial.title.includes(EXPECT_VERSION),initial.title);
       record('walking-api',initial.walkingApi);
@@ -295,6 +296,15 @@ async function run(){
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await ctx.close();
       return;
+    }
+    if(REQUIRE_PLAYER_SMOOTH){
+      record('walking-api',initial.walkingApi);
+      record('walking-tuning',Number(initial.walkingTuning?.walkSpeed)>0&&Number(initial.walkingTuning?.sprintSpeed)>Number(initial.walkingTuning?.walkSpeed),JSON.stringify(initial.walkingTuning));
+      record('player-dynamics-api',initial.playerDynamicsApi);
+      record('sprint-control',initial.sprintButton);
+      record('player-move-hud',initial.playerMoveHud);
+      record('final-build-runtime',String(initial.finalBuildVersion).includes('V2.00'),String(initial.finalBuildVersion));
+      record('gamepad-api',initial.gamepadApi);
     }
     if(REQUIRE_DESTINATIONS){
       record('destination-count',initial.destinations>=6,String(initial.destinations));

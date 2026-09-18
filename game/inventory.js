@@ -10,7 +10,10 @@
     {id:'show-pass',name:'Show Pass',type:'event',detail:'Access credential for the City Showdown.'},
     {id:'contract-folder',name:'Contract Folder',type:'career',detail:'Offer paperwork and meeting notes for the deal route.'},
     {id:'indie-kit',name:'Indie Rollout Kit',type:'promo',detail:'Independent release plan, assets and street-team checklist.'},
-    {id:'release-pass',name:'Release Night Pass',type:'event',detail:'Credential for the Mission 03 release-night finale.'}
+    {id:'release-pass',name:'Release Night Pass',type:'event',detail:'Credential for the Mission 03 release-night finale.'},
+    {id:'club-booking',name:'Club Booking',type:'event',detail:'Confirmed booking and promo packet for the club headline route.'},
+    {id:'festival-kit',name:'Festival Kit',type:'event',detail:'Festival credential, set notes and promo package.'},
+    {id:'headline-pass',name:'Headline Pass',type:'event',detail:'Backstage credential required to perform the Mission 04 headline show.'}
   ];
   let state={items:{},updatedAt:0};
   function load(){try{const saved=JSON.parse(localStorage.getItem(KEY)||'{}');state={...state,...saved};if(!state.items||typeof state.items!=='object')state.items={}}catch(e){state={items:{},updatedAt:0}}return state}
@@ -36,10 +39,19 @@
     localStorage.setItem(migration,'1');
     return true;
   }
+  function mission04Pack(){
+    const migration='tgg-inventory-v118-mission04';
+    if(localStorage.getItem(migration))return false;
+    ['club-booking','festival-kit','headline-pass'].forEach(id=>state.items[id]=Math.max(1,get(id)));
+    save();
+    localStorage.setItem(migration,'1');
+    return true;
+  }
   function render(){const el=document.getElementById('inventoryList');if(!el)return;el.innerHTML=catalog.map(x=>`<div class="mission-card"><b>${x.name}</b><span>${x.detail} • ${get(x.id)} owned</span><button class="secondary" data-inventory-add="${x.id}">ADD</button></div>`).join('');el.querySelectorAll('[data-inventory-add]').forEach(b=>b.onclick=()=>add(b.dataset.inventoryAdd,1))}
   load();
   starterPack();
   mission02Pack();
   mission03Pack();
-  window.TGGInventory={catalog,state,load,save,get,add,remove,has,starterPack,mission02Pack,mission03Pack,render};
+  mission04Pack();
+  window.TGGInventory={catalog,state,load,save,get,add,remove,has,starterPack,mission02Pack,mission03Pack,mission04Pack,render};
 })();

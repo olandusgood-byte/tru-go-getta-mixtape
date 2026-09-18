@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.13",
-  "module": "GAME-V1.13-QA",
-  "name": "Progression + Business Discovery",
+  "version": "1.14",
+  "module": "GAME-V1.14-QA",
+  "name": "Live City + Read-Only World Assets",
   "checks": [
     "storage",
     "game_api",
@@ -18,7 +18,14 @@
     "world_vehicle_bundle",
     "world_assets_bundle",
     "no_purchase_bridge",
-    "virtual_currency_only"
+    "virtual_currency_only",
+    "business_assets_loader",
+    "business_assets_state",
+    "city_assets_hotspot",
+    "live_city_activity_snapshot",
+    "property_readonly_inspect",
+    "vehicle_readonly_inspect",
+    "remote_label_escape"
   ],
   "workflow": [
     "BUILD",
@@ -31,5 +38,5 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "manual_only",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.14 LIVE CITY ACTIVITIES + VEHICLE/PROPERTY GAMEPLAY"
+  "next": "V1.15 CITY ACTIVITY DEPTH + SAFE LOCAL PROGRESSION"
 }

@@ -44,6 +44,10 @@
     test('street life contacts',Array.isArray(window.TGGStreetLife?.CONTACTS)&&window.TGGStreetLife.CONTACTS.length>=6);
     test('street life state',Array.isArray(window.TGGStreetLife?.state?.met)&&typeof window.TGGStreetLife?.state?.talks==='number');
     test('street life prompt',!!document.getElementById('streetLifePrompt')&&!!document.getElementById('streetDialogue'));
+    test('street events api',!!window.TGGStreetEvents&&typeof window.TGGStreetEvents.nearest==='function'&&typeof window.TGGStreetEvents.start==='function'&&typeof window.TGGStreetEvents.finish==='function');
+    test('street events hotspots',Array.isArray(window.TGGStreetEvents?.HOTSPOTS)&&window.TGGStreetEvents.HOTSPOTS.length===3);
+    test('street events state',Array.isArray(window.TGGStreetEvents?.state?.completed)&&typeof window.TGGStreetEvents?.state?.crowdHype==='number');
+    test('street events hud',!!document.getElementById('streetEventPrompt')&&!!document.getElementById('streetEventHud'));
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

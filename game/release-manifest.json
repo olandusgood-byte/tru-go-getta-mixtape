@@ -345,8 +345,8 @@
     "street_sets_single_store",
     "street_set_achievements"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.34-STREET-SETS-CROWD-MOMENTUM-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.34-STREET-SETS-CROWD-MOMENTUM-VERIFIED",
   "production": "gated"
 }

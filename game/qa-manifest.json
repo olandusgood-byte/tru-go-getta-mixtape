@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.25",
-  "module": "GAME-V1.25-QA",
-  "name": "Starter Car + Drive Mode",
+  "version": "1.26",
+  "module": "GAME-V1.26-QA",
+  "name": "Fixed Driving Controls",
   "checks": [
     "storage",
     "game_api",
@@ -104,7 +104,13 @@
     "car_follow_camera",
     "wheel_animation",
     "single_e_vehicle_action",
-    "vehicle_no_reward_path"
+    "vehicle_no_reward_path",
+    "drive_vehicle_api",
+    "forward_relative_drive",
+    "reverse_relative_drive",
+    "steering_heading",
+    "steering_no_strafe",
+    "vehicle_collision_preserved"
   ],
   "workflow": [
     "BUILD",
@@ -117,6 +123,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.26 VEHICLE HANDLING + GARAGE",
+  "next": "V1.27 CINEMATIC CAMERA + RADAR",
   "verification": "pending_ci"
 }

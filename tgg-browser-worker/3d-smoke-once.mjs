@@ -22,7 +22,7 @@ async function run(){
     page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
     page.on('response',r=>{if(r.status()>=400)failedResources.push({url:r.url(),status:r.status()})});
     const res=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
-    await page.waitForSelector('#newGame',{state:'visible',timeout:15000});
+    await page.waitForSelector('#newGame',{state:'attached',timeout:15000});
     await page.evaluate(()=>document.getElementById('newGame')?.click());
     await page.evaluate(()=>{
       const stage=document.getElementById('stageName');

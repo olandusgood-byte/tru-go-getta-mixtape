@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.22",
-  "module": "GAME-V1.22",
-  "name": "3D Collision + Camera Orbit Checkpoint",
+  "version": "1.23",
+  "module": "GAME-V1.23",
+  "name": "3D District Landmarks + Enterable Hubs Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -83,10 +83,14 @@
     "world3d_collision": true,
     "world3d_orbit_camera": true,
     "world3d_zoom": true,
-    "mission_path_clear": true
+    "mission_path_clear": true,
+    "world3d_landmarks": true,
+    "world3d_proximity": true,
+    "world3d_enter_hub": true,
+    "world3d_e_key": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.23 3D DISTRICT LANDMARKS + ENTERABLE HUBS",
-  "verification": "passed"
+  "next": "V1.24 3D INTERIORS + PORTAL TRANSITIONS",
+  "verification": "pending_ci"
 }

@@ -8,7 +8,7 @@
   function install(){
     document.body.classList.add('tgg-v211');
     const badge=document.querySelector('.v201-badge');
-    if(badge)badge.textContent='V2.12 MEGA 100';
+    if(badge)badge.textContent='V2.13 WORLD POLISH 100';
     const city=document.querySelector('.city');
     if(city&&!document.getElementById('livingTrafficHud')){
       hud=document.createElement('div');

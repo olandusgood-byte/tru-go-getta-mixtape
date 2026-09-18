@@ -1,53 +1,61 @@
-# TRU GO GETTA Game V1.18
+# TRU GO GETTA Game V1.19
 
-V1.18 makes the district-story layer visibly playable by adding NPC route encounters and persistent local district memory.
+V1.19 turns the V1.18 encounter memory into deterministic NPC relationship and dialogue states without creating another save store or another reward system.
 
-## NPC route
+## Relationship tiers
 
-- Downtown / GET SEEN → M (Manager)
-- Studio Row / GET SHARP → Kane (Producer)
-- Mixtape Ave / GET HEARD → DJ V (DJ)
+Each NPC relationship is derived from two things only:
 
-The City Events screen now auto-renders both the District Story card and NPC Route Memory card.
+1. the player has actually met that NPC through the district story route;
+2. mastery of that NPC's linked city activity.
 
-## Local memory
+Tiers:
 
-The existing route creates local, reward-free memory in `tgg-route-memory-v1`:
+- STRANGER
+- INTRO
+- FAMILIAR
+- TRUSTED
+- INNER CIRCLE
 
-- district visits;
-- story beats seen;
-- unique NPC contacts;
-- last NPC / beat per district;
-- deduplicated encounter records.
+Linked activities:
 
-Repeatedly talking to the same NPC on the same route beat does not create duplicate encounter history.
+- M → Street Cypher
+- Kane → Studio Pop-In
+- DJ V → Release Rush
 
-## Remote memory
+Repeatedly pressing TALK does not increase relationship status. Activity mastery does.
 
-Optional remote refresh uses only:
+## Persistence
 
-- `tgg_world_npc_encounters`
-- `tgg_world_memory_history`
+Relationships remain inside the existing `tgg-route-memory-v1` state under `relationships`. No `tgg-relationship-v1` store is created.
 
-The route-memory module has no cash, XP, REP, economy-apply, mission-completion, story-write or social-write authority.
+## Safety / economy
+
+The relationship module:
+
+- cannot award cash;
+- cannot award XP;
+- cannot award reputation;
+- cannot apply economy rewards;
+- cannot write remote story/social state;
+- only changes local dialogue/relationship memory.
 
 ## Verification
 
-- [x] story + memory cards auto-render in City Events
-- [x] M encounter recorded once
-- [x] Kane appears on GET SHARP
-- [x] DJ V appears on GET HEARD
-- [x] Downtown / Studio Row / Mixtape Ave visits persist
-- [x] three unique route contacts recorded
-- [x] `know-the-city` achievement unlocks
-- [x] full route payout remains the existing 905 cash
-- [x] remote memory uses only NPC encounters + memory history reads
-- [x] Static CI PASS on `95b30b9`
-- [x] Chromium Smoke PASS on `95b30b9`
+- [x] M starts Stranger before meeting
+- [x] meeting M with existing Regular mastery produces Familiar
+- [x] repeated M talk remains Familiar with unchanged run count
+- [x] fifth Street Cypher advances M to Trusted
+- [x] Trusted M dialogue changes
+- [x] Trusted Contact achievement unlocks
+- [x] relationships persist in `tgg-route-memory-v1`
+- [x] no separate relationship store
+- [x] Static CI PASS on `31d8ac1`
+- [x] Chromium Smoke PASS on `31d8ac1`
 - [x] production remains gated
 
 ## Release status
 
-**V1.18-NPC-ROUTE-ENCOUNTERS-DISTRICT-MEMORY-VERIFIED.**
+**V1.19-NPC-DIALOGUE-RELATIONSHIP-MEMORY-VERIFIED.**
 
-Next internal development layer: **V1.19 NPC Dialogue States + Relationship Memory**.
+Next internal development layer: **V1.20 NPC Favor Hooks + Contact Opportunities**.

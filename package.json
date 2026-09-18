@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "postinstall": "playwright install chromium",
-    "start": "node worker.mjs",
-    "start:core": "node tgg-core/server.mjs"
+    "start": "node tgg-core/server.mjs",
+    "start:worker": "node worker.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",

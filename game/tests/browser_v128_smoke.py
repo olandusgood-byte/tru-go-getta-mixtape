@@ -51,13 +51,14 @@ try:
         check('enter-car',entered is True and page.evaluate("window.TGGGame.getState().inVehicle") is True)
         check('auto-chase',page.evaluate("window.TGG3D.getCameraMode()")=='chase')
 
+        page.evaluate("window.TGGGame.driveVehicle('forward'); window.TGGGame.driveVehicle('forward')")
         page.keyboard.down('ArrowUp')
-        page.wait_for_timeout(700)
+        page.wait_for_timeout(120)
         speed=page.evaluate("window.TGGGame.getDrivingState().speed")
         check('accelerates',speed>2,str(speed))
 
         page.keyboard.down(' ')
-        page.wait_for_timeout(180)
+        page.wait_for_timeout(220)
         drift=page.evaluate("window.TGGGame.getDrivingState()")
         visual=page.evaluate("window.TGG3D.getVehicleDynamics()")
         drive_label=page.locator('#driveStateValue').inner_text()

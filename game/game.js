@@ -152,6 +152,7 @@
     if(activeScreen!=='game')return false;
     if(state.inVehicle){
       state.inVehicle=false;
+      window.TGG3D?.setCameraMode?.('orbit',true);
       update();save(true);toast('EXITED STARTER CAR');
       return true;
     }
@@ -163,6 +164,7 @@
     const carHeading=window.TGG3D?.getCarHeading?.();
     if(Number.isFinite(carHeading))state.heading=carHeading;
     state.inVehicle=true;
+    window.TGG3D?.setCameraMode?.('chase',true);
     update();save(true);toast('STARTER CAR — ↑ GAS • ↓ REVERSE • ←/→ STEER');
     return true;
   }

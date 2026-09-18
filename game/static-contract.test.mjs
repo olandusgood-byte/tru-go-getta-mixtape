@@ -5,14 +5,16 @@ const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
 const business=fs.readFileSync(new URL('./business.js',import.meta.url),'utf8');
 const game=fs.readFileSync(new URL('./game.js',import.meta.url),'utf8');
 const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
+const events=fs.readFileSync(new URL('./events.js',import.meta.url),'utf8');
+const progression=fs.readFileSync(new URL('./progression.js',import.meta.url),'utf8');
 const qa=fs.readFileSync(new URL('./qa.js',import.meta.url),'utf8');
 const releaseQa=fs.readFileSync(new URL('./release-qa.js',import.meta.url),'utf8');
 const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.14/);
-assert.match(html,/GAME V1\.14 • LIVE CITY \+ READ-ONLY WORLD ASSETS/);
+assert.match(html,/Game V1\.15/);
+assert.match(html,/GAME V1\.15 • CITY ACTIVITY MASTERY/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/id="businessBoard"/);
 assert.match(html,/id="businessBtn"/);
@@ -44,6 +46,20 @@ for (const token of [
   assert.ok(game.includes(token),'missing playable control binding: '+token);
 }
 assert.match(game,/if\(activeScreen!==['"]game['"]\)return false/);
+
+
+for (const api of ['totalRuns','mastery','cityProfile','recordMomentum']) {
+  assert.match(events,new RegExp('function '+api+'\\b'));
+}
+assert.match(events,/tgg-events-v1/);
+assert.match(events,/streak:0/);
+assert.match(events,/bestStreak:0/);
+for (const reward of [
+  /street-cypher[^\n]+cash:180,xp:35,rep:10/,
+  /studio-pop-in[^\n]+cash:275,xp:55,rep:20/,
+  /release-rush[^\n]+cash:450,xp:90,rep:35/
+]) assert.match(events,reward);
+for (const achievement of ['city-regular','city-known','city-headliner']) assert.match(progression,new RegExp(achievement));
 
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
@@ -82,16 +98,20 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.14 Live City + Read-Only World Assets');
-assert.equal(release.base,'V1.13 Progression + Business Discovery');
-assert.equal(auto.version,'1.14');
-assert.equal(qaManifest.version,'1.14');
-assert.equal(release.browser_smoke,'automated_ci_pass');
+assert.equal(release.release,'V1.15 City Activity Mastery');
+assert.equal(release.base,'V1.14 Live City + Read-Only World Assets');
+assert.equal(auto.version,'1.15');
+assert.equal(qaManifest.version,'1.15');
+assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
+assert.ok(['pending_ci','passed'].includes(auto.verification));
 assert.equal(qaManifest.browserPolicy,'automated_ci_required');
+assert.ok(['pending_ci','passed'].includes(qaManifest.verification));
 assert.equal(release.production,'gated');
 assert.ok(release.modules.includes('V1.14-LIVE-CITY-ACTIVITY-SURFACE'));
 assert.ok(release.modules.includes('V1.14-WORLD-ASSET-READONLY-INSPECT'));
 assert.ok(release.gates.includes('remote_label_escape'));
+assert.ok(release.gates.includes('city_mastery_api'));
+assert.ok(release.gates.includes('base_event_economy_unchanged'));
 
-console.log('GAME_V1_14_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_15_STATIC_CONTRACT_PASS');

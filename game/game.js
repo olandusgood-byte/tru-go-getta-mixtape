@@ -189,6 +189,7 @@
     });
     $('missionBtn')?.addEventListener('click',mission);
     $('vehicleBtn')?.addEventListener('click',toggleVehicle);
+    $('interact3dBtn')?.addEventListener('click',()=>window.TGG3D?.interactNearest?.());
     $('saveBtn')?.addEventListener('click',()=>save(false));
     $('pauseBtn')?.addEventListener('click',()=>show('pause'));
     $('resumeBtn')?.addEventListener('click',()=>show('game'));
@@ -239,6 +240,7 @@
       if(typing)return;
       const k=e.key.length===1?e.key.toLowerCase():e.key;
       if(k==='e'){e.preventDefault();toggleVehicle();return;}
+      if(k==='f'){e.preventDefault();window.TGG3D?.interactNearest?.();return;}
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d'].includes(k)){
         e.preventDefault();
         move(k==='a'||k==='ArrowLeft'?-2:k==='d'||k==='ArrowRight'?2:0,k==='w'||k==='ArrowUp'?-2:k==='s'||k==='ArrowDown'?2:0);

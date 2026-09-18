@@ -67,19 +67,18 @@ with sync_playwright() as p:
     blocked_after=page.evaluate("window.TGGGame.getState().x")
     check('game-move-collision-guard',blocked_result is False and blocked_after==blocked_before,f'{blocked_before}->{blocked_after}')
     page.evaluate("window.TGGGame.getState().x=50;window.TGGGame.getState().y=55;window.TGGGame.refresh()")
-    canvas=page.locator('#world3d canvas')
-    box=canvas.bounding_box()
     initial_camera=page.evaluate("window.TGGWorld3D.cameraState()")
-    page.mouse.move(box['x']+box['width']/2,box['y']+box['height']/2)
-    page.mouse.down()
-    page.mouse.move(box['x']+box['width']/2+120,box['y']+box['height']/2+35,steps=6)
-    page.mouse.up()
-    page.wait_for_timeout(100)
+    page.evaluate("""() => {
+      const el=document.querySelector('#world3d canvas');
+      el.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1,clientX:100,clientY:100}));
+      el.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:1,clientX:220,clientY:135}));
+      el.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:1,clientX:220,clientY:135}));
+    }""")
+    page.wait_for_timeout(50)
     orbit_camera=page.evaluate("window.TGGWorld3D.cameraState()")
     check('camera-drag-orbit',abs(orbit_camera.get('yaw',0)-initial_camera.get('yaw',0))>0.2,json.dumps([initial_camera,orbit_camera]))
-    page.mouse.move(box['x']+box['width']/2,box['y']+box['height']/2)
-    page.mouse.wheel(0,500)
-    page.wait_for_timeout(100)
+    page.evaluate("""() => document.querySelector('#world3d canvas').dispatchEvent(new WheelEvent('wheel',{bubbles:true,deltaY:500}))""")
+    page.wait_for_timeout(50)
     zoom_camera=page.evaluate("window.TGGWorld3D.cameraState()")
     check('camera-wheel-zoom',zoom_camera.get('distance')!=orbit_camera.get('distance') and 5.5<=zoom_camera.get('distance',0)<=18,json.dumps([orbit_camera,zoom_camera]))
     reset_camera=page.evaluate("window.TGGWorld3D.resetCamera()")

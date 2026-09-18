@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.20",
-  "module": "GAME-V1.20-QA",
-  "name": "NPC Favor Hooks + Contact Opportunities",
+  "version": "1.30",
+  "module": "GAME-V1.30-QA",
+  "name": "City Life 3D",
   "checks": [
     "storage",
     "game_api",
@@ -70,7 +70,29 @@
     "event_run_completion_hook",
     "contact_ops_no_bonus_rewards",
     "opportunities_single_memory_store",
-    "first_opportunity_achievement"
+    "first_opportunity_achievement",
+    "garage_api",
+    "garage_persistence",
+    "car_appearance_runtime",
+    "handling_preset_runtime",
+    "vehicle_collision_margin",
+    "studio_3d_renderer",
+    "studio_3d_entry",
+    "manager_dialogue_proximity",
+    "mobile_drift_control",
+    "mobile_horn_control",
+    "local_three_runtime",
+    "studio_dom_ready_boot",
+    "interiors_3d_runtime",
+    "home_3d",
+    "media_3d",
+    "shops_3d",
+    "park_3d",
+    "garage_3d_runtime",
+    "navigation_hud",
+    "traffic_population",
+    "traffic_animation",
+    "interior_no_reward_path"
   ],
   "workflow": [
     "BUILD",
@@ -83,6 +105,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.21 CONTACT CHAINS + OPPORTUNITY HISTORY",
-  "verification": "passed"
+  "next": "V1.31 TRAFFIC PROXIMITY + STREET INTERACTIONS",
+  "verification": "pending_ci"
 }

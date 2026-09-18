@@ -9,7 +9,7 @@
   function install(){
     document.body.classList.add('tgg-v209');
     const badge=document.querySelector('.v201-badge');
-    if(badge)badge.textContent='V2.09 CITY ACTION';
+    if(badge)badge.textContent='V2.10 CITY DEPTH';
     const city=document.querySelector('.city');
     if(city&&!sceneEl){
       sceneEl=document.createElement('div');

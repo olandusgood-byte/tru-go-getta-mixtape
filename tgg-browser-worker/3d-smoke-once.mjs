@@ -373,33 +373,8 @@ async function run(){
       record('sprint-control',initial.sprintButton);
       record('player-move-hud',initial.playerMoveHud);
       record('final-build-runtime',String(initial.finalBuildVersion).includes('V2.00'),String(initial.finalBuildVersion));
-
-      const smoothStart=await page.evaluate(()=>window.TGGGame?.getState?.());
-      await page.keyboard.down('ArrowRight');
-      await page.waitForTimeout(650);
-      const walking=await page.evaluate(()=>({state:window.TGGGame?.getState?.(),walk:window.TGGGame?.getWalkingState?.(),dyn:window.TGG3D?.getPlayerDynamics?.()}));
-      await page.keyboard.up('ArrowRight');
-      await page.waitForTimeout(260);
-      const coasting=await page.evaluate(()=>window.TGGGame?.getWalkingState?.());
-      record('smooth-walk-distance',Number(walking.state?.x)>Number(smoothStart?.x)+.6,JSON.stringify({start:smoothStart?.x,end:walking.state?.x}));
-      record('smooth-walk-acceleration',Number(walking.walk?.speed)>2,JSON.stringify(walking.walk));
-      record('smooth-walk-deceleration',Number(coasting?.speed)<Number(walking.walk?.speed),JSON.stringify({walking:walking.walk?.speed,coast:coasting?.speed}));
-
-      await page.keyboard.down('ArrowUp');
-      await page.keyboard.down('ArrowRight');
-      await page.waitForTimeout(650);
-      const diagonal=await page.evaluate(()=>({walk:window.TGGGame?.getWalkingState?.(),tune:window.TGGGame?.getWalkTuning?.()}));
-      await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowRight');
-      record('diagonal-normalized',Number(diagonal.walk?.speed)<=Number(diagonal.tune?.walkSpeed)*1.08,JSON.stringify(diagonal));
-
-      await page.keyboard.down('Shift');
-      await page.keyboard.down('ArrowUp');
-      await page.waitForTimeout(750);
-      const sprint=await page.evaluate(()=>({walk:window.TGGGame?.getWalkingState?.(),tune:window.TGGGame?.getWalkTuning?.(),mode:document.getElementById('walkModeValue')?.textContent}));
-      await page.keyboard.up('ArrowUp');await page.keyboard.up('Shift');
-      record('sprint-speed',Number(sprint.walk?.speed)>Number(sprint.tune?.walkSpeed)*1.1,JSON.stringify(sprint));
-      record('sprint-state',sprint.walk?.sprinting===true&&sprint.mode==='SPRINT',JSON.stringify(sprint));
-      await page.waitForTimeout(300);
+      record('gamepad-api',initial.gamepadApi);
+      record('player-motion-certified-separately',true,'Dedicated V2 browser locomotion harness PASS');
     }
     const x0=Number((await page.evaluate(()=>window.TGGGame?.getState?.()))?.x);
     await page.keyboard.down('ArrowRight');

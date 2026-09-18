@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.15 Story Missions",
-  "base": "V1.13 Progression + Business Discovery",
+  "release": "V1.16 Branching Story — Mission 02",
+  "base": "V1.15 Story Missions",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -45,7 +45,11 @@
     "V1.13-BUSINESS-SCREEN",
     "V1.15-STORY-MISSION-MAKE-NOISE",
     "V1.15-STORY-MISSION-PERSISTENCE",
-    "V1.15-STORY-MISSION-REWARD-GATE"
+    "V1.15-STORY-MISSION-REWARD-GATE",
+    "V1.16-MISSION-02-PICK-A-SIDE",
+    "V1.16-BRANCHING-CHOICE",
+    "V1.16-PERSISTENT-CONSEQUENCE",
+    "V1.16-CITY-SHOWDOWN"
   ],
   "gates": [
     "runtime_api_presence",
@@ -111,10 +115,16 @@
     "story_mission_api",
     "story_mission_ui",
     "story_mission_persistence",
-    "story_mission_reward_once"
+    "story_mission_reward_once",
+    "story_mission_02_api",
+    "story_mission_02_ui",
+    "story_mission_02_choice_persistence",
+    "story_mission_02_route_rewards",
+    "story_mission_02_finale",
+    "story_mission_02_reward_once"
   ],
   "static_gate": "candidate_pending_ci",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.15-STORY-MISSION-MAKE-NOISE-CANDIDATE",
+  "release_checkpoint": "V1.16-MISSION-02-PICK-A-SIDE-CANDIDATE",
   "production": "staging_candidate"
 }

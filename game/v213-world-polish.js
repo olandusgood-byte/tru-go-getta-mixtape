@@ -28,7 +28,7 @@
 
   function installHud(){
     document.body.classList.add('tgg-v213');
-    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.14 PLAYTEST HARDENING 100';
+    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.15 CHARACTER + MISSION DEPTH 100';
     const city=document.querySelector('.city');
     if(city&&!document.getElementById('v213FxOverlay')){
       overlay=document.createElement('div');overlay.id='v213FxOverlay';overlay.className='v213-fx-overlay';
@@ -336,7 +336,7 @@
     if(document.hidden)return;
     emitCarFx(dt,now);updateParticles(dt);updateDistrict();pulseWorld(now);updateOverlay();
     const q=window.TGGV212?.status?.()?.quality||'high';state.particleMode=q;
-    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.14 PLAYTEST HARDENING 100';
+    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.15 CHARACTER + MISSION DEPTH 100';
   }
   function status(){
     return {

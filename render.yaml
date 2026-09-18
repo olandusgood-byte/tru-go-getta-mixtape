@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: tgg-core
+    runtime: node
+    region: ohio
+    plan: free
+    branch: main
+    autoDeploy: true
+    buildCommand: npm install
+    startCommand: node tgg-core/server.mjs
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tgg-core-db
+          property: connectionString
+      - key: DATABASE_SSL
+        value: "true"
+      - key: TGG_TOKEN_SECRET
+        generateValue: true
+
+databases:
+  - name: tgg-core-db
+    plan: free
+    region: ohio
+    postgresMajorVersion: 18

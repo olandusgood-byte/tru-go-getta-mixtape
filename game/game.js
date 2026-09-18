@@ -387,6 +387,11 @@
       toast('MOVE CLOSER TO THE STARTER CAR');
       return false;
     }
+    const carPos=window.TGG3D?.getCarPercent?.();
+    if(Number.isFinite(carPos?.x)&&Number.isFinite(carPos?.y)){
+      state.x=Math.max(3,Math.min(94,carPos.x));
+      state.y=Math.max(8,Math.min(88,carPos.y));
+    }
     const carHeading=window.TGG3D?.getCarHeading?.();
     if(Number.isFinite(carHeading))state.heading=carHeading;
     clearWalkKeys();
@@ -554,8 +559,10 @@
         e.preventDefault();
         const driveControl=(k==='w'||k==='ArrowUp')?'forward':(k==='s'||k==='ArrowDown')?'reverse':(k==='a'||k==='ArrowLeft')?'left':'right';
         const walkControl=(k==='w'||k==='ArrowUp')?'up':(k==='s'||k==='ArrowDown')?'down':(k==='a'||k==='ArrowLeft')?'left':'right';
-        if(state.inVehicle)setDriveKey(driveControl,true);
-        else setWalkKey(walkControl,true);
+        if(state.inVehicle){
+          setDriveKey(driveControl,true);
+          if(!e.repeat&&['forward','reverse'].includes(driveControl))driveVehicle(driveControl);
+        }else setWalkKey(walkControl,true);
       }
     });
     document.addEventListener('keyup',e=>{
@@ -573,8 +580,10 @@
       b.addEventListener('pointerdown',e=>{
         if(activeScreen!=='game')return;
         e.preventDefault();
-        if(state.inVehicle)setDriveKey(driveControl,true);
-        else setWalkKey(walkControl,true);
+        if(state.inVehicle){
+          setDriveKey(driveControl,true);
+          driveVehicle(driveControl);
+        }else setWalkKey(walkControl,true);
         b.classList.add('held');
         b.setPointerCapture?.(e.pointerId);
       });
@@ -585,7 +594,7 @@
       };
       b.addEventListener('pointerup',release);
       b.addEventListener('pointercancel',release);
-      b.addEventListener('pointerleave',release);
+      b.addEventListener('lostpointercapture',release);
     });
     const sprintBtn=$('sprintBtn');
     if(sprintBtn){

@@ -125,10 +125,19 @@ with sync_playwright() as p:
     check('mission-offered',page.locator('#missionBtn').inner_text()=='TAKE MISSION')
     page.click('#missionBtn')
     check('mission-accepted',page.locator('#missionBtn').inner_text()=='COMPLETE MISSION')
-    page.evaluate("""() => {
-      while(window.TGGGame.getState().x<72)window.TGGGame.move(2,0);
-      while(window.TGGGame.getState().y>36)window.TGGGame.move(0,-2);
+    mission_route=page.evaluate("""() => {
+      let guard=0;
+      while(window.TGGGame.getState().x<72&&guard++<40){
+        if(window.TGGGame.move(2,0)===false)break;
+      }
+      guard=0;
+      while(window.TGGGame.getState().y>36&&guard++<40){
+        if(window.TGGGame.move(0,-2)===false)break;
+      }
+      const s=window.TGGGame.getState();
+      return {x:s.x,y:s.y,reachable:Math.abs(s.x-72)<10&&Math.abs(s.y-36)<10};
     }""")
+    check('mission-route-reachable',mission_route.get('reachable') is True,json.dumps(mission_route))
     page.click('#missionBtn')
     check('mission-cash',page.locator('#hudCash').inner_text()=='250',page.locator('#hudCash').inner_text())
     check('mission-xp',page.locator('#hudXp').inner_text()=='50',page.locator('#hudXp').inner_text())

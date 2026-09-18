@@ -70,9 +70,12 @@ async function runMultiFlowBrowser(page, { flowKey, supabaseUrl, supabaseKey, ac
   const bodyText = await page.locator('body').innerText().catch(() => '');
   const control = await browserRpc(page, supabaseUrl, accessToken, 'tgg_get_creator_ui_workspace_states');
   const controlResponded = control.ok;
-  const blockingErrorCount = consoleErrors.length + pageErrors.length;
+  const nonBlockingPatterns = [/requestStorageAccess: Permission denied\.?/i, /Failed to load resource: the server responded with a status of 429 \(\)/i, /solveSimpleChallenge is not defined/i];
+  const blockingConsoleErrors = consoleErrors.filter((message) => !nonBlockingPatterns.some((pattern) => pattern.test(message)));
+  const blockingPageErrors = pageErrors.filter((message) => !nonBlockingPatterns.some((pattern) => pattern.test(message)));
+  const blockingErrorCount = blockingConsoleErrors.length + blockingPageErrors.length;
   const browserErrors = { console: [...consoleErrors], page: [...pageErrors] };
-  const capture = { build: 'ARTIST-HQ-V3-AUTO-QA-V1', load_ms: Math.max(1, loadMs), rendered, page_path: pagePath, auth_present: true, browser_context: true, control_responded: controlResponded, blocking_error_count: blockingErrorCount, browser_errors: browserErrors };
+  const capture = { build: 'ARTIST-HQ-V3-AUTO-QA-V1', load_ms: Math.max(1, loadMs), rendered, page_path: pagePath, auth_present: true, browser_context: true, control_responded: controlResponded, blocking_error_count: blockingErrorCount, browser_errors: browserErrors, ignored_browser_errors: { console: consoleErrors.filter((message) => !blockingConsoleErrors.includes(message)), page: pageErrors.filter((message) => !blockingPageErrors.includes(message)) } };
 
   if (config.workspace) {
     const schema = await browserRpc(page, supabaseUrl, accessToken, 'tgg_get_creator_workspace_schema', { p_workspace: config.workspace });

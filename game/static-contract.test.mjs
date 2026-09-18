@@ -16,8 +16,8 @@ const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',impor
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.18/);
-assert.match(html,/GAME V1\.18 • NPC ROUTE ENCOUNTERS \+ DISTRICT MEMORY/);
+assert.match(html,/Game V1\.19/);
+assert.match(html,/GAME V1\.19 • NPC DIALOGUE STATES \+ RELATIONSHIP MEMORY/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/<script src="district-story\.js"><\/script>/);
@@ -137,6 +137,20 @@ for (const forbiddenNpcWrite of [
 ]) assert.equal(routeMemory.includes(forbiddenNpcWrite),false,'route memory must remain read-only: '+forbiddenNpcWrite);
 assert.match(progression,/know-the-city/);
 
+
+assert.match(routeMemory,/relationships:\{\}/);
+assert.match(routeMemory,/RELATION_EVENT/);
+assert.match(routeMemory,/DIALOGUE/);
+for (const api of ['relationship','dialogue','syncRelationships']) {
+  assert.match(routeMemory,new RegExp('function '+api+'\\b'));
+}
+assert.match(events,/TGGRouteMemory\?\.syncRelationships/);
+assert.match(progression,/trusted-contact/);
+assert.equal(routeMemory.includes('tgg-relationship-v1'),false);
+assert.equal(routeMemory.includes('TGGGame?.reward'),false);
+assert.equal(routeMemory.includes('TGGCareer?.addRep'),false);
+assert.equal(routeMemory.includes('TGGEconomy?.apply'),false);
+
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
 }
@@ -174,10 +188,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.18 NPC Route Encounters + District Memory');
-assert.equal(release.base,'V1.17 District Circuits + Story Routing');
-assert.equal(auto.version,'1.18');
-assert.equal(qaManifest.version,'1.18');
+assert.equal(release.release,'V1.19 NPC Dialogue States + Relationship Memory');
+assert.equal(release.base,'V1.18 NPC Route Encounters + District Memory');
+assert.equal(auto.version,'1.19');
+assert.equal(qaManifest.version,'1.19');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -198,5 +212,8 @@ assert.ok(release.gates.includes('story_router_no_rewards'));
 assert.ok(release.gates.includes('route_memory_api'));
 assert.ok(release.gates.includes('remote_memory_readonly'));
 assert.ok(release.gates.includes('route_memory_no_rewards'));
+assert.ok(release.gates.includes('relationship_api'));
+assert.ok(release.gates.includes('repeat_talk_no_progress'));
+assert.ok(release.gates.includes('single_memory_store'));
 
-console.log('GAME_V1_18_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_19_STATIC_CONTRACT_PASS');

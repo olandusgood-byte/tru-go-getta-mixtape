@@ -324,8 +324,8 @@
     "street_event_no_remote_mutations",
     "contextual_event_hud"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.32-STREET-EVENTS-CROWD-REACTIONS-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.32-STREET-EVENTS-CROWD-REACTIONS-VERIFIED",
   "production": "gated"
 }

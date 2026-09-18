@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.16 Branching Story — Mission 02",
-  "base": "V1.15 Story Missions",
+  "release": "V1.17 Career Choices — Mission 03",
+  "base": "V1.16 Branching Story — Mission 02",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -49,7 +49,11 @@
     "V1.16-MISSION-02-PICK-A-SIDE",
     "V1.16-BRANCHING-CHOICE",
     "V1.16-PERSISTENT-CONSEQUENCE",
-    "V1.16-CITY-SHOWDOWN"
+    "V1.16-CITY-SHOWDOWN",
+    "V1.17-MISSION-03-THE-OFFER",
+    "V1.17-DEAL-VS-INDEPENDENT",
+    "V1.17-CAREER-CONSEQUENCE",
+    "V1.17-RELEASE-NIGHT"
   ],
   "gates": [
     "runtime_api_presence",
@@ -121,10 +125,16 @@
     "story_mission_02_choice_persistence",
     "story_mission_02_route_rewards",
     "story_mission_02_finale",
-    "story_mission_02_reward_once"
+    "story_mission_02_reward_once",
+    "story_mission_03_api",
+    "story_mission_03_ui",
+    "story_mission_03_choice_persistence",
+    "story_mission_03_prior_consequence",
+    "story_mission_03_finale",
+    "story_mission_03_reward_once"
   ],
   "static_gate": "candidate_pending_ci",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.16-MISSION-02-PICK-A-SIDE-CANDIDATE",
+  "release_checkpoint": "V1.17-MISSION-03-THE-OFFER-CANDIDATE",
   "production": "staging_candidate"
 }

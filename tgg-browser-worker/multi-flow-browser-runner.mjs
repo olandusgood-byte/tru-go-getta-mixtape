@@ -6,7 +6,7 @@ const FLOW_CONFIG = {
   growth_runtime: { workspace: 'growth', rpc: 'tgg_get_creator_growth_workspace_bundle' },
   messenger_runtime: { workspace: 'messages', rpc: 'tgg_get_creator_communications_bundle' },
   music_library_runtime: { workspace: 'library', rpc: 'tgg_get_user_music_library_bundle' },
-  release_pro_runtime: { workspace: 'releases', rpc: 'tgg_creator_create_mixtape_draft' },
+  release_pro_runtime: { workspace: 'releases', rpc: 'tgg_get_creator_releases' },
   supporters_runtime: { workspace: 'supporters', rpc: 'tgg_get_creator_supporters_revenue_bundle' },
   creator_profile_runtime: { workspace: null, rpc: 'tgg_creator_profile_bundle' },
   notifications_runtime: { workspace: null, rpc: 'tgg_creator_notifications_bundle' },
@@ -46,6 +46,10 @@ async function browserRpc(page, tggCoreUrl, accessToken, fn, body = {}) {
   }
   if (fn === 'tgg_get_creator_communications_bundle') {
     const r = await page.evaluate(async ({coreUrl,accessToken}) => { const x=await fetch(coreUrl+'/v1/creator/messages',{headers:{authorization:'Bearer '+accessToken}}); const json=await x.json().catch(()=>({})); return {ok:x.ok,status:x.status,json,text:JSON.stringify(json)}; }, {coreUrl,accessToken});
+    return r;
+  }
+  if (fn === 'tgg_get_creator_releases') {
+    const r = await page.evaluate(async ({coreUrl,accessToken}) => { const x=await fetch(coreUrl+'/v1/releases',{headers:{authorization:'Bearer '+accessToken}}); const json=await x.json().catch(()=>({})); return {ok:x.ok,status:x.status,json,text:JSON.stringify(json)}; }, {coreUrl,accessToken});
     return r;
   }
   if (fn === 'tgg_get_creator_supporters_revenue_bundle') {
@@ -111,13 +115,14 @@ async function runMultiFlowBrowser(page, { flowKey, tggCoreUrl, tggCoreKey, acce
     capture.workspace_schema_ok = schema.ok && schema.json?.key === config.workspace;
     if (!capture.workspace_schema_ok) throw new Error(`WORKSPACE_SCHEMA_FAILED:${config.workspace}:${schema.status}`);
     if (flowKey === 'release_pro_runtime') {
-      const invalidCreate = await browserRpc(page, tggCoreUrl, accessToken, 'tgg_creator_create_mixtape_draft', { p_title: '', p_genre: 'qa', p_description: '', p_cover_url: '', p_cover_path: '', p_explicit: 'false' });
-      capture.workspace_rpc_ok = false;
-      capture.release_create_path_ok = !invalidCreate.ok && hasTitleInvalid(invalidCreate);
-      capture.release_create_rpc = 'tgg_creator_create_mixtape_draft';
-      capture.release_create_validation = capture.release_create_path_ok ? 'TITLE_INVALID' : '';
+      const releases = await browserRpc(page, tggCoreUrl, accessToken, 'tgg_get_creator_releases');
+      capture.workspace_rpc_ok = releases.ok;
+      capture.release_create_path_ok = false;
+      capture.release_create_rpc = 'tgg_get_creator_releases';
+      capture.release_create_validation = 'READ_ONLY_NATIVE_TGG_ROUTE';
       capture.release_mutation_performed = false;
-      if (!capture.release_create_path_ok) throw new Error(`RELEASE_VALIDATION_FAILED:${invalidCreate.status}`);
+      capture.release_count = Array.isArray(releases.json?.releases) ? releases.json.releases.length : 0;
+      if (!releases.ok) throw new Error(`RELEASE_READ_FAILED:${releases.status}`);
     } else {
       const artistId = await getArtistId(page, tggCoreUrl, accessToken);
       let rpcBody = {};

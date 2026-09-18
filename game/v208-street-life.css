@@ -1,0 +1,9 @@
+/* V2.08 STREET LIFE */
+body.tgg-v208 .street-contact-card{max-width:330px}
+body.tgg-v208 .street-contact-card .sc-tier{display:inline-flex;margin-top:7px;padding:4px 7px;border:1px solid color-mix(in srgb,var(--contact,#7b86ff) 55%,transparent);border-radius:999px;color:var(--contact,#7b86ff);font-size:8px;font-style:normal;font-weight:900;letter-spacing:.12em}
+body.tgg-v208 .street-contact-card .sc-dialogue{display:block;margin-top:7px;max-width:300px;color:#e7eaf2;font-size:10px;font-style:normal;line-height:1.45}
+body.tgg-v208 .street-life-alert{position:absolute;left:50%;top:88px;z-index:14;transform:translate(-50%,-12px) scale(.96);display:grid;gap:2px;min-width:170px;padding:9px 13px;border:1px solid #ffcf4a55;border-radius:14px;background:#080b11e8;box-shadow:0 16px 45px #0008;opacity:0;pointer-events:none;transition:.18s ease}
+body.tgg-v208 .street-life-alert.active{opacity:1;transform:translate(-50%,0) scale(1)}
+body.tgg-v208 .street-life-alert b{font-size:10px;letter-spacing:.18em;color:#ffcf4a}
+body.tgg-v208 .street-life-alert span{font-size:9px;font-weight:900;color:#fff}
+@media(max-width:700px){body.tgg-v208 .street-life-alert{top:72px;min-width:150px}body.tgg-v208 .street-contact-card .sc-dialogue{font-size:9px}}

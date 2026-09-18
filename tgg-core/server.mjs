@@ -286,7 +286,7 @@ app.get('/v1/storage/object-auth/:bucket/*key', auth, async (req,res,next)=>{try
   } catch(e){ if(e.code==='ENOENT') return res.status(404).json({error:'object_not_found'}); next(e); }
 });
 
-app.post('/v1/jobs', auth, async (req,res,next)=>{
+app.post('/v1/browser/jobs/protected-audio', auth, async (req,res,next)=>{try{const object_key=String(req.body?.object_key||'').replace(/^\\/+/,''),mime_type=String(req.body?.mime_type||'audio/mpeg');if(!object_key)return res.status(400).json({error:'object_key_required'});const r=await pool.query('select id from media_objects where owner_user_id=$1 and storage_key=$2 and media_type=\'audio\'',[req.user.id,object_key]);if(!r.rowCount)return res.status(404).json({error:'owned_audio_object_not_found'});const j=await pool.query(\`insert into tgg_browser_jobs(flow_key,payload) values('protected_audio_runtime',$1) returning *\`,[{object_key,mime_type,user_id:req.user.id}]);res.status(201).json({job:j.rows[0]});}catch(e){next(e);}});\n\napp.post('/v1/jobs', auth, async (req,res,next)=>{
   try {
     const {queue='default',job_type,payload={},priority=0,max_attempts=3}=req.body||{};
     if(!job_type) return res.status(400).json({error:'job_type_required'});

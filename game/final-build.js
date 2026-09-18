@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.08 STREET LIFE';
+  const VERSION='V2.09 CITY ACTION';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

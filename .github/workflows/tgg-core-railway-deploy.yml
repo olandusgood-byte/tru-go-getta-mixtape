@@ -49,7 +49,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          railway up --project "${RAILWAY_PROJECT_ID}" --environment "${RAILWAY_ENVIRONMENT}" --service "${RAILWAY_SERVICE}" --ci
+          railway up --ci --service "${RAILWAY_SERVICE}"
 
       - name: Report deployed commit
         shell: bash

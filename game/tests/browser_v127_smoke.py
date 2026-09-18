@@ -1,0 +1,512 @@
+import json
+import re
+import sys
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+
+ROOT=Path(__file__).resolve().parents[1]
+html=(ROOT/'index.html').read_text(encoding='utf-8')
+css=(ROOT/'style.css').read_text(encoding='utf-8')
+html=html.replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>')
+
+def inline_script(match):
+    src=match.group(1)
+    js=(ROOT/src).read_text(encoding='utf-8').replace('</script','<\\/script')
+    return '<script data-inline-src="'+src+'">'+js+'</script>'
+
+html=re.sub(r'<script src="([^"]+)"></script>',inline_script,html)
+results=[]
+errors=[]
+
+def check(name,condition,detail=''):
+    results.append({'name':name,'ok':bool(condition),'detail':detail})
+
+with sync_playwright() as p:
+    browser=p.chromium.launch(headless=True,args=['--use-gl=swiftshader','--enable-webgl','--ignore-gpu-blocklist'])
+    page=browser.new_page(viewport={'width':1440,'height':1000})
+    page.on('console',lambda m: errors.append('console:'+m.text) if m.type=='error' else None)
+    page.on('pageerror',lambda e: errors.append('pageerror:'+str(e)))
+    page.evaluate("""() => {
+      const store=new Map();
+      const ls={
+        getItem:k=>store.has(String(k))?store.get(String(k)):null,
+        setItem:(k,v)=>store.set(String(k),String(v)),
+        removeItem:k=>store.delete(String(k)),
+        clear:()=>store.clear(),
+        key:i=>Array.from(store.keys())[i]??null,
+        get length(){return store.size}
+      };
+      Object.defineProperty(window,'localStorage',{value:ls,configurable:true});
+    }""")
+    page.set_content(html,wait_until='load')
+
+    check('v127-title',page.title()=='TRU GO GETTA — Game V1.27',page.title())
+    check('no-initial-runtime-errors',not errors,'; '.join(errors))
+
+    page.click('#newGame')
+    check('creator-screen','active' in (page.locator('#creator').get_attribute('class') or ''))
+    page.fill('#stageName','Tony Snow')
+    page.select_option('#styleChoice',label='Rapper')
+    page.click('#startGame')
+    check('game-screen','active' in (page.locator('#game').get_attribute('class') or ''))
+    check('player-name',page.locator('#hudName').inner_text()=='Tony Snow',page.locator('#hudName').inner_text())
+    page.wait_for_function("window.TGGWorld3D && (window.TGGWorld3D.ready || window.TGGWorld3D.failed)",timeout=20000)
+    three_boot=page.evaluate("window.TGGWorld3D.snapshot()")
+    check('world3d-ready',three_boot.get('ready') is True and three_boot.get('failed') is False,json.dumps(three_boot))
+    check('world3d-canvas',page.locator('#world3d').count()==1)
+    canvas_box=page.locator('#world3d').bounding_box()
+    check('world3d-size',bool(canvas_box) and canvas_box['width']>=500 and canvas_box['height']>=300,json.dumps(canvas_box))
+    check('world3d-badge',page.locator('#world3dBadge').inner_text()=='3D LIVE',page.locator('#world3dBadge').inner_text())
+    check('radar-visible',page.locator('#radar3d').count()==1 and page.locator('#radarPlayer').count()==1 and page.locator('#radarCar').count()==1)
+    check('radar-five-hubs',page.locator('#radarDestinations .radar-destination').count()==5,str(page.locator('#radarDestinations .radar-destination').count()))
+    check('camera-control',page.locator('#camera3dBtn').count()==1)
+    camera_initial=page.evaluate("window.TGGWorld3D.snapshot().cameraMode")
+    check('camera-starts-orbit',camera_initial=='orbit',str(camera_initial))
+    page.click('#camera3dBtn')
+    page.wait_for_timeout(180)
+    camera_chase=page.evaluate("window.TGGWorld3D.snapshot().cameraMode")
+    check('camera-chase-mode',camera_chase=='chase',str(camera_chase))
+    page.click('#camera3dBtn')
+    page.wait_for_timeout(260)
+    camera_top=page.evaluate("window.TGGWorld3D.snapshot()")
+    check('camera-top-mode',camera_top.get('cameraMode')=='top' and camera_top.get('camera',{}).get('y',0)>20,json.dumps(camera_top))
+    page.keyboard.press('c')
+    page.wait_for_timeout(180)
+    camera_orbit=page.evaluate("window.TGGWorld3D.snapshot().cameraMode")
+    check('camera-c-key-cycle',camera_orbit=='orbit',str(camera_orbit))
+    radar_before=page.locator('#radarPlayer').evaluate("e=>({left:e.style.left,top:e.style.top})")
+    page.evaluate("""() => {
+      const s=window.TGGGame.getState();
+      s.x=56;s.y=55;window.TGGGame.refresh();
+    }""")
+    page.wait_for_timeout(220)
+    radar_after=page.locator('#radarPlayer').evaluate("e=>({left:e.style.left,top:e.style.top})")
+    check('radar-player-tracks',radar_before!=radar_after,json.dumps([radar_before,radar_after]))
+    page.evaluate("""() => {
+      const s=window.TGGGame.getState();
+      s.x=50;s.y=55;s.heading=0;window.TGGGame.refresh();
+    }""")
+    page.wait_for_timeout(120)
+    check('vehicle-control',page.locator('#vehicleBtn').count()==1)
+    car_boot=page.evaluate("window.TGGWorld3D.snapshot().car")
+    check('starter-car-rendered',car_boot is not None,json.dumps(car_boot))
+    far_gate=page.evaluate("""() => {
+      const s=window.TGGGame.getState();s.x=90;s.y=80;window.TGGGame.refresh();
+      return window.TGGGame.toggleVehicle();
+    }""")
+    check('vehicle-proximity-gate',far_gate.get('ok') is False and far_gate.get('status')=='too_far',json.dumps(far_gate))
+    car_pos=page.evaluate("""() => {
+      const car=window.TGGWorld3D.car.position;
+      const p=window.TGGWorld3D.worldToPercent(car.x,car.z);
+      const s=window.TGGGame.getState();s.x=p.x;s.y=p.y;s.heading=0;s.inVehicle=false;window.TGGGame.refresh();
+      return {world:{x:car.x,z:car.z},percent:p};
+    }""")
+    page.wait_for_timeout(160)
+    car_near=page.evaluate("window.TGGWorld3D.nearestInteraction()")
+    check('vehicle-nearby-interaction',car_near.get('id')=='starter-car' and car_near.get('type')=='vehicle',json.dumps({'pos':car_pos,'near':car_near}))
+    check('vehicle-enter-prompt',page.locator('#interactionPrompt').is_visible() and 'ENTER STARTER CAR' in page.locator('#interactionPrompt').inner_text(),page.locator('#interactionPrompt').inner_text())
+    cash_before_car=page.evaluate("window.TGGGame.getState().cash")
+    xp_before_car=page.evaluate("window.TGGGame.getState().xp")
+    entered_car=page.evaluate("window.TGGWorld3D.activateNearest()")
+    check('vehicle-entered',entered_car.get('ok') is True and page.evaluate("window.TGGGame.getState().inVehicle") is True,json.dumps(entered_car))
+    check('vehicle-state-saved',page.evaluate("JSON.parse(localStorage.getItem('tgg-game-v1')).inVehicle") is True)
+    drive_start=page.evaluate("({...window.TGGGame.getState()})")
+    page.evaluate("window.TGGGame.move(0,-2)")
+    drive_forward=page.evaluate("({...window.TGGGame.getState()})")
+    check('drive-forward-relative',drive_forward.get('x',0)-drive_start.get('x',0)>2.5 and abs(drive_forward.get('y',0)-drive_start.get('y',0))<.5,json.dumps([drive_start,drive_forward]))
+
+    steer_before=page.evaluate("({...window.TGGGame.getState()})")
+    page.evaluate("window.TGGGame.move(-2,0)")
+    steer_after=page.evaluate("({...window.TGGGame.getState()})")
+    check('drive-steering-heading',steer_after.get('heading')!=steer_before.get('heading'),json.dumps([steer_before,steer_after]))
+    check('drive-steering-no-strafe',abs(steer_after.get('x')-steer_before.get('x'))<.001 and abs(steer_after.get('y')-steer_before.get('y'))<.001,json.dumps([steer_before,steer_after]))
+
+    reverse_before=page.evaluate("({...window.TGGGame.getState()})")
+    page.evaluate("window.TGGGame.move(0,2)")
+    reverse_after=page.evaluate("({...window.TGGGame.getState()})")
+    check('drive-reverse-relative',reverse_after.get('x',0)<reverse_before.get('x',0)-2.0,json.dumps([reverse_before,reverse_after]))
+
+    page.evaluate("""() => {
+      const s=window.TGGGame.getState();
+      s.x=37.5;s.y=23;s.heading=270;s.inVehicle=true;
+      window.TGGGame.refresh();
+    }""")
+    collision_before_vehicle=page.evaluate("({...window.TGGGame.getState()})")
+    drove_into_wall=page.evaluate("window.TGGGame.driveVehicle('forward')")
+    collision_after_vehicle=page.evaluate("({...window.TGGGame.getState()})")
+    check('vehicle-collision-preserved',drove_into_wall is False and abs(collision_after_vehicle.get('x')-collision_before_vehicle.get('x'))<.001 and abs(collision_after_vehicle.get('y')-collision_before_vehicle.get('y'))<.001,json.dumps([collision_before_vehicle,collision_after_vehicle]))
+    page.evaluate("""() => {
+      const car=window.TGGWorld3D.car.position;
+      const p=window.TGGWorld3D.worldToPercent(car.x,car.z);
+      const s=window.TGGGame.getState();
+      s.x=p.x;s.y=p.y;s.heading=0;s.inVehicle=true;
+      window.TGGGame.refresh();
+    }""")
+    page.wait_for_timeout(220)
+    drive_snap=page.evaluate("window.TGGWorld3D.snapshot()")
+    check('car-follows-state',drive_snap.get('inVehicle') is True and drive_snap.get('car') is not None,json.dumps(drive_snap))
+    check('player-hidden-driving',page.evaluate("window.TGGWorld3D.player.visible") is False)
+    exit_near=page.evaluate("window.TGGWorld3D.nearestInteraction()")
+    check('vehicle-exit-interaction',exit_near.get('id')=='starter-car' and 'EXIT STARTER CAR' in exit_near.get('label',''),json.dumps(exit_near))
+    exited_car=page.evaluate("window.TGGWorld3D.activateNearest()")
+    page.wait_for_timeout(120)
+    check('vehicle-exited',exited_car.get('ok') is True and page.evaluate("window.TGGGame.getState().inVehicle") is False,json.dumps(exited_car))
+    check('player-visible-after-exit',page.evaluate("window.TGGWorld3D.player.visible") is True)
+    check('vehicle-no-reward',page.evaluate("window.TGGGame.getState().cash")==cash_before_car and page.evaluate("window.TGGGame.getState().xp")==xp_before_car)
+    page.evaluate("""() => {
+      const s=window.TGGGame.getState();s.x=50;s.y=55;s.heading=0;s.inVehicle=false;window.TGGGame.refresh();
+    }""")
+    page.wait_for_timeout(700)
+    world_before=page.evaluate("window.TGGWorld3D.snapshot()")
+    page.keyboard.press('ArrowRight')
+    page.wait_for_timeout(220)
+    world_after=page.evaluate("window.TGGWorld3D.snapshot()")
+    check('world3d-player-state-sync',world_after.get('player',{}).get('x',0)>world_before.get('player',{}).get('x',0),json.dumps([world_before,world_after]))
+    page.keyboard.press('ArrowRight')
+    page.wait_for_timeout(70)
+    motion=page.evaluate("window.TGGWorld3D.snapshot().motion")
+    rig_motion=page.evaluate("""() => {
+      const r=window.TGGWorld3D.player.userData.rig;
+      return {arms:r.arms.map(x=>x.rotation.x),legs:r.legs.map(x=>x.rotation.x),phase:window.TGGWorld3D.player.userData.walkPhase};
+    }""")
+    check('walk-animation-active',motion.get('moving') is True and rig_motion.get('phase',0)>0,json.dumps([motion,rig_motion]))
+    check('walk-rig-swings',max(abs(x) for x in rig_motion.get('arms',[])+rig_motion.get('legs',[]))>.02,json.dumps(rig_motion))
+    check('third-person-camera',world_after.get('camera',{}).get('y',0)>world_after.get('player',{}).get('y',0),json.dumps(world_after))
+    yaw_before=world_after.get('cameraYawOffset',0)
+    box=page.locator('#world3d').bounding_box()
+    page.mouse.move(box['x']+box['width']*.55,box['y']+box['height']*.45)
+    page.mouse.down()
+    page.mouse.move(box['x']+box['width']*.70,box['y']+box['height']*.45,steps=5)
+    page.mouse.up()
+    page.wait_for_timeout(100)
+    yaw_after=page.evaluate("window.TGGWorld3D.snapshot().cameraYawOffset")
+    check('orbit-camera-drag',abs(yaw_after-yaw_before)>.05,f'{yaw_before}->{yaw_after}')
+    check('collision-map-loaded',page.evaluate("window.TGGWorld3D.collisionBoxes.length")>=10)
+    check('known-building-blocked',page.evaluate("window.TGGWorld3D.isBlockedPercent(37.5,12.5)") is True)
+    constrained=page.evaluate("window.TGGWorld3D.constrainPercent(37.5,12.5,50,55)")
+    check('collision-constrain-api',constrained.get('blocked') is True and (constrained.get('x')!=37.5 or constrained.get('y')!=12.5),json.dumps(constrained))
+    page.evaluate("""() => {
+      const s=window.TGGGame.getState();
+      s.x=37.5;s.y=23;s.heading=-90;
+      window.TGGGame.show('game');window.TGGGame.refresh();
+    }""")
+    collision_before=page.evaluate("window.TGGWorld3D.snapshot().collisionCount")
+    y_before=page.evaluate("window.TGGGame.getState().y")
+    page.keyboard.press('ArrowUp')
+    page.wait_for_timeout(120)
+    y_after=page.evaluate("window.TGGGame.getState().y")
+    collision_after=page.evaluate("window.TGGWorld3D.snapshot().collisionCount")
+    check('authoritative-building-collision',abs(y_after-y_before)<.001 and collision_after>collision_before,json.dumps({'before':y_before,'after':y_after,'collisions':[collision_before,collision_after]}))
+    page.evaluate("""() => {
+      const s=window.TGGGame.getState();
+      s.x=78.125;s.y=29.1667;s.heading=0;
+      window.TGGGame.refresh();
+    }""")
+    page.wait_for_timeout(180)
+    check('district-awareness',page.locator('#worldDistrictBadge').inner_text()=='DOWNTOWN',page.locator('#worldDistrictBadge').inner_text())
+    npc_alignment=page.evaluate("""() => {
+      const p=window.TGGWorld3D.percentToWorld(72,36);
+      const n=window.TGGWorld3D.npc.position;
+      return {distance:Math.hypot(p.x-n.x,p.z-n.z),target:p,npc:{x:n.x,z:n.z}};
+    }""")
+    check('mission-npc-alignment',npc_alignment.get('distance',99)<.01,json.dumps(npc_alignment))
+    page.evaluate("""() => {
+      const s=window.TGGGame.getState();
+      s.x=72;s.y=36;s.mission=null;s.accepted=false;
+      window.TGGGame.show('game');window.TGGGame.refresh();
+    }""")
+    page.wait_for_timeout(160)
+    near=page.evaluate("window.TGGWorld3D.nearestInteraction()")
+    check('manager-proximity-detected',near.get('id')=='manager-m' and near.get('distance',99)<=5,json.dumps(near))
+    check('interaction-prompt-visible',page.locator('#interactionPrompt').is_visible() and 'TALK TO M' in page.locator('#interactionPrompt').inner_text(),page.locator('#interactionPrompt').inner_text())
+    page.click('#interactionPrompt')
+    check('interaction-shares-mission-action',page.locator('#missionBtn').inner_text()=='TAKE MISSION',page.locator('#missionBtn').inner_text())
+
+    hubs=page.evaluate("window.TGGWorld3D.hubs")
+    check('five-3d-hubs',len(hubs)==5,json.dumps(hubs))
+    hub_paths=[
+      ('studio-hub','studio','#studioBack'),
+      ('park-hub','park','#parkBack'),
+      ('shops-hub','shops','#shopsBack'),
+      ('apartment-hub','home','#homeBack'),
+      ('media-hub','media','#mediaBack')
+    ]
+    for hub_id,screen,back in hub_paths:
+        position=page.evaluate("""hubId => {
+          const h=window.TGGWorld3D.hubs.find(x=>x.id===hubId);
+          const p=window.TGGWorld3D.worldToPercent(h.x,h.z);
+          const s=window.TGGGame.getState();
+          s.x=p.x;s.y=p.y;s.heading=0;
+          window.TGGGame.show('game');window.TGGGame.refresh();
+          return {hub:h,percent:p};
+        }""",hub_id)
+        page.wait_for_timeout(120)
+        hub_near=page.evaluate("window.TGGWorld3D.nearestInteraction()")
+        check('hub-near-'+hub_id,hub_near.get('id')==hub_id and hub_near.get('type')=='hub',json.dumps({'position':position,'near':hub_near}))
+        check('hub-prompt-'+hub_id,page.locator('#interactionPrompt').is_visible() and 'ENTER' in page.locator('#interactionPrompt').inner_text(),page.locator('#interactionPrompt').inner_text())
+        entered=page.evaluate("window.TGGWorld3D.activateNearest()")
+        check('hub-enter-'+hub_id,entered.get('ok') is True and entered.get('status')=='entered_hub',json.dumps(entered))
+        check('hub-screen-'+hub_id,'active' in (page.locator('#'+screen).get_attribute('class') or ''))
+        page.click(back)
+        check('hub-return-'+hub_id,'active' in (page.locator('#game').get_attribute('class') or ''))
+
+    page.evaluate("""() => {
+      const s=window.TGGGame.getState();
+      s.x=52;s.y=55;s.heading=0;s.mission=null;s.accepted=false;
+      window.TGGGame.refresh();
+    }""")
+    page.wait_for_timeout(120)
+    check('interaction-prompt-hides-away',page.locator('#interactionPrompt').is_hidden())
+    layout=page.evaluate("""() => {
+      const box=e=>{const r=e.getBoundingClientRect();return {left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height}};
+      const city=box(document.querySelector('.game-shell .city'));
+      const controls=box(document.querySelector('.game-controls'));
+      const move=box(document.querySelector('.move-pad'));
+      const deck=box(document.querySelector('.action-deck'));
+      const buttons=[...document.querySelectorAll('.action-deck .actions button')].map(box);
+      const minH=Math.min(...buttons.map(x=>x.height));
+      const player=box(document.getElementById('player'));
+      return {city,controls,move,deck,minH,player,towers:document.querySelectorAll('.city-depth .tower').length};
+    }""")
+    check('controls-below-city',layout['controls']['top']>=layout['city']['bottom']-3,json.dumps(layout))
+    check('action-buttons-readable',layout['minH']>=48,json.dumps(layout))
+    check('move-pad-separated',layout['move']['right']<=layout['deck']['left']+3,json.dumps(layout))
+    check('player-depth-size',layout['player']['height']>=80 and layout['towers']>=4,json.dumps(layout))
+    page.click('#eventsBtn')
+    check('story-ui-auto-render',page.locator('[data-district-story]').count()==1)
+    check('memory-ui-auto-render',page.locator('[data-route-memory]').count()==1)
+    page.click('#eventsBack')
+
+    before=page.locator('#player').evaluate('e=>e.style.left')
+    page.keyboard.press('ArrowRight')
+    after=page.locator('#player').evaluate('e=>e.style.left')
+    check('keyboard-movement',before!=after,f'{before}->{after}')
+
+    page.click('#pauseBtn')
+    paused=page.locator('#player').evaluate('e=>e.style.left')
+    page.keyboard.press('ArrowRight')
+    paused_after=page.locator('#player').evaluate('e=>e.style.left')
+    check('pause-freezes-movement',paused==paused_after,f'{paused}->{paused_after}')
+    page.click('#resumeBtn')
+
+    page.click('#missionBtn')
+    check('mission-offered',page.locator('#missionBtn').inner_text()=='TAKE MISSION')
+    page.click('#missionBtn')
+    check('mission-accepted',page.locator('#missionBtn').inner_text()=='COMPLETE MISSION')
+    page.evaluate("""() => {
+      while(window.TGGGame.getState().x<72)window.TGGGame.move(2,0);
+      while(window.TGGGame.getState().y>36)window.TGGGame.move(0,-2);
+    }""")
+    page.click('#missionBtn')
+    check('mission-cash',page.locator('#hudCash').inner_text()=='250',page.locator('#hudCash').inner_text())
+    check('mission-xp',page.locator('#hudXp').inner_text()=='50',page.locator('#hudXp').inner_text())
+
+    page.click('#businessBtn')
+    check('business-screen','active' in (page.locator('#businessBoard').get_attribute('class') or ''))
+    check('live-city-panel',page.locator('#liveCityPanel').count()==1)
+    qa=page.evaluate('window.TGGQA.run()')
+    rqa=page.evaluate('window.TGGReleaseQA.run()')
+    check('runtime-qa',qa.get('passed') is True,json.dumps([x for x in qa['report'] if x['status']!='PASS']))
+    check('release-qa',rqa.get('passed') is True,json.dumps([x for x in rqa['checks'] if not x['pass']]))
+
+    snap=page.evaluate('window.TGGBusiness.activitySnapshot()')
+    check('activity-readonly',snap.get('readOnly') is True,json.dumps(snap))
+    check('activity-count',len(snap.get('cityActivities',[]))>=3,str(len(snap.get('cityActivities',[]))))
+
+    page.evaluate("""() => {
+      window.__xss=0;
+      window.TGGWorldSync.setTransport(async ({name})=>{
+        if(name==='tgg_world_property_market')return {ok:true,data:[{id:'p1',name:'<img src=x onerror="window.__xss=99"> Studio Loft',district:'Studio Row',tier:2,status:'available'}]};
+        if(name==='tgg_world_property_upgrades')return {ok:true,data:[{id:'u1',name:'Acoustic Treatment',level:1}]};
+        if(name==='tgg_world_vehicle_progression')return {ok:true,data:[{id:'v1',model:'<svg onload="window.__xss=77"></svg> Night Runner',class:'coupe',level:3,status:'unlocked'}]};
+        return {ok:true,data:{}};
+      });
+    }""")
+    assets=page.evaluate('window.TGGBusiness.loadAssets()')
+    check('world-assets-loaded',assets.get('ok') is True,json.dumps(assets))
+    check('property-card',page.locator('[data-property-index="0"]').count()==1)
+    check('vehicle-card',page.locator('[data-vehicle-index="0"]').count()==1)
+    check('no-injected-img',page.locator('#worldProperties img').count()==0)
+    check('no-injected-svg',page.locator('#worldVehicles svg').count()==0)
+    check('xss-blocked',page.evaluate('window.__xss')==0,str(page.evaluate('window.__xss')))
+
+    page.click('[data-property-index="0"]')
+    check('property-readonly','READ ONLY' in page.locator('#businessDetail').inner_text())
+    page.click('[data-vehicle-index="0"]')
+    check('vehicle-readonly','READ ONLY' in page.locator('#businessDetail').inner_text())
+    page.click('#businessBack')
+
+    for btn,screen,back in [
+      ('#parkBtn','#park','#parkBack'),
+      ('#studioBtn','#studio','#studioBack'),
+      ('#shopsBtn','#shops','#shopsBack'),
+      ('#homeBtn','#home','#homeBack'),
+      ('#mediaBtn','#media','#mediaBack')
+    ]:
+        page.click(btn)
+        check('open-'+screen[1:],'active' in (page.locator(screen).get_attribute('class') or ''))
+        page.click(back)
+        check('back-'+screen[1:],'active' in (page.locator('#game').get_attribute('class') or ''))
+
+    page.click('#progressionBtn')
+    check('progression-screen','active' in (page.locator('#progressionBoard').get_attribute('class') or ''))
+    page.click('#progressionBack')
+
+    page.click('#saveBtn')
+    page.click('#pauseBtn')
+    page.click('#menuBtn')
+    page.evaluate("document.getElementById('hudCash').textContent='9999'")
+    page.click('#continueGame')
+    check('continue-loads-save',page.locator('#hudName').inner_text()=='Tony Snow' and page.locator('#hudCash').inner_text()=='250')
+    before_city=page.evaluate('window.TGGGame.getState().cash')
+    start=page.evaluate("window.TGGCircuits.start('first-lap')")
+    check('circuit-start',start.get('active')=='first-lap' and start.get('expected')=='street-cypher',json.dumps(start))
+    page.evaluate("window.TGGInventory.add('notebook',3)")
+    first_run=page.evaluate("window.TGGEvents.run('street-cypher')")
+    after_first=page.evaluate("window.TGGCircuits.status()")
+    check('circuit-first-step',first_run is True and after_first.get('step')==1 and after_first.get('expected')=='studio-pop-in',json.dumps(after_first))
+    second_run=page.evaluate("window.TGGEvents.run('street-cypher')")
+    after_second=page.evaluate("window.TGGCircuits.status()")
+    check('circuit-order-lock',second_run is True and after_second.get('step')==1 and after_second.get('expected')=='studio-pop-in',json.dumps(after_second))
+    third_run=page.evaluate("window.TGGEvents.run('street-cypher')")
+    run_results=[first_run,second_run,third_run]
+    check('three-city-runs',all(run_results),json.dumps(run_results))
+    mastery=page.evaluate("window.TGGEvents.mastery('street-cypher')")
+    check('city-mastery-regular',mastery.get('name')=='REGULAR',json.dumps(mastery))
+    variant=page.evaluate("window.TGGCircuits.variant('street-cypher')")
+    check('mastery-variant',variant.get('label')=='NO HOOK CYPHER' and variant.get('rewardMultiplier')==1 and variant.get('cosmeticOnly') is True,json.dumps(variant))
+    profile=page.evaluate('window.TGGEvents.cityProfile()')
+    check('city-rank-local-name',profile.get('rank')=='LOCAL NAME',json.dumps(profile))
+    after_city=page.evaluate('window.TGGGame.getState().cash')
+    check('base-event-economy-unchanged',after_city-before_city==540,f'{before_city}->{after_city}')
+    unlocked=page.evaluate("window.TGGProgression.sync().unlocked")
+    check('city-regular-achievement','city-regular' in unlocked,json.dumps(unlocked))
+    page.evaluate("window.TGGInventory.add('mic',1)")
+    studio_run=page.evaluate("window.TGGEvents.run('studio-pop-in')")
+    circuit_done=page.evaluate("window.TGGCircuits.status()")
+    check('first-lap-complete',studio_run is True and 'first-lap' in circuit_done.get('completed',[]) and circuit_done.get('active') is None,json.dumps(circuit_done))
+    unlocked2=page.evaluate("window.TGGProgression.sync().unlocked")
+    check('first-circuit-achievement','first-circuit' in unlocked2,json.dumps(unlocked2))
+    profile2=page.evaluate('window.TGGEvents.cityProfile()')
+    check('city-variety-streak',profile2.get('streak')==2 and profile2.get('bestStreak')>=2,json.dumps(profile2))
+
+    district_state=page.evaluate("window.TGGDistrictStory.districtState(window.TGGDistrictStory.get('city-story-lap'))")
+    locked_ids=[x.get('district') for x in district_state.get('locked',[])]
+    check('district-level-gate','mixtape-ave' in locked_ids,json.dumps(district_state))
+    blocked=page.evaluate("window.TGGDistrictStory.start('city-story-lap')")
+    check('story-route-blocked-at-level-two',blocked.get('status')=='district_locked',json.dumps(blocked))
+
+    page.evaluate("window.TGGGame.getState().level=3; window.TGGDistricts.sync(); window.TGGGame.refresh()")
+    story_start=page.evaluate("window.TGGDistrictStory.start('city-story-lap')")
+    check('story-route-started',story_start.get('activeRoute')=='city-story-lap' and story_start.get('currentBeat',{}).get('beat')=='GET SEEN',json.dumps(story_start))
+    npc_one=page.evaluate("window.TGGRouteMemory.currentNpc()")
+    check('downtown-contact',npc_one.get('id')=='m',json.dumps(npc_one))
+    m_before=page.evaluate("window.TGGRouteMemory.relationship('m')")
+    check('m-starts-stranger',m_before.get('tier')=='STRANGER',json.dumps(m_before))
+    meet_one=page.evaluate("window.TGGRouteMemory.encounterCurrent()")
+    m_after_first=page.evaluate("window.TGGRouteMemory.relationship('m')")
+    meet_one_again=page.evaluate("window.TGGRouteMemory.encounterCurrent()")
+    m_after_repeat=page.evaluate("window.TGGRouteMemory.relationship('m')")
+    check('meet-m-once',meet_one.get('status')=='recorded' and meet_one_again.get('status')=='already_met',json.dumps([meet_one,meet_one_again]))
+    check('m-familiar-from-mastery',m_after_first.get('tier')=='FAMILIAR',json.dumps(m_after_first))
+    check('repeat-talk-no-progress',m_after_repeat.get('tier')==m_after_first.get('tier') and m_after_repeat.get('runs')==m_after_first.get('runs'),json.dumps([m_after_first,m_after_repeat]))
+    check('single-memory-store',page.evaluate("localStorage.getItem('tgg-relationship-v1')") is None)
+
+    before_story=page.evaluate("window.TGGGame.getState().cash")
+    page.evaluate("window.TGGInventory.add('notebook',1); window.TGGInventory.add('mic',1); window.TGGInventory.add('beat-pack',1); window.TGGInventory.add('promo-flyers',1)")
+    story_one=page.evaluate("window.TGGEvents.run('street-cypher')")
+    beat_two=page.evaluate("window.TGGDistrictStory.currentBeat()")
+    check('story-beat-studio',story_one is True and beat_two.get('beat')=='GET SHARP',json.dumps(beat_two))
+    npc_two=page.evaluate("window.TGGRouteMemory.currentNpc()")
+    meet_two=page.evaluate("window.TGGRouteMemory.encounterCurrent()")
+    check('meet-kane',npc_two.get('id')=='producer' and meet_two.get('status')=='recorded',json.dumps([npc_two,meet_two]))
+
+    story_two=page.evaluate("window.TGGEvents.run('studio-pop-in')")
+    beat_three=page.evaluate("window.TGGDistrictStory.currentBeat()")
+    check('story-beat-release',story_two is True and beat_three.get('beat')=='GET HEARD',json.dumps(beat_three))
+    npc_three=page.evaluate("window.TGGRouteMemory.currentNpc()")
+    meet_three=page.evaluate("window.TGGRouteMemory.encounterCurrent()")
+    check('meet-dj-v',npc_three.get('id')=='dj' and meet_three.get('status')=='recorded',json.dumps([npc_three,meet_three]))
+
+    story_three=page.evaluate("window.TGGEvents.run('release-rush')")
+    story_done=page.evaluate("window.TGGDistrictStory.status()")
+    check('district-story-complete',story_three is True and 'city-story-lap' in story_done.get('completed',[]) and story_done.get('activeRoute') is None,json.dumps(story_done))
+    memory_snapshot=page.evaluate("window.TGGRouteMemory.memorySnapshot()")
+    check('three-route-contacts',set(memory_snapshot.get('uniqueNpcIds',[]))=={'m','producer','dj'},json.dumps(memory_snapshot))
+    districts_memory=memory_snapshot.get('districts',{})
+    check('district-memory-recorded',all(districts_memory.get(x,{}).get('visits',0)>=1 for x in ['downtown','studio-row','mixtape-ave']),json.dumps(districts_memory))
+    after_story=page.evaluate("window.TGGGame.getState().cash")
+    check('story-router-no-extra-reward',after_story-before_story==905,f'{before_story}->{after_story}')
+    route_unlocks=page.evaluate("window.TGGProgression.sync().unlocked")
+    check('district-story-achievement','district-story' in route_unlocks,json.dumps(route_unlocks))
+    check('npc-memory-achievement','know-the-city' in route_unlocks,json.dumps(route_unlocks))
+    page.evaluate("window.TGGInventory.add('notebook',1)")
+    before_trust=page.evaluate("window.TGGRouteMemory.relationship('m')")
+    trust_run=page.evaluate("window.TGGEvents.run('street-cypher')")
+    after_trust=page.evaluate("window.TGGRouteMemory.relationship('m')")
+    check('mastery-advances-trust',trust_run is True and before_trust.get('tier')=='FAMILIAR' and after_trust.get('tier')=='TRUSTED',json.dumps([before_trust,after_trust]))
+    m_dialogue=page.evaluate("window.TGGRouteMemory.dialogue('m')")
+    check('trusted-dialogue-state',m_dialogue.get('tier')=='TRUSTED' and 'rooms' in m_dialogue.get('line','').lower(),json.dumps(m_dialogue))
+    trust_unlocks=page.evaluate("window.TGGProgression.sync().unlocked")
+    check('trusted-contact-achievement','trusted-contact' in trust_unlocks,json.dumps(trust_unlocks))
+    page.click('#eventsBtn')
+    check('contact-opportunities-ui',page.locator('[data-contact-opportunities]').count()==1)
+    page.click('#eventsBack')
+    manager_gate=page.evaluate("window.TGGContactOps.available('manager-intro')")
+    producer_gate=page.evaluate("window.TGGContactOps.available('producer-lockin')")
+    dj_gate=page.evaluate("window.TGGContactOps.available('dj-test-spin')")
+    check('manager-opportunity-unlocked',manager_gate.get('ok') is True and manager_gate.get('relationship',{}).get('tier')=='TRUSTED',json.dumps(manager_gate))
+    check('producer-opportunity-unlocked',producer_gate.get('ok') is True and producer_gate.get('relationship',{}).get('tier')=='FAMILIAR',json.dumps(producer_gate))
+    check('dj-opportunity-still-locked',dj_gate.get('ok') is False and dj_gate.get('status')=='relationship_locked',json.dumps(dj_gate))
+    op_start=page.evaluate("window.TGGContactOps.start('manager-intro')")
+    check('manager-opportunity-started',op_start.get('active',{}).get('id')=='manager-intro',json.dumps(op_start))
+    check('opportunities-single-store',page.evaluate("localStorage.getItem('tgg-contact-opportunities-v1')") is None)
+    before_op=page.evaluate("window.TGGGame.getState().cash")
+    page.evaluate("window.TGGInventory.add('beat-pack',1); window.TGGInventory.add('promo-flyers',1)")
+    op_event=page.evaluate("window.TGGEvents.run('release-rush')")
+    op_status=page.evaluate("window.TGGContactOps.status()")
+    after_op=page.evaluate("window.TGGGame.getState().cash")
+    check('manager-opportunity-complete',op_event is True and 'manager-intro' in op_status.get('completed',[]) and op_status.get('active') is None,json.dumps(op_status))
+    check('opportunity-no-bonus-reward',after_op-before_op==450,f'{before_op}->{after_op}')
+    opportunity_unlocks=page.evaluate("window.TGGProgression.sync().unlocked")
+    check('first-opportunity-achievement','first-opportunity' in opportunity_unlocks,json.dumps(opportunity_unlocks))
+
+    page.evaluate("""() => {
+      window.__storyCalls=[];
+      window.TGGWorldSync.setTransport(async ({name})=>{
+        window.__storyCalls.push(name);
+        if(name==='tgg_world_creative_missions')return {ok:true,data:[{id:'m1'},{id:'m2'}]};
+        if(name==='tgg_world_npc_encounters')return {ok:true,data:[{id:'n1'}]};
+        if(name==='tgg_world_story_control')return {ok:true,data:{chapter:'local-read'}};
+        if(name==='tgg_world_memory_history')return {ok:true,data:[{id:'h1'}]};
+        return {ok:false,error:'unexpected rpc '+name};
+      });
+    }""")
+    remote=page.evaluate("window.TGGDistrictStory.refreshRemoteStory()")
+    check('remote-story-summary',remote.get('ok') is True and remote.get('summary',{}).get('missions')==2 and remote.get('summary',{}).get('encounters')==1,json.dumps(remote))
+    story_calls=page.evaluate("window.__storyCalls")
+    approved={'tgg_world_creative_missions','tgg_world_npc_encounters','tgg_world_story_control','tgg_world_memory_history'}
+    check('remote-story-readonly',set(story_calls)==approved,json.dumps(story_calls))
+
+    page.evaluate("""() => {
+      window.__memoryCalls=[];
+      window.TGGWorldSync.setTransport(async ({name})=>{
+        window.__memoryCalls.push(name);
+        if(name==='tgg_world_npc_encounters')return {ok:true,data:[{id:'n1'},{id:'n2'}]};
+        if(name==='tgg_world_memory_history')return {ok:true,data:[{id:'h1'}]};
+        return {ok:false,error:'unexpected rpc '+name};
+      });
+    }""")
+    remote_memory=page.evaluate("window.TGGRouteMemory.refreshRemoteMemory()")
+    check('remote-memory-summary',remote_memory.get('ok') is True and remote_memory.get('summary',{}).get('encounters')==2 and remote_memory.get('summary',{}).get('memory')==1,json.dumps(remote_memory))
+    memory_calls=page.evaluate("window.__memoryCalls")
+    check('remote-memory-readonly',set(memory_calls)=={'tgg_world_npc_encounters','tgg_world_memory_history'},json.dumps(memory_calls))
+
+    check('no-final-runtime-errors',not errors,'; '.join(errors))
+    browser.close()
+
+passed=sum(1 for item in results if item['ok'])
+failed=len(results)-passed
+print(json.dumps({'passed':passed,'failed':failed,'results':results,'errors':errors},indent=2))
+if failed:
+    sys.exit(1)

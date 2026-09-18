@@ -461,7 +461,7 @@
       syncCarFromState(s);
     }else{
       player.visible=true;
-      const followRate=playerDynamics.sprinting?.26:.21;
+      const followRate=playerDynamics.sprinting ? .26 : .21;
       player.position.x=THREE.MathUtils.lerp(player.position.x,p.x,followRate);
       player.position.z=THREE.MathUtils.lerp(player.position.z,p.z,followRate);
       const desiredRot=-((Number(s.heading)||0)*Math.PI/180)+Math.PI/2;
@@ -480,8 +480,8 @@
       const swing=!s.inVehicle?Math.sin(walkPhase)*stride*speed:0;
       parts.leftArm.rotation.x=THREE.MathUtils.lerp(parts.leftArm.rotation.x,swing,.24);
       parts.rightArm.rotation.x=THREE.MathUtils.lerp(parts.rightArm.rotation.x,-swing,.24);
-      parts.leftLeg.rotation.x=THREE.MathUtils.lerp(parts.leftLeg.rotation.x,-swing*(playerDynamics.sprinting?.95:.85),.24);
-      parts.rightLeg.rotation.x=THREE.MathUtils.lerp(parts.rightLeg.rotation.x,swing*(playerDynamics.sprinting?.95:.85),.24);
+      parts.leftLeg.rotation.x=THREE.MathUtils.lerp(parts.leftLeg.rotation.x,-swing*(playerDynamics.sprinting ? .95 : .85),.24);
+      parts.rightLeg.rotation.x=THREE.MathUtils.lerp(parts.rightLeg.rotation.x,swing*(playerDynamics.sprinting ? .95 : .85),.24);
       const sideLean=!s.inVehicle?Math.max(-.08,Math.min(.08,-playerDynamics.vy*.004+playerDynamics.vx*.0025)):0;
       parts.body.rotation.z=THREE.MathUtils.lerp(parts.body.rotation.z,sideLean+Math.sin(walkPhase*2)*.025*speed,.2);
       parts.body.position.y=THREE.MathUtils.lerp(parts.body.position.y,2.05+(speed>.04?Math.abs(Math.sin(walkPhase))*0.07*(playerDynamics.sprinting?1.45:1):0),.22);
@@ -528,7 +528,7 @@
         target.y+(s.inVehicle?7.5:(playerDynamics.sprinting?6.8:6.2)),
         target.z-Math.sin(heading)*chaseDistance
       );
-      cameraLerp=s.inVehicle ? .16 : (playerDynamics.sprinting?.15:.12);
+      cameraLerp=s.inVehicle ? .16 : (playerDynamics.sprinting ? .15 : .12);
     }else{
       const cp=Math.cos(pitch),sp=Math.sin(pitch);
       const followDistance=s.inVehicle?Math.max(12,distance):distance;

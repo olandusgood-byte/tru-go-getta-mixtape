@@ -1,0 +1,39 @@
+/* V2.23 CAREER STORY + PHONE 100 */
+body.tgg-v223 .v223-phone-btn{position:relative;min-width:58px;height:32px;margin-left:6px;padding:0 10px;border:1px solid #ffffff20;border-radius:999px;background:#0a0e16;color:#c7ff00;font-size:8px;font-weight:1000;letter-spacing:.1em;cursor:pointer}
+body.tgg-v223 .v223-phone-btn i{display:inline-grid;place-items:center;min-width:16px;height:16px;margin-left:5px;padding:0 4px;border-radius:999px;background:#ff315f;color:#fff;font-size:7px;font-style:normal}
+body.tgg-v223 .v223-phone-panel{position:fixed;right:18px;top:58px;z-index:205;display:grid;gap:12px;width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 76px);overflow:auto;padding:16px;transform:translateX(22px);opacity:0;pointer-events:none;border:1px solid #ffffff20;border-radius:24px;background:linear-gradient(160deg,#090d15fb,#111827fb);box-shadow:0 32px 110px #000e;transition:.22s ease}
+body.tgg-v223 .v223-phone-panel.active{opacity:1;pointer-events:auto;transform:translateX(0)}
+body.tgg-v223 .v223-phone-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+body.tgg-v223 .v223-phone-head div{display:grid;gap:3px}
+body.tgg-v223 .v223-phone-head small{font-size:7px;font-weight:900;letter-spacing:.18em;color:#c7ff00}
+body.tgg-v223 .v223-phone-head b{font-size:11px;color:#fff}
+body.tgg-v223 .v223-phone-head button{width:32px;height:32px;border:1px solid #ffffff18;border-radius:50%;background:#111722;color:#fff;font-size:18px;cursor:pointer}
+body.tgg-v223 .v223-caller{display:flex;align-items:center;gap:11px;padding:10px;border:1px solid #ffffff10;border-radius:14px;background:#ffffff05}
+body.tgg-v223 .v223-caller>span{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#c7ff00,#61d9ff);color:#07100b;font-size:18px;font-weight:1000}
+body.tgg-v223 .v223-caller div{display:grid;gap:2px}
+body.tgg-v223 .v223-caller b{font-size:14px;color:#fff}
+body.tgg-v223 .v223-caller small{font-size:7px;font-weight:900;letter-spacing:.14em;color:#8993a5}
+body.tgg-v223 #v223Message{margin:0;font-size:11px;line-height:1.55;color:#d4dae6}
+body.tgg-v223 .v223-objective{display:grid;gap:4px;padding:11px;border:1px solid #c7ff0027;border-radius:13px;background:#c7ff0008}
+body.tgg-v223 .v223-objective small{font-size:7px;font-weight:900;letter-spacing:.16em;color:#c7ff00}
+body.tgg-v223 .v223-objective b{font-size:11px;color:#fff}
+body.tgg-v223 .v223-objective span{font-size:8px;font-weight:900;color:#9ca6b8}
+body.tgg-v223 .v223-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+body.tgg-v223 .v223-actions button{min-height:43px;border:1px solid #ffffff18;border-radius:11px;background:#111722;color:#fff;font-size:8px;font-weight:900;letter-spacing:.08em;cursor:pointer}
+body.tgg-v223 .v223-actions button:first-child{border-color:#c7ff004c;color:#dfff9b}
+body.tgg-v223 .v223-history{display:grid;gap:7px}
+body.tgg-v223 .v223-history>small{font-size:7px;font-weight:900;letter-spacing:.16em;color:#8993a5}
+body.tgg-v223 #v223History{display:grid;gap:5px}
+body.tgg-v223 #v223History span{display:flex;justify-content:space-between;gap:9px;padding:7px 8px;border:1px solid #ffffff0d;border-radius:9px;background:#ffffff04}
+body.tgg-v223 #v223History b{font-size:8px;color:#fff}
+body.tgg-v223 #v223History small,body.tgg-v223 #v223History em{font-size:7px;color:#7e899b;font-style:normal}
+body.tgg-v223 .v223-career-hud{position:absolute;left:18px;bottom:18px;z-index:13;display:grid;gap:2px;max-width:310px;padding:8px 10px;border:1px solid #ffffff14;border-radius:12px;background:#070b12d9;box-shadow:0 12px 38px #0008}
+body.tgg-v223 .v223-career-hud small{font-size:6px;font-weight:900;letter-spacing:.15em;color:#c7ff00}
+body.tgg-v223 .v223-career-hud b{font-size:8px;color:#fff}
+body.tgg-v223 .v223-career-hud span{font-size:7px;color:#929daf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.v223-new-call .v223-phone-btn{box-shadow:0 0 0 2px #c7ff002b,0 0 28px #c7ff0030}
+body.v223-chapter-complete .v223-career-hud{border-color:#c7ff0068;box-shadow:0 0 30px #c7ff0022}
+body.tgg-v223 .sr-only{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(prefers-reduced-motion:reduce){body.tgg-v223 .v223-phone-panel{transition:none!important}}
+@media(max-width:700px){body.tgg-v223 .v223-phone-panel{right:8px;top:50px;width:calc(100vw - 16px);padding:13px;border-radius:18px}body.tgg-v223 .v223-actions{grid-template-columns:1fr}body.tgg-v223 .v223-actions button{min-height:48px}body.tgg-v223 .v223-career-hud{left:10px;bottom:58px;max-width:calc(100% - 20px)}}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v223 .v223-phone-panel{left:8px;right:auto;top:8px;width:min(390px,48vw);max-height:calc(100vh - 16px)}body.tgg-v223 .v223-career-hud{left:auto;right:10px;bottom:8px;max-width:42vw}}

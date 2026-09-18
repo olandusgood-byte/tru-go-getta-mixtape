@@ -183,12 +183,12 @@ app.post('/v1/realtime/publish', auth, async (req,res,next)=>{
     const { topic, payload={} }=req.body||{};
     if(!topic) return res.status(400).json({error:'topic_required'});
     const r=await pool.query('insert into realtime_events(topic,user_id,payload) values($1,$2,$3) returning *',[topic,req.user.id,payload]);
-    await pool.query('select pg_notify($1,$2)', ['tgg_realtime', JSON.stringify({id:r.rows[0].id,topic,payload})]);
+    await pool.query('select pg_notify($1,$2)', ['tgg_realtime', JSON.stringify({id:r.rows[0].id,topic,user_id:req.user.id,payload})]);
     res.status(201).json({event:r.rows[0]});
   } catch(e){ next(e); }
 });
 
-app.get('/v1/realtime/events', auth, async (req,res,next)=>{
+app.get('/v1/realtime/stream', auth, async (req,res,next)=>{\n  const topic=String(req.query.topic||'');\n  const after=Math.max(0,Number(req.query.after||0));\n  if(!topic) return res.status(400).json({error:'topic_required'});\n  const client=await pool.connect();\n  let closed=false;\n  const send=(event)=>{ if(!closed) res.write('data: '+JSON.stringify(event)+'\\n\\n'); };\n  try {\n    await client.query('listen tgg_realtime');\n    res.status(200);\n    res.set({'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});\n    res.flushHeaders?.();\n    const backlog=await pool.query('select * from realtime_events where id>$1 and topic=$2 and (user_id=$3 or user_id is null) order by id asc limit 100',[after,topic,req.user.id]);\n    for(const event of backlog.rows) send({id:event.id,topic:event.topic,user_id:event.user_id,payload:event.payload,created_at:event.created_at});\n    const heartbeat=setInterval(()=>{ if(!closed) res.write(': tgg-heartbeat\\n\\n'); },25000);\n    const onNotification=(msg)=>{ try { const event=JSON.parse(msg.payload||'{}'); if(event.topic!==topic) return; if(event.user_id && event.user_id!==req.user.id) return; send(event); } catch {} };\n    client.on('notification',onNotification);\n    const close=async()=>{ if(closed) return; closed=true; clearInterval(heartbeat); client.off('notification',onNotification); try { await client.query('unlisten tgg_realtime'); } catch {} client.release(); if(!res.writableEnded) res.end(); };\n    req.on('close',close);\n  } catch(e) { client.release(); next(e); }\n});\n\napp.get('/v1/realtime/events', auth, async (req,res,next)=>{
   try {
     const after=Number(req.query.after||0);
     const r=await pool.query(

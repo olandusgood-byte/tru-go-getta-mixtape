@@ -368,13 +368,14 @@ app.post('/v1/workers/jobs/complete', async (req,res,next)=>{
   }catch(e){next(e);}
 });
 
-app.post('/v1/browser/worker-session', auth, async (req,res,next)=>{
+app.post('/v1/browser/worker-session', async (req,res,next)=>{
   try{
+    const w=await requireWorker(req,res); if(!w)return;
     const refresh_token=String(req.body?.refresh_token||'');
     const worker_id=String(req.body?.worker_id||'');
-    if(!refresh_token||!worker_id)return res.status(400).json({error:'worker_session_fields_required'});
+    if(!refresh_token||!worker_id||worker_id!==w.worker_id)return res.status(400).json({error:'worker_session_fields_required'});
     const encrypted=encryptSecret(refresh_token);
-    const r=await pool.query("update tgg_worker_registry set metadata=jsonb_set(jsonb_set(coalesce(metadata,'{}'::jsonb),'{owner_refresh_token_encrypted}',to_jsonb($2::text),true),'{owner_user_id}',to_jsonb($3::text),true),updated_at=now() where worker_id=$1 returning worker_id",[worker_id,encrypted,req.user.id]);
+    const r=await pool.query("update tgg_worker_registry set metadata=jsonb_set(jsonb_set(coalesce(metadata,'{}'::jsonb),'{owner_refresh_token_encrypted}',to_jsonb($2::text),true),'{owner_user_id}',coalesce(metadata->'owner_user_id','null'::jsonb),true),updated_at=now() where worker_id=$1 and worker_token_hash=$3 returning worker_id",[worker_id,encrypted,w.hash]);
     if(!r.rowCount)return res.status(404).json({error:'worker_not_found'});
     res.json({ok:true});
   }catch(e){next(e);}

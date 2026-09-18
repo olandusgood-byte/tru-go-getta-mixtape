@@ -29,7 +29,7 @@ async function run(){
     const page=await ctx.newPage();
 
     if(STORY_CHAPTER2_ONLY){
-      const base=TARGET.replace(/\\/index\\.html(?:\\?.*)?$/,'').replace(/\\/$/,'');
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
       const [htmlResponse,cssResponse,storyResponse,navResponse]=await Promise.all([
         fetch(base+'/index.html'),fetch(base+'/style.css'),fetch(base+'/story-missions.js'),fetch(base+'/navigation.js')
       ]);
@@ -38,8 +38,8 @@ async function run(){
       }
       let html=await htmlResponse.text();
       const [css,storySource,navSource]=await Promise.all([cssResponse.text(),storyResponse.text(),navResponse.text()]);
-      html=html.replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi,'')
-               .replace(/<link[^>]*href=["']style\\.css["'][^>]*>/i,'<style>'+css+'</style>');
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
       const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
       const mp=await mobile.newPage();
       const errors=[];
@@ -247,8 +247,7 @@ async function run(){
       await mp.evaluate(()=>window.TGGStoryMissions.doCurrent());
       await mp.waitForTimeout(50);
       await mp.evaluate(()=>window.TGGStoryMissions.sync());
-      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
-      record('story-manager-step',snap.step===1,JSON.stringify(snap));
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());      record('story-manager-step',snap.step===1,JSON.stringify(snap));
 
       await mp.evaluate(()=>{window.__qaContent.completed.push('flyer-run');window.TGGStoryMissions.sync();});      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('story-city-job-step',snap.step===2,JSON.stringify(snap));
@@ -497,8 +496,7 @@ async function run(){
       const checks=[];const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
       record('career-director-api',await page.evaluate(()=>typeof window.TGGCareerDirector?.getState==='function'));
 
-      async function runContract(contactId,advance){
-        await page.evaluate(({contactId,stamp})=>{window.__qaLife.activeOpportunity={contactId,title:'QA',detail:'QA',createdAt:stamp}}, {contactId,stamp:Date.now()});
+      async function runContract(contactId,advance){        await page.evaluate(({contactId,stamp})=>{window.__qaLife.activeOpportunity={contactId,title:'QA',detail:'QA',createdAt:stamp}}, {contactId,stamp:Date.now()});
         await page.waitForTimeout(1050);        const active=await page.evaluate(()=>window.TGGCareerDirector?.getState?.().activeContract);
         advance();
         await page.waitForTimeout(1050);
@@ -747,8 +745,7 @@ async function run(){
 
       result={
         ok:checks.every(x=>x.pass)&&harnessErrors.length===0,
-        status:'done',
-        mode:'gamepad_logic_harness',        target:TARGET,
+        status:'done',        mode:'gamepad_logic_harness',        target:TARGET,
         checks,
         page_errors:harnessErrors,
         updated_at:new Date().toISOString()
@@ -997,8 +994,7 @@ async function run(){
       record('smooth-walk-acceleration',Number(walking.walk?.speed)>2,JSON.stringify(walking.walk));
       record('smooth-walk-deceleration',Number(coasting?.speed)<Number(walking.walk?.speed),JSON.stringify({walking:walking.walk?.speed,coast:coasting?.speed}));
       console.log(JSON.stringify({tgg_3d_smoke_step:'player-walk-pass'}));
-      await page.keyboard.down('ArrowUp');
-      await page.keyboard.down('ArrowRight');
+      await page.keyboard.down('ArrowUp');      await page.keyboard.down('ArrowRight');
       await page.waitForTimeout(650);
       const diagonal=await page.evaluate(()=>({walk:window.TGGGame?.getWalkingState?.(),tune:window.TGGGame?.getWalkTuning?.()}));
       await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowRight');
@@ -1247,8 +1243,7 @@ async function run(){
       await ctx.close();return;
     }
     const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});    const mp=await mobile.newPage();
-    const mr=await mp.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
-    await mp.waitForTimeout(800);
+    const mr=await mp.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});    await mp.waitForTimeout(800);
     const mobileLayout=await mp.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,overflowX:document.documentElement.scrollWidth>innerWidth+1}));
     await mobile.close();
     record('mobile-http',mr?.status()===200,String(mr?.status()));

@@ -25,7 +25,7 @@
     });
     return {...WALK};
   }
-  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','worldLifeBoard','bridge','avatar','park','studio','shops','home','media','garage','businessBoard'];
+  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','worldLifeBoard','storyMissionsBoard','bridge','avatar','park','studio','shops','home','media','garage','businessBoard'];
 
   function show(id){
     if(id!=='game'){
@@ -34,7 +34,7 @@
     }
     activeScreen=id;
     screens.forEach(s=>$(s)?.classList.toggle('active',s===id));
-    $('hud')?.classList.toggle('hidden',!['game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','worldLifeBoard','bridge','businessBoard'].includes(id));
+    $('hud')?.classList.toggle('hidden',!['game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','worldLifeBoard','storyMissionsBoard','bridge','businessBoard'].includes(id));
     window.TGGCareer?.render?.();
     window.TGGBridge?.render?.();
     window.TGGProgression?.render?.();

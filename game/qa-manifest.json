@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.34",
-  "module": "GAME-V1.34-QA",
-  "name": "Street Sets + Crowd Momentum",
+  "version": "1.35",
+  "module": "GAME-V1.35-QA",
+  "name": "Street Crews + Audience Memory",
   "checks": [
     "storage",
     "game_api",
@@ -120,7 +120,15 @@
     "momentum_crowd_bonus",
     "street_sets_no_rewards",
     "street_sets_single_store",
-    "street_set_achievements"
+    "street_set_achievements",
+    "street_audience_api",
+    "audience_memory_persistence",
+    "returning_audience",
+    "street_crew_bonds",
+    "audience_aware_crowd_selection",
+    "audience_no_rewards",
+    "audience_single_store",
+    "audience_achievements"
   ],
   "workflow": [
     "BUILD",
@@ -133,6 +141,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.35 STREET CREWS + AUDIENCE MEMORY",
-  "verification": "passed"
+  "next": "V1.36 CROWD CALL-AND-RESPONSE + PERFORMANCE STATES",
+  "verification": "pending_ci"
 }

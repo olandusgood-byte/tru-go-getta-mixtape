@@ -146,4 +146,24 @@
 .gear-readout{font-size:9px;color:#8f93a8;letter-spacing:.12em}.gear-readout b{display:block;font-size:19px;color:#c7ff00;line-height:1.05}
 .drive-hint{grid-column:1/-1;font-size:8px;letter-spacing:.08em;color:#a9adbd;white-space:nowrap}
 @media(max-width:650px){.vehicle-hud{left:10px;bottom:10px;padding:9px 10px}.speed-readout b{font-size:24px}.drive-hint{font-size:7px;white-space:normal;max-width:190px}}
-\n.drive-state{font-size:9px;color:#8f93a8;letter-spacing:.12em}.drive-state b{display:block;font-size:12px;color:#7b86ff}.vehicle-hud.active .drive-state b{color:#c7ff00}\n
+
+.drive-state{font-size:9px;color:#8f93a8;letter-spacing:.12em}.drive-state b{display:block;font-size:12px;color:#7b86ff}.vehicle-hud.active .drive-state b{color:#c7ff00}
+
+/* V1.29 bulk world upgrade */
+.npc-dialogue{position:absolute;left:63%;top:23%;z-index:14;max-width:250px;padding:10px 12px;border:1px solid #ffffff24;border-radius:12px;background:#070910e8;color:#fff;font-size:11px;font-weight:800;box-shadow:0 12px 26px #000a;backdrop-filter:blur(9px);opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
+.npc-dialogue.show{opacity:1;transform:translateY(0)}
+#driftBtn,#hornBtn,#garageBtn{border-color:#c7ff0055!important}
+#driftBtn:active{background:#c7ff00!important;color:#071000!important}
+.studio3d{position:absolute;inset:0;z-index:4;background:#06070b}
+.studio3d canvas{display:block;width:100%;height:100%}
+#studio.studio-3d-ready .booth,#studio.studio-3d-ready .console,#studio.studio-3d-ready .studio-avatar,#studio.studio-3d-ready .producer{display:none}
+#studio.studio-3d-ready .studio-room{min-height:470px;border-color:#c7ff0035;border-radius:20px;box-shadow:0 28px 80px #000}
+#studio.studio-3d-ready .studio-actions{position:relative;z-index:8}
+.garage-shell{width:min(1100px,96vw);max-height:88vh;overflow:auto;padding:24px;border:1px solid #3c4052;border-radius:24px;background:radial-gradient(circle at 50% 0,#252b36,#080a10 68%);box-shadow:0 34px 100px #000}
+.garage-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.garage-head h2{margin:5px 0 8px;font-size:clamp(34px,5vw,60px)}.garage-head p{color:#989dae;margin:0}
+.garage-summary{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}.garage-summary span{padding:10px 12px;border:1px solid #ffffff15;border-radius:10px;background:#090b11;color:#8f94a5;font-size:9px;letter-spacing:.08em}.garage-summary b{display:block;color:#c7ff00;margin-top:4px}
+.garage-car-stage{height:230px;margin:20px 0;position:relative;display:grid;place-items:center;overflow:hidden;border:1px solid #ffffff14;border-radius:20px;background:linear-gradient(180deg,#111724,#06080e)}
+.garage-glow{position:absolute;width:480px;height:150px;border-radius:50%;background:#c7ff0014;filter:blur(24px);bottom:-20px}.garage-car-card{position:relative;text-align:center;font-size:28px;font-weight:900;letter-spacing:.12em;color:#fff;text-shadow:0 0 25px #c7ff0035}.garage-car-card small{display:block;margin-top:10px;font-size:10px;color:#9297a8;letter-spacing:.05em}
+.garage-grid{display:grid;grid-template-columns:1.1fr .75fr .9fr;gap:14px}.garage-grid section{padding:15px;border:1px solid #ffffff13;border-radius:16px;background:#0c0f16}.garage-grid section>b{font-size:10px;letter-spacing:.14em;color:#9ca1b1}.garage-options{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.garage-options button{padding:10px 12px;border:1px solid #3d4253;border-radius:9px;background:#171b25;color:#fff;font-size:10px;font-weight:900;cursor:pointer}.garage-options button:hover,.garage-options button.selected{border-color:#c7ff00;color:#c7ff00;box-shadow:0 0 16px #c7ff001c}
+.garage-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+@media(max-width:720px){.garage-head{display:block}.garage-summary{justify-content:flex-start;margin-top:14px}.garage-grid{grid-template-columns:1fr}.garage-car-stage{height:170px}.garage-car-card{font-size:20px}.npc-dialogue{left:auto;right:10px;top:155px;max-width:190px}.studio3d{min-height:360px}}

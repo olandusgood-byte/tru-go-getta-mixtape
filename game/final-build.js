@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.26 REAL ASSET LOADER 100';
+  const VERSION='V2.27 TGG 3D FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

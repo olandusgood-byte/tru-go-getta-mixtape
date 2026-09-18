@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.34 Street Sets + Crowd Momentum",
-  "base": "V1.33 Street Reputation + Event Variants",
+  "release": "V1.35 Street Crews + Audience Memory",
+  "base": "V1.34 Street Sets + Crowd Momentum",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -138,7 +138,11 @@
     "V1.34-STREET-SETS",
     "V1.34-CROWD-MOMENTUM",
     "V1.34-ORDERED-STREET-ROUTES",
-    "V1.34-SAME-STREET-EVENT-STORE"
+    "V1.34-SAME-STREET-EVENT-STORE",
+    "V1.35-AUDIENCE-MEMORY",
+    "V1.35-STREET-CREWS",
+    "V1.35-RETURNING-REGULARS",
+    "V1.35-SAME-STREET-EVENT-STORE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -343,10 +347,18 @@
     "momentum_crowd_bonus",
     "street_sets_no_rewards",
     "street_sets_single_store",
-    "street_set_achievements"
+    "street_set_achievements",
+    "street_audience_api",
+    "audience_memory_persistence",
+    "returning_audience",
+    "street_crew_bonds",
+    "audience_aware_crowd_selection",
+    "audience_no_rewards",
+    "audience_single_store",
+    "audience_achievements"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.34-STREET-SETS-CROWD-MOMENTUM-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.35-STREET-CREWS-AUDIENCE-MEMORY-CANDIDATE",
   "production": "gated"
 }

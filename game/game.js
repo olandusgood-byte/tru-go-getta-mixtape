@@ -40,7 +40,8 @@
     window.TGGProgression?.render?.();
     window.TGGInventory?.render?.();
     window.TGGCrew?.render?.();
-    window.TGGEvents?.render?.();\n    window.TGGWorldLife?.render?.();
+    window.TGGEvents?.render?.();
+    window.TGGWorldLife?.render?.();
   }
 
   function toast(t){
@@ -511,7 +512,8 @@
     $('homeBtn')?.addEventListener('click',()=>show('home'));
     $('mediaBtn')?.addEventListener('click',()=>show('media'));
     $('businessBtn')?.addEventListener('click',()=>window.TGGBusiness?.open?.());
-    $('garageBtn')?.addEventListener('click',()=>show('garage'));\n    $('worldLifeBtn')?.addEventListener('click',()=>show('worldLifeBoard'));
+    $('garageBtn')?.addEventListener('click',()=>show('garage'));
+    $('worldLifeBtn')?.addEventListener('click',()=>show('worldLifeBoard'));
     $('cityAssetsBtn')?.addEventListener('click',()=>{window.TGGBusiness?.open?.();window.TGGBusiness?.loadAssets?.()});
 
     $('mediaBack')?.addEventListener('click',()=>show('game'));

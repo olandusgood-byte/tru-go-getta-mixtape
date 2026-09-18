@@ -1,5 +1,5 @@
 (() => {
-  const keys={game:'tgg-game-v1',career:'tgg-career-v1',content:'tgg-content-v1',expansion:'tgg-expansion-v1',progression:'tgg-progression-v1',chains:'tgg-chains-v1',districts:'tgg-districts-v1',inventory:'tgg-inventory-v1',crew:'tgg-crew-v1',events:'tgg-events-v1',circuits:'tgg-circuits-v1',districtStory:'tgg-district-story-v1',routeMemory:'tgg-route-memory-v1',avatar:'tgg-avatar-v1'};
+  const keys={game:'tgg-game-v1',career:'tgg-career-v1',content:'tgg-content-v1',expansion:'tgg-expansion-v1',progression:'tgg-progression-v1',chains:'tgg-chains-v1',districts:'tgg-districts-v1',inventory:'tgg-inventory-v1',crew:'tgg-crew-v1',events:'tgg-events-v1',streetEvents:'tgg-street-events-v1',circuits:'tgg-circuits-v1',districtStory:'tgg-district-story-v1',routeMemory:'tgg-route-memory-v1',avatar:'tgg-avatar-v1'};
   const num=(v,f,min=0)=>{v=Number(v);return Number.isFinite(v)&&v>=min?v:f};
   function read(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v&&typeof v==='object'?v:fallback}catch(e){return fallback}}
   function repair(){
@@ -8,6 +8,16 @@
     const inv=read(keys.inventory,null);if(inv&&typeof inv.items!=='object')localStorage.setItem(keys.inventory,JSON.stringify({items:{},updatedAt:Date.now()}));
     const crew=read(keys.crew,null);if(crew&&(!Array.isArray(crew.members)))localStorage.setItem(keys.crew,JSON.stringify({members:[],updatedAt:Date.now()}));
     const events=read(keys.events,null);if(events&&(!Array.isArray(events.completed)))localStorage.setItem(keys.events,JSON.stringify({completed:[],runs:{},updatedAt:Date.now(),streak:0,bestStreak:0,lastEventId:null}));
+    const streetEvents=read(keys.streetEvents,null);if(streetEvents){
+      if(!Array.isArray(streetEvents.completed))streetEvents.completed=[];
+      if(!streetEvents.runs||typeof streetEvents.runs!=='object'||Array.isArray(streetEvents.runs))streetEvents.runs={};
+      streetEvents.crowdHype=Math.max(0,Math.min(100,num(streetEvents.crowdHype,0)));
+      streetEvents.bestHype=Math.max(streetEvents.crowdHype,Math.max(0,Math.min(100,num(streetEvents.bestHype,0))));
+      const totalRuns=Object.values(streetEvents.runs).reduce((sum,v)=>sum+Math.max(0,num(v,0)),0);
+      streetEvents.streetRep=Math.max(0,Math.min(100,totalRuns*6+Math.floor(streetEvents.crowdHype/2)));
+      streetEvents.updatedAt=num(streetEvents.updatedAt,Date.now());
+      localStorage.setItem(keys.streetEvents,JSON.stringify(streetEvents));
+    }
     const circuits=read(keys.circuits,null);if(circuits){
       if(!Array.isArray(circuits.completed))circuits.completed=[];
       if(!Array.isArray(circuits.history))circuits.history=[];

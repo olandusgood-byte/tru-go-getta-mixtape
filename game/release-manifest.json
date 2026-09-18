@@ -113,7 +113,8 @@
     "V1.29-3D-RECORDING-STUDIO",
     "V1.29-MANAGER-M-DIALOGUE",
     "V1.29-MOBILE-DRIFT-HORN",
-    "V1.29-METADATA-CLEANUP"
+    "V1.29-METADATA-CLEANUP",
+    "V1.29-LOCAL-THREE-RUNTIME"
   ],
   "gates": [
     "runtime_api_presence",
@@ -279,7 +280,8 @@
     "manager_dialogue_proximity",
     "mobile_drift_control",
     "mobile_horn_control",
-    "metadata_literal_newline_clean"
+    "metadata_literal_newline_clean",
+    "local_three_runtime"
   ],
   "static_gate": "passed",
   "browser_smoke": "automated_ci_pass",

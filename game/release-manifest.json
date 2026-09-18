@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.16 City Circuits + Event Variants",
-  "base": "V1.15 City Activity Mastery",
+  "release": "V1.17 District Circuits + Story Routing",
+  "base": "V1.16 City Circuits + Event Variants",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -53,7 +53,11 @@
     "V1.16-CITY-CIRCUITS",
     "V1.16-EVENT-VARIANTS",
     "V1.16-CIRCUIT-PERSISTENCE",
-    "V1.16-CIRCUIT-ACHIEVEMENTS"
+    "V1.16-CIRCUIT-ACHIEVEMENTS",
+    "V1.17-DISTRICT-STORY-ROUTING",
+    "V1.17-DISTRICT-LOCK-GATE",
+    "V1.17-READONLY-STORY-SUMMARY",
+    "V1.17-STORY-ROUTE-PERSISTENCE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -137,10 +141,17 @@
     "circuit_ordering",
     "circuit_persistence",
     "event_variants_cosmetic_only",
-    "circuit_achievements"
+    "circuit_achievements",
+    "district_story_api",
+    "district_story_persistence",
+    "district_lock_gate",
+    "story_route_completion",
+    "remote_story_readonly",
+    "no_story_mutation_bridge",
+    "story_router_no_rewards"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.16-CITY-CIRCUITS-EVENT-VARIANTS-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.17-DISTRICT-CIRCUITS-STORY-ROUTING-CANDIDATE",
   "production": "gated"
 }

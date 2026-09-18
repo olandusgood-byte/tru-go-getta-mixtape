@@ -18,8 +18,8 @@ const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',impor
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.22/);
-assert.match(html,/GAME V1\.22 • 3D COLLISION \+ CAMERA ORBIT/);
+assert.match(html,/Game V1\.23/);
+assert.match(html,/GAME V1\.23 • 3D DISTRICT LANDMARKS \+ ENTERABLE HUBS/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/<script src="district-story\.js"><\/script>/);
@@ -27,6 +27,7 @@ assert.match(html,/<script src="route-memory\.js"><\/script>/);
 assert.match(html,/<script src="contact-opportunities\.js"><\/script>/);
 assert.match(html,/<script src="world3d\.js"><\/script>/);
 assert.match(html,/id="world3d"/);
+assert.match(html,/id="world3dPrompt"/);
 assert.match(html,/id="businessBoard"/);
 assert.match(html,/id="businessBtn"/);
 assert.match(html,/id="cityAssetsBtn"/);
@@ -192,6 +193,11 @@ assert.match(world3d,/colliders/);
 assert.match(world3d,/pointerdown/);
 assert.match(world3d,/wheel/);
 assert.match(game,/TGGWorld3D\?\.canMovePercent/);
+assert.match(game,/tryEnterLandmark/);
+assert.match(world3d,/addHubLandmark/);
+assert.match(world3d,/nearestLandmark/);
+assert.match(world3d,/tryEnterLandmark/);
+for (const hub of ['studio-row','park','shops','apartment','media']) assert.match(world3d,new RegExp(hub));
 
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
@@ -230,10 +236,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.22 3D Collision + Camera Orbit');
-assert.equal(release.base,'V1.21 True 3D City Foundation');
-assert.equal(auto.version,'1.22');
-assert.equal(qaManifest.version,'1.22');
+assert.equal(release.release,'V1.23 3D District Landmarks + Enterable Hubs');
+assert.equal(release.base,'V1.22 3D Collision + Camera Orbit');
+assert.equal(auto.version,'1.23');
+assert.equal(qaManifest.version,'1.23');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -267,5 +273,9 @@ assert.ok(release.gates.includes('world3d_collision'));
 assert.ok(release.gates.includes('world3d_orbit_camera'));
 assert.ok(release.gates.includes('world3d_zoom'));
 assert.ok(release.gates.includes('mission_path_clear'));
+assert.ok(release.gates.includes('world3d_landmarks'));
+assert.ok(release.gates.includes('world3d_proximity'));
+assert.ok(release.gates.includes('world3d_enter_hub'));
+assert.ok(release.gates.includes('world3d_e_key'));
 
-console.log('GAME_V1_22_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_23_STATIC_CONTRACT_PASS');

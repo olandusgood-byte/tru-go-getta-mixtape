@@ -1,0 +1,28 @@
+/* V2.13 WORLD POLISH 100 */
+body.tgg-v213 .v213-fx-overlay{position:absolute;inset:0;z-index:12;pointer-events:none;overflow:hidden;border-radius:inherit}
+body.tgg-v213 .v213-vignette{position:absolute;inset:-2%;opacity:.18;background:radial-gradient(circle at center,transparent 48%,#000 100%);transition:opacity .2s}
+body.v213-driving .v213-vignette{opacity:.28}
+body.v213-boosting .v213-vignette{opacity:.48;background:radial-gradient(ellipse at center,transparent 35%,#071429aa 100%)}
+body.v213-critical .v213-vignette{box-shadow:inset 0 0 55px #ff213f33}
+body.tgg-v213 .v213-letterbox{position:absolute;left:0;right:0;height:0;background:#000;transition:height .22s ease}
+body.tgg-v213 .v213-letterbox.top{top:0}body.tgg-v213 .v213-letterbox.bottom{bottom:0}
+body.v213-cinematic .v213-letterbox{height:6.5%}
+body.v213-complete .v213-fx-overlay:after{content:"";position:absolute;inset:0;background:#c7ff0018;animation:v213-complete .75s ease-out}
+body.v213-impact .v213-fx-overlay:after{content:"";position:absolute;inset:0;background:#ff5f2b22;animation:v213-impact .26s ease-out}
+body.v213-repaired .v213-fx-overlay:after{content:"";position:absolute;inset:0;background:#39dd7920;animation:v213-complete .6s ease-out}
+body.tgg-v213 .v213-district-ribbon{position:absolute;left:50%;top:18px;z-index:15;display:grid;gap:2px;min-width:210px;padding:8px 14px;text-align:center;transform:translate(-50%,-22px);opacity:0;border:1px solid #ffffff18;border-radius:13px;background:#070a10db;box-shadow:0 14px 44px #0008;transition:.22s ease}
+body.tgg-v213 .v213-district-ribbon.active{opacity:1;transform:translate(-50%,0)}
+body.tgg-v213 .v213-district-ribbon small{font-size:7px;font-weight:900;letter-spacing:.2em;color:#8d96a8}
+body.tgg-v213 .v213-district-ribbon b{font-size:11px;letter-spacing:.15em;color:#fff}
+body.v213-boosting #vehicleHud{box-shadow:0 0 0 1px #5ab8ff66,0 0 32px #5ab8ff22}
+body.v213-drifting #driveStateValue{color:#ffd45c;text-shadow:0 0 12px #ffd45c55}
+body.v213-critical #conditionState{color:#ff315f;animation:v213-critical 1s ease-in-out infinite}
+body.tgg-v213 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@keyframes v213-complete{0%{opacity:1}100%{opacity:0}}
+@keyframes v213-impact{0%{opacity:1}100%{opacity:0}}
+@keyframes v213-critical{0%,100%{opacity:1}50%{opacity:.45}}
+@media(prefers-reduced-motion:reduce){body.tgg-v213 .v213-district-ribbon,body.tgg-v213 .v213-letterbox{transition:none!important}body.tgg-v213 .v213-vignette{opacity:.14!important}}
+@media(max-width:700px){body.tgg-v213 .v213-district-ribbon{top:10px;min-width:170px;padding:6px 10px}body.tgg-v213 .v213-district-ribbon b{font-size:9px}body.v213-cinematic .v213-letterbox{height:4%}}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v213 .v213-district-ribbon{left:52%;top:7px}}
+body[data-mega-quality="performance"].tgg-v213 .v213-vignette{display:none}
+body[data-mega-quality="performance"].tgg-v213 .v213-district-ribbon{box-shadow:none}

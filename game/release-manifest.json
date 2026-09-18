@@ -173,8 +173,8 @@
     "trusted_contact_achievement",
     "single_memory_store"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.19-NPC-DIALOGUE-RELATIONSHIP-MEMORY-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.19-NPC-DIALOGUE-RELATIONSHIP-MEMORY-VERIFIED",
   "production": "gated"
 }

@@ -19,7 +19,7 @@ const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',imp
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
 assert.match(html,/Game V1\.21/);
-assert.match(html,/GAME V1\.21 • TRUE 3D CITY FOUNDATION/);
+assert.match(html,/GAME V1\.21 • TRUE 3D CITY RUNTIME/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/<script src="district-story\.js"><\/script>/);
@@ -185,7 +185,7 @@ assert.match(world3d,/buildPlayer/);
 assert.match(world3d,/buildNpc/);
 assert.match(world3d,/followCamera/);
 assert.match(world3d,/syncPlayer/);
-assert.match(world3d,/world3d-active/);
+assert.match(world3d,/host\.classList\.add\('ready'\)/);
 
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
@@ -224,7 +224,7 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.21 True 3D City Foundation');
+assert.equal(release.release,'V1.21 True 3D City Runtime');
 assert.equal(release.base,'V1.20 NPC Favor Hooks + Contact Opportunities');
 assert.equal(auto.version,'1.21');
 assert.equal(qaManifest.version,'1.21');

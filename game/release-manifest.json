@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.18 Live Performance — Mission 04",
-  "base": "V1.17 Career Choices — Mission 03",
+  "release": "V1.19 Rival Battle — Mission 05",
+  "base": "V1.18 Live Performance — Mission 04",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -57,7 +57,11 @@
     "V1.18-MISSION-04-THE-HEADLINER",
     "V1.18-CONCERT-PERFORMANCE",
     "V1.18-CROWD-SCORE",
-    "V1.18-CLUB-VS-FESTIVAL"
+    "V1.18-CLUB-VS-FESTIVAL",
+    "V1.19-MISSION-05-RIVAL-CALLOUT",
+    "V1.19-RAP-BATTLE",
+    "V1.19-BATTLE-STYLE",
+    "V1.19-RIVAL-CONSEQUENCE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -142,10 +146,17 @@
     "performance_unique_moves",
     "performance_crowd_threshold",
     "performance_reward_once",
-    "story_mission_04_reward_once"
+    "story_mission_04_reward_once",
+    "story_mission_05_api",
+    "story_mission_05_ui",
+    "battle_api",
+    "battle_unique_rounds",
+    "battle_score",
+    "battle_reward_once",
+    "story_mission_05_reward_once"
   ],
   "static_gate": "candidate_pending_ci",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.18-MISSION-04-THE-HEADLINER-CANDIDATE",
+  "release_checkpoint": "V1.19-MISSION-05-RIVAL-CALLOUT-CANDIDATE",
   "production": "staging_candidate"
 }

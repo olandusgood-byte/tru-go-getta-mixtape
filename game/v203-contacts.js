@@ -65,6 +65,14 @@
     const best=closest();
     return best&&best.distance<=6.6?best:null;
   }
+  function contactForMission(missionId){return CONTACTS.find(c=>c.mission===missionId)||null}
+  function focusMission(missionId){
+    if(window.TGGContent?.current?.()){window.__tggToast?.('ACTIVE JOB — FOLLOW THE OBJECTIVE MARKER');return false;}
+    const c=contactForMission(missionId);if(!c)return false;
+    focusedContactId=c.id;
+    window.__tggToast?.('NEXT MOVE — GO SEE '+c.name+' • '+c.role);
+    return true;
+  }
   function focusNearest(){
     if(window.TGGContent?.current?.()){window.__tggToast?.('ACTIVE JOB — FOLLOW THE OBJECTIVE MARKER');return false;}
     const c=closest();if(!c)return false;
@@ -85,6 +93,7 @@
     const ok=window.TGGContent?.start?.(contact.mission)===true;
     if(ok){
       focusedContactId=null;
+      window.dispatchEvent(new CustomEvent('tgg:mission-start',{detail:{contactId:contact.id,contactName:contact.name,role:contact.role,missionId:contact.mission,missionName:missionName(contact.mission)}}));
       window.__tggToast?.(contact.name+' — JOB STARTED: '+missionName(contact.mission));
       window.TGGGame?.save?.(true);
       return true;
@@ -123,6 +132,6 @@
     requestAnimationFrame(tick);
   }
   function status(){const c=nearest();return {ready:!!c,contact:c?.id||null,mission:c?.mission||null,distance:c?Number(c.distance.toFixed(2)):null}}
-  window.TGGStreetContacts={contacts:CONTACTS,closest,nearest,focusNearest,getNavTarget,startContact,getObject:id=>objects[id]||null,status};
+  window.TGGStreetContacts={contacts:CONTACTS,contactForMission,closest,nearest,focusMission,focusNearest,getNavTarget,startContact,getObject:id=>objects[id]||null,status};
   requestAnimationFrame(tick);
 })();

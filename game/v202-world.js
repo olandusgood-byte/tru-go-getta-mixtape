@@ -81,6 +81,8 @@
     return true;
   }
   function installObjectiveHud(){
+    const versionBadge=document.querySelector('.v201-badge');
+    if(versionBadge)versionBadge.textContent='V2.02 WORLD';
     const city=document.querySelector('.city');
     if(!city||document.getElementById('worldObjective'))return;
     objectiveEl=document.createElement('div');

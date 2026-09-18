@@ -42,6 +42,8 @@
     test('first opportunity achievement',window.TGGProgression?.achievements?.some(a=>a.id==='first-opportunity'));
     test('world3d api',!!window.TGGWorld3D&&typeof window.TGGWorld3D.status==='function'&&typeof window.TGGWorld3D.resize==='function');
     test('world3d host',!!document.getElementById('world3d'));
+    test('world3d collision api',typeof window.TGGWorld3D?.canMove==='function'&&typeof window.TGGWorld3D?.collisionSnapshot==='function');
+    test('world3d camera orbit api',typeof window.TGGWorld3D?.cameraState==='function'&&typeof window.TGGWorld3D?.resetCamera==='function');
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

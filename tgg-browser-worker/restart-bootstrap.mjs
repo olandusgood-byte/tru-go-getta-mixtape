@@ -6,7 +6,7 @@ const workerId = process.env.TGG_WORKER_ID || '';
 const bootstrapSecret = process.env.TGG_WORKER_BOOTSTRAP_SECRET || '';
 const existingWorkerToken = process.env.TGG_WORKER_TOKEN || '';
 
-if (workerId && bootstrapSecret && SUPABASE_KEY && !existingWorkerToken) {
+if (workerId && bootstrapSecret && SUPABASE_KEY) {
   try {
     const client = createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false }
@@ -21,7 +21,8 @@ if (workerId && bootstrapSecret && SUPABASE_KEY && !existingWorkerToken) {
         ok: false,
         worker_id_configured: true,
         bootstrap_secret_configured: true,
-        reason: error?.message || 'bootstrap_response_invalid'
+        reason: error?.message || 'bootstrap_response_invalid',
+        preserved_existing_worker_token: Boolean(existingWorkerToken)
       }));
     } else {
       process.env.TGG_WORKER_TOKEN = data.worker_token;
@@ -39,7 +40,8 @@ if (workerId && bootstrapSecret && SUPABASE_KEY && !existingWorkerToken) {
       ok: false,
       worker_id_configured: true,
       bootstrap_secret_configured: true,
-      reason: error?.message || 'bootstrap_exception'
+      reason: error?.message || 'bootstrap_exception',
+      preserved_existing_worker_token: Boolean(existingWorkerToken)
     }));
   }
 } else {

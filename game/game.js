@@ -282,6 +282,7 @@
       osc.stop(ctx.currentTime+.19);
     }catch{}
     toast('HONK!');
+    window.dispatchEvent(new CustomEvent('tgg:horn'));
     return true;
   }
 
@@ -402,7 +403,7 @@
       if(typing)return;
       const k=e.key.length===1?e.key.toLowerCase():e.key;
       if(k==='e'){e.preventDefault();toggleVehicle();return;}
-      if(k==='f'){e.preventDefault();window.TGG3D?.interactNearest?.();return;}
+      if(k==='f'){e.preventDefault();if(!window.TGGStreetLife?.activateNearest?.())window.TGG3D?.interactNearest?.();return;}
       if(k==='c'){e.preventDefault();window.TGG3D?.cycleCamera?.();return;}
       if(k==='h'){e.preventDefault();horn();return;}
       if(k===' '||k==='Spacebar'){

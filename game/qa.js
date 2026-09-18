@@ -48,6 +48,9 @@ const inventory=window.TGGInventory?.catalog||[];check('inventory-catalog',inven
     check('world3d-collision-api',typeof window.TGGWorld3D?.constrainPercent==='function'&&typeof window.TGGWorld3D?.isBlockedPercent==='function','V1.22 building collision API available');
     check('world3d-collision-map',Array.isArray(window.TGGWorld3D?.collisionBoxes)&&window.TGGWorld3D.collisionBoxes.length>=10,'V1.22 building collision map registered');
     check('world3d-district-api',typeof window.TGGWorld3D?.districtAtPercent==='function'&&!!document.getElementById('worldDistrictBadge'),'V1.22 district awareness available');
+    check('world3d-animation-state',!!window.TGGWorld3D?.motion&&typeof window.TGGWorld3D.motion.moving==='boolean','V1.23 3D animation state available');
+    check('world3d-interaction-api',typeof window.TGGWorld3D?.nearestInteraction==='function'&&typeof window.TGGWorld3D?.activateNearest==='function','V1.23 proximity interaction API available');
+    check('world3d-interaction-prompt',!!document.getElementById('interactionPrompt'),'V1.23 in-world interaction prompt available');
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:20,rep:5});check('economy-reward-shape',!!economy&&economy.cash>=100&&economy.xp>=20&&economy.rep>=5&&!!economy.crew,'shared economy reward normalization available');
     const integrity=window.TGGV12Integrity?.run?.();check('v12-integrity',!!integrity?.passed,'V1.2 integrity gate passes');
     const bad=report.filter(x=>x.status==='FAIL');window.TGGQA={report,passed:bad.length===0,repair(){window.TGGSave?.repair?.();return !!document.getElementById('hud')&&!!window.TGGGame&&!!window.TGGProgression&&!!window.TGGChains&&!!window.TGGDistricts&&!!window.TGGSave&&!!window.TGGInventory&&!!window.TGGCrew&&!!window.TGGEconomy&&!!window.TGGEvents&&!!window.TGGAvatar&&!!window.TGGWorldSync}};return window.TGGQA;

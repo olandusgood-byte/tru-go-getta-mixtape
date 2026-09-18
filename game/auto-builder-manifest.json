@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.31",
-  "module": "GAME-V1.31",
-  "name": "Street Life + Traffic Proximity Checkpoint",
+  "version": "1.32",
+  "module": "GAME-V1.32",
+  "name": "Street Events + Crowd Reactions Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -101,10 +101,18 @@
     "street_talk_no_rewards": true,
     "traffic_proximity": true,
     "horn_reaction": true,
-    "contextual_prompt": true
+    "contextual_prompt": true,
+    "street_events_api": true,
+    "street_event_hotspots": true,
+    "street_event_local_state": true,
+    "crowd_gather_3d": true,
+    "crowd_reaction_animation": true,
+    "street_event_no_rewards": true,
+    "street_event_no_remote_mutations": true,
+    "contextual_event_hud": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.32 STREET EVENTS + CROWD REACTIONS",
-  "verification": "passed"
+  "next": "V1.33 STREET REPUTATION + EVENT VARIANTS",
+  "verification": "pending_ci"
 }

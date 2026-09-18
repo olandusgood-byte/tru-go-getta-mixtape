@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.32 Street Events + Crowd Reactions",
-  "base": "V1.31 Street Life + Traffic Proximity",
+  "release": "V1.33 Street Reputation + Event Variants",
+  "base": "V1.32 Street Events + Crowd Reactions",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -130,7 +130,11 @@
     "V1.32-STREET-EVENT-HOTSPOTS",
     "V1.32-3D-CROWD-GATHER",
     "V1.32-CROWD-REACTION-PHASES",
-    "V1.32-CONTEXTUAL-EVENT-HUD"
+    "V1.32-CONTEXTUAL-EVENT-HUD",
+    "V1.33-STREET-REPUTATION",
+    "V1.33-EVENT-VARIANTS",
+    "V1.33-STREET-RANK",
+    "V1.33-SAME-STREET-EVENT-STORE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -322,10 +326,15 @@
     "crowd_reaction_animation",
     "street_event_no_rewards",
     "street_event_no_remote_mutations",
-    "contextual_event_hud"
+    "contextual_event_hud",
+    "street_reputation_api",
+    "street_rank",
+    "event_variant_catalog",
+    "street_rep_persistence",
+    "street_rep_achievements"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.32-STREET-EVENTS-CROWD-REACTIONS-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.33-STREET-REPUTATION-EVENT-VARIANTS-CANDIDATE",
   "production": "gated"
 }

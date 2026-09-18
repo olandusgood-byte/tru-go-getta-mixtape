@@ -86,6 +86,7 @@
     const speedMph=Math.round(Math.abs(driveRuntime.speed)*7.2);
     $('speedValue') && ($('speedValue').textContent=String(speedMph));
     $('gearValue') && ($('gearValue').textContent=state.inVehicle?(driveRuntime.speed<-.2?'R':driveRuntime.speed>.2?'D':'N'):'P');
+    $('vehicleHud')?.classList.toggle('active',!!state.inVehicle);
   }
 
   function addXp(n){

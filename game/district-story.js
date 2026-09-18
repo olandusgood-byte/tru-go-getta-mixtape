@@ -8,9 +8,9 @@
       detail:'Move from the block to the studio to the release lane in district order.',
       circuit:'city-run',
       steps:[
-        {eventId:'street-cypher',district:'downtown',beat:'GET SEEN',detail:'Build a name Downtown.'},
-        {eventId:'studio-pop-in',district:'studio-row',beat:'GET SHARP',detail:'Turn momentum into a real studio session.'},
-        {eventId:'release-rush',district:'mixtape-ave',beat:'GET HEARD',detail:'Carry the run into Mixtape Ave.'}
+        {eventId:'street-cypher',district:'downtown',npcId:'m',beat:'GET SEEN',detail:'Build a name Downtown.'},
+        {eventId:'studio-pop-in',district:'studio-row',npcId:'producer',beat:'GET SHARP',detail:'Turn momentum into a real studio session.'},
+        {eventId:'release-rush',district:'mixtape-ave',npcId:'dj',beat:'GET HEARD',detail:'Carry the run into Mixtape Ave.'}
       ]
     }
   ];
@@ -52,6 +52,7 @@
         level:district?.level||1,
         open,
         beat:step.beat,
+        npcId:step.npcId||null,
         detail:step.detail
       };
     });
@@ -107,6 +108,7 @@
     state.activeRoute=id;
     state.lastResult={ok:true,status:'started',route:id,circuit:route.circuit};
     save();
+    window.TGGRouteMemory?.recordBeat?.(currentBeat());
     window.__tggToast?.('DISTRICT STORY STARTED — '+route.name.toUpperCase());
     render();
     return status();
@@ -131,6 +133,7 @@
         expected:result.expected||null
       };
       save();
+      if(result.status==='advanced')window.TGGRouteMemory?.recordBeat?.(currentBeat());
     }
     render();
     return status();
@@ -186,6 +189,7 @@
       '<button class="secondary" data-story-route="'+route.id+'">'+(state.activeRoute===route.id?'RESTART STORY ROUTE':'START STORY ROUTE')+'</button>'+
       '<button class="secondary" data-story-refresh="1">REFRESH READ-ONLY STORY</button>';
     host.prepend(wrap);
+    window.TGGRouteMemory?.render?.();
     wrap.querySelector('[data-story-route]')?.addEventListener('click',()=>start(route.id));
     wrap.querySelector('[data-story-refresh]')?.addEventListener('click',()=>refreshRemoteStory());
   }

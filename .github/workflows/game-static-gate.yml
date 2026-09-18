@@ -1,13 +1,13 @@
 name: Game Static Gate
-# V1.31 Street Life verification
+# V1.32 Street Events verification
 
 on:
   push:
-    branches: [feat/game-v1-31-street-life-20260918]
+    branches: [feat/game-v1-32-street-events-20260918]
     paths:
       - 'game/**'
       - '.github/workflows/game-static-gate.yml'
-      - '.github/workflows/game-v1-31-browser-smoke.yml'
+      - '.github/workflows/game-v1-32-browser-smoke.yml'
   workflow_dispatch:
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
             node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$f"
           done
 
-      - name: Run V1.31 static contract
+      - name: Run V1.32 static contract
         run: node game/static-contract.test.mjs
 
       - name: Validate local script references
@@ -45,5 +45,5 @@ jobs:
               if src.startswith(('http://','https://')): continue
               p=Path('game')/src
               assert p.is_file(), f'missing script: {src}'
-          print('V1.31 local script references verified.')
+          print('V1.32 local script references verified.')
           PY

@@ -35,7 +35,7 @@
 
   function installHud(){
     document.body.classList.add('tgg-v212');
-    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.14 PLAYTEST HARDENING 100';
+    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.15 CHARACTER + MISSION DEPTH 100';
     const vh=document.getElementById('vehicleHud');
     if(vh&&!document.getElementById('conditionValue')){
       const wrap=document.createElement('div');

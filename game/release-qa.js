@@ -119,7 +119,14 @@
     test('v224 crew HQ UI',!!document.getElementById('v224CrewPanel')&&!!document.getElementById('v224NearHud'));
     test('v224 crew chemistry range',Number(crewHQ.chemistry)>=0&&Number(crewHQ.chemistry)<=100);
     test('v224 crew HQ css',!!document.querySelector('link[href*="v224-crew-hq.css"]'));
-    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.24 CREW HQ + TEAM SYSTEMS 100');
+    const rivals=window.TGGV225?.status?.()||{};
+    test('v225 rival core api',!!window.TGGV225Core&&typeof window.TGGV225Core.applyChoice==='function'&&typeof window.TGGV225Core.relationshipTier==='function');
+    test('v225 rival crew api',!!window.TGGV225&&typeof window.TGGV225.choose==='function'&&typeof window.TGGV225.openEncounter==='function');
+    test('v225 100 layers',Array.isArray(window.TGGV225?.layers)&&window.TGGV225.layers.length===100);
+    test('v225 rival crew ui',!!document.getElementById('v225RivalPanel')&&!!document.getElementById('v225RivalHud'));
+    test('v225 rival state range',Number(rivals.rivalry)>=0&&Number(rivals.rivalry)<=100&&Number(rivals.respect)>=0&&Number(rivals.respect)<=100);
+    test('v225 rival crew css',!!document.querySelector('link[href*="v225-rival-crews.css"]'));
+    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.25 RIVAL CREWS + STORY CHOICES 100');
     test('v2 movement hud',!!document.getElementById('playerMoveHud')&&!!document.getElementById('walkModeValue')&&!!document.getElementById('walkSpeedValue'));
     test('v2 sprint control',!!document.getElementById('sprintBtn'));test('v202 world gameplay',!!window.TGGWorldGameplay&&typeof window.TGGWorldGameplay.getNavTarget==='function'&&typeof window.TGGWorldGameplay.performObjective==='function');test('v202 world objective hud',!!document.getElementById('worldObjective'));test('v203 street contacts',!!window.TGGStreetContacts&&Array.isArray(window.TGGStreetContacts.contacts)&&window.TGGStreetContacts.contacts.length>=3&&typeof window.TGGStreetContacts.startContact==='function');test('v203 contact hud',!!document.getElementById('streetContactCard'));test('career api',!!window.TGGCareer);test('content api',!!window.TGGContent);test('expansion api',!!window.TGGExpansion);test('progression api',!!window.TGGProgression);test('bridge api',!!window.TGGBridge);test('chain api',!!window.TGGChains);test('district api',!!window.TGGDistricts);test('save api',!!window.TGGSave);test('inventory api',!!window.TGGInventory);test('crew api',!!window.TGGCrew);test('events api',!!window.TGGEvents);test('economy api',!!window.TGGEconomy&&typeof window.TGGEconomy.apply==='function');test('avatar api',!!window.TGGAvatar&&typeof window.TGGAvatar.get==='function'&&typeof window.TGGAvatar.save==='function');test('world sync api',!!window.TGGWorldSync&&typeof window.TGGWorldSync.snapshot==='function'&&typeof window.TGGWorldSync.setTransport==='function'&&typeof window.TGGWorldSync.sync==='function');
     ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud'].forEach(id=>test('dom:'+id,!!document.getElementById(id)));

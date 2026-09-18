@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.14",
-  "module": "GAME-V1.14-QA",
-  "name": "Live City + Read-Only World Assets",
+  "version": "1.15",
+  "module": "GAME-V1.15-QA",
+  "name": "City Activity Mastery",
   "checks": [
     "storage",
     "game_api",
@@ -30,7 +30,13 @@
     "pause_input_lock",
     "secondary_world_navigation",
     "save_continue_loop",
-    "browser_smoke_automated"
+    "browser_smoke_automated",
+    "city_mastery_api",
+    "city_mastery_state",
+    "city_rank",
+    "city_streak",
+    "city_mastery_achievements",
+    "base_event_economy_unchanged"
   ],
   "workflow": [
     "BUILD",
@@ -43,5 +49,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.15 CITY ACTIVITY DEPTH + SAFE LOCAL PROGRESSION"
+  "next": "V1.16 CITY CIRCUITS + EVENT VARIANTS",
+  "verification": "pending_ci"
 }

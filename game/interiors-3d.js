@@ -1,6 +1,9 @@
 (() => {
+  let booted=false;
   function boot(){
+    if(booted)return window.TGGInteriors3D||null;
     if(!window.THREE)return;
+    booted=true;
     const THREE=window.THREE;
     const runtimes=[];
 
@@ -136,6 +139,15 @@
 
     window.TGGInteriors3D={isReady:()=>runtimes.length>=4,runtimes};
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
-  else boot();
+  function watch(){
+    const ids=['home','media','shops','park'];
+    const screens=ids.map(id=>document.getElementById(id)).filter(Boolean);
+    if(!screens.length)return;
+    const maybeBoot=()=>{if(screens.some(s=>s.classList.contains('active')))boot()};
+    maybeBoot();
+    screens.forEach(screen=>new MutationObserver(maybeBoot).observe(screen,{attributes:true,attributeFilter:['class']}));
+  }
+  window.TGGInteriors3D={ensure:boot,isReady:()=>booted,runtimes:[]};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch,{once:true});
+  else watch();
 })();

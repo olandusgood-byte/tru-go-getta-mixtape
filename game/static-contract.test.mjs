@@ -19,7 +19,7 @@ const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',imp
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
 assert.match(html,/Game V1\.26/);
-assert.match(html,/GAME V1\.25 • STARTER CAR \+ DRIVE MODE/);
+assert.match(html,/GAME V1\.26 • FIXED DRIVING CONTROLS/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/<script src="district-story\.js"><\/script>/);

@@ -1,0 +1,36 @@
+name: TGG Browser Game Smoke
+
+on:
+  push:
+    branches:
+      - tgg-world-unreal-fastlane
+    paths:
+      - 'game/index.html'
+      - 'game/style.css'
+      - 'game/game.js'
+      - 'game/tests/browser_smoke.py'
+      - '.github/workflows/tgg-browser-game-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Playwright
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Run TGG Chromium gameplay smoke
+        run: python game/tests/browser_smoke.py

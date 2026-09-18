@@ -51,6 +51,9 @@
     test('world3d interaction prompt',!!document.getElementById('interactionPrompt'));
     test('world3d hub catalog',Array.isArray(window.TGGWorld3D?.hubs)&&window.TGGWorld3D.hubs.length===5);
     test('world3d unified interaction',window.TGGWorld3D?.hubs?.every(h=>h.id&&h.name&&h.screen&&Number.isFinite(h.x)&&Number.isFinite(h.z)));
+    test('starter car api',!!window.TGGWorld3D?.car&&typeof window.TGGWorld3D?.distanceToCarPercent==='function'&&typeof window.TGGGame?.toggleVehicle==='function');
+    test('vehicle state',typeof window.TGGGame?.getState?.()?.inVehicle==='boolean');
+    test('vehicle control',!!document.getElementById('vehicleBtn'));
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

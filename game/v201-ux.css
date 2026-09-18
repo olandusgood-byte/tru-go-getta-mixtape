@@ -49,3 +49,10 @@ body.tgg-v201 .v201-badge{margin-right:10px;padding:5px 8px;border:1px solid #c7
   body.tgg-v201 .control-title small{display:block;max-width:none;margin-top:6px;text-align:left}
   body.tgg-v201 .action-tabs{overflow:auto;flex-wrap:nowrap;padding-bottom:2px}
 }
+
+body.tgg-v201 .boost-readout{display:grid;gap:4px;margin-top:6px;min-width:150px}
+body.tgg-v201 .boost-readout>span{display:flex;justify-content:space-between;gap:12px;font-size:8px;font-weight:900;letter-spacing:.12em;color:#b8bdcc}
+body.tgg-v201 .boost-track{height:7px;border-radius:999px;overflow:hidden;background:#ffffff12;border:1px solid #ffffff18}
+body.tgg-v201 .boost-fill{height:100%;width:100%;background:linear-gradient(90deg,#7b86ff,#c7ff00);box-shadow:0 0 12px #7b86ff66;transition:width .08s linear}
+body.tgg-v201 #sprintBtn.boosting{transform:scale(.96);box-shadow:0 0 24px #7b86ff88;border-color:#7b86ff}
+body.tgg-v201 .vehicle-hud .drive-hint{max-width:240px}

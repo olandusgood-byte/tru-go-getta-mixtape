@@ -17,6 +17,7 @@ const VEHICLE_LOGIC_ONLY=String(process.env.TGG_3D_VEHICLE_LOGIC_ONLY||'0')==='1
 const MOBILE_LAYOUT_ONLY=String(process.env.TGG_3D_MOBILE_LAYOUT_ONLY||'0')==='1';
 const WORLD_LIFE_ONLY=String(process.env.TGG_3D_WORLD_LIFE_ONLY||'0')==='1';
 const CAREER_DIRECTOR_ONLY=String(process.env.TGG_3D_CAREER_DIRECTOR_ONLY||'0')==='1';
+const CAREER_MOBILE_ONLY=String(process.env.TGG_3D_CAREER_MOBILE_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -122,6 +123,52 @@ async function run(){
       record('world-life-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
       record('world-life-mobile-tabs-readable',layout.minTab>=48,String(layout.minTab));
       result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'world_life_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
+
+    if(CAREER_MOBILE_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,cssResponse]=await Promise.all([fetch(base+'/index.html'),fetch(base+'/style.css')]);
+      if(!htmlResponse.ok||!cssResponse.ok)throw new Error('Career mobile harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status);
+      let html=await htmlResponse.text();
+      const css=await cssResponse.text();
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      await mp.setContent(html,{waitUntil:'domcontentloaded'});
+      const layout=await mp.evaluate(()=>{
+        document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
+        document.getElementById('career')?.classList.add('active');
+        const rect=sel=>{const e=document.querySelector(sel);if(!e)return null;const r=e.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
+        const stats=rect('.career-director-stats');
+        const grid=rect('.career-hq-grid');
+        const shell=rect('.career-hq-shell');
+        const core=rect('.career-core'),contract=rect('.career-contract'),next=rect('.career-next'),history=rect('.career-history-wrap');
+        const go=rect('#careerDirectorGo');
+        const style=getComputedStyle(document.querySelector('.career-hq-grid'));
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          overflowX:document.documentElement.scrollWidth>innerWidth+1,
+          shell,stats,grid,core,contract,next,history,go,
+          gridColumns:style.gridTemplateColumns,
+          statsColumns:getComputedStyle(document.querySelector('.career-director-stats')).gridTemplateColumns,
+          heading:document.querySelector('.career-hq-head h2')?.textContent||'',
+          hasContract:!!document.getElementById('careerContract'),
+          hasNext:!!document.getElementById('careerNextMove')
+        };
+      });
+      const checks=[];const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      record('career-mobile-source-http',htmlResponse.status===200&&cssResponse.status===200,'html='+htmlResponse.status+',css='+cssResponse.status);
+      record('career-mobile-no-overflow',layout.overflowX===false,JSON.stringify(layout));
+      record('career-mobile-shell-contained',!!layout.shell&&layout.shell.left>=0&&layout.shell.right<=layout.width+1,JSON.stringify(layout.shell));
+      record('career-mobile-one-column',!!layout.gridColumns&&!layout.gridColumns.includes(' '),layout.gridColumns);
+      record('career-mobile-two-stat-columns',layout.statsColumns.split(' ').length===2,layout.statsColumns);
+      record('career-mobile-cards-stacked',!!layout.core&&!!layout.contract&&!!layout.next&&layout.contract.top>=layout.core.bottom-2&&layout.next.top>=layout.contract.bottom-2,JSON.stringify({core:layout.core,contract:layout.contract,next:layout.next}));
+      record('career-mobile-go-readable',!!layout.go&&layout.go.height>=44&&layout.go.width>=250,JSON.stringify(layout.go));
+      record('career-mobile-content-present',/TURN EVERY MOVE/.test(layout.heading)&&layout.hasContract&&layout.hasNext,JSON.stringify({heading:layout.heading,hasContract:layout.hasContract,hasNext:layout.hasNext}));
+      result={ok:checks.every(x=>x.pass),status:'done',mode:'career_mobile_harness',target:TARGET,checks,updated_at:new Date().toISOString()};
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await mobile.close();await ctx.close();return;
     }

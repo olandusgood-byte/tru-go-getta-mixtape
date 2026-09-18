@@ -2,13 +2,15 @@ import express from 'express';
 import pg from 'pg';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 
 const { Pool } = pg;
 const app = express();
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '70mb' }));
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL;
+const STORAGE_ROOT = process.env.TGG_STORAGE_ROOT || '/data/media';
 if (!DATABASE_URL) console.warn('[TGG Core] DATABASE_URL is not configured');
 
 const pool = new Pool({
@@ -207,16 +209,52 @@ app.get('/v1/storage/buckets', auth, async (_req,res,next)=>{
 
 app.post('/v1/storage/uploads', auth, async (req,res,next)=>{
   try {
-    const {bucket_key,object_key,mime_type,size_bytes,metadata={}}=req.body||{};
+    const {bucket_key,object_key,mime_type,size_bytes,metadata={},data_base64}=req.body||{};
     if(!bucket_key||!object_key) return res.status(400).json({error:'bucket_key_and_object_key_required'});
-    const b=await pool.query('select bucket_key from tgg_storage_buckets where bucket_key=$1',[bucket_key]);
+    const b=await pool.query('select bucket_key,visibility,max_bytes,allowed_mime_types from tgg_storage_buckets where bucket_key=$1',[bucket_key]);
     if(!b.rowCount) return res.status(404).json({error:'storage_bucket_not_found'});
-    const r=await pool.query(
-      'insert into tgg_media_uploads(owner_user_id,bucket_key,object_key,metadata) values($1,$2,$3,$4) returning *',
-      [req.user.id,bucket_key,object_key,{...metadata,mime_type:mime_type||null,size_bytes:size_bytes||null}]
+    if(!data_base64) return res.status(400).json({error:'data_base64_required'});
+    const bucket=b.rows[0];
+    const cleanKey=String(object_key).replace(/^\\/+|\\\\/g,'/').split('/').filter(x=>x && x!=='.' && x!=='..').join('/');
+    if(!cleanKey) return res.status(400).json({error:'invalid_object_key'});
+    const bytes=Buffer.from(String(data_base64).replace(/^data:[^;]+;base64,/,'').replace(/\\s/g,''),'base64');
+    if(!bytes.length) return res.status(400).json({error:'empty_upload'});
+    if(bucket.max_bytes && bytes.length>Number(bucket.max_bytes)) return res.status(413).json({error:'object_too_large',max_bytes:Number(bucket.max_bytes)});
+    if(bucket.allowed_mime_types?.length && mime_type && !bucket.allowed_mime_types.includes(mime_type)) return res.status(415).json({error:'mime_type_not_allowed'});
+    const checksum_sha256=crypto.createHash('sha256').update(bytes).digest('hex');
+    const mediaType=String(mime_type||'application/octet-stream').startsWith('video/')?'video':String(mime_type||'').startsWith('audio/')?'audio':String(mime_type||'').startsWith('image/')?'image':'document';
+    const storageKey=path.posix.join(bucket_key,cleanKey);
+    const target=path.resolve(STORAGE_ROOT,storageKey);
+    const root=path.resolve(STORAGE_ROOT);
+    if(!target.startsWith(root+path.sep)) return res.status(400).json({error:'invalid_object_key'});
+    await fs.mkdir(path.dirname(target),{recursive:true});
+    await fs.writeFile(target,bytes,{flag:'wx'}).catch(async e=>{ if(e.code==='EEXIST') await fs.writeFile(target,bytes); else throw e; });
+    const media=await pool.query(
+      'insert into media_objects(owner_user_id,media_type,storage_key,public_url,size_bytes,mime_type) values($1,$2,$3,$4,$5,$6) on conflict(storage_key) do update set public_url=excluded.public_url,size_bytes=excluded.size_bytes,mime_type=excluded.mime_type returning *',
+      [req.user.id,mediaType,storageKey,'/v1/storage/object/'+encodeURIComponent(bucket_key)+'/'+cleanKey,bytes.length,mime_type||null]
     );
-    res.status(201).json({upload:r.rows[0]});
+    const upload=await pool.query(
+      'insert into tgg_media_uploads(media_object_id,owner_user_id,bucket_key,object_key,status,checksum_sha256,metadata) values($1,$2,$3,$4,$5,$6,$7) on conflict(object_key) do update set media_object_id=excluded.media_object_id,status=excluded.status,checksum_sha256=excluded.checksum_sha256,metadata=excluded.metadata,updated_at=now() returning *',
+      [media.rows[0].id,req.user.id,bucket_key,cleanKey,'ready',checksum_sha256,{...metadata,mime_type:mime_type||null,size_bytes:bytes.length}]
+    );
+    res.status(201).json({upload:upload.rows[0],media:media.rows[0],checksum_sha256,storage_key:storageKey});
   } catch(e){next(e);}
+});
+
+app.get('/v1/storage/object/:bucket/*key', async (req,res,next)=>{
+  try {
+    const bucketKey=String(req.params.bucket||'');
+    const key=String(req.params.key||'').replace(/^\\/+/, '');
+    const b=await pool.query('select visibility from tgg_storage_buckets where bucket_key=$1',[bucketKey]);
+    if(!b.rowCount) return res.status(404).json({error:'storage_bucket_not_found'});
+    if(b.rows[0].visibility!=='public') return auth(req,res,async()=>{});
+    const target=path.resolve(STORAGE_ROOT,path.posix.join(bucketKey,key));
+    const root=path.resolve(STORAGE_ROOT);
+    if(!target.startsWith(root+path.sep)) return res.status(400).json({error:'invalid_object_key'});
+    const stat=await fs.stat(target);
+    res.set('Content-Length',String(stat.size));
+    res.sendFile(target);
+  } catch(e){ if(e.code==='ENOENT') return res.status(404).json({error:'object_not_found'}); next(e); }
 });
 
 app.post('/v1/jobs', auth, async (req,res,next)=>{

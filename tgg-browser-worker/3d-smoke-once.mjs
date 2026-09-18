@@ -17,6 +17,13 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+    if(PLAYER_SMOOTH_ONLY){
+      await page.route('**/*',route=>{
+        const url=route.request().url();
+        if(/\/(garage-3d|studio-3d|interiors-3d)\.js(?:\?|$)/.test(url))return route.abort();
+        return route.continue();
+      });
+    }
     const consoleErrors=[],pageErrors=[],failedResources=[];
     page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
     page.on('pageerror',e=>pageErrors.push(e.message||String(e)));

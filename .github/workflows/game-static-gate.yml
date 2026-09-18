@@ -1,9 +1,9 @@
 name: Game Static Gate
-# V1.13 RC isolated validation
+# V1.14 live-city isolated validation
 
 on:
   push:
-    branches: [release/game-v1.13-rc]
+    branches: [feat/game-v1-14-live-city-20260918]
     paths:
       - 'game/**'
       - '.github/workflows/game-static-gate.yml'
@@ -29,7 +29,7 @@ jobs:
           for f in game/*.json; do
             node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$f"
           done
-      - name: Run V1.13 static contract
+      - name: Run V1.14 static contract
         run: node game/static-contract.test.mjs
 
       - name: Validate script references
@@ -52,7 +52,7 @@ jobs:
           import re
           html=Path('game/index.html').read_text()
           ids=re.findall(r'id=[\"\']([^\"\']+)[\"\']', html)
-          required={'menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','worldSyncBtn','chainBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
+          required={'menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','businessBoard','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','businessBtn','cityAssetsBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','worldSyncBtn','chainBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
           missing=sorted(required-set(ids))
           assert not missing, 'missing required IDs: '+', '.join(missing)
           assert len(ids)==len(set(ids)), 'duplicate DOM ids detected'
@@ -74,7 +74,7 @@ jobs:
           for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
             if(sync.includes(forbidden)) throw new Error('forbidden secret marker in game bundle: '+forbidden);
           }
-          if(!String(manifest.release||'').startsWith('V1.13')) throw new Error('release manifest is not V1.13');
+          if(!String(manifest.release||'').startsWith('V1.14')) throw new Error('release manifest is not V1.14');
           if(sync.includes("rpc('tgg_world_purchase'")) throw new Error('tgg_world_purchase must remain excluded from the game adapter');
                               for(const forbiddenRpc of ['tgg_world_buy_property','tgg_world_property_market_buy','tgg_world_property_market_list','tgg_world_property_market_cancel','tgg_world_install_property_upgrade','tgg_world_fast_travel','tgg_world_v3_travel_to','tgg_world_vehicle_spawn','tgg_world_vehicle_join','tgg_world_vehicle_drive_session','tgg_world_vehicle_install_tune','tgg_world_vehicle_music','tgg_world_party_travel']){
             if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('property/vehicle mutation RPC must remain excluded: '+forbiddenRpc);
@@ -86,11 +86,11 @@ jobs:
             if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('social mutation RPC must remain excluded: '+forbiddenRpc);
           }
           const business=fs.readFileSync('game/business.js','utf8');
-          for(const token of ['window.TGGBusiness','businessBoard','businessBtn','worldAssetsBundle']){
-            if(!business.includes(token) && !html.includes(token)) throw new Error('missing V1.13 business contract token: '+token);
+          for(const token of ['window.TGGBusiness','businessBoard','businessBtn','cityAssetsBtn','worldAssetsBundle','loadAssets','activitySnapshot','inspectProperty','inspectVehicle']){
+            if(!business.includes(token) && !html.includes(token)) throw new Error('missing V1.14 business contract token: '+token);
           }
           for(const forbidden of ['tgg_world_buy_property','tgg_world_property_market_buy','tgg_world_vehicle_spawn','tgg_world_vehicle_drive_session']){
-            if(business.includes(forbidden)) throw new Error('V1.13 business layer must remain discovery-only: '+forbidden);
+            if(business.includes(forbidden)) throw new Error('V1.14 business layer must remain read-only: '+forbidden);
           }
-          console.log('V1.13 world sync + business discovery contract verified.');
+          console.log('V1.14 world sync + live-city read-only assets contract verified.');
           NODE

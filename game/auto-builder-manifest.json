@@ -43,5 +43,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
   "next": "V1.16 CITY CIRCUITS + EVENT VARIANTS",
-  "verification": "pending_ci"
+  "verification": "passed"
 }

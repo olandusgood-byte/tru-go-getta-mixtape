@@ -1,6 +1,6 @@
-# TRU GO GETTA Game V1.14
+# TRU GO GETTA Game V1.15
 
-V1.14 turns the existing V1.13 business/world-asset discovery wiring into a usable **Live City + Read-Only World Assets** surface while preserving the same fail-closed production and mutation boundaries.
+V1.15 deepens the existing repeatable city-event system without creating a second economy, a second progression store, or a remote mutation path.
 
 ## Verified layers
 
@@ -15,65 +15,55 @@ V1.14 turns the existing V1.13 business/world-asset discovery wiring into a usab
 - V1.12: Property + Vehicle Discovery
 - V1.13: Progression + Business Discovery
 - V1.14: Live City + Read-Only World Assets
+- V1.15: City Activity Mastery
 
-## V1.14 Live City + Read-Only World Assets
+## V1.15 City Activity Mastery
 
-This layer keeps the existing `window.TGGWorldSync` reads and hardens `window.TGGBusiness`:
+V1.15 extends the existing `tgg-events-v1` state rather than creating parallel progression:
 
-- exports the previously hidden world-asset loader and renderer;
-- keeps one persistent `tgg-business-v1` state object;
-- shows the existing city activity catalog in the business hub;
-- exposes a read-only activity snapshot for deterministic QA;
-- supports property and vehicle **inspect-only** detail;
-- escapes remote asset labels before HTML rendering;
-- keeps offline-ready behavior when trusted Creator OS transport is absent;
-- exposes no purchase, ownership, travel, spawn, driving, tune, or upgrade mutation bridge.
+- per-activity mastery tiers: Rookie → Regular → City Known → Headliner;
+- total city-run counter and city rank;
+- activity variety streak + best streak;
+- persistent migration-safe streak fields inside the existing event save;
+- City Regular, City Known and City Headliner achievements through the existing `tgg-progression-v1` store;
+- city rank and total runs surfaced on the progression panel;
+- explicit progression sync after successful event completion.
 
-## Explicit exclusions
+Base event economics are unchanged:
 
-V1.14 does not expose:
+- Street Cypher: 180 cash / 35 XP / 10 REP;
+- Studio Pop-In: 275 cash / 55 XP / 20 REP;
+- Release Rush: 450 cash / 90 XP / 35 REP.
 
-- property buy/list/cancel;
-- property upgrade install/buy;
-- fast travel / travel-to;
-- vehicle spawn/join/drive;
-- vehicle tune/music mutation;
-- party travel;
-- automatic network polling;
-- service-role/provider secrets.
+Crew bonuses still route through the existing bonus logic. V1.15 adds no new currency, reward multiplier, purchase surface or real-money behavior.
+
+## Verification
+
+- [x] JavaScript syntax gate
+- [x] JSON manifest gate
+- [x] V1.15 static contract
+- [x] Existing V1.14 read-only world-asset safety checks
+- [x] Core create / continue / save / pause controls
+- [x] Automated Chromium gameplay smoke
+- [x] 3 Street Cypher runs preserve exact +540 base cash
+- [x] Street Cypher reaches Regular mastery
+- [x] LOCAL NAME city rank at 3 runs
+- [x] city-regular achievement unlock
+- [x] switching to Studio Pop-In advances activity streak
+- [x] production remains gated
 
 ## Safety model
 
 - Trusted transport injection only.
-- No automatic network calls or timers.
-- Remote property/vehicle payloads are rendered as escaped display data.
-- World assets are inspect-only.
+- No automatic network polling.
+- Property and vehicle surfaces remain inspect-only.
+- No purchase, travel, spawn, driving or upgrade mutation bridge.
 - No local save overwrite from remote state.
-- No purchase bridge.
-- No mission/social mutation bridge.
+- No service-role/provider secrets.
 - Production remains gated.
-
-## Current checkpoint
-
-- [x] Character Identity
-- [x] World Sync Foundation
-- [x] Player State
-- [x] Career + Economy
-- [x] Inventory + Equipment
-- [x] Social + Crew
-- [x] Mission + Story
-- [x] Property + Vehicle discovery
-- [x] Progression + Business discovery
-- [x] V1.14 live-city surface
-- [x] V1.14 property/vehicle read-only inspectors
-- [x] V1.14 remote-label escaping
-- [x] V1.14 runtime/release QA targets
-- [x] V1.14 static contract target
-- [x] V1.14 static CI confirmation
-- [x] V1.14 automated Chromium confirmation
-- [ ] Trusted Creator OS transport connection
-- [ ] Production game deployment/release
 
 ## Release status
 
-**V1.14-LIVE-CITY-READONLY-ASSETS-VERIFIED.** Static CI passed, the missing core control bindings were repaired, and the automated Chromium smoke gate passed on GitHub. Production remains gated; the next development layer is V1.15 City Activity Depth + Safe Local Progression.
+**V1.15-CITY-ACTIVITY-MASTERY-VERIFIED.** Static CI and automated Chromium smoke both passed on commit `5b6919a57d62216eadeee11d9ee11ad24c07f970`.
+
+Next internal development layer: **V1.16 City Circuits + Event Variants**.

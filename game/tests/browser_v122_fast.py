@@ -42,16 +42,16 @@ with sync_playwright() as p:
     check('movement-guard',moved is False and before==after,f'{before}->{after}')
 
     page.evaluate("window.TGGGame.getState().x=50;window.TGGGame.getState().y=55;window.TGGGame.refresh()")
-    canvas=page.locator('#world3d canvas')
-    box=canvas.bounding_box()
     cam0=page.evaluate("window.TGGWorld3D.cameraState()")
-    page.mouse.move(box['x']+box['width']/2,box['y']+box['height']/2)
-    page.mouse.down()
-    page.mouse.move(box['x']+box['width']/2+130,box['y']+box['height']/2+30,steps=5)
-    page.mouse.up()
+    page.evaluate("""() => {
+      const el=document.querySelector('#world3d canvas');
+      el.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1,clientX:100,clientY:100}));
+      el.dispatchEvent(new PointerEvent('pointermove',{bubbles:true,pointerId:1,clientX:230,clientY:130}));
+      el.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:1,clientX:230,clientY:130}));
+    }""")
     cam1=page.evaluate("window.TGGWorld3D.cameraState()")
     check('orbit-drag',abs(cam1.get('yaw',0)-cam0.get('yaw',0))>0.2,json.dumps([cam0,cam1]))
-    page.mouse.wheel(0,500)
+    page.evaluate("""() => document.querySelector('#world3d canvas').dispatchEvent(new WheelEvent('wheel',{bubbles:true,deltaY:500}))""")
     page.wait_for_timeout(50)
     cam2=page.evaluate("window.TGGWorld3D.cameraState()")
     check('wheel-zoom',cam2.get('distance')!=cam1.get('distance'),json.dumps([cam1,cam2]))

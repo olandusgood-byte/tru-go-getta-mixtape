@@ -182,11 +182,15 @@
   let cameraMode='orbit';
   let yaw=Math.PI*.25,pitch=.48,distance=17,dragging=false,px=0,py=0;
 
+  function setCameraMode(mode,quiet=false){
+    if(!cameraModes.includes(mode))return cameraMode;
+    cameraMode=mode;
+    if(!quiet)window.__tggToast?.('CAMERA — '+cameraMode.toUpperCase());
+    return cameraMode;
+  }
   function cycleCamera(){
     const idx=cameraModes.indexOf(cameraMode);
-    cameraMode=cameraModes[(idx+1)%cameraModes.length];
-    window.__tggToast?.('CAMERA — '+cameraMode.toUpperCase());
-    return cameraMode;
+    return setCameraMode(cameraModes[(idx+1)%cameraModes.length]);
   }
   function getCameraMode(){return cameraMode;}
 
@@ -517,6 +521,7 @@
     pedestrians,
     traffic,
     cycleCamera,
+    setCameraMode,
     getCameraMode,
     updateRadar
   };

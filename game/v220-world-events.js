@@ -27,7 +27,7 @@
   const state={
     ready:false,rotationIndex:0,activeEventId:null,windowStart:0,windowEnd:0,sequenceIndex:0,
     sequenceStartedAt:0,lastStepAt:0,combo:0,bestCombo:0,history:[],lastResult:null,sessionRuns:0,
-    panelOpen:false,nearestDistance:null,flow:'READY'
+    panelOpen:false,sequenceEventId:null,nearestDistance:null,flow:'READY'
   };
   let group=null,panel=null,hud=null,live=null,actionBtn=null,lastRender=0;
   const T=()=>window.THREE;
@@ -129,14 +129,14 @@
     if(window.TGGDistricts?.canEnter&&!window.TGGDistricts.canEnter(e.district)){
       window.__tggToast?.('DISTRICT LOCKED — '+e.district.toUpperCase());return false;
     }
-    state.panelOpen=true;state.sequenceIndex=0;state.sequenceStartedAt=now();state.lastStepAt=0;state.combo=0;state.flow='READY';
+    state.panelOpen=true;state.sequenceEventId=e.id;state.sequenceIndex=0;state.sequenceStartedAt=now();state.lastStepAt=0;state.combo=0;state.flow='READY';
     panel?.classList.add('active');renderPanel(true);
     window.dispatchEvent(new CustomEvent('tgg:world-event-enter',{detail:{eventId:e.id,name:e.name,district:e.district}}));
     if(live)live.textContent='Live event '+e.name+' opened.';return true;
   }
   function closePanel(){
     if(state.panelOpen)window.dispatchEvent(new CustomEvent('tgg:world-event-cancel',{detail:{eventId:state.activeEventId,step:state.sequenceIndex}}));
-    state.panelOpen=false;panel?.classList.remove('active');state.sequenceIndex=0;state.combo=0;state.flow='READY';
+    state.panelOpen=false;state.sequenceEventId=null;panel?.classList.remove('active');state.sequenceIndex=0;state.combo=0;state.flow='READY';
   }
 
   function flow(delta){
@@ -148,6 +148,7 @@
   }
   function performStep(){
     const e=activeEvent();if(!e||!state.panelOpen)return false;
+    if(state.sequenceEventId!==e.id){closePanel();window.__tggToast?.('CITY EVENT ROTATED — FIND THE NEW HOTSPOT');return false}
     if(distance()>7){window.__tggToast?.('RETURN TO THE EVENT HOTSPOT');return false}
     const t=now();if(t-state.lastStepAt<280)return false;
     const delta=state.lastStepAt?t-state.lastStepAt:0;state.lastStepAt=t;state.flow=flow(delta);
@@ -180,7 +181,7 @@
     window.dispatchEvent(new CustomEvent('tgg:world-event-complete',{detail:{...result}}));
     document.body.classList.add('v220-event-complete');setTimeout(()=>document.body.classList.remove('v220-event-complete'),700);
     window.__tggToast?.(e.name.toUpperCase()+' — CITY EVENT COMPLETE');
-    state.panelOpen=false;panel?.classList.remove('active');state.sequenceIndex=0;state.combo=0;state.flow='READY';
+    state.panelOpen=false;state.sequenceEventId=null;panel?.classList.remove('active');state.sequenceIndex=0;state.combo=0;state.flow='READY';
     return true;
   }
 

@@ -25,7 +25,7 @@
       const saved=JSON.parse(localStorage.getItem(KEY)||'{}');
       Object.assign(state,saved||{});
     }catch{}
-    state.condition=clamp(Number(state.condition)||100,0,100);
+    const conditionNum=Number(state.condition);state.condition=clamp(Number.isFinite(conditionNum)?conditionNum:100,0,100);
     state.nearMissStreak=Math.max(0,Number(state.nearMissStreak)||0);
     state.bestNearMissStreak=Math.max(state.nearMissStreak,Number(state.bestNearMissStreak)||0);
     state.cleanSeconds=Math.max(0,Number(state.cleanSeconds)||0);
@@ -122,13 +122,24 @@
   }
 
   function syncDriveTune(){
-    if(!baseTune)baseTune=window.TGGGame?.getDriveTuning?.();
-    if(!baseTune)return;
+    const garageState=window.TGGGarage?.getState?.();
+    const garagePresets=window.TGGGarage?.getPresets?.();
+    const garageBase=garageState&&garagePresets?garagePresets[garageState.tuning]:null;
+    const current=window.TGGGame?.getDriveTuning?.();
+    const base=garageBase||baseTune||current;
+    if(!base)return;
+    if(!baseTune)baseTune={...base};
     const conditionFactor=.72+.28*(state.condition/100);
-    const boostFactor=state.condition<15?1.06:state.condition<35?1.18:baseTune.boostMultiplier;
+    const boostBase=Number(current?.boostMultiplier)||Number(baseTune?.boostMultiplier)||1.38;
+    const boostFactor=state.condition<15?1.06:state.condition<35?Math.min(1.18,boostBase):boostBase;
     window.TGGGame?.setDriveTuning?.({
-      maxForward:baseTune.maxForward*conditionFactor,
-      accel:baseTune.accel*(.82+.18*(state.condition/100)),
+      maxForward:Number(base.maxForward)*conditionFactor,
+      accel:Number(base.accel)*(.82+.18*(state.condition/100)),
+      maxReverse:Number(base.maxReverse),
+      reverseAccel:Number(base.reverseAccel),
+      brake:Number(base.brake),
+      coast:Number(base.coast),
+      turnRate:Number(base.turnRate),
       boostMultiplier:boostFactor
     });
   }

@@ -10,18 +10,20 @@ const progression=fs.readFileSync(new URL('./progression.js',import.meta.url),'u
 const circuits=fs.readFileSync(new URL('./circuits.js',import.meta.url),'utf8');
 const districtStory=fs.readFileSync(new URL('./district-story.js',import.meta.url),'utf8');
 const routeMemory=fs.readFileSync(new URL('./route-memory.js',import.meta.url),'utf8');
+const contactOps=fs.readFileSync(new URL('./contact-opportunities.js',import.meta.url),'utf8');
 const qa=fs.readFileSync(new URL('./qa.js',import.meta.url),'utf8');
 const releaseQa=fs.readFileSync(new URL('./release-qa.js',import.meta.url),'utf8');
 const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.19/);
-assert.match(html,/GAME V1\.19 • NPC DIALOGUE STATES \+ RELATIONSHIP MEMORY/);
+assert.match(html,/Game V1\.20/);
+assert.match(html,/GAME V1\.20 • NPC FAVOR HOOKS \+ CONTACT OPPORTUNITIES/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/<script src="district-story\.js"><\/script>/);
 assert.match(html,/<script src="route-memory\.js"><\/script>/);
+assert.match(html,/<script src="contact-opportunities\.js"><\/script>/);
 assert.match(html,/id="businessBoard"/);
 assert.match(html,/id="businessBtn"/);
 assert.match(html,/id="cityAssetsBtn"/);
@@ -151,6 +153,25 @@ assert.equal(routeMemory.includes('TGGGame?.reward'),false);
 assert.equal(routeMemory.includes('TGGCareer?.addRep'),false);
 assert.equal(routeMemory.includes('TGGEconomy?.apply'),false);
 
+
+assert.match(contactOps,/window\.TGGContactOps/);
+assert.match(contactOps,/manager-intro/);
+assert.match(contactOps,/producer-lockin/);
+assert.match(contactOps,/dj-test-spin/);
+assert.match(contactOps,/TIER_SCORE/);
+assert.match(contactOps,/baseRun/);
+for (const api of ['memory','available','list','start','onEventComplete','status','render']) {
+  assert.match(contactOps,new RegExp('function '+api+'\\b'));
+}
+assert.match(events,/TGGContactOps\?\.onEventComplete/);
+assert.match(routeMemory,/TGGContactOps\?\.render/);
+assert.match(progression,/first-opportunity/);
+assert.equal(contactOps.includes('localStorage'),false);
+assert.equal(contactOps.includes('tgg-contact-opportunities-v1'),false);
+assert.equal(contactOps.includes('TGGGame?.reward'),false);
+assert.equal(contactOps.includes('TGGCareer?.addRep'),false);
+assert.equal(contactOps.includes('TGGEconomy?.apply'),false);
+
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
 }
@@ -188,10 +209,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.19 NPC Dialogue States + Relationship Memory');
-assert.equal(release.base,'V1.18 NPC Route Encounters + District Memory');
-assert.equal(auto.version,'1.19');
-assert.equal(qaManifest.version,'1.19');
+assert.equal(release.release,'V1.20 NPC Favor Hooks + Contact Opportunities');
+assert.equal(release.base,'V1.19 NPC Dialogue States + Relationship Memory');
+assert.equal(auto.version,'1.20');
+assert.equal(qaManifest.version,'1.20');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -215,5 +236,8 @@ assert.ok(release.gates.includes('route_memory_no_rewards'));
 assert.ok(release.gates.includes('relationship_api'));
 assert.ok(release.gates.includes('repeat_talk_no_progress'));
 assert.ok(release.gates.includes('single_memory_store'));
+assert.ok(release.gates.includes('contact_ops_api'));
+assert.ok(release.gates.includes('contact_ops_no_bonus_rewards'));
+assert.ok(release.gates.includes('opportunities_single_memory_store'));
 
-console.log('GAME_V1_19_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_20_STATIC_CONTRACT_PASS');

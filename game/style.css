@@ -218,3 +218,27 @@
   .player-move-hud{left:10px;bottom:10px;min-width:160px;padding:9px 10px}
   .player-move-hud>span{max-width:160px;white-space:normal}
 }
+
+
+/* V2.00 FINAL MASTER — larger readable control surface */
+.game-controls{grid-template-columns:240px minmax(0,1fr);gap:18px;min-height:212px}
+.move-pad{padding:15px 18px 17px}
+.dpad{width:178px;height:142px;gap:8px}
+.dpad button{font-size:20px;border-radius:14px;touch-action:none;user-select:none;-webkit-user-select:none}
+.d-core{border-radius:50%!important;font-size:10px!important;letter-spacing:.12em!important;border-color:#c7ff0060!important;box-shadow:inset 0 0 18px #c7ff0012!important}
+.action-deck{padding:15px 16px 16px}
+.action-deck .actions{grid-template-columns:repeat(3,minmax(145px,1fr));gap:10px;max-height:205px;padding:2px 7px 7px 2px}
+.action-deck .actions button{min-height:58px;padding:12px 13px;font-size:11px;line-height:1.25;border-radius:14px}
+.control-title{margin-bottom:12px}.control-title small{line-height:1.35}
+@media(max-width:900px){
+  .game-controls{grid-template-columns:210px minmax(0,1fr);gap:12px}
+  .dpad{width:164px;height:132px}
+  .action-deck .actions{grid-template-columns:repeat(2,minmax(130px,1fr));max-height:250px}
+}
+@media(max-width:650px){
+  .game-controls{grid-template-columns:1fr}
+  .move-pad{padding:12px 14px}
+  .dpad{width:min(220px,72vw);height:164px}
+  .action-deck .actions{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-height:none}
+  .action-deck .actions button{min-height:60px;font-size:11px}
+}

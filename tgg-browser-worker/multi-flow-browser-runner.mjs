@@ -32,7 +32,8 @@ async function browserRpc(page, tggCoreUrl, accessToken, fn, body = {}) {
   if (fn === 'tgg_creator_profile_bundle') {
     const r = await page.evaluate(async ({coreUrl,accessToken}) => { const x=await fetch(coreUrl+'/v1/creator/profile',{headers:{authorization:'Bearer '+accessToken}}); const json=await x.json().catch(()=>({})); return {ok:x.ok,status:x.status,json,text:JSON.stringify(json)}; }, {coreUrl,accessToken});
     return r;
-  }\n  if (fn === 'tgg_creator_notifications_bundle') {
+  }
+  if (fn === 'tgg_creator_notifications_bundle') {
     const r = await page.evaluate(async ({coreUrl,accessToken}) => { const x=await fetch(coreUrl+'/v1/creator/notifications',{headers:{authorization:'Bearer '+accessToken}}); const json=await x.json().catch(()=>({})); return {ok:x.ok,status:x.status,json,text:JSON.stringify(json)}; }, {coreUrl,accessToken});
     return r;
   }

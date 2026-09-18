@@ -28,6 +28,10 @@
   const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','avatar','park','studio','shops','home','media','garage','businessBoard'];
 
   function show(id){
+    if(id!=='game'){
+      clearWalkKeys();
+      Object.keys(driveKeys).forEach(k=>driveKeys[k]=false);
+    }
     activeScreen=id;
     screens.forEach(s=>$(s)?.classList.toggle('active',s===id));
     $('hud')?.classList.toggle('hidden',!['game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','businessBoard'].includes(id));

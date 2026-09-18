@@ -76,7 +76,13 @@
     test('v217 100 layers',Array.isArray(window.TGGV217?.layers)&&window.TGGV217.layers.length===100);
     test('v217 interior overlay',!!document.getElementById('v217InteriorOverlay'));
     test('v217 interior depth css',!!document.querySelector('link[href*="v217-interior-depth.css"]'));
-    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.17 CITY + INTERIOR DEPTH 100');
+    const missionActions=window.TGGV218?.status?.()||{};
+    test('v218 mission actions api',!!window.TGGV218&&typeof window.TGGV218.enterObjective==='function'&&typeof window.TGGV218.performStep==='function');
+    test('v218 100 layers',Array.isArray(window.TGGV218?.layers)&&window.TGGV218.layers.length===100);
+    test('v218 mission action hud',!!document.getElementById('v218MissionAction')&&!!document.getElementById('v218ActionBtn'));
+    test('v218 mission actions css',!!document.querySelector('link[href*="v218-mission-actions.css"]'));
+    test('v218 world objective hook',String(window.TGGWorldGameplay?.performObjective||'').length>0);
+    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.18 MISSION ACTIONS 100');
     test('v2 movement hud',!!document.getElementById('playerMoveHud')&&!!document.getElementById('walkModeValue')&&!!document.getElementById('walkSpeedValue'));
     test('v2 sprint control',!!document.getElementById('sprintBtn'));test('v202 world gameplay',!!window.TGGWorldGameplay&&typeof window.TGGWorldGameplay.getNavTarget==='function'&&typeof window.TGGWorldGameplay.performObjective==='function');test('v202 world objective hud',!!document.getElementById('worldObjective'));test('v203 street contacts',!!window.TGGStreetContacts&&Array.isArray(window.TGGStreetContacts.contacts)&&window.TGGStreetContacts.contacts.length>=3&&typeof window.TGGStreetContacts.startContact==='function');test('v203 contact hud',!!document.getElementById('streetContactCard'));test('career api',!!window.TGGCareer);test('content api',!!window.TGGContent);test('expansion api',!!window.TGGExpansion);test('progression api',!!window.TGGProgression);test('bridge api',!!window.TGGBridge);test('chain api',!!window.TGGChains);test('district api',!!window.TGGDistricts);test('save api',!!window.TGGSave);test('inventory api',!!window.TGGInventory);test('crew api',!!window.TGGCrew);test('events api',!!window.TGGEvents);test('economy api',!!window.TGGEconomy&&typeof window.TGGEconomy.apply==='function');test('avatar api',!!window.TGGAvatar&&typeof window.TGGAvatar.get==='function'&&typeof window.TGGAvatar.save==='function');test('world sync api',!!window.TGGWorldSync&&typeof window.TGGWorldSync.snapshot==='function'&&typeof window.TGGWorldSync.setTransport==='function'&&typeof window.TGGWorldSync.sync==='function');
     ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud'].forEach(id=>test('dom:'+id,!!document.getElementById(id)));

@@ -10,6 +10,7 @@ const REQUIRE_CINEMATIC=String(process.env.TGG_3D_REQUIRE_CINEMATIC||'0')==='1';
 const REQUIRE_WORLD_BULK=String(process.env.TGG_3D_REQUIRE_WORLD_BULK||'0')==='1';
 const REQUIRE_PLAYER_SMOOTH=String(process.env.TGG_3D_REQUIRE_PLAYER_SMOOTH||'0')==='1';
 const PLAYER_SMOOTH_ONLY=String(process.env.TGG_3D_PLAYER_SMOOTH_ONLY||'0')==='1';
+const WORLD_ONLY=String(process.env.TGG_3D_WORLD_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -366,6 +367,24 @@ async function run(){
     }
 
     console.log(JSON.stringify({tgg_3d_smoke_step:'cinematic-complete'}));
+    if(WORLD_ONLY){
+      if(String(EXPECT_VERSION).includes('V2.00'))record('gamepad-api',initial.gamepadApi);
+      result={
+        ok:(res?.status()===200)&&checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&failedResources.length===0,
+        status:'done',
+        mode:'world_cinematic_only',
+        target:TARGET,
+        http_status:res?.status()||0,
+        checks,
+        console_errors:consoleErrors,
+        page_errors:pageErrors,
+        failed_resources:failedResources,
+        updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();
+      return;
+    }
     if(REQUIRE_PLAYER_SMOOTH){
       record('walking-api',initial.walkingApi);
       record('walking-tuning',Number(initial.walkingTuning?.walkSpeed)>0&&Number(initial.walkingTuning?.sprintSpeed)>Number(initial.walkingTuning?.walkSpeed),JSON.stringify(initial.walkingTuning));

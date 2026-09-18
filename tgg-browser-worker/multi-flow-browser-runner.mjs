@@ -30,10 +30,12 @@ async function browserRpc(page, supabaseUrl, accessToken, fn, body = {}) {
 }
 
 async function browserAuthUser(page, supabaseUrl, accessToken) {
-  return page.evaluate(async ({ supabaseUrl, accessToken }) => {
-    const r = await fetch(`${supabaseUrl}/auth/v1/user`, { headers: { apikey: window.__TGG_SUPABASE_KEY, Authorization: `Bearer ${accessToken}` } });
-    return { ok: r.ok, status: r.status, user: r.ok ? await r.json() : null };
-  }, { supabaseUrl, accessToken });
+  const coreUrl = String(process.env.TGG_CORE_URL || supabaseUrl).replace(/\/$/,'');
+  return page.evaluate(async ({ coreUrl, accessToken }) => {
+    const r = await fetch(coreUrl + '/v1/me', { headers: { Authorization: 'Bearer ' + accessToken } });
+    const json = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, json, text: JSON.stringify(json) };
+  }, { coreUrl, accessToken });
 }
 
 function hasTitleInvalid(result) {

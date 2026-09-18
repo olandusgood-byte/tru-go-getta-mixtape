@@ -145,9 +145,12 @@ async function run(){
       record('chapter2-persistence',snap.stored?.chapter2?.completed===true&&snap.stored?.chapter2?.step===10,JSON.stringify(snap.stored?.chapter2));
 
       const layout=await mp.evaluate(()=>{
+        window.TGGStoryMissions.reset();
+        window.TGGStoryMissions.startChapter2();
         window.__qaShown='game';
         document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
         document.getElementById('game')?.classList.add('active');
+        window.TGGStoryMissions.render();
         const hud=document.getElementById('storyWorldHud')?.getBoundingClientRect();
         const button=document.getElementById('storyWorldAction')?.getBoundingClientRect();
         return {
@@ -247,8 +250,7 @@ async function run(){
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('story-manager-step',snap.step===1,JSON.stringify(snap));
 
-      await mp.evaluate(()=>{window.__qaContent.completed.push('flyer-run');window.TGGStoryMissions.sync();});
-      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      await mp.evaluate(()=>{window.__qaContent.completed.push('flyer-run');window.TGGStoryMissions.sync();});      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('story-city-job-step',snap.step===2,JSON.stringify(snap));
 
       await mp.evaluate(()=>{window.__qaCareer.recordings=1;window.TGGStoryMissions.sync();});
@@ -497,8 +499,7 @@ async function run(){
 
       async function runContract(contactId,advance){
         await page.evaluate(({contactId,stamp})=>{window.__qaLife.activeOpportunity={contactId,title:'QA',detail:'QA',createdAt:stamp}}, {contactId,stamp:Date.now()});
-        await page.waitForTimeout(1050);
-        const active=await page.evaluate(()=>window.TGGCareerDirector?.getState?.().activeContract);
+        await page.waitForTimeout(1050);        const active=await page.evaluate(()=>window.TGGCareerDirector?.getState?.().activeContract);
         advance();
         await page.waitForTimeout(1050);
         const after=await page.evaluate(()=>window.TGGCareerDirector?.getState?.());
@@ -747,8 +748,7 @@ async function run(){
       result={
         ok:checks.every(x=>x.pass)&&harnessErrors.length===0,
         status:'done',
-        mode:'gamepad_logic_harness',
-        target:TARGET,
+        mode:'gamepad_logic_harness',        target:TARGET,
         checks,
         page_errors:harnessErrors,
         updated_at:new Date().toISOString()
@@ -997,7 +997,6 @@ async function run(){
       record('smooth-walk-acceleration',Number(walking.walk?.speed)>2,JSON.stringify(walking.walk));
       record('smooth-walk-deceleration',Number(coasting?.speed)<Number(walking.walk?.speed),JSON.stringify({walking:walking.walk?.speed,coast:coasting?.speed}));
       console.log(JSON.stringify({tgg_3d_smoke_step:'player-walk-pass'}));
-
       await page.keyboard.down('ArrowUp');
       await page.keyboard.down('ArrowRight');
       await page.waitForTimeout(650);
@@ -1247,8 +1246,7 @@ async function run(){
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await ctx.close();return;
     }
-    const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
-    const mp=await mobile.newPage();
+    const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});    const mp=await mobile.newPage();
     const mr=await mp.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
     await mp.waitForTimeout(800);
     const mobileLayout=await mp.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,overflowX:document.documentElement.scrollWidth>innerWidth+1}));

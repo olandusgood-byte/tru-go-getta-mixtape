@@ -1,12 +1,10 @@
 (() => {
   function isSupportedModelUrl(value){
-    if(typeof value!=='string'||!value.trim())return false;
-    try{
-      const u=new URL(value);
-      if(u.protocol!=='https:')return false;
-      const p=u.pathname.toLowerCase();
-      return p.endsWith('.glb')||p.endsWith('.gltf');
-    }catch{return false}
+    if(typeof value!=='string')return false;
+    const raw=value.trim();
+    if(!/^https:\/\//i.test(raw))return false;
+    const clean=raw.split('#')[0].split('?')[0].toLowerCase();
+    return clean.endsWith('.glb')||clean.endsWith('.gltf');
   }
 
   function normalizeConfig(input={}){

@@ -99,40 +99,81 @@ async function run(){
     const startX=Number(driveStart?.x)||0;
     const startY=Number(driveStart?.y)||0;
 
-    await page.keyboard.press('ArrowRight');
-    await page.waitForTimeout(120);
-    const steered=await page.evaluate(()=>window.TGGGame?.getState?.());
-    const steeredHeading=Number(steered?.heading)||0;
-    record('drive-steer-right',steeredHeading!==startHeading,`${startHeading}->${steeredHeading}`);
-    record('steer-does-not-translate',Math.hypot(Number(steered?.x)-startX,Number(steered?.y)-startY)<0.05);
-
-    await page.keyboard.press('ArrowUp');
-    await page.waitForTimeout(220);
-    const driven=await page.evaluate(()=>({
+    await page.keyboard.down('ArrowUp');
+    await page.waitForTimeout(900);
+    const accelerated=await page.evaluate(()=>({
       state:window.TGGGame?.getState?.(),
-      carRotation:window.TGG3D?.car?.rotation?.y,
-      carHeading:window.TGG3D?.getCarHeading?.()
+      driving:window.TGGGame?.getDrivingState?.(),
+      speedText:document.getElementById('speedValue')?.textContent,
+      gearText:document.getElementById('gearValue')?.textContent,
+      hudActive:document.getElementById('vehicleHud')?.classList.contains('active')
     }));
-    const drivenState=driven.state||{};
-    const forwardDistance=Math.hypot(Number(drivenState.x)-startX,Number(drivenState.y)-startY);
-    record('drive-forward-relative',forwardDistance>2.5,`${startX},${startY}->${drivenState.x},${drivenState.y}`);
+    await page.keyboard.up('ArrowUp');
+    const accelSpeed=Number(accelerated.driving?.speed)||0;
+    const accelDistance=Math.hypot(Number(accelerated.state?.x)-startX,Number(accelerated.state?.y)-startY);
+    record('smooth-acceleration',accelSpeed>3,`speed=${accelSpeed}`);
+    record('continuous-forward-travel',accelDistance>1.5,`distance=${accelDistance}`);
+    record('speedometer-hud',accelerated.hudActive&&Number(accelerated.speedText)>0,`mph=${accelerated.speedText}`);
+    record('drive-gear',accelerated.gearText==='D',String(accelerated.gearText));
 
-    const expectedRotation=-(Number(drivenState.heading)||0)*Math.PI/180;
-    let rotationDiff=Math.abs((Number(driven.carRotation)||0)-expectedRotation)%(Math.PI*2);
+    const headingBeforeSteer=Number(accelerated.state?.heading)||0;
+    await page.keyboard.down('ArrowRight');
+    await page.waitForTimeout(500);
+    const steeringVisual=await page.evaluate(()=>({
+      state:window.TGGGame?.getState?.(),
+      driving:window.TGGGame?.getDrivingState?.(),
+      carRotation:window.TGG3D?.car?.rotation?.y,
+      carLean:window.TGG3D?.car?.rotation?.z,
+      frontWheelAngles:(window.TGG3D?.car?.userData?.wheels||[]).filter(w=>w.userData?.front).map(w=>w.rotation.y)
+    }));
+    await page.keyboard.up('ArrowRight');
+    const headingAfterSteer=Number(steeringVisual.state?.heading)||0;
+    record('speed-sensitive-steering',headingAfterSteer!==headingBeforeSteer,`${headingBeforeSteer}->${headingAfterSteer}`);
+    record('front-wheel-visual-steer',steeringVisual.frontWheelAngles.some(v=>Math.abs(Number(v)||0)>.02),JSON.stringify(steeringVisual.frontWheelAngles));
+    record('vehicle-body-lean',Math.abs(Number(steeringVisual.carLean)||0)>.002,`lean=${steeringVisual.carLean}`);
+
+    const expectedRotation=-(Number(steeringVisual.state?.heading)||0)*Math.PI/180;
+    let rotationDiff=Math.abs((Number(steeringVisual.carRotation)||0)-expectedRotation)%(Math.PI*2);
     rotationDiff=Math.min(rotationDiff,Math.PI*2-rotationDiff);
-    record('car-mesh-heading-aligned',rotationDiff<0.2,`diff=${rotationDiff}`);
+    record('car-mesh-heading-aligned',rotationDiff<0.22,`diff=${rotationDiff}`);
 
-    const forwardX=Number(drivenState.x)||0;
-    const forwardY=Number(drivenState.y)||0;
-    await page.keyboard.press('ArrowDown');
-    await page.waitForTimeout(180);
-    const reversed=await page.evaluate(()=>window.TGGGame?.getState?.());
-    const reverseDistance=Math.hypot(Number(reversed?.x)-forwardX,Number(reversed?.y)-forwardY);
-    record('drive-reverse-relative',reverseDistance>2.5,`${forwardX},${forwardY}->${reversed?.x},${reversed?.y}`);
+    const speedBeforeBrake=Math.abs(Number(steeringVisual.driving?.speed)||0);
+    await page.keyboard.down('ArrowDown');
+    await page.waitForTimeout(700);
+    const braking=await page.evaluate(()=>({
+      state:window.TGGGame?.getState?.(),
+      driving:window.TGGGame?.getDrivingState?.(),
+      brakeGlow:(window.TGG3D?.car?.userData?.brakeLights||[]).map(x=>x.material?.emissiveIntensity),
+      gearText:document.getElementById('gearValue')?.textContent
+    }));
+    await page.keyboard.up('ArrowDown');
+    const brakeSpeed=Number(braking.driving?.speed)||0;
+    record('smooth-braking-reverse',Math.abs(brakeSpeed)<speedBeforeBrake||brakeSpeed<0,`before=${speedBeforeBrake},after=${brakeSpeed}`);
+    record('brake-lights',braking.brakeGlow.some(v=>Number(v)>1.5),JSON.stringify(braking.brakeGlow));
+
+    await page.keyboard.down('ArrowDown');
+    await page.waitForTimeout(900);
+    const reversed=await page.evaluate(()=>({
+      state:window.TGGGame?.getState?.(),
+      driving:window.TGGGame?.getDrivingState?.(),
+      gearText:document.getElementById('gearValue')?.textContent
+    }));
+    await page.keyboard.up('ArrowDown');
+    record('reverse-gear',Number(reversed.driving?.speed)<-.2&&reversed.gearText==='R',`speed=${reversed.driving?.speed},gear=${reversed.gearText}`);
+
+    await page.waitForTimeout(500);
+    const coast=await page.evaluate(()=>window.TGGGame?.getDrivingState?.());
+    record('coast-deceleration',Math.abs(Number(coast?.speed)||0)<Math.abs(Number(reversed.driving?.speed)||0),`reverse=${reversed.driving?.speed},coast=${coast?.speed}`);
 
     await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());
-    const exited=await page.evaluate(()=>window.TGGGame?.getState?.());
-    record('exit-car',exited?.inVehicle===false);
+    const exited=await page.evaluate(()=>({
+      state:window.TGGGame?.getState?.(),
+      hudActive:document.getElementById('vehicleHud')?.classList.contains('active'),
+      camera:window.TGG3D?.getCameraMode?.()
+    }));
+    record('exit-car',exited.state?.inVehicle===false);
+    record('exit-restores-orbit',exited.camera==='orbit',String(exited.camera));
+    record('vehicle-hud-dims-on-exit',exited.hudActive===false);
 
     const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
     const mp=await mobile.newPage();

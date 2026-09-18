@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.19 NPC Dialogue States + Relationship Memory",
-  "base": "V1.18 NPC Route Encounters + District Memory",
+  "release": "V1.20 NPC Favor Hooks + Contact Opportunities",
+  "base": "V1.19 NPC Dialogue States + Relationship Memory",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -65,7 +65,11 @@
     "V1.19-RELATIONSHIP-STATES",
     "V1.19-MASTERY-DIALOGUE",
     "V1.19-TRUSTED-CONTACT",
-    "V1.19-SAME-MEMORY-STORE"
+    "V1.19-SAME-MEMORY-STORE",
+    "V1.20-CONTACT-OPPORTUNITIES",
+    "V1.20-RELATIONSHIP-GATES",
+    "V1.20-EVENT-COMPLETION-HOOKS",
+    "V1.20-SAME-MEMORY-STORE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -171,10 +175,17 @@
     "repeat_talk_no_progress",
     "relationship_no_rewards",
     "trusted_contact_achievement",
-    "single_memory_store"
+    "single_memory_store",
+    "contact_ops_api",
+    "contact_ops_catalog",
+    "relationship_gated_opportunities",
+    "event_run_completion_hook",
+    "contact_ops_no_bonus_rewards",
+    "opportunities_single_memory_store",
+    "first_opportunity_achievement"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.19-NPC-DIALOGUE-RELATIONSHIP-MEMORY-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.20-NPC-FAVOR-HOOKS-CONTACT-OPPORTUNITIES-CANDIDATE",
   "production": "gated"
 }

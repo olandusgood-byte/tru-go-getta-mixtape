@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.15 City Activity Mastery",
-  "base": "V1.14 Live City + Read-Only World Assets",
+  "release": "V1.16 City Circuits + Event Variants",
+  "base": "V1.15 City Activity Mastery",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -49,7 +49,11 @@
     "V1.15-CITY-ACTIVITY-MASTERY",
     "V1.15-CITY-RANK",
     "V1.15-CITY-STREAK",
-    "V1.15-CITY-ACHIEVEMENTS"
+    "V1.15-CITY-ACHIEVEMENTS",
+    "V1.16-CITY-CIRCUITS",
+    "V1.16-EVENT-VARIANTS",
+    "V1.16-CIRCUIT-PERSISTENCE",
+    "V1.16-CIRCUIT-ACHIEVEMENTS"
   ],
   "gates": [
     "runtime_api_presence",
@@ -128,10 +132,15 @@
     "city_rank",
     "city_streak",
     "city_mastery_achievements",
-    "base_event_economy_unchanged"
+    "base_event_economy_unchanged",
+    "circuit_api",
+    "circuit_ordering",
+    "circuit_persistence",
+    "event_variants_cosmetic_only",
+    "circuit_achievements"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.15-CITY-ACTIVITY-MASTERY-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.16-CITY-CIRCUITS-EVENT-VARIANTS-CANDIDATE",
   "production": "gated"
 }

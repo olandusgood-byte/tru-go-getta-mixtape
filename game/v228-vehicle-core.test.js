@@ -1,0 +1,24 @@
+(() => {
+  const core=globalThis.__V228CoreUnderTest;
+  const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
+  assert(core,'V2.28 Vehicle Forge core API must exist');
+  assert(typeof core.normalize==='function','normalize API');
+  assert(typeof core.preset==='function','preset API');
+  assert(typeof core.applyTuning==='function','applyTuning API');
+  const d=core.normalize({});
+  assert(d.length===1&&d.width===1&&d.height===1,'neutral dimensions');
+  assert(d.wheelSize===1&&d.rideHeight===1,'neutral wheel/ride');
+  const sport=core.preset('sport');
+  assert(sport.id==='sport'&&sport.spoiler===true,'sport preset');
+  const luxury=core.preset('luxury');
+  assert(luxury.id==='luxury','luxury preset');
+  const street=core.preset('street');
+  assert(street.id==='street','street preset');
+  const tuned=core.applyTuning(street,{wheelSize:1.2,rideHeight:.82,width:1.12});
+  assert(tuned.wheelSize===1.2,'wheel tuning');
+  assert(tuned.rideHeight===.82,'ride tuning');
+  assert(tuned.width===1.12,'width tuning');
+  const clamped=core.applyTuning(street,{wheelSize:99,rideHeight:-2});
+  assert(clamped.wheelSize<=1.3&&clamped.rideHeight>=.72,'tuning clamp');
+  return true;
+})();

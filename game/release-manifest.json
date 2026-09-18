@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.22 3D Collision + Walkable Districts",
-  "base": "V1.21 3D World Foundation",
+  "release": "V1.23 3D Animation + Interaction Prompts",
+  "base": "V1.22 3D Collision + Walkable Districts",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -77,7 +77,11 @@
     "V1.22-BUILDING-COLLISION",
     "V1.22-WALKABLE-DISTRICTS",
     "V1.22-MISSION-NPC-ALIGNMENT",
-    "V1.22-COLLISION-SLIDE"
+    "V1.22-COLLISION-SLIDE",
+    "V1.23-WALK-ANIMATION",
+    "V1.23-PROXIMITY-PROMPT",
+    "V1.23-KEYBOARD-INTERACTION",
+    "V1.23-SHARED-MISSION-ACTION"
   ],
   "gates": [
     "runtime_api_presence",
@@ -202,10 +206,16 @@
     "authoritative_move_collision",
     "collision_slide",
     "district_awareness",
-    "mission_npc_alignment"
+    "mission_npc_alignment",
+    "world3d_animation_state",
+    "walk_rig_animation",
+    "proximity_interaction_api",
+    "interaction_prompt",
+    "keyboard_e_interaction",
+    "shared_mission_action"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_webgl_ci_pass",
-  "release_checkpoint": "V1.22-3D-COLLISION-WALKABLE-DISTRICTS-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.23-3D-ANIMATION-INTERACTION-CANDIDATE",
   "production": "gated"
 }

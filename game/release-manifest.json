@@ -194,8 +194,8 @@
     "webgl_fallback",
     "three_pin_0_186_0"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.21-3D-WORLD-FOUNDATION-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_webgl_ci_pass",
+  "release_checkpoint": "V1.21-3D-WORLD-FOUNDATION-VERIFIED",
   "production": "gated"
 }

@@ -40,6 +40,8 @@
     const THREE=T(),parts=obj?.userData?.parts;if(!THREE||!obj||!parts||obj.userData.v216Detailed)return false;
     const g=groupFor(obj,kind);if(!g)return false;
     const skin=parts.head?.material||mat('skin-default',0x9d6a49,{roughness:.72});
+    const headY=Number(parts.head?.position?.y)||3.58;
+    const bodyY=Number(parts.body?.position?.y)||2.05;
     const dark=mat('human-dark',0x0b0e14,{roughness:.64,metalness:.12});
     const white=mat('human-eye',0xf4f7fb,{roughness:.35});
     const black=mat('human-black',0x050609,{roughness:.45});
@@ -48,16 +50,16 @@
     const shoe=mat('shoe',0x12151c,{roughness:.48,metalness:.18});
 
     const hair=new THREE.Mesh(new THREE.SphereGeometry(.595,16,10,0,Math.PI*2,0,Math.PI*.48),dark);
-    hair.position.set(0,3.72,0);hair.scale.set(1.02,.75,1.02);g.add(hair);
+    hair.position.set(0,headY+.14,0);hair.scale.set(1.02,.75,1.02);g.add(hair);
 
     const eyeGeo=new THREE.SphereGeometry(.075,8,6);
     [-.19,.19].forEach(x=>{
-      const eye=mesh(eyeGeo,white,x,3.64,.535);eye.scale.z=.5;g.add(eye);
+      const eye=mesh(eyeGeo,white,x,headY+.06,.535);eye.scale.z=.5;g.add(eye);
       const pupil=mesh(new THREE.SphereGeometry(.032,7,5),black,x,3.64,.592);g.add(pupil);
     });
-    const nose=mesh(new THREE.ConeGeometry(.065,.18,7),skin,0,3.48,.61);nose.rotation.x=Math.PI/2;g.add(nose);
-    const mouth=mesh(new THREE.BoxGeometry(.22,.025,.025),mat('mouth',0x401d20,{roughness:.72}),0,3.31,.585);g.add(mouth);
-    [-.58,.58].forEach(x=>{const ear=mesh(new THREE.SphereGeometry(.09,8,6),skin,x,3.55,0);ear.scale.x=.45;g.add(ear)});
+    const nose=mesh(new THREE.ConeGeometry(.065,.18,7),skin,0,headY-.10,.61);nose.rotation.x=Math.PI/2;g.add(nose);
+    const mouth=mesh(new THREE.BoxGeometry(.22,.025,.025),mat('mouth',0x401d20,{roughness:.72}),0,headY-.27,.585);g.add(mouth);
+    [-.58,.58].forEach(x=>{const ear=mesh(new THREE.SphereGeometry(.09,8,6),skin,x,headY-.03,0);ear.scale.x=.45;g.add(ear)});
 
     if(parts.leftArm){
       const h=mesh(new THREE.SphereGeometry(.18,9,7),skin,0,-1.12,0);parts.leftArm.add(h);
@@ -67,15 +69,23 @@
       const h=mesh(new THREE.SphereGeometry(.18,9,7),skin,0,-1.12,0);parts.rightArm.add(h);
       const cuff=mesh(new THREE.CylinderGeometry(.205,.205,.16,10),accentMat,0,-.96,0);parts.rightArm.add(cuff);
     }
-    for(const leg of [parts.leftLeg,parts.rightLeg].filter(Boolean)){
-      const shoeMesh=mesh(new THREE.BoxGeometry(.42,.24,.72),shoe,0,-1.2,.18);shoeMesh.rotation.x=.04;leg.add(shoeMesh);
-      const sole=mesh(new THREE.BoxGeometry(.44,.055,.75),black,0,-1.32,.19);leg.add(sole);
+    const riggedLegs=[parts.leftLeg,parts.rightLeg].filter(leg=>leg?.parent);
+    if(riggedLegs.length){
+      for(const leg of riggedLegs){
+        const shoeMesh=mesh(new THREE.BoxGeometry(.42,.24,.72),shoe,0,-1.2,.18);shoeMesh.rotation.x=.04;leg.add(shoeMesh);
+        const sole=mesh(new THREE.BoxGeometry(.44,.055,.75),black,0,-1.32,.19);leg.add(sole);
+      }
+    }else{
+      [-.28,.28].forEach(x=>{
+        const shoeMesh=mesh(new THREE.BoxGeometry(.42,.24,.72),shoe,x,.12,.18);shoeMesh.rotation.x=.04;g.add(shoeMesh);
+        const sole=mesh(new THREE.BoxGeometry(.44,.055,.75),black,x,.01,.19);g.add(sole);
+      });
     }
 
-    const chain=new THREE.Mesh(new THREE.TorusGeometry(.37,.035,8,28),metal);chain.position.set(0,2.42,.73);chain.scale.y=.76;g.add(chain);
-    const pendant=mesh(new THREE.BoxGeometry(.13,.18,.055),metal,0,2.05,.73);g.add(pendant);
-    const jacketL=mesh(new THREE.BoxGeometry(.06,1.18,.05),accentMat,-.28,2.1,.72);jacketL.rotation.z=-.09;g.add(jacketL);
-    const jacketR=mesh(new THREE.BoxGeometry(.06,1.18,.05),accentMat,.28,2.1,.72);jacketR.rotation.z=.09;g.add(jacketR);
+    const chain=new THREE.Mesh(new THREE.TorusGeometry(.37,.035,8,28),metal);chain.position.set(0,bodyY+.37,.73);chain.scale.y=.76;g.add(chain);
+    const pendant=mesh(new THREE.BoxGeometry(.13,.18,.055),metal,0,bodyY,.73);g.add(pendant);
+    const jacketL=mesh(new THREE.BoxGeometry(.06,1.18,.05),accentMat,-.28,bodyY+.05,.72);jacketL.rotation.z=-.09;g.add(jacketL);
+    const jacketR=mesh(new THREE.BoxGeometry(.06,1.18,.05),accentMat,.28,bodyY+.05,.72);jacketR.rotation.z=.09;g.add(jacketR);
 
     obj.userData.v216Detailed=true;obj.userData.v216Kind=kind;return true;
   }

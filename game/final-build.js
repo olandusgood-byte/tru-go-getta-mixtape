@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.00 BIG BUILD';
+  const VERSION='V2.00 FINAL MASTER';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;
@@ -80,7 +80,8 @@
       smoothPlayer:typeof window.TGGGame?.getWalkingState==='function',
       smoothDriving:typeof window.TGGGame?.getDrivingState==='function',
       garage3d:window.TGGGarage3D?.isReady?.()===true,
-      studio3d:window.TGGStudio3D?.isReady?.()===true
+      studio3d:window.TGGStudio3D?.isReady?.()===true,
+      gamepadLayer:typeof window.TGGGamepad?.isConnected==='function'
     };
   }
 

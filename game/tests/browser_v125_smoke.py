@@ -98,7 +98,7 @@ with sync_playwright() as p:
     page.evaluate("""() => {
       const s=window.TGGGame.getState();s.x=50;s.y=55;s.heading=0;s.inVehicle=false;window.TGGGame.refresh();
     }""")
-    page.wait_for_timeout(100)
+    page.wait_for_timeout(700)
     world_before=page.evaluate("window.TGGWorld3D.snapshot()")
     page.keyboard.press('ArrowRight')
     page.wait_for_timeout(220)

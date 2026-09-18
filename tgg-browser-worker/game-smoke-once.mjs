@@ -1,0 +1,297 @@
+import http from 'node:http';
+import crypto from 'node:crypto';
+import { chromium } from 'playwright';
+
+const PORT = Number(process.env.PORT || 10000);
+const TARGET = String(process.env.TGG_GAME_SMOKE_TARGET || '').trim();
+
+function allowedTarget(raw) {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'https:') return null;
+    const host = u.hostname.toLowerCase();
+    if (!/^tru-go-getta-world(?:-v\d+(?:-rc|-staging)?)?\.onrender\.com$/.test(host)) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+function sha256(buf) {
+  return crypto.createHash('sha256').update(buf).digest('hex');
+}
+
+let result = {
+  ok: false,
+  status: 'pending',
+  target: TARGET || null,
+  updated_at: new Date().toISOString()
+};
+
+async function runSmoke(target) {
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-dev-shm-usage']
+  });
+  const started = Date.now();
+  const consoleErrors = [];
+  const pageErrors = [];
+  const failedResources = [];
+
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    const page = await context.newPage();
+
+    page.on('console', msg => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text().slice(0, 500));
+    });
+    page.on('pageerror', err => pageErrors.push(String(err?.message || err).slice(0, 500)));
+    page.on('response', response => {
+      if (response.status() >= 400) {
+        failedResources.push({ url: response.url(), status: response.status() });
+      }
+    });
+
+    const response = await page.goto(target, {
+      waitUntil: 'domcontentloaded',
+      timeout: 45000
+    });
+    await page.waitForTimeout(1200);
+
+    const title = await page.title();
+
+    const releaseQa = await page.evaluate(() => {
+      try {
+        return window.TGGReleaseQA?.run?.() || null;
+      } catch (error) {
+        return { passed: false, error: error?.message || String(error), checks: [] };
+      }
+    });
+
+    const foundationQa = await page.evaluate(() => {
+      try {
+        if (window.TGGQA && typeof window.TGGQA.run === 'function') return window.TGGQA.run();
+        return window.TGGQA || null;
+      } catch (error) {
+        return { passed: false, error: error?.message || String(error) };
+      }
+    });
+
+    const dom = await page.evaluate(() => ({
+      title: document.title,
+      menu: Boolean(document.getElementById('menu')),
+      createPlayer: Boolean(document.getElementById('newGame')),
+      gameScreen: Boolean(document.getElementById('game')),
+      businessBoard: Boolean(document.getElementById('businessBoard')),
+      businessApi: Boolean(window.TGGBusiness),
+      worldSyncApi: Boolean(window.TGGWorldSync)
+    }));
+
+    const gameplay = await page.evaluate(() => {
+      const checks = [];
+      const record = (name, pass, detail='') => checks.push({ name, pass: Boolean(pass), detail });
+      const active = id => document.getElementById(id)?.classList.contains('active') === true;
+      const click = id => {
+        const el = document.getElementById(id);
+        if (!el) return false;
+        el.click();
+        return true;
+      };
+      const moveKey = key => document.dispatchEvent(new KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        cancelable: true
+      }));
+
+      try {
+        localStorage.removeItem('tgg-game-v1');
+        window.TGGGame?.show?.('menu');
+
+        record('menu-active', active('menu'));
+        record('create-player-control', click('newGame'));
+
+        const creatorOpened = active('creator');
+        record('create-player-opens-creator', creatorOpened);
+
+        if (creatorOpened) {
+          const stage = document.getElementById('stageName');
+          const style = document.getElementById('styleChoice');
+          if (stage) stage.value = 'TGG QA PLAYER';
+          if (style) style.value = 'Rapper';
+
+          record('start-game-control', click('startGame'));
+          const gameOpened = active('game');
+          record('start-game-enters-city', gameOpened);
+          record('hud-player-name', document.getElementById('hudName')?.textContent === 'TGG QA PLAYER');
+
+          if (gameOpened && window.TGGGame?.getState) {
+            const beforeMove = Number(window.TGGGame.getState()?.x);
+            moveKey('ArrowRight');
+            const afterMove = Number(window.TGGGame.getState()?.x);
+            record('keyboard-movement', afterMove > beforeMove, `${beforeMove}->${afterMove}`);
+
+            click('saveBtn');
+            record('save-persistence', Boolean(localStorage.getItem('tgg-game-v1')));
+
+            const beforePause = Number(window.TGGGame.getState()?.x);
+            click('pauseBtn');
+            const paused = active('pause');
+            record('pause-opens', paused);
+            moveKey('ArrowRight');
+            const afterPauseMove = Number(window.TGGGame.getState()?.x);
+            record('pause-freezes-movement', paused && afterPauseMove === beforePause, `${beforePause}->${afterPauseMove}`);
+
+            click('resumeBtn');
+            record('resume-returns-city', active('game'));
+
+            window.TGGGame.show('menu');
+            click('continueGame');
+            record('continue-restores-city', active('game'));
+            record('continue-keeps-player', document.getElementById('hudName')?.textContent === 'TGG QA PLAYER');
+
+            window.TGGGame.show('game');
+            click('missionBtn');
+            click('missionBtn');
+            const missionAccepted = window.TGGGame.getState()?.accepted === true;
+            record('mission-accept', missionAccepted);
+
+            if (missionAccepted) {
+              const s = window.TGGGame.getState();
+              s.x = 72;
+              s.y = 36;
+              window.TGGGame.refresh?.();
+              const cashBefore = Number(s.cash || 0);
+              click('missionBtn');
+              const s2 = window.TGGGame.getState();
+              record(
+                'mission-complete',
+                s2?.mission === null &&
+                  s2?.accepted === false &&
+                  Number(s2?.cash || 0) >= cashBefore + 250
+              );
+            } else {
+              record('mission-complete', false, 'mission was not accepted');
+            }
+
+            click('businessBtn');
+            record('business-opens', active('businessBoard'));
+            record('business-grid-visible', Boolean(document.querySelector('#businessBoard .business-grid')));
+          }
+        }
+      } catch (error) {
+        record('gameplay-exception', false, error?.message || String(error));
+      }
+
+      return {
+        passed: checks.length > 0 && checks.every(check => check.pass),
+        checks
+      };
+    });
+
+    const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
+    await context.close();
+
+    const mobile = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      isMobile: true
+    });
+    const mobilePage = await mobile.newPage();
+    const mobileResponse = await mobilePage.goto(target, {
+      waitUntil: 'domcontentloaded',
+      timeout: 45000
+    });
+    await mobilePage.waitForTimeout(700);
+    const mobileLayout = await mobilePage.evaluate(() => ({
+      width: innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      overflowX: document.documentElement.scrollWidth > innerWidth + 1
+    }));
+    await mobile.close();
+
+    const releasePassed = releaseQa?.passed === true;
+    const pass =
+      (response?.status() || 0) >= 200 &&
+      (response?.status() || 0) < 400 &&
+      (mobileResponse?.status() || 0) >= 200 &&
+      (mobileResponse?.status() || 0) < 400 &&
+      releasePassed &&
+      gameplay?.passed === true &&
+      pageErrors.length === 0 &&
+      consoleErrors.length === 0 &&
+      failedResources.length === 0 &&
+      mobileLayout.overflowX === false &&
+      dom.menu &&
+      dom.createPlayer &&
+      dom.gameScreen &&
+      dom.businessBoard &&
+      dom.businessApi &&
+      dom.worldSyncApi;
+
+    return {
+      ok: pass,
+      status: pass ? 'passed' : 'failed',
+      target,
+      http_status: response?.status() || 0,
+      mobile_http_status: mobileResponse?.status() || 0,
+      title,
+      release_qa_passed: releasePassed,
+      release_qa_failed_checks: Array.isArray(releaseQa?.checks)
+        ? releaseQa.checks.filter(x => !x.pass).slice(0, 20)
+        : [],
+      foundation_qa_passed: foundationQa?.passed === true,
+      gameplay,
+      dom,
+      console_errors: consoleErrors,
+      page_errors: pageErrors,
+      failed_resources: failedResources.slice(0, 20),
+      mobile: mobileLayout,
+      screenshot_sha256: sha256(screenshot),
+      elapsed_ms: Date.now() - started,
+      updated_at: new Date().toISOString()
+    };
+  } finally {
+    await browser.close();
+  }
+}
+
+const target = allowedTarget(TARGET);
+if (!target) {
+  result = {
+    ok: false,
+    status: 'invalid_target',
+    target: TARGET || null,
+    updated_at: new Date().toISOString()
+  };
+  console.error(JSON.stringify({ tgg_game_smoke_once: true, ...result }));
+} else {
+  runSmoke(target)
+    .then(r => {
+      result = r;
+      console.log(JSON.stringify({ tgg_game_smoke_once: true, ...r }));
+    })
+    .catch(error => {
+      result = {
+        ok: false,
+        status: 'error',
+        target,
+        error: error?.message || String(error),
+        updated_at: new Date().toISOString()
+      };
+      console.error(JSON.stringify({ tgg_game_smoke_once: true, ...result }));
+    });
+}
+
+http.createServer((req, res) => {
+  res.setHeader('content-type', 'application/json; charset=utf-8');
+  if (req.url === '/health') {
+    res.end(JSON.stringify({ ok: true, smoke_status: result.status, target: result.target }));
+    return;
+  }
+  res.end(JSON.stringify(result));
+}).listen(PORT, () => {
+  console.log(JSON.stringify({
+    tgg_game_smoke_once_server: true,
+    port: PORT,
+    target: target || TARGET || null
+  }));
+});

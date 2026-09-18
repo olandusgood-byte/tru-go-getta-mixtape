@@ -20,7 +20,10 @@ async function run(){
     if(PLAYER_SMOOTH_ONLY){
       await page.route('**/*',route=>{
         const url=route.request().url();
-        if(/\/(garage-3d|studio-3d|interiors-3d)\.js(?:\?|$)/.test(url))return route.abort();
+        if(/\.js(?:\?|$)/.test(url)){
+          const keep=/\/(?:vendor\/three-r152\.min|game|game-3d|final-build)\.js(?:\?|$)/.test(url);
+          if(!keep)return route.abort();
+        }
         return route.continue();
       });
     }

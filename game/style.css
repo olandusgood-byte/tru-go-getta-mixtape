@@ -111,3 +111,18 @@
   .city-depth .tower{opacity:.65}
 }
 
+/* V1.21 TRUE 3D WORLD */
+.world3d{position:absolute;inset:0;z-index:3;background:linear-gradient(#060810,#0b0e16);overflow:hidden}
+.world3d:before{content:"LOADING 3D CITY…";position:absolute;inset:0;display:grid;place-items:center;color:#9aa0b5;font-size:11px;letter-spacing:2px;z-index:1}
+.world3d.ready:before{display:none}
+.world3d.failed:before{content:"3D UNAVAILABLE • USING FALLBACK";background:#0a0d14cc}
+.world3d-canvas{display:block;width:100%!important;height:100%!important;position:absolute;inset:0}
+.world3d-active .city-depth,
+.world3d-active #player,
+.world3d-active #missionNpc{opacity:0;pointer-events:none}
+.world3d-active .city:before{opacity:.12}
+.world3d-active .city:after{background:linear-gradient(180deg,#0000 65%,#0008 100%)}
+.world3d-active .district{z-index:8;background:#070912d4;border-color:#ffffff25}
+.world3d-active .city-title{z-index:10}
+.world3d-active .city-asset-hotspot{z-index:10}
+

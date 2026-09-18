@@ -1,9 +1,9 @@
 name: Game Static Gate
-# V1.15 city-mastery isolated validation
+# V1.16 city-circuits isolated validation
 
 on:
   push:
-    branches: [feat/game-v1-15-city-depth-20260918]
+    branches: [feat/game-v1-16-city-circuits-20260918]
     paths:
       - 'game/**'
       - '.github/workflows/game-static-gate.yml'
@@ -29,7 +29,7 @@ jobs:
           for f in game/*.json; do
             node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$f"
           done
-      - name: Run V1.15 static contract
+      - name: Run V1.16 static contract
         run: node game/static-contract.test.mjs
 
       - name: Validate script references
@@ -74,7 +74,7 @@ jobs:
           for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
             if(sync.includes(forbidden)) throw new Error('forbidden secret marker in game bundle: '+forbidden);
           }
-          if(!String(manifest.release||'').startsWith('V1.15')) throw new Error('release manifest is not V1.15');
+          if(!String(manifest.release||'').startsWith('V1.16')) throw new Error('release manifest is not V1.16');
           if(sync.includes("rpc('tgg_world_purchase'")) throw new Error('tgg_world_purchase must remain excluded from the game adapter');
                               for(const forbiddenRpc of ['tgg_world_buy_property','tgg_world_property_market_buy','tgg_world_property_market_list','tgg_world_property_market_cancel','tgg_world_install_property_upgrade','tgg_world_fast_travel','tgg_world_v3_travel_to','tgg_world_vehicle_spawn','tgg_world_vehicle_join','tgg_world_vehicle_drive_session','tgg_world_vehicle_install_tune','tgg_world_vehicle_music','tgg_world_party_travel']){
             if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('property/vehicle mutation RPC must remain excluded: '+forbiddenRpc);
@@ -94,9 +94,9 @@ jobs:
           }
           console.log('V1.14 world sync + live-city read-only assets contract verified.');
           NODE
-      - name: Upload V1.15 game verification artifact
+      - name: Upload V1.16 game verification artifact
         uses: actions/upload-artifact@v4
         with:
-          name: v1-15-game-bundle
+          name: v1-16-game-bundle
           path: game
           retention-days: 1

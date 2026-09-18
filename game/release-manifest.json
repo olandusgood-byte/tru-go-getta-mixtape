@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.23 3D Animation + Interaction Prompts",
-  "base": "V1.22 3D Collision + Walkable Districts",
+  "release": "V1.24 Unified 3D Gameplay Slice",
+  "base": "V1.23 Verified 3D Animation + Landmarks",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -81,7 +81,11 @@
     "V1.23-WALK-ANIMATION",
     "V1.23-PROXIMITY-PROMPT",
     "V1.23-KEYBOARD-INTERACTION",
-    "V1.23-SHARED-MISSION-ACTION"
+    "V1.23-SHARED-MISSION-ACTION",
+    "V1.24-UNIFIED-3D-INTERACTIONS",
+    "V1.24-FIVE-ENTERABLE-HUBS",
+    "V1.24-ANIMATED-HUB-APPROACH",
+    "V1.24-SINGLE-E-ACTION"
   ],
   "gates": [
     "runtime_api_presence",
@@ -212,10 +216,17 @@
     "proximity_interaction_api",
     "interaction_prompt",
     "keyboard_e_interaction",
-    "shared_mission_action"
+    "shared_mission_action",
+    "hub_catalog",
+    "five_hub_routes",
+    "unified_nearest_interaction",
+    "hub_enter_action",
+    "single_e_action",
+    "walk_animation_preserved",
+    "mission_interaction_preserved"
   ],
   "static_gate": "candidate_pending_ci",
   "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.23-3D-ANIMATION-INTERACTION-CANDIDATE",
+  "release_checkpoint": "V1.24-UNIFIED-3D-GAMEPLAY-SLICE-CANDIDATE",
   "production": "gated"
 }

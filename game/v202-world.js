@@ -61,7 +61,12 @@
     window.TGGChains?.sync?.();
     const still=window.TGGChains?.current?.();
     if(!still)return false;
-    return !!window.TGGChains?.start?.(still.id);
+    const done=window.TGGContent?.state?.completed||[];
+    const next=still.missions.find(id=>!done.includes(id));
+    if(!next)return false;
+    window.TGGStreetContacts?.focusMission?.(next);
+    window.dispatchEvent(new CustomEvent('tgg:mission-handoff',{detail:{chainId:still.id,nextMissionId:next}}));
+    return true;
   }
   function performObjective(){
     const stage=currentStage();
@@ -73,12 +78,16 @@
     const beforeProgress=Number(window.TGGContent?.state?.progress)||0;
     const completed=window.TGGContent?.advance?.()===true;
     if(completed){
+      window.dispatchEvent(new CustomEvent('tgg:mission-complete',{detail:{missionId,missionName:stage.mission.name,district:stage.mission.district,reward:stage.mission.reward,xp:stage.mission.xp,rep:stage.mission.rep}}));
       window.TGGChains?.sync?.();
-      setTimeout(()=>autoNextChain(),220);
+      setTimeout(()=>autoNextChain(),420);
       window.__tggToast?.('WORLD OBJECTIVE COMPLETE — '+stage.mission.name);
     }else if(window.TGGContent?.state?.active===missionId){
       const after=Number(window.TGGContent?.state?.progress)||0;
-      if(after>beforeProgress)window.__tggToast?.('CHECKPOINT COMPLETE — NEXT STOP MARKED');
+      if(after>beforeProgress){
+        window.dispatchEvent(new CustomEvent('tgg:mission-checkpoint',{detail:{missionId,missionName:stage.mission.name,progress:after,goal:stage.goal,nextStage:currentStage()?.label||null}}));
+        window.__tggToast?.('CHECKPOINT COMPLETE — NEXT STOP MARKED');
+      }
     }
     window.TGGGame?.save?.(true);
     return true;

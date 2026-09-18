@@ -6,7 +6,10 @@
     {id:'mixtape-promo',name:'Mixtape Promo',district:'Mixtape Ave',goal:2,reward:500,xp:100,rep:50,requires:[{id:'beat-pack',qty:1}]},
     {id:'radio-run',name:'Radio Run',district:'Downtown',goal:2,reward:450,xp:80,rep:65,requires:[{id:'radio-pack',qty:1}]},
     {id:'producer-lockin',name:'Producer Lock-In',district:'Studio Row',goal:2,reward:500,xp:110,rep:55,requires:[{id:'session-drive',qty:1}]},
-    {id:'city-showdown',name:'City Showdown',district:'Mixtape Ave',goal:3,reward:900,xp:175,rep:125,requires:[{id:'show-pass',qty:1}]}
+    {id:'city-showdown',name:'City Showdown',district:'Mixtape Ave',goal:3,reward:900,xp:175,rep:125,requires:[{id:'show-pass',qty:1}]},
+    {id:'label-meeting',name:'Label Meeting',district:'Downtown',goal:2,reward:800,xp:90,rep:55,requires:[{id:'contract-folder',qty:1}]},
+    {id:'indie-rollout',name:'Independent Rollout',district:'Mixtape Ave',goal:3,reward:550,xp:140,rep:110,requires:[{id:'indie-kit',qty:1}]},
+    {id:'release-night',name:'Release Night',district:'Downtown',goal:3,reward:1200,xp:220,rep:160,requires:[{id:'release-pass',qty:1}]}
   ];
   const content={missions,npcs:[{id:'m',name:'M',role:'Manager'},{id:'dj',name:'DJ V',role:'DJ'},{id:'producer',name:'Kane',role:'Producer'}],locations:['Studio Row','Downtown','Mixtape Ave'],items:['Mic','Notebook','Promo Flyers','Beat Pack'],rewards:['Cash','XP','Reputation','Unlocks']};
   let state={active:null,progress:0,completed:[]};

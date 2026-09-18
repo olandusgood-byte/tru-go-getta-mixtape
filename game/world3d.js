@@ -17,7 +17,7 @@
   ];
 
   const api={
-    version:'1.22.0',
+    version:'1.23.0',
     library:'three@0.186.0',
     ready:false,
     failed:false,
@@ -32,6 +32,8 @@
     collisionCount:0,
     lastCollision:null,
     district:null,
+    motion:{moving:false,walkPhase:0},
+    interaction:null,
     snapshot(){
       const p=this.player?.position;
       const c=this.camera?.position;
@@ -46,7 +48,9 @@
         cameraYawOffset:this.cameraYawOffset,
         collisionCount:this.collisionCount,
         lastCollision:this.lastCollision,
-        district:this.district
+        district:this.district,
+        motion:{...this.motion},
+        interaction:this.interaction?{...this.interaction}:null
       };
     }
   };
@@ -136,6 +140,31 @@
   api.constrainPercent=constrainPercent;
   api.collisionBoxes=BUILDINGS.map(([x,z,w,d])=>({x,z,w,d}));
 
+  function nearestInteraction(){
+    const state=window.TGGGame?.getState?.();
+    if(!state)return null;
+    const p=percentToWorld(state.x,state.y);
+    const m=percentToWorld(72,36);
+    const distance=Math.hypot(p.x-m.x,p.z-m.z);
+    if(distance<=5){
+      return {id:'manager-m',type:'npc',label:'TALK TO M',key:'E',distance};
+    }
+    return null;
+  }
+
+  function activateNearest(){
+    const interaction=nearestInteraction();
+    if(!interaction)return {ok:false,status:'nothing_nearby'};
+    if(interaction.id==='manager-m'){
+      document.getElementById('missionBtn')?.click();
+      return {ok:true,status:'activated',interaction};
+    }
+    return {ok:false,status:'unsupported',interaction};
+  }
+
+  api.nearestInteraction=nearestInteraction;
+  api.activateNearest=activateNearest;
+
   function avatarPalette(){
     try{
       const raw=JSON.parse(localStorage.getItem('tgg-avatar-v1')||'{}');
@@ -193,6 +222,8 @@
     const accent=makeMaterial(THREE,accentOverride||palette.accent,.55,.08);
     const dark=makeMaterial(THREE,0x151923,.8,.04);
     const shoe=makeMaterial(THREE,0xe7e8ec,.55,.08);
+    const arms=[];
+    const legs=[];
 
     const torso=new THREE.Mesh(new THREE.CylinderGeometry(.48,.56,1.25,8),accent);
     torso.position.y=1.55;torso.castShadow=true;group.add(torso);
@@ -205,14 +236,16 @@
 
     for(const side of [-1,1]){
       const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.72,4,8),skin);
-      arm.position.set(side*.58,1.52,0);arm.rotation.z=side*.08;arm.castShadow=true;group.add(arm);
+      arm.position.set(side*.58,1.52,0);arm.rotation.z=side*.08;arm.castShadow=true;arm.name=side<0?'arm-left':'arm-right';arms.push(arm);group.add(arm);
 
       const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.16,.82,4,8),dark);
-      leg.position.set(side*.22,.62,0);leg.castShadow=true;group.add(leg);
+      leg.position.set(side*.22,.62,0);leg.castShadow=true;leg.name=side<0?'leg-left':'leg-right';legs.push(leg);group.add(leg);
 
       const foot=new THREE.Mesh(new THREE.BoxGeometry(.34,.18,.58),shoe);
       foot.position.set(side*.22,.12,.12);foot.castShadow=true;group.add(foot);
     }
+    group.userData.rig={torso,head,arms,legs};
+    group.userData.walkPhase=0;
     return group;
   }
 
@@ -280,6 +313,24 @@
     BUILDINGS.forEach(v=>addBuilding(THREE,scene,...v));
   }
 
+
+  function bindInteractionInput(){
+    const prompt=document.getElementById('interactionPrompt');
+    prompt?.addEventListener('click',()=>activateNearest());
+    document.addEventListener('keydown',e=>{
+      const t=e.target;
+      const typing=t instanceof HTMLInputElement||t instanceof HTMLTextAreaElement||t instanceof HTMLSelectElement||t?.isContentEditable;
+      if(typing)return;
+      if(String(e.key||'').toLowerCase()==='e'&&window.TGGGame?.getActiveScreen?.()==='game'){
+        const near=nearestInteraction();
+        if(near){
+          e.preventDefault();
+          activateNearest();
+        }
+      }
+    });
+  }
+
   function bindCameraInput(canvas){
     let dragging=false;
     let lastX=0;
@@ -305,6 +356,7 @@
     if(!host)return;
     const badge=document.getElementById('world3dBadge');
     const districtBadge=document.getElementById('worldDistrictBadge');
+    const interactionPrompt=document.getElementById('interactionPrompt');
 
     try{
       const THREE=await import(THREE_URL);
@@ -367,18 +419,45 @@
       api.resize=resize;
       const ro=new ResizeObserver(resize);ro.observe(host);resize();
       bindCameraInput(canvas);
+      bindInteractionInput();
 
       const target=new THREE.Vector3();
       const camTarget=new THREE.Vector3();
       const desiredCam=new THREE.Vector3();
       let lastTime=performance.now();
       let lastDistrict='';
+      let lastStateX=null;
+      let lastStateY=null;
+      let movingUntil=0;
 
       function frame(now){
         const dt=Math.min(.05,(now-lastTime)/1000||.016);
         lastTime=now;
         const state=window.TGGGame?.getState?.()||{};
         const mapped=stateToWorld(state);
+        const stateX=Number(state.x)||0;
+        const stateY=Number(state.y)||0;
+        if(lastStateX!==null&&(Math.abs(stateX-lastStateX)>.001||Math.abs(stateY-lastStateY)>.001)){
+          movingUntil=now+240;
+        }
+        lastStateX=stateX;
+        lastStateY=stateY;
+        const moving=now<movingUntil;
+        const rig=player.userData.rig;
+        if(moving&&rig){
+          player.userData.walkPhase=(player.userData.walkPhase||0)+dt*11;
+          const swing=Math.sin(player.userData.walkPhase)*.62;
+          rig.arms[0].rotation.x=swing;
+          rig.arms[1].rotation.x=-swing;
+          rig.legs[0].rotation.x=-swing*.72;
+          rig.legs[1].rotation.x=swing*.72;
+          rig.torso.position.y=1.55+Math.abs(Math.sin(player.userData.walkPhase*2))*.045;
+        }else if(rig){
+          rig.arms.forEach(a=>a.rotation.x*=.78);
+          rig.legs.forEach(l=>l.rotation.x*=.78);
+          rig.torso.position.y+=(1.55-rig.torso.position.y)*.18;
+        }
+        api.motion={moving,walkPhase:player.userData.walkPhase||0};
 
         target.set(mapped.x,0,mapped.z);
         const smooth=1-Math.pow(.001,dt);
@@ -405,6 +484,20 @@
         if(district?.id!==lastDistrict){
           lastDistrict=district?.id||'';
           if(districtBadge)districtBadge.textContent=district?.name||'CITY';
+        }
+
+        const interaction=nearestInteraction();
+        api.interaction=interaction;
+        if(interactionPrompt){
+          if(interaction){
+            interactionPrompt.classList.remove('hidden');
+            interactionPrompt.textContent=interaction.key+' • '+interaction.label;
+            interactionPrompt.dataset.interaction=interaction.id;
+          }else{
+            interactionPrompt.classList.add('hidden');
+            interactionPrompt.textContent='';
+            delete interactionPrompt.dataset.interaction;
+          }
         }
 
         renderer.render(scene,camera);

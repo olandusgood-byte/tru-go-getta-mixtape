@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.23",
-  "module": "GAME-V1.23",
-  "name": "3D Animation + Interaction Prompts Checkpoint",
+  "version": "1.24",
+  "module": "GAME-V1.24",
+  "name": "Unified 3D Gameplay Slice Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -90,10 +90,17 @@
     "proximity_interaction_api": true,
     "interaction_prompt": true,
     "keyboard_e_interaction": true,
-    "shared_mission_action": true
+    "shared_mission_action": true,
+    "hub_catalog": true,
+    "five_hub_routes": true,
+    "unified_nearest_interaction": true,
+    "hub_enter_action": true,
+    "single_e_action": true,
+    "walk_animation_preserved": true,
+    "mission_interaction_preserved": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.24 3D NPC DIALOGUE + DISTRICT PORTALS",
+  "next": "V1.25 STARTER CAR + DRIVE MODE",
   "verification": "pending_ci"
 }

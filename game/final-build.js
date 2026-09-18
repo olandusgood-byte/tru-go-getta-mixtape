@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.16 3D MODEL POLISH 100';
+  const VERSION='V2.17 CITY + INTERIOR DEPTH 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

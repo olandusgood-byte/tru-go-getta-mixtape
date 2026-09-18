@@ -1,9 +1,12 @@
 (() => {
+  let booted=false;
   function boot(){
+    if(booted)return window.TGGStudio3D||null;
   const host=document.getElementById('studio3d');
   const screen=document.getElementById('studio');
   if(!host||!screen||!window.THREE)return;
 
+  booted=true;
   const THREE=window.THREE;
   const scene=new THREE.Scene();
   scene.background=new THREE.Color(0x07080d);
@@ -128,6 +131,14 @@
 
   window.TGGStudio3D={scene,camera,renderer,isReady:()=>true,resize};
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
-  else boot();
+  function watch(){
+    const screen=document.getElementById('studio');
+    if(!screen)return;
+    const maybeBoot=()=>{if(screen.classList.contains('active'))boot()};
+    maybeBoot();
+    new MutationObserver(maybeBoot).observe(screen,{attributes:true,attributeFilter:['class']});
+  }
+  window.TGGStudio3D={ensure:boot,isReady:()=>booted};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch,{once:true});
+  else watch();
 })();

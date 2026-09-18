@@ -1,7 +1,23 @@
 (() => {
   const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js';
+  const WORLD={minX:-32,maxX:32,minZ:-24,maxZ:24};
+  const PLAYER_RADIUS=.72;
+  const BUILDINGS=[
+    [-27,-19,8,7,10,0x252b38],[-18,-19,7,7,15,0x1d2938],[-9,-19,6,7,8,0x303445],
+    [12,-19,8,7,13,0x322b44],[23,-19,9,7,18,0x242b3d],
+    [-27,18,8,7,14,0x2a3040],[-17,18,7,7,9,0x303847],[-8,18,6,7,17,0x202d3a],
+    [12,18,7,7,12,0x333041],[22,18,9,7,16,0x202a3a],
+    [-30,7,6,7,9,0x252a34],[-30,-7,6,7,13,0x292e3a],
+    [30,7,6,7,15,0x222b39],[30,-7,6,7,11,0x313441]
+  ];
+  const DISTRICTS=[
+    {id:'studio-row',name:'STUDIO ROW',x:-21,z:-13,color:0x5f67ff},
+    {id:'downtown',name:'DOWNTOWN',x:18,z:10,color:0xc7ff00},
+    {id:'mixtape-ave',name:'MIXTAPE AVE',x:18,z:-14,color:0xff3b7b}
+  ];
+
   const api={
-    version:'1.21.0',
+    version:'1.22.0',
     library:'three@0.186.0',
     ready:false,
     failed:false,
@@ -13,17 +29,24 @@
     npc:null,
     cameraYawOffset:0,
     cameraDistance:10,
+    collisionCount:0,
+    lastCollision:null,
+    district:null,
     snapshot(){
       const p=this.player?.position;
       const c=this.camera?.position;
       return {
+        version:this.version,
         ready:this.ready,
         failed:this.failed,
         library:this.library,
         player:p?{x:p.x,y:p.y,z:p.z}:null,
         camera:c?{x:c.x,y:c.y,z:c.z}:null,
         cameraDistance:this.cameraDistance,
-        cameraYawOffset:this.cameraYawOffset
+        cameraYawOffset:this.cameraYawOffset,
+        collisionCount:this.collisionCount,
+        lastCollision:this.lastCollision,
+        district:this.district
       };
     }
   };
@@ -32,19 +55,91 @@
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const lerp=(a,b,t)=>a+(b-a)*t;
 
-  function stateToWorld(state){
-    const x=lerp(-27,27,clamp((Number(state?.x)||50)/100,0,1));
-    const z=lerp(21,-21,clamp((Number(state?.y)||55)/100,0,1));
-    return {x,z};
+  function percentToWorld(x,y){
+    return {
+      x:lerp(WORLD.minX,WORLD.maxX,clamp((Number(x)||0)/100,0,1)),
+      z:lerp(WORLD.maxZ,WORLD.minZ,clamp((Number(y)||0)/100,0,1))
+    };
   }
+
+  function stateToWorld(state){
+    return percentToWorld(Number(state?.x)||50,Number(state?.y)||55);
+  }
+
+  function worldToPercent(x,z){
+    return {
+      x:clamp(((Number(x)-WORLD.minX)/(WORLD.maxX-WORLD.minX))*100,0,100),
+      y:clamp(((WORLD.maxZ-Number(z))/(WORLD.maxZ-WORLD.minZ))*100,0,100)
+    };
+  }
+
+  function blockedBuilding(x,z,pad=PLAYER_RADIUS){
+    const hit=BUILDINGS.find(([bx,bz,w,d])=>
+      x>=(bx-w/2-pad)&&x<=(bx+w/2+pad)&&
+      z>=(bz-d/2-pad)&&z<=(bz+d/2+pad)
+    );
+    return hit?{x:hit[0],z:hit[1],w:hit[2],d:hit[3]}:null;
+  }
+
+  function isBlockedPercent(x,y){
+    const p=percentToWorld(x,y);
+    return !!blockedBuilding(p.x,p.z);
+  }
+
+  function districtAtPercent(x,y){
+    const p=percentToWorld(x,y);
+    let best=null;
+    for(const d of DISTRICTS){
+      const distance=Math.hypot(p.x-d.x,p.z-d.z);
+      if(!best||distance<best.distance)best={id:d.id,name:d.name,distance,x:d.x,z:d.z};
+    }
+    return best;
+  }
+
+  function constrainPercent(nextX,nextY,currentX,currentY){
+    const nx=clamp(Number(nextX)||0,3,94);
+    const ny=clamp(Number(nextY)||0,8,88);
+    const cx=clamp(Number(currentX)||50,3,94);
+    const cy=clamp(Number(currentY)||55,8,88);
+    const full=percentToWorld(nx,ny);
+    const hit=blockedBuilding(full.x,full.z);
+    if(!hit){
+      return {x:nx,y:ny,blocked:false,district:districtAtPercent(nx,ny)};
+    }
+
+    const slideX=percentToWorld(nx,cy);
+    if(!blockedBuilding(slideX.x,slideX.z)){
+      api.collisionCount++;
+      api.lastCollision={axis:'y',building:hit,attempt:{x:nx,y:ny},resolved:{x:nx,y:cy},at:Date.now()};
+      window.dispatchEvent(new CustomEvent('tgg:world3d-collision',{detail:api.lastCollision}));
+      return {x:nx,y:cy,blocked:true,slid:true,axis:'y',district:districtAtPercent(nx,cy)};
+    }
+
+    const slideY=percentToWorld(cx,ny);
+    if(!blockedBuilding(slideY.x,slideY.z)){
+      api.collisionCount++;
+      api.lastCollision={axis:'x',building:hit,attempt:{x:nx,y:ny},resolved:{x:cx,y:ny},at:Date.now()};
+      window.dispatchEvent(new CustomEvent('tgg:world3d-collision',{detail:api.lastCollision}));
+      return {x:cx,y:ny,blocked:true,slid:true,axis:'x',district:districtAtPercent(cx,ny)};
+    }
+
+    api.collisionCount++;
+    api.lastCollision={axis:'both',building:hit,attempt:{x:nx,y:ny},resolved:{x:cx,y:cy},at:Date.now()};
+    window.dispatchEvent(new CustomEvent('tgg:world3d-collision',{detail:api.lastCollision}));
+    return {x:cx,y:cy,blocked:true,slid:false,axis:'both',district:districtAtPercent(cx,cy)};
+  }
+
+  api.percentToWorld=percentToWorld;
+  api.worldToPercent=worldToPercent;
+  api.isBlockedPercent=isBlockedPercent;
+  api.districtAtPercent=districtAtPercent;
+  api.constrainPercent=constrainPercent;
+  api.collisionBoxes=BUILDINGS.map(([x,z,w,d])=>({x,z,w,d}));
 
   function avatarPalette(){
     try{
       const raw=JSON.parse(localStorage.getItem('tgg-avatar-v1')||'{}');
-      return {
-        skin:raw.skin||'#8b5a3c',
-        accent:raw.accent||'#c7ff00'
-      };
+      return {skin:raw.skin||'#8b5a3c',accent:raw.accent||'#c7ff00'};
     }catch(e){
       return {skin:'#8b5a3c',accent:'#c7ff00'};
     }
@@ -55,10 +150,7 @@
   }
 
   function addBox(THREE,scene,{x=0,y=.5,z=0,w=1,h=1,d=1,color=0x303747,rough=.75,metal=.05,cast=true,receive=true}={}){
-    const mesh=new THREE.Mesh(
-      new THREE.BoxGeometry(w,h,d),
-      makeMaterial(THREE,color,rough,metal)
-    );
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),makeMaterial(THREE,color,rough,metal));
     mesh.position.set(x,y,z);
     mesh.castShadow=cast;
     mesh.receiveShadow=receive;
@@ -68,21 +160,14 @@
 
   function addBuilding(THREE,scene,x,z,w,d,h,color){
     const group=new THREE.Group();
-    const body=new THREE.Mesh(
-      new THREE.BoxGeometry(w,h,d),
-      makeMaterial(THREE,color,.62,.18)
-    );
+    const body=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),makeMaterial(THREE,color,.62,.18));
     body.position.y=h/2;
     body.castShadow=true;
     body.receiveShadow=true;
     group.add(body);
 
     const trimMat=new THREE.MeshStandardMaterial({
-      color:0x7fd0ff,
-      emissive:0x1e5f88,
-      emissiveIntensity:.7,
-      roughness:.45,
-      metalness:.2
+      color:0x7fd0ff,emissive:0x1e5f88,emissiveIntensity:.7,roughness:.45,metalness:.2
     });
     const floors=Math.max(2,Math.floor(h/2.6));
     for(let i=1;i<floors;i++){
@@ -91,10 +176,7 @@
       group.add(strip);
     }
 
-    const roof=new THREE.Mesh(
-      new THREE.BoxGeometry(w*.35,.25,d*.35),
-      makeMaterial(THREE,0x10141e,.5,.35)
-    );
+    const roof=new THREE.Mesh(new THREE.BoxGeometry(w*.35,.25,d*.35),makeMaterial(THREE,0x10141e,.5,.35));
     roof.position.y=h+.13;
     group.add(roof);
 
@@ -113,39 +195,24 @@
     const shoe=makeMaterial(THREE,0xe7e8ec,.55,.08);
 
     const torso=new THREE.Mesh(new THREE.CylinderGeometry(.48,.56,1.25,8),accent);
-    torso.position.y=1.55;
-    torso.castShadow=true;
-    group.add(torso);
+    torso.position.y=1.55;torso.castShadow=true;group.add(torso);
 
     const head=new THREE.Mesh(new THREE.SphereGeometry(.35,16,12),skin);
-    head.position.y=2.48;
-    head.castShadow=true;
-    group.add(head);
+    head.position.y=2.48;head.castShadow=true;group.add(head);
 
     const hair=new THREE.Mesh(new THREE.SphereGeometry(.36,12,8,0,Math.PI*2,0,Math.PI*.45),dark);
-    hair.position.y=2.65;
-    hair.scale.y=.65;
-    hair.castShadow=true;
-    group.add(hair);
+    hair.position.y=2.65;hair.scale.y=.65;hair.castShadow=true;group.add(hair);
 
     for(const side of [-1,1]){
       const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.13,.72,4,8),skin);
-      arm.position.set(side*.58,1.52,0);
-      arm.rotation.z=side*.08;
-      arm.castShadow=true;
-      group.add(arm);
+      arm.position.set(side*.58,1.52,0);arm.rotation.z=side*.08;arm.castShadow=true;group.add(arm);
 
       const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.16,.82,4,8),dark);
-      leg.position.set(side*.22,.62,0);
-      leg.castShadow=true;
-      group.add(leg);
+      leg.position.set(side*.22,.62,0);leg.castShadow=true;group.add(leg);
 
       const foot=new THREE.Mesh(new THREE.BoxGeometry(.34,.18,.58),shoe);
-      foot.position.set(side*.22,.12,.12);
-      foot.castShadow=true;
-      group.add(foot);
+      foot.position.set(side*.22,.12,.12);foot.castShadow=true;group.add(foot);
     }
-
     return group;
   }
 
@@ -161,112 +228,70 @@
     const lineMat=new THREE.MeshStandardMaterial({color:0xd9dd7a,emissive:0x5f6120,emissiveIntensity:.35,roughness:.7});
 
     const roadA=new THREE.Mesh(new THREE.PlaneGeometry(72,9),roadMat);
-    roadA.rotation.x=-Math.PI/2;
-    roadA.position.y=.012;
-    roadA.receiveShadow=true;
-    scene.add(roadA);
+    roadA.rotation.x=-Math.PI/2;roadA.position.y=.012;roadA.receiveShadow=true;scene.add(roadA);
 
     const roadB=new THREE.Mesh(new THREE.PlaneGeometry(9,56),roadMat);
-    roadB.rotation.x=-Math.PI/2;
-    roadB.position.y=.014;
-    roadB.receiveShadow=true;
-    scene.add(roadB);
+    roadB.rotation.x=-Math.PI/2;roadB.position.y=.014;roadB.receiveShadow=true;scene.add(roadB);
 
     for(let x=-30;x<=30;x+=5.2){
       const dash=new THREE.Mesh(new THREE.BoxGeometry(2.2,.03,.12),lineMat);
-      dash.position.set(x,.035,0);
-      scene.add(dash);
+      dash.position.set(x,.035,0);scene.add(dash);
     }
     for(let z=-22;z<=22;z+=5.2){
       const dash=new THREE.Mesh(new THREE.BoxGeometry(.12,.03,2.2),lineMat);
-      dash.position.set(0,.04,z);
-      scene.add(dash);
+      dash.position.set(0,.04,z);scene.add(dash);
     }
 
-    const sidewalk=makeMaterial(THREE,0x363d49,.85,.04);
-    [
-      [-20,13,25,7], [20,13,25,7], [-20,-13,25,7], [20,-13,25,7]
-    ].forEach(([x,z,w,d])=>addBox(THREE,scene,{x,y:.09,z,w,h:.18,d,color:0x343b47,rough:.92,metal:.01,cast:false}));
+    [[-20,13,25,7],[20,13,25,7],[-20,-13,25,7],[20,-13,25,7]]
+      .forEach(([x,z,w,d])=>addBox(THREE,scene,{x,y:.09,z,w,h:.18,d,color:0x343b47,rough:.92,metal:.01,cast:false}));
   }
 
   function addStreetLights(THREE,scene){
     const poleMat=makeMaterial(THREE,0x353b45,.4,.6);
     const bulbMat=new THREE.MeshStandardMaterial({
-      color:0xf6ffd4,
-      emissive:0xcaff70,
-      emissiveIntensity:2.1,
-      roughness:.3
+      color:0xf6ffd4,emissive:0xcaff70,emissiveIntensity:2.1,roughness:.3
     });
     const spots=[[-11,-5],[11,-5],[-11,5],[11,5],[-25,-5],[25,-5],[-25,5],[25,5]];
     for(const [x,z] of spots){
       const pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.09,3.2,8),poleMat);
-      pole.position.set(x,1.6,z);
-      scene.add(pole);
+      pole.position.set(x,1.6,z);scene.add(pole);
       const bulb=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),bulbMat);
-      bulb.position.set(x,3.18,z);
-      scene.add(bulb);
+      bulb.position.set(x,3.18,z);scene.add(bulb);
     }
   }
 
   function addDistrictPads(THREE,scene){
-    const configs=[
-      {x:-21,z:-13,color:0x5f67ff},
-      {x:18,z:10,color:0xc7ff00},
-      {x:18,z:-14,color:0xff3b7b}
-    ];
-    for(const c of configs){
+    for(const c of DISTRICTS){
       const ring=new THREE.Mesh(
         new THREE.RingGeometry(1.4,1.8,32),
         new THREE.MeshBasicMaterial({color:c.color,transparent:true,opacity:.5,side:THREE.DoubleSide})
       );
-      ring.rotation.x=-Math.PI/2;
-      ring.position.set(c.x,.08,c.z);
-      scene.add(ring);
+      ring.rotation.x=-Math.PI/2;ring.position.set(c.x,.08,c.z);scene.add(ring);
     }
   }
 
   function buildCity(THREE,scene){
-    const ground=new THREE.Mesh(
-      new THREE.PlaneGeometry(80,60),
-      makeMaterial(THREE,0x171b22,.95,.01)
-    );
-    ground.rotation.x=-Math.PI/2;
-    ground.receiveShadow=true;
-    scene.add(ground);
+    const ground=new THREE.Mesh(new THREE.PlaneGeometry(80,60),makeMaterial(THREE,0x171b22,.95,.01));
+    ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
 
     addRoadNetwork(THREE,scene);
     addStreetLights(THREE,scene);
     addDistrictPads(THREE,scene);
-
-    const buildings=[
-      [-27,-19,8,7,10,0x252b38],[-18,-19,7,7,15,0x1d2938],[-9,-19,6,7,8,0x303445],
-      [12,-19,8,7,13,0x322b44],[23,-19,9,7,18,0x242b3d],
-      [-27,18,8,7,14,0x2a3040],[-17,18,7,7,9,0x303847],[-8,18,6,7,17,0x202d3a],
-      [12,18,7,7,12,0x333041],[22,18,9,7,16,0x202a3a],
-      [-30,7,6,7,9,0x252a34],[-30,-7,6,7,13,0x292e3a],
-      [30,7,6,7,15,0x222b39],[30,-7,6,7,11,0x313441]
-    ];
-    buildings.forEach(v=>addBuilding(THREE,scene,...v));
+    BUILDINGS.forEach(v=>addBuilding(THREE,scene,...v));
   }
 
   function bindCameraInput(canvas){
     let dragging=false;
     let lastX=0;
     canvas.addEventListener('pointerdown',e=>{
-      dragging=true;
-      lastX=e.clientX;
-      canvas.setPointerCapture?.(e.pointerId);
+      dragging=true;lastX=e.clientX;canvas.setPointerCapture?.(e.pointerId);
     });
     canvas.addEventListener('pointermove',e=>{
       if(!dragging)return;
-      const dx=e.clientX-lastX;
-      lastX=e.clientX;
+      const dx=e.clientX-lastX;lastX=e.clientX;
       api.cameraYawOffset=clamp(api.cameraYawOffset-dx*.008,-1.2,1.2);
     });
-    const end=e=>{
-      dragging=false;
-      canvas.releasePointerCapture?.(e.pointerId);
-    };
+    const end=e=>{dragging=false;canvas.releasePointerCapture?.(e.pointerId);};
     canvas.addEventListener('pointerup',end);
     canvas.addEventListener('pointercancel',end);
     canvas.addEventListener('wheel',e=>{
@@ -279,6 +304,8 @@
     const host=document.querySelector('#game .city');
     if(!host)return;
     const badge=document.getElementById('world3dBadge');
+    const districtBadge=document.getElementById('worldDistrictBadge');
+
     try{
       const THREE=await import(THREE_URL);
 
@@ -303,22 +330,17 @@
       const camera=new THREE.PerspectiveCamera(58,1,.1,180);
       camera.position.set(0,7,11);
 
-      const hemi=new THREE.HemisphereLight(0x9fc7ff,0x18151e,1.25);
-      scene.add(hemi);
+      scene.add(new THREE.HemisphereLight(0x9fc7ff,0x18151e,1.25));
 
       const sun=new THREE.DirectionalLight(0xffffff,2.4);
       sun.position.set(-12,24,14);
       sun.castShadow=true;
       sun.shadow.mapSize.set(1024,1024);
-      sun.shadow.camera.left=-35;
-      sun.shadow.camera.right=35;
-      sun.shadow.camera.top=35;
-      sun.shadow.camera.bottom=-35;
+      sun.shadow.camera.left=-35;sun.shadow.camera.right=35;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;
       scene.add(sun);
 
       const rim=new THREE.PointLight(0xc7ff00,55,28,2);
-      rim.position.set(0,8,0);
-      scene.add(rim);
+      rim.position.set(0,8,0);scene.add(rim);
 
       buildCity(THREE,scene);
 
@@ -327,14 +349,11 @@
       scene.add(player);
 
       const npc=createNpc(THREE);
-      npc.position.set(12,0,-7);
+      const missionWorld=percentToWorld(72,36);
+      npc.position.set(missionWorld.x,0,missionWorld.z);
       scene.add(npc);
 
-      api.renderer=renderer;
-      api.scene=scene;
-      api.camera=camera;
-      api.player=player;
-      api.npc=npc;
+      api.renderer=renderer;api.scene=scene;api.camera=camera;api.player=player;api.npc=npc;
 
       function resize(){
         const rect=host.getBoundingClientRect();
@@ -346,16 +365,14 @@
       }
 
       api.resize=resize;
-      const ro=new ResizeObserver(resize);
-      ro.observe(host);
-      resize();
-
+      const ro=new ResizeObserver(resize);ro.observe(host);resize();
       bindCameraInput(canvas);
 
       const target=new THREE.Vector3();
       const camTarget=new THREE.Vector3();
       const desiredCam=new THREE.Vector3();
       let lastTime=performance.now();
+      let lastDistrict='';
 
       function frame(now){
         const dt=Math.min(.05,(now-lastTime)/1000||.016);
@@ -383,6 +400,13 @@
 
         npc.rotation.y=Math.atan2(player.position.x-npc.position.x,player.position.z-npc.position.z);
 
+        const district=districtAtPercent(state.x,state.y);
+        api.district=district?{id:district.id,name:district.name,distance:district.distance}:null;
+        if(district?.id!==lastDistrict){
+          lastDistrict=district?.id||'';
+          if(districtBadge)districtBadge.textContent=district?.name||'CITY';
+        }
+
         renderer.render(scene,camera);
         requestAnimationFrame(frame);
       }
@@ -390,21 +414,14 @@
       api.ready=true;
       host.classList.add('webgl-ready');
       document.documentElement.classList.add('tgg-webgl-ready');
-      if(badge){
-        badge.textContent='3D LIVE';
-        badge.dataset.state='ready';
-      }
+      if(badge){badge.textContent='3D LIVE';badge.dataset.state='ready';}
       window.dispatchEvent(new CustomEvent('tgg:world3d-ready',{detail:api.snapshot()}));
       requestAnimationFrame(frame);
     }catch(error){
       api.failed=true;
       api.error=String(error?.message||error);
-      const host=document.querySelector('#game .city');
-      host?.classList.add('webgl-fallback');
-      if(badge){
-        badge.textContent='2.5D FALLBACK';
-        badge.dataset.state='fallback';
-      }
+      host.classList.add('webgl-fallback');
+      if(badge){badge.textContent='2.5D FALLBACK';badge.dataset.state='fallback';}
       window.dispatchEvent(new CustomEvent('tgg:world3d-failed',{detail:{error:api.error}}));
     }
   }

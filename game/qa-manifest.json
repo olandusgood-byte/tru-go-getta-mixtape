@@ -91,5 +91,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
   "next": "V1.22 3D COLLISION + CAMERA ORBIT",
-  "verification": "passed"
+  "verification": "pending_ci"
 }

@@ -33,7 +33,8 @@ async function ensureWorkerToken(){
 let ownerSession = null;
 let running = false;
 let last = { status: 'idle', updated_at: new Date().toISOString() };
-const rpc = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+const rpcFetch = (url, init = {}) => fetch(url, { ...init, signal: AbortSignal.timeout(15000) });
+const rpc = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: rpcFetch } });
 const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 
 async function verifyOwnerSession(accessToken) {

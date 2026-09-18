@@ -18,7 +18,7 @@ const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',impor
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.25/);
+assert.match(html,/Game V1\.26/);
 assert.match(html,/GAME V1\.25 • STARTER CAR \+ DRIVE MODE/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
@@ -80,7 +80,13 @@ assert.match(world3d,/ENTER STARTER CAR/);
 assert.match(world3d,/wheel/);
 assert.match(game,/inVehicle:false/);
 assert.match(game,/function toggleVehicle/);
-assert.match(game,/state\.inVehicle\?1\.75:1/);
+assert.match(game,/function driveVehicle/);
+assert.match(game,/control==='forward'/);
+assert.match(game,/control==='reverse'/);
+assert.match(game,/control==='left'/);
+assert.match(game,/control==='right'/);
+assert.match(game,/Math\.cos\(rad\)\*driveStep/);
+assert.match(game,/Math\.sin\(rad\)\*driveStep/);
 assert.match(game,/vehicleBtn/);
 assert.match(game,/TGGWorld3D\?\.distanceToCarPercent/);
 assert.equal(world3d.includes('TGGGame?.reward'),false);
@@ -269,10 +275,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.25 Starter Car + Drive Mode');
-assert.equal(release.base,'V1.24 Unified 3D Gameplay Slice');
-assert.equal(auto.version,'1.25');
-assert.equal(qaManifest.version,'1.25');
+assert.equal(release.release,'V1.26 Fixed Driving Controls');
+assert.equal(release.base,'V1.25 Starter Car + Drive Mode');
+assert.equal(auto.version,'1.26');
+assert.equal(qaManifest.version,'1.26');
 assert.ok(['candidate_pending_ci','automated_ci_pass','automated_webgl_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -325,6 +331,13 @@ assert.ok(release.gates.includes('wheel_animation'));
 assert.ok(release.gates.includes('single_e_vehicle_action'));
 assert.ok(release.gates.includes('vehicle_no_reward_path'));
 
+assert.ok(release.gates.includes('drive_vehicle_api'));
+assert.ok(release.gates.includes('forward_relative_drive'));
+assert.ok(release.gates.includes('reverse_relative_drive'));
+assert.ok(release.gates.includes('steering_heading'));
+assert.ok(release.gates.includes('steering_no_strafe'));
+assert.ok(release.gates.includes('vehicle_collision_preserved'));
 
 
-console.log('GAME_V1_25_STATIC_CONTRACT_PASS');
+
+console.log('GAME_V1_26_STATIC_CONTRACT_PASS');

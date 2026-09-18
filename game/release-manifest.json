@@ -139,8 +139,8 @@
     "event_variants_cosmetic_only",
     "circuit_achievements"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.16-CITY-CIRCUITS-EVENT-VARIANTS-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.16-CITY-CIRCUITS-EVENT-VARIANTS-VERIFIED",
   "production": "gated"
 }

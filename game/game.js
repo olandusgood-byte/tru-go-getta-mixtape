@@ -200,12 +200,14 @@
   }
 
   function updateVehiclePhysics(now){
-    const dt=Math.min(.05,Math.max(.001,(now-driveRuntime.lastTime)/1000));
+    // Keep simulation time stable even when WebGL rendering drops frames.
+    // Cap long stalls, but consume the elapsed slice in small physics substeps.
+    const elapsed=Math.min(.9,Math.max(.001,(now-driveRuntime.lastTime)/1000));
     driveRuntime.lastTime=now;
 
     if(activeScreen!=='game'||!state.inVehicle){
-      driveRuntime.speed=approach(driveRuntime.speed,0,DRIVE.brake*dt);
-      driveRuntime.steer=approach(driveRuntime.steer,0,6*dt);
+      driveRuntime.speed=approach(driveRuntime.speed,0,DRIVE.brake*elapsed);
+      driveRuntime.steer=approach(driveRuntime.steer,0,6*elapsed);
       driveRuntime.braking=false;
       driveRuntime.handbrake=false;
       window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:false,handbrake:false});
@@ -215,44 +217,51 @@
 
     const wantsForward=driveKeys.forward&&!driveKeys.reverse;
     const wantsReverse=driveKeys.reverse&&!driveKeys.forward;
-    const movingForward=driveRuntime.speed>.15;
-    const movingReverse=driveRuntime.speed<-.15;
-    driveRuntime.braking=(wantsReverse&&movingForward)||(wantsForward&&movingReverse);
     driveRuntime.handbrake=!!driveKeys.handbrake;
 
-    if(wantsForward){
-      const rate=movingReverse?DRIVE.brake:DRIVE.accel;
-      driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxForward,rate*dt);
-    }else if(wantsReverse){
-      const rate=movingForward?DRIVE.brake:DRIVE.reverseAccel;
-      driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxReverse,rate*dt);
-    }else{
-      driveRuntime.speed=approach(driveRuntime.speed,0,DRIVE.coast*dt);
-    }
-    if(driveRuntime.handbrake){
-      driveRuntime.speed=approach(driveRuntime.speed,0,5.8*dt);
-    }
+    let remaining=elapsed;
+    while(remaining>.0001){
+      const dt=Math.min(.05,remaining);
+      remaining-=dt;
 
-    const steerTarget=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
-    driveRuntime.steer=approach(driveRuntime.steer,Math.max(-1,Math.min(1,steerTarget)),5.5*dt);
+      const movingForward=driveRuntime.speed>.15;
+      const movingReverse=driveRuntime.speed<-.15;
+      driveRuntime.braking=(wantsReverse&&movingForward)||(wantsForward&&movingReverse);
 
-    const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/DRIVE.maxForward);
-    if(Math.abs(driveRuntime.steer)>.01&&Math.abs(driveRuntime.speed)>.08){
-      const reverseSign=driveRuntime.speed<0?-1:1;
-      const turnFactor=.25+speedRatio*.75;
-      const driftBoost=driveRuntime.handbrake?1.65:1;
-      state.heading=(Number(state.heading||0)+driveRuntime.steer*DRIVE.turnRate*turnFactor*reverseSign*driftBoost*dt+360)%360;
-    }
-
-    if(Math.abs(driveRuntime.speed)>.02){
-      const rad=(Number(state.heading)||0)*Math.PI/180;
-      const nx=Math.max(3,Math.min(94,state.x+Math.cos(rad)*driveRuntime.speed*dt));
-      const ny=Math.max(8,Math.min(88,state.y+Math.sin(rad)*driveRuntime.speed*dt));
-      if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny,true)){
-        driveRuntime.speed*=.18;
+      if(wantsForward){
+        const rate=movingReverse?DRIVE.brake:DRIVE.accel;
+        driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxForward,rate*dt);
+      }else if(wantsReverse){
+        const rate=movingForward?DRIVE.brake:DRIVE.reverseAccel;
+        driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxReverse,rate*dt);
       }else{
-        state.x=nx;
-        state.y=ny;
+        driveRuntime.speed=approach(driveRuntime.speed,0,DRIVE.coast*dt);
+      }
+      if(driveRuntime.handbrake){
+        driveRuntime.speed=approach(driveRuntime.speed,0,5.8*dt);
+      }
+
+      const steerTarget=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
+      driveRuntime.steer=approach(driveRuntime.steer,Math.max(-1,Math.min(1,steerTarget)),5.5*dt);
+
+      const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/DRIVE.maxForward);
+      if(Math.abs(driveRuntime.steer)>.01&&Math.abs(driveRuntime.speed)>.08){
+        const reverseSign=driveRuntime.speed<0?-1:1;
+        const turnFactor=.25+speedRatio*.75;
+        const driftBoost=driveRuntime.handbrake?1.65:1;
+        state.heading=(Number(state.heading||0)+driveRuntime.steer*DRIVE.turnRate*turnFactor*reverseSign*driftBoost*dt+360)%360;
+      }
+
+      if(Math.abs(driveRuntime.speed)>.02){
+        const rad=(Number(state.heading)||0)*Math.PI/180;
+        const nx=Math.max(3,Math.min(94,state.x+Math.cos(rad)*driveRuntime.speed*dt));
+        const ny=Math.max(8,Math.min(88,state.y+Math.sin(rad)*driveRuntime.speed*dt));
+        if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny,true)){
+          driveRuntime.speed*=.18;
+        }else{
+          state.x=nx;
+          state.y=ny;
+        }
       }
     }
 

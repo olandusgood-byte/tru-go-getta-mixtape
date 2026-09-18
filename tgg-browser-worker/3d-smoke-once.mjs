@@ -16,6 +16,7 @@ const DESKTOP_DRIVE_ONLY=String(process.env.TGG_3D_DESKTOP_DRIVE_ONLY||'0')==='1
 const VEHICLE_LOGIC_ONLY=String(process.env.TGG_3D_VEHICLE_LOGIC_ONLY||'0')==='1';
 const MOBILE_LAYOUT_ONLY=String(process.env.TGG_3D_MOBILE_LAYOUT_ONLY||'0')==='1';
 const WORLD_LIFE_ONLY=String(process.env.TGG_3D_WORLD_LIFE_ONLY||'0')==='1';
+const CAREER_DIRECTOR_ONLY=String(process.env.TGG_3D_CAREER_DIRECTOR_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -123,6 +124,91 @@ async function run(){
       result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'world_life_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await mobile.close();await ctx.close();return;
+    }
+
+    if(CAREER_DIRECTOR_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const response=await fetch(base+'/career-director.js');
+      if(!response.ok)throw new Error('Career Director harness could not fetch deployed script: '+response.status);
+      const source=await response.text();
+      const errors=[]; page.on('pageerror',e=>errors.push(e.message||String(e)));
+      await page.setContent(`<!doctype html><html><body>
+        <section id="career"><div id="careerDirectorStats"></div><div id="careerContract"></div><div id="careerNextMove"></div><div id="careerDirectorHistory"></div><button id="careerDirectorGo"></button></section>
+      </body></html>`);
+      await page.evaluate(()=>{
+        localStorage.clear();
+        window.__qaGame={cash:0,xp:0,level:3};
+        window.__qaCareer={recordings:0,mixtapes:0,reputation:0,studioLevel:3};
+        window.__qaContent={completed:[]};
+        window.__qaLife={shows:0,battleWins:0,training:0,activeOpportunity:null};
+        window.__qaTab=null;window.__qaScreen=null;window.__qaSyncs=0;
+        window.TGGGame={
+          getState:()=>window.__qaGame,
+          reward:(cash,xp)=>{window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return true},
+          show:id=>{window.__qaScreen=id;return true}
+        };
+        window.TGGCareer={
+          career:window.__qaCareer,
+          addRep:n=>{window.__qaCareer.reputation+=Number(n)||0;return true}
+        };
+        window.TGGContent={state:window.__qaContent};
+        window.TGGWorldLife={
+          getState:()=>JSON.parse(JSON.stringify(window.__qaLife)),
+          clearOpportunity:()=>{window.__qaLife.activeOpportunity=null;return true},
+          setTab:t=>{window.__qaTab=t;return true}
+        };
+        window.TGGProgression={sync:()=>{window.__qaSyncs++;return true}};
+        window.TGGWorldSync={sync:()=>true};
+        window.__tggToast=()=>{};
+      });
+      await page.addScriptTag({content:source});
+      await page.waitForTimeout(120);
+      const checks=[];const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      record('career-director-api',await page.evaluate(()=>typeof window.TGGCareerDirector?.getState==='function'));
+
+      async function runContract(contactId,advance){
+        await page.evaluate(({contactId,stamp})=>{window.__qaLife.activeOpportunity={contactId,title:'QA',detail:'QA',createdAt:stamp}}, {contactId,stamp:Date.now()});
+        await page.waitForTimeout(1050);
+        const active=await page.evaluate(()=>window.TGGCareerDirector?.getState?.().activeContract);
+        advance();
+        await page.waitForTimeout(1050);
+        const after=await page.evaluate(()=>window.TGGCareerDirector?.getState?.());
+        return {active,after};
+      }
+
+      let r=await runContract('manager',async()=>{await page.evaluate(()=>window.__qaContent.completed.push('qa-job'))});
+      record('manager-contract-captured',r.active?.contactId==='manager',JSON.stringify(r.active));
+      record('manager-contract-completed',r.after.completedContracts===1&&r.after.activeContract===null,JSON.stringify(r.after));
+
+      r=await runContract('dj',async()=>{await page.evaluate(()=>window.__qaLife.shows++)});
+      record('dj-show-contract',r.active?.metric==='shows'&&r.after.completedContracts===2,JSON.stringify(r));
+
+      r=await runContract('producer',async()=>{await page.evaluate(()=>window.__qaCareer.recordings++)});
+      record('producer-recording-contract',r.active?.metric==='recordings'&&r.after.completedContracts===3,JSON.stringify(r));
+
+      r=await runContract('director',async()=>{await page.evaluate(()=>window.__qaCareer.mixtapes++)});
+      record('director-release-contract',r.active?.metric==='mixtapes'&&r.after.completedContracts===4,JSON.stringify(r));
+
+      const final=await page.evaluate(()=>({
+        director:window.TGGCareerDirector?.getState?.(),
+        game:window.__qaGame,career:window.__qaCareer,
+        stats:document.getElementById('careerDirectorStats')?.textContent||'',
+        next:window.TGGCareerDirector?.recommendation?.(),
+        stored:JSON.parse(localStorage.getItem('tgg-career-director-v1')||'null')
+      }));
+      record('career-rewards',final.director?.fans===650&&final.director?.buzz===72&&final.game.cash===1770&&final.game.xp===335&&final.career.reputation===118,JSON.stringify(final));
+      record('career-rank',final.director?.rank==='LOCAL BUZZ',final.director?.rank);
+      record('career-ui-rendered',/LOCAL BUZZ/.test(final.stats)&&/650/.test(final.stats),final.stats);
+      record('career-next-move',final.next?.go==='battle',JSON.stringify(final.next));
+      record('career-persistence',final.stored?.completedContracts===4&&final.stored?.fans===650,JSON.stringify(final.stored));
+
+      await page.evaluate(()=>window.TGGCareerDirector?.go?.('battle'));
+      const nav=await page.evaluate(()=>({tab:window.__qaTab,screen:window.__qaScreen}));
+      record('career-navigation',nav.tab==='battle'&&nav.screen==='worldLifeBoard',JSON.stringify(nav));
+
+      result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'career_director_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();return;
     }
 
     if(VEHICLE_LOGIC_ONLY){

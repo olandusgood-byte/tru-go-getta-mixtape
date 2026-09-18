@@ -46,7 +46,7 @@ assert.match(world3d,/TGGGame\?\.getState/);
 assert.equal(world3d.includes('localStorage.setItem'),false);
 assert.equal(world3d.includes('TGGGame?.reward'),false);
 assert.equal(world3d.includes('TGGCareer?.addRep'),false);
-assert.match(world3d,/version:'1\.22\.0'/);
+assert.match(world3d,/version:'1\.23\.0'/);
 assert.match(world3d,/const BUILDINGS=/);
 assert.match(world3d,/constrainPercent/);
 assert.match(world3d,/isBlockedPercent/);

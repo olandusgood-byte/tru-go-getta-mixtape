@@ -10,7 +10,7 @@
   function install(){
     document.body.classList.add('tgg-v208');
     const badge=document.querySelector('.v201-badge');
-    if(badge)badge.textContent='V2.10 CITY DEPTH';
+    if(badge)badge.textContent='V2.11 LIVING TRAFFIC';
     const city=document.querySelector('.city');
     if(city&&!document.getElementById('streetLifeAlert')){
       alertEl=document.createElement('div');

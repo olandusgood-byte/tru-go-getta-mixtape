@@ -55,5 +55,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
   "next": "V1.18 NPC ROUTE ENCOUNTERS + DISTRICT MEMORY",
-  "verification": "pending_ci"
+  "verification": "passed"
 }

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.26 Fixed Driving Controls",
-  "base": "V1.25 Starter Car + Drive Mode",
+  "release": "V1.27 Cinematic Camera + Radar",
+  "base": "V1.26 Fixed Driving Controls",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -93,7 +93,11 @@
     "V1.26-CAR-RELATIVE-CONTROLS",
     "V1.26-FORWARD-REVERSE",
     "V1.26-STEERING",
-    "V1.26-VEHICLE-COLLISION-PRESERVED"
+    "V1.26-VEHICLE-COLLISION-PRESERVED",
+    "V1.27-CAMERA-MODES",
+    "V1.27-LIVE-RADAR",
+    "V1.27-HUB-RADAR-DOTS",
+    "V1.27-KEYBOARD-CAMERA"
   ],
   "gates": [
     "runtime_api_presence",
@@ -246,10 +250,20 @@
     "reverse_relative_drive",
     "steering_heading",
     "steering_no_strafe",
-    "vehicle_collision_preserved"
+    "vehicle_collision_preserved",
+    "camera_mode_api",
+    "camera_orbit_mode",
+    "camera_chase_mode",
+    "camera_top_mode",
+    "camera_c_key",
+    "live_radar",
+    "radar_player_tracking",
+    "radar_car_tracking",
+    "radar_five_hubs",
+    "camera_radar_no_rewards"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.26-FIXED-DRIVING-CONTROLS-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.27-CINEMATIC-CAMERA-RADAR-CANDIDATE",
   "production": "gated"
 }

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.17 Career Choices — Mission 03",
-  "base": "V1.16 Branching Story — Mission 02",
+  "release": "V1.18 Live Performance — Mission 04",
+  "base": "V1.17 Career Choices — Mission 03",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -53,7 +53,11 @@
     "V1.17-MISSION-03-THE-OFFER",
     "V1.17-DEAL-VS-INDEPENDENT",
     "V1.17-CAREER-CONSEQUENCE",
-    "V1.17-RELEASE-NIGHT"
+    "V1.17-RELEASE-NIGHT",
+    "V1.18-MISSION-04-THE-HEADLINER",
+    "V1.18-CONCERT-PERFORMANCE",
+    "V1.18-CROWD-SCORE",
+    "V1.18-CLUB-VS-FESTIVAL"
   ],
   "gates": [
     "runtime_api_presence",
@@ -131,10 +135,17 @@
     "story_mission_03_choice_persistence",
     "story_mission_03_prior_consequence",
     "story_mission_03_finale",
-    "story_mission_03_reward_once"
+    "story_mission_03_reward_once",
+    "story_mission_04_api",
+    "story_mission_04_ui",
+    "performance_api",
+    "performance_unique_moves",
+    "performance_crowd_threshold",
+    "performance_reward_once",
+    "story_mission_04_reward_once"
   ],
   "static_gate": "candidate_pending_ci",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.17-MISSION-03-THE-OFFER-CANDIDATE",
+  "release_checkpoint": "V1.18-MISSION-04-THE-HEADLINER-CANDIDATE",
   "production": "staging_candidate"
 }

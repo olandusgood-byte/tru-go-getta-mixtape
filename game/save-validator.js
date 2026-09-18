@@ -31,6 +31,12 @@
       if(!Array.isArray(routeMemory.opportunities.completed))routeMemory.opportunities.completed=[];
       if(!Array.isArray(routeMemory.opportunities.history))routeMemory.opportunities.history=[];
       if(routeMemory.opportunities.active&&typeof routeMemory.opportunities.active!=='object')routeMemory.opportunities.active=null;
+      if(!routeMemory.opportunities.chain||typeof routeMemory.opportunities.chain!=='object'||Array.isArray(routeMemory.opportunities.chain))routeMemory.opportunities.chain={active:null,step:0,completed:[],history:[],lastResult:null};
+      const opportunityChain=routeMemory.opportunities.chain;
+      opportunityChain.active=typeof opportunityChain.active==='string'?opportunityChain.active:null;
+      opportunityChain.step=Math.max(0,Math.floor(num(opportunityChain.step,0)));
+      if(!Array.isArray(opportunityChain.completed))opportunityChain.completed=[];
+      if(!Array.isArray(opportunityChain.history))opportunityChain.history=[];
       routeMemory.lastFingerprint=typeof routeMemory.lastFingerprint==='string'?routeMemory.lastFingerprint:null;
       routeMemory.updatedAt=num(routeMemory.updatedAt,Date.now());
       if(typeof routeMemory.remoteStatus!=='string')routeMemory.remoteStatus='offline_ready';

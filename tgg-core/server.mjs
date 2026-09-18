@@ -325,7 +325,7 @@ async function requireWorker(req,res){
   return r.rows[0];
 }
 
-app.post('/v1/workers/register', async (req,res,next)=>{
+app.post('/v1/workers/bootstrap', async (req,res,next)=>{try{const secret=String(process.env.TGG_WORKER_BOOTSTRAP_SECRET||'');if(!secret||req.headers['x-tgg-bootstrap-secret']!==secret)return res.status(403).json({error:'bootstrap_auth_failed'});const worker_id=String(req.body?.worker_id||'').trim();if(!worker_id)return res.status(400).json({error:'worker_id_required'});const worker_token=crypto.randomBytes(32).toString('base64url');const r=await pool.query(\`insert into tgg_worker_registry(worker_id,worker_token_hash,metadata,last_seen_at) values($1,$2,$3,now()) on conflict(worker_id) do update set worker_token_hash=excluded.worker_token_hash,status='active',updated_at=now(),last_seen_at=now() returning id,worker_id,status\`,[worker_id,hashWorkerToken(worker_token),req.body?.metadata||{}]);res.status(201).json({worker:r.rows[0],worker_token});}catch(e){next(e);}});\n\napp.post('/v1/workers/register', async (req,res,next)=>{
   try{
     const secret=String(process.env.TGG_WORKER_BOOTSTRAP_SECRET||'');
     if(!secret || req.headers['x-tgg-bootstrap-secret']!==secret) return res.status(403).json({error:'bootstrap_auth_failed'});

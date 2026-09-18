@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.17",
-  "module": "GAME-V1.17-QA",
-  "name": "District Circuits + Story Routing",
+  "version": "1.18",
+  "module": "GAME-V1.18-QA",
+  "name": "NPC Route Encounters + District Memory",
   "checks": [
     "storage",
     "game_api",
@@ -48,7 +48,15 @@
     "story_route_completion",
     "remote_story_readonly",
     "no_story_mutation_bridge",
-    "story_router_no_rewards"
+    "story_router_no_rewards",
+    "route_memory_api",
+    "route_memory_persistence",
+    "route_npc_encounters",
+    "district_memory",
+    "story_ui_auto_render",
+    "remote_memory_readonly",
+    "route_memory_no_rewards",
+    "npc_memory_achievement"
   ],
   "workflow": [
     "BUILD",
@@ -61,6 +69,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.18 NPC ROUTE ENCOUNTERS + DISTRICT MEMORY",
-  "verification": "passed"
+  "next": "V1.19 NPC DIALOGUE STATES + RELATIONSHIP MEMORY",
+  "verification": "pending_ci"
 }

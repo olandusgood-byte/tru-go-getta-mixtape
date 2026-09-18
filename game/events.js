@@ -105,6 +105,7 @@
     if(!state.completed.includes(id))state.completed.push(id);
     state.lastReward={id,cash,xp,rep,run:state.runs[id]};
     save();
+    window.TGGCircuits?.onEventComplete?.(id);
     window.TGGProgression?.sync?.();
     window.__tggToast?.(event.name+' COMPLETE — '+MONEY+cash+' / +'+xp+' XP / +'+rep+' REP');
     render();
@@ -119,12 +120,14 @@
     const cards=events.map(e=>{
       const open=!window.TGGDistricts?.canEnter||window.TGGDistricts.canEnter(e.district);
       const m=mastery(e.id);
+      const variant=window.TGGCircuits?.variant?.(e.id)||{label:e.name,cosmeticOnly:true,rewardMultiplier:1};
       const next=m.nextAt===null?'MAX MASTERY':m.remaining+' runs to '+(m.nextAt===5?'CITY KNOWN':m.nextAt===10?'HEADLINER':'REGULAR');
       const action=open&&requirementsMet(e)?'<button class="primary" data-event-run="'+e.id+'">RUN EVENT</button>':open?'<span>NEEDS INVENTORY</span>':'<span>LOCKED — LEVEL '+(window.TGGDistricts?.get?.(e.district)?.level||1)+'</span>';
-      return '<div class="mission-card"><b>'+e.name+' • '+m.name+'</b><span>'+e.detail+'</span><span>'+e.district+' • '+MONEY+e.cash+' • '+e.xp+' XP • '+e.rep+' REP • '+m.runs+' runs</span><span>MASTERY: '+next+'</span><span>NEEDS: '+requirementText(e)+'</span>'+action+'</div>';
+      return '<div class="mission-card"><b>'+e.name+' • '+m.name+'</b><span>VARIANT: '+variant.label+' • COSMETIC ONLY</span><span>'+e.detail+'</span><span>'+e.district+' • '+MONEY+e.cash+' • '+e.xp+' XP • '+e.rep+' REP • '+m.runs+' runs</span><span>MASTERY: '+next+'</span><span>NEEDS: '+requirementText(e)+'</span>'+action+'</div>';
     }).join('');
     el.innerHTML=header+cards;
     el.querySelectorAll('[data-event-run]').forEach(b=>b.onclick=()=>run(b.dataset.eventRun));
+    window.TGGCircuits?.render?.();
   }
 
   load();

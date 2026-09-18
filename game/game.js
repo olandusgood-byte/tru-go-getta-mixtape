@@ -290,7 +290,7 @@
 
   window.__tggToast=toast;
   window.TGGAutoMode={enabled:()=>true,toggle:()=>true};
-  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,mission,toggleVehicle,resetForNewGame};
+  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,driveVehicle,mission,toggleVehicle,resetForNewGame};
 
   load();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindControls,{once:true});

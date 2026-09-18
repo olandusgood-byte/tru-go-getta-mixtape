@@ -35,6 +35,9 @@ const inventory=window.TGGInventory?.catalog||[];check('inventory-catalog',inven
     check('route-memory-persistence',window.TGGSave?.keys?.routeMemory==='tgg-route-memory-v1'&&Array.isArray(window.TGGRouteMemory?.state?.encounters),'V1.18 route memory save state registered');
     check('route-memory-npcs',['m','producer','dj'].every(id=>!!window.TGGRouteMemory?.npcs?.[id]),'V1.18 M, Kane and DJ V route contacts registered');
     check('route-memory-achievement',window.TGGProgression?.achievements?.some(a=>a.id==='know-the-city'),'V1.18 contact achievement registered');
+    check('relationship-api',typeof window.TGGRouteMemory?.relationship==='function'&&typeof window.TGGRouteMemory?.dialogue==='function'&&typeof window.TGGRouteMemory?.syncRelationships==='function','V1.19 relationship API available');
+    check('relationship-state',!!window.TGGRouteMemory?.state?.relationships&&typeof window.TGGRouteMemory.state.relationships==='object','V1.19 relationship state uses existing route-memory store');
+    check('trusted-contact-achievement',window.TGGProgression?.achievements?.some(a=>a.id==='trusted-contact'),'V1.19 trusted contact achievement registered');
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:20,rep:5});check('economy-reward-shape',!!economy&&economy.cash>=100&&economy.xp>=20&&economy.rep>=5&&!!economy.crew,'shared economy reward normalization available');
     const integrity=window.TGGV12Integrity?.run?.();check('v12-integrity',!!integrity?.passed,'V1.2 integrity gate passes');
     const bad=report.filter(x=>x.status==='FAIL');window.TGGQA={report,passed:bad.length===0,repair(){window.TGGSave?.repair?.();return !!document.getElementById('hud')&&!!window.TGGGame&&!!window.TGGProgression&&!!window.TGGChains&&!!window.TGGDistricts&&!!window.TGGSave&&!!window.TGGInventory&&!!window.TGGCrew&&!!window.TGGEconomy&&!!window.TGGEvents&&!!window.TGGAvatar&&!!window.TGGWorldSync}};return window.TGGQA;

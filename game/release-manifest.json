@@ -195,8 +195,8 @@
     "world3d_player_sync",
     "world3d_fallback"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.21-TRUE-3D-CITY-FOUNDATION-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.21-TRUE-3D-CITY-FOUNDATION-VERIFIED",
   "production": "gated"
 }

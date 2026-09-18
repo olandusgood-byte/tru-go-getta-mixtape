@@ -40,6 +40,9 @@
     test('contact ops single store',!!window.TGGRouteMemory?.state?.opportunities&&typeof window.TGGRouteMemory.state.opportunities==='object');
     test('contact ops catalog',Array.isArray(window.TGGContactOps?.opportunities)&&window.TGGContactOps.opportunities.length>=3);
     test('first opportunity achievement',window.TGGProgression?.achievements?.some(a=>a.id==='first-opportunity'));
+    test('world3d api',!!window.TGGWorld3D&&typeof window.TGGWorld3D.snapshot==='function');
+    test('world3d library',window.TGGWorld3D?.library==='three@0.186.0');
+    test('world3d host',!!document.getElementById('world3dBadge')&&!!document.querySelector('#game .city'));
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

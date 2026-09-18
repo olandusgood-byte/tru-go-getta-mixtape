@@ -20,6 +20,7 @@ const CAREER_DIRECTOR_ONLY=String(process.env.TGG_3D_CAREER_DIRECTOR_ONLY||'0')=
 const CAREER_MOBILE_ONLY=String(process.env.TGG_3D_CAREER_MOBILE_ONLY||'0')==='1';
 const STORY_MISSION_ONLY=String(process.env.TGG_3D_STORY_MISSION_ONLY||'0')==='1';
 const STORY_CHAPTER2_ONLY=String(process.env.TGG_3D_STORY_CHAPTER2_ONLY||'0')==='1';
+const STORY_CHAPTER3_ONLY=String(process.env.TGG_3D_STORY_CHAPTER3_ONLY||'0')==='1';
 const STORY_WORLD_3D_ONLY=String(process.env.TGG_3D_STORY_WORLD_3D_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
@@ -28,6 +29,166 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(STORY_CHAPTER3_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,cssResponse,storyResponse,cineResponse]=await Promise.all([
+        fetch(base+'/index.html'),fetch(base+'/style.css'),fetch(base+'/story-missions.js'),fetch(base+'/story-cinematics.js')
+      ]);
+      if(!htmlResponse.ok||!cssResponse.ok||!storyResponse.ok||!cineResponse.ok){
+        throw new Error('Story Chapter 3 harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', story='+storyResponse.status+', cine='+cineResponse.status);
+      }
+      let html=await htmlResponse.text();
+      const [css,storySource,cineSource]=await Promise.all([cssResponse.text(),storyResponse.text(),cineResponse.text()]);
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      const errors=[]; const consoleErrors=[];
+      mp.on('pageerror',e=>errors.push(e.message||String(e)));
+      mp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      await mp.setContent(html,{waitUntil:'domcontentloaded'});
+      await mp.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
+        window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:0,xp:0,level:7};
+        window.__qaCareer={recordings:4,mixtapes:2,reputation:0,studioLevel:4};
+        window.__qaContent={completed:['flyer-run','studio-session','mixtape-promo']};
+        window.__qaLife={battleWins:2,shows:2,activeOpportunity:null,contacts:{}};
+        window.__qaShown='storyMissionsBoard';window.__qaTab=null;window.__qaToasts=[];
+        window.TGGGame={
+          getState:()=>window.__qaGame,
+          getActiveScreen:()=>window.__qaShown,
+          show:id=>{window.__qaShown=id;document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));document.getElementById(id)?.classList.add('active');return true},
+          reward:(cash,xp)=>{window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return true}
+        };
+        window.TGGCareer={career:window.__qaCareer,addRep:n=>{window.__qaCareer.reputation+=Number(n)||0;return true}};
+        window.TGGContent={state:window.__qaContent};
+        window.TGGWorldLife={
+          getState:()=>JSON.parse(JSON.stringify(window.__qaLife)),
+          setTab:t=>{window.__qaTab=t;return true},
+          callContact:id=>{window.__qaLife.activeOpportunity={contactId:id,createdAt:Date.now(),title:'QA',detail:'QA'};return true}
+        };
+        window.TGGCareerDirector={getState:()=>({activeContract:null,history:[{title:'MANAGER MOVE'}]})};
+        window.TGGProgression={sync:()=>true};
+        window.__tggToast=t=>window.__qaToasts.push(String(t));
+        localStorage.setItem('tgg-story-missions-v1',JSON.stringify({
+          active:false,completed:true,step:6,startedAt:1,completedAt:2,
+          baselines:{jobs:0,recordings:0,battleWins:0,shows:0,mixtapes:0},
+          chapter2:{
+            active:false,completed:true,step:10,startedAt:3,completedAt:4,
+            baselines:{recordings:3,battleWins:1,shows:1},
+            flags:{manager:true,kane:true,director:true,visual:true},lastSync:4
+          },
+          chapter3:{
+            active:false,completed:false,step:0,startedAt:0,completedAt:0,
+            baselines:null,flags:{dj:false,premiere:false,manager:false},lastSync:0
+          }
+        }));
+      });
+      await mp.addScriptTag({content:storySource});
+      await mp.addScriptTag({content:cineSource});
+      await mp.waitForTimeout(80);
+      const checks=[]; const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+
+      let snap=await mp.evaluate(()=>({
+        api:typeof window.TGGStoryMissions?.startChapter3==='function'&&typeof window.TGGStoryCinematics?.show==='function',
+        status:window.TGGStoryMissions?.status?.()
+      }));
+      record('chapter3-api',snap.api);
+      record('chapter2-preserved',snap.status?.chapter===2&&snap.status?.completed===true&&snap.status?.step===10,JSON.stringify(snap.status));
+
+      await mp.evaluate(()=>window.TGGStoryMissions.startChapter3());
+      await mp.waitForTimeout(40);
+      snap=await mp.evaluate(()=>({
+        status:window.TGGStoryMissions.status(),
+        target:window.TGGStoryMissions.navigationTarget(),
+        cinematic:window.TGGStoryCinematics.getState()
+      }));
+      record('chapter3-starts',snap.status?.chapter===3&&snap.status?.active===true&&snap.status?.step===0&&snap.status?.steps?.length===8,JSON.stringify(snap.status));
+      record('chapter3-dj-marker',snap.target?.id==='dj-v'&&snap.target?.x===76&&snap.target?.y===63&&snap.target?.talk==='dj',JSON.stringify(snap.target));
+      record('chapter3-start-cinematic',snap.cinematic?.lastEvent?.type==='chapter-start'&&snap.cinematic?.lastEvent?.chapter===3,JSON.stringify(snap.cinematic));
+
+      await mp.evaluate(()=>{window.__qaGame.x=76;window.__qaGame.y=63;window.TGGStoryMissions.doCurrent();});
+      snap=await mp.evaluate(()=>({
+        status:window.TGGStoryMissions.status(),
+        opportunity:window.__qaLife.activeOpportunity,
+        cinematic:window.TGGStoryCinematics.getState()
+      }));
+      record('chapter3-dj-talk',snap.status?.step===1&&snap.opportunity?.contactId==='dj',JSON.stringify(snap));
+      record('chapter3-objective-cinematic',snap.cinematic?.lastEvent?.type==='objective'&&snap.cinematic?.lastEvent?.title==='PACK THE VENUE',JSON.stringify(snap.cinematic));
+
+      await mp.evaluate(()=>{window.__qaLife.shows=3;window.TGGStoryMissions.sync();});
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('chapter3-show',snap.step===2&&snap.current?.id==='business-arrival',JSON.stringify(snap));
+
+      await mp.evaluate(()=>{window.__qaGame.x=11;window.__qaGame.y=50;window.TGGStoryMissions.sync();});
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('chapter3-business-arrival',snap.step===3&&snap.current?.id==='next-release',JSON.stringify(snap));
+
+      await mp.evaluate(()=>{window.__qaCareer.mixtapes=3;window.TGGStoryMissions.sync();});
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('chapter3-release',snap.step===4&&snap.current?.id==='media-return',JSON.stringify(snap));
+
+      await mp.evaluate(()=>{window.__qaGame.x=50;window.__qaGame.y=89;window.TGGStoryMissions.sync();});
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('chapter3-media-arrival',snap.step===5&&snap.current?.id==='premiere',JSON.stringify(snap));
+
+      await mp.evaluate(()=>document.querySelector('[data-media="premiere"]')?.click());
+      await mp.waitForTimeout(25);
+      await mp.evaluate(()=>window.TGGStoryMissions.sync());
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('chapter3-premiere',snap.step===6&&snap.current?.id==='home-base',JSON.stringify(snap));
+
+      await mp.evaluate(()=>{window.__qaGame.x=63;window.__qaGame.y=24;window.TGGStoryMissions.sync();});
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('chapter3-home-base',snap.step===7&&snap.current?.id==='manager-finale',JSON.stringify(snap));
+
+      await mp.evaluate(()=>{window.__qaGame.x=72;window.__qaGame.y=36;window.TGGStoryMissions.doCurrent();});
+      await mp.waitForTimeout(30);
+      snap=await mp.evaluate(()=>({
+        status:window.TGGStoryMissions.status(),
+        game:{...window.__qaGame},
+        career:{...window.__qaCareer},
+        stored:JSON.parse(localStorage.getItem('tgg-story-missions-v1')||'null'),
+        cinematic:window.TGGStoryCinematics.getState(),
+        action:{text:document.getElementById('storyMissionAction')?.textContent||'',disabled:document.getElementById('storyMissionAction')?.disabled}
+      }));
+      record('chapter3-completes',snap.status?.completed===true&&snap.status?.step===8,JSON.stringify(snap.status));
+      record('chapter3-final-reward',snap.game.cash===3500&&snap.game.xp===700&&snap.career.reputation===300,JSON.stringify({game:snap.game,career:snap.career}));
+      record('chapter3-persistence',snap.stored?.chapter3?.completed===true&&snap.stored?.chapter3?.step===8,JSON.stringify(snap.stored?.chapter3));
+      record('chapter3-passed-cinematic',snap.cinematic?.lastEvent?.type==='chapter-complete'&&snap.cinematic?.lastEvent?.chapter===3,JSON.stringify(snap.cinematic));
+      record('chapter3-story-arc-lock',snap.action.text==='STORY ARC COMPLETE'&&snap.action.disabled===true,JSON.stringify(snap.action));
+
+      const layout=await mp.evaluate(async()=>{
+        window.TGGStoryCinematics.show({type:'objective',chapter:3,title:'OBJECTIVE UPDATED',detail:'FOLLOW THE CITY MARKER'});
+        await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+        const root=document.getElementById('storyCinematic')?.getBoundingClientRect();
+        const copy=document.querySelector('.story-cine-copy')?.getBoundingClientRect();
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          overflowX:document.documentElement.scrollWidth>innerWidth+1,
+          visible:document.getElementById('storyCinematic')?.classList.contains('show'),
+          root:root?{left:root.left,right:root.right,width:root.width}:null,
+          copy:copy?{left:copy.left,right:copy.right,width:copy.width,height:copy.height}:null
+        };
+      });
+      record('chapter3-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
+      record('chapter3-cinematic-contained',layout.visible===true&&!!layout.copy&&layout.copy.left>=0&&layout.copy.right<=layout.width+1,JSON.stringify(layout));
+
+      result={
+        ok:checks.every(x=>x.pass)&&errors.length===0&&consoleErrors.length===0,
+        status:'done',mode:'story_chapter3_harness',target:TARGET,checks,
+        console_errors:consoleErrors,page_errors:errors,updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
 
     if(STORY_WORLD_3D_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
@@ -121,7 +282,7 @@ async function run(){
       }));
       record('story3d-api',snap.api,JSON.stringify(snap.world));
       record('story3d-three-scene-populated',snap.sceneChildren>=5,'children='+snap.sceneChildren);
-      record('story3d-three-contacts',snap.contacts.length===3&&snap.contacts.map(x=>x.id).join(',')==='manager,kane,director',JSON.stringify(snap.contacts));
+      record('story3d-three-contacts',snap.contacts.length===4&&snap.contacts.map(x=>x.id).join(',')==='manager,kane,dj,director',JSON.stringify(snap.contacts));
       record('story3d-contact-geometry',snap.contacts.every(x=>x.isGroup&&x.visible&&x.children>=8&&x.labelSprite&&x.markerMesh),JSON.stringify(snap.contacts));
       const manager=snap.contacts.find(x=>x.id==='manager');
       record('story3d-manager-world-position',!!manager&&Math.abs(manager.wx-20.24)<.15&&Math.abs(manager.wz+12.88)<.15,JSON.stringify(manager));
@@ -248,7 +409,6 @@ async function run(){
       await mp.evaluate(()=>{window.__qaGame.x=24;window.__qaGame.y=37;window.TGGStoryMissions.sync();});
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter2-studio-arrival',snap.step===2,JSON.stringify(snap));
-
       await mp.evaluate(()=>window.TGGStoryMissions.doCurrent());
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter2-kane-talk',snap.step===3,JSON.stringify(snap));
@@ -497,8 +657,7 @@ async function run(){
       }));
       record('world-life-api',initial.api);
       record('world-life-entry-button',initial.button);
-      record('world-life-board',initial.board);
-      record('world-life-tabs',initial.tabs===4,String(initial.tabs));
+      record('world-life-board',initial.board);      record('world-life-tabs',initial.tabs===4,String(initial.tabs));
       record('world-life-game-runtime-hook',gameSource.includes('worldLifeBoard')&&gameSource.includes('worldLifeBtn'));
 
       await mp.evaluate(()=>{
@@ -747,8 +906,7 @@ async function run(){
       let braking=await page.evaluate(()=>({drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.()}));
       record('vehicle-braking',Math.abs(Number(braking.drive?.speed)||0)<beforeBrake||braking.drive?.braking===true,JSON.stringify({beforeBrake,braking}));
 
-      await page.waitForTimeout(700);
-      const reversed=await page.evaluate(()=>({drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.(),gear:document.getElementById('gearValue')?.textContent}));
+      await page.waitForTimeout(700);      const reversed=await page.evaluate(()=>({drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.(),gear:document.getElementById('gearValue')?.textContent}));
       record('vehicle-reverse',Number(reversed.drive?.speed)<-.2&&reversed.gear==='R',JSON.stringify(reversed));
       await page.evaluate(()=>window.TGGGame?.setDriveKey?.('reverse',false));
       await page.waitForTimeout(350);
@@ -997,8 +1155,7 @@ async function run(){
         status:'done',
         mode:'player_smooth_logic_harness',
         target:TARGET,
-        checks,
-        page_errors:harnessErrors,
+        checks,        page_errors:harnessErrors,
         updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
@@ -1247,8 +1404,7 @@ async function run(){
       await ctx.close();
       return;
     }
-    if(REQUIRE_PLAYER_SMOOTH){
-      record('walking-api',initial.walkingApi);
+    if(REQUIRE_PLAYER_SMOOTH){      record('walking-api',initial.walkingApi);
       record('walking-tuning',Number(initial.walkingTuning?.walkSpeed)>0&&Number(initial.walkingTuning?.sprintSpeed)>Number(initial.walkingTuning?.walkSpeed),JSON.stringify(initial.walkingTuning));
       record('player-dynamics-api',initial.playerDynamicsApi);
       record('sprint-control',initial.sprintButton);

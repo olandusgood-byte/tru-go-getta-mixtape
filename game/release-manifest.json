@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.25 Cinematic Camera + Radar Playtest",
-  "base": "V1.24 Living 3D City Playtest",
+  "release": "V1.26 Fixed Car Steering Playtest",
+  "base": "V1.25 Cinematic Camera + Radar Playtest",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -89,7 +89,11 @@
     "V1.25-CAMERA-MODES",
     "V1.25-LIVE-RADAR",
     "V1.25-NIGHT-SKY-POLISH",
-    "V1.25-PLAYER-CAR-RADAR-TRACKING"
+    "V1.25-PLAYER-CAR-RADAR-TRACKING",
+    "V1.26-CAR-RELATIVE-CONTROLS",
+    "V1.26-FORWARD-REVERSE-DRIVE",
+    "V1.26-STEERING-HEADING",
+    "V1.26-CAR-MESH-ALIGNMENT"
   ],
   "gates": [
     "runtime_api_presence",
@@ -226,10 +230,14 @@
     "camera_mode_top",
     "live_radar",
     "radar_destinations",
-    "night_sky_polish"
+    "night_sky_polish",
+    "car_forward_relative",
+    "car_reverse_relative",
+    "car_steer_left_right",
+    "car_mesh_heading_alignment"
   ],
   "static_gate": "passed",
   "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.25-CINEMATIC-RADAR-PLAYTEST-CANDIDATE",
+  "release_checkpoint": "V1.26-FIXED-DRIVING-CONTROLS",
   "production": "playtest"
 }

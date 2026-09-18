@@ -9,17 +9,19 @@ const events=fs.readFileSync(new URL('./events.js',import.meta.url),'utf8');
 const progression=fs.readFileSync(new URL('./progression.js',import.meta.url),'utf8');
 const circuits=fs.readFileSync(new URL('./circuits.js',import.meta.url),'utf8');
 const districtStory=fs.readFileSync(new URL('./district-story.js',import.meta.url),'utf8');
+const routeMemory=fs.readFileSync(new URL('./route-memory.js',import.meta.url),'utf8');
 const qa=fs.readFileSync(new URL('./qa.js',import.meta.url),'utf8');
 const releaseQa=fs.readFileSync(new URL('./release-qa.js',import.meta.url),'utf8');
 const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.17/);
-assert.match(html,/GAME V1\.17 • DISTRICT CIRCUITS \+ STORY ROUTING/);
+assert.match(html,/Game V1\.18/);
+assert.match(html,/GAME V1\.18 • NPC ROUTE ENCOUNTERS \+ DISTRICT MEMORY/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/<script src="district-story\.js"><\/script>/);
+assert.match(html,/<script src="route-memory\.js"><\/script>/);
 assert.match(html,/id="businessBoard"/);
 assert.match(html,/id="businessBtn"/);
 assert.match(html,/id="cityAssetsBtn"/);
@@ -105,6 +107,36 @@ for (const forbiddenStoryWrite of [
 ]) assert.equal(districtStory.includes(forbiddenStoryWrite),false,'story router must remain read-only: '+forbiddenStoryWrite);
 assert.match(progression,/district-story/);
 
+
+assert.match(routeMemory,/tgg-route-memory-v1/);
+assert.match(routeMemory,/window\.TGGRouteMemory/);
+for (const npc of ['m','producer','dj']) assert.match(routeMemory,new RegExp(npc+':'));
+for (const api of ['districtMemory','recordBeat','currentNpc','encounterCurrent','uniqueNpcIds','memorySnapshot','summarizeRemote','refreshRemoteMemory','render']) {
+  assert.match(routeMemory,new RegExp('function '+api+'\\b'));
+}
+assert.match(routeMemory,/npcEncounters/);
+assert.match(routeMemory,/memoryHistory/);
+assert.match(events,/TGGDistrictStory\?\.render/);
+assert.match(districtStory,/TGGRouteMemory\?\.recordBeat/);
+assert.match(districtStory,/TGGRouteMemory\?\.render/);
+assert.equal(routeMemory.includes('TGGGame?.reward'),false);
+assert.equal(routeMemory.includes('TGGCareer?.addRep'),false);
+assert.equal(routeMemory.includes('TGGEconomy?.apply'),false);
+for (const forbiddenNpcWrite of [
+  'tgg_world_mvp_v1_accept_mission',
+  'tgg_world_mvp_v1_complete_mission',
+  'tgg_world_start_story_arc',
+  'tgg_world_claim_story_chapter',
+  'tgg_world_join_location',
+  'tgg_world_join_location_at',
+  'tgg_world_v4_record_mission_evidence',
+  'tgg_world_v4_verify_and_complete_mission',
+  'tgg_world_social_post',
+  'tgg_world_social_comment',
+  'tgg_world_social_react'
+]) assert.equal(routeMemory.includes(forbiddenNpcWrite),false,'route memory must remain read-only: '+forbiddenNpcWrite);
+assert.match(progression,/know-the-city/);
+
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
 }
@@ -142,10 +174,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.17 District Circuits + Story Routing');
-assert.equal(release.base,'V1.16 City Circuits + Event Variants');
-assert.equal(auto.version,'1.17');
-assert.equal(qaManifest.version,'1.17');
+assert.equal(release.release,'V1.18 NPC Route Encounters + District Memory');
+assert.equal(release.base,'V1.17 District Circuits + Story Routing');
+assert.equal(auto.version,'1.18');
+assert.equal(qaManifest.version,'1.18');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -163,5 +195,8 @@ assert.ok(release.gates.includes('event_variants_cosmetic_only'));
 assert.ok(release.gates.includes('district_story_api'));
 assert.ok(release.gates.includes('remote_story_readonly'));
 assert.ok(release.gates.includes('story_router_no_rewards'));
+assert.ok(release.gates.includes('route_memory_api'));
+assert.ok(release.gates.includes('remote_memory_readonly'));
+assert.ok(release.gates.includes('route_memory_no_rewards'));
 
-console.log('GAME_V1_17_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_18_STATIC_CONTRACT_PASS');

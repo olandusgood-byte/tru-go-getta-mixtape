@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.24 Unified 3D Gameplay Slice",
-  "base": "V1.23 Verified 3D Animation + Landmarks",
+  "release": "V1.25 Starter Car + Drive Mode",
+  "base": "V1.24 Unified 3D Gameplay Slice",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -85,7 +85,11 @@
     "V1.24-UNIFIED-3D-INTERACTIONS",
     "V1.24-FIVE-ENTERABLE-HUBS",
     "V1.24-ANIMATED-HUB-APPROACH",
-    "V1.24-SINGLE-E-ACTION"
+    "V1.24-SINGLE-E-ACTION",
+    "V1.25-STARTER-CAR",
+    "V1.25-DRIVE-MODE",
+    "V1.25-CAR-FOLLOW-CAMERA",
+    "V1.25-UNIFIED-VEHICLE-INTERACTION"
   ],
   "gates": [
     "runtime_api_presence",
@@ -223,10 +227,19 @@
     "hub_enter_action",
     "single_e_action",
     "walk_animation_preserved",
-    "mission_interaction_preserved"
+    "mission_interaction_preserved",
+    "starter_car_mesh",
+    "vehicle_saved_state",
+    "vehicle_proximity_gate",
+    "drive_speed",
+    "vehicle_collision",
+    "car_follow_camera",
+    "wheel_animation",
+    "single_e_vehicle_action",
+    "vehicle_no_reward_path"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_webgl_ci_pass",
-  "release_checkpoint": "V1.24-UNIFIED-3D-GAMEPLAY-SLICE-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.25-STARTER-CAR-DRIVE-MODE-CANDIDATE",
   "production": "gated"
 }

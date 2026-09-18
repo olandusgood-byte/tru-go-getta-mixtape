@@ -605,6 +605,55 @@ async function runSmoke(target) {
       return {present:true,passed:checks.length>0&&checks.every(x=>x.pass),checks};
     });
 
+    const storyMission05 = await page.evaluate(() => {
+      const api=window.TGGStoryMission05;
+      const battle=window.TGGBattle;
+      if(!api||!battle)return {present:false,passed:false,checks:[{name:'story05-api',pass:false,detail:'missing'}]};
+      const checks=[];
+      const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      try{
+        localStorage.setItem('tgg-story-mission-v4',JSON.stringify({
+          accepted:true,choice:'festival',step:'complete',completed:true,rewardClaimed:true,
+          consequence:'FESTIVAL_BREAKOUT',performanceScore:105,updatedAt:Date.now()
+        }));
+        localStorage.removeItem('tgg-story-mission-v5');
+        Object.assign(api.state,{accepted:false,style:null,step:'locked',completed:false,rewardClaimed:false,consequence:null,battleScore:0,updatedAt:0});
+        api.save();battle.reset();api.sync(false);
+
+        record('story05-api',api.mission?.id==='rival-callout');
+        record('story05-ui',Boolean(document.getElementById('mission05Btn'))&&Boolean(document.getElementById('battleBoard'))&&document.querySelectorAll('[data-battle-move]').length===3);
+        record('story05-unlocked',api.mission04Complete()===true);
+        record('story05-accept',api.accept()===true&&api.state.accepted===true&&api.state.step==='choice');
+        record('story05-bars-choice',api.choose('bars')===true&&api.state.style==='bars'&&api.state.consequence==='BAR_FOR_BAR');
+        record('story05-choice-persist',JSON.parse(localStorage.getItem('tgg-story-mission-v5')||'{}')?.style==='bars');
+
+        const started=api.act();
+        record('battle-start',started===true&&battle.state.started===true&&battle.state.style==='bars'&&document.getElementById('battleBoard')?.classList.contains('active')===true);
+
+        const a=battle.act('setup'),b=battle.act('punchline'),d=battle.act('rebuttal');
+        record('battle-three-rounds',a===true&&b===true&&d===true&&battle.state.moves.length===3);
+        record('battle-score',battle.state.score>battle.state.rivalScore,String(battle.state.score)+'>'+String(battle.state.rivalScore));
+        record('battle-win',battle.state.completed===true&&battle.state.won===true&&battle.state.rewardClaimed===true);
+
+        const repeat=battle.act('setup');
+        record('battle-no-repeat',repeat===false);
+
+        api.sync(false);
+        record('story05-return',api.state.step==='return');
+
+        const cashBefore=Number(window.TGGGame?.getState?.()?.cash||0);
+        const claimed=api.claim();
+        const cashAfter=Number(window.TGGGame?.getState?.()?.cash||0);
+        record('story05-claim',claimed===true&&api.state.completed===true&&api.state.rewardClaimed===true&&api.state.battleScore===battle.state.score);
+        record('story05-route-reward',cashAfter>=cashBefore+api.mission.styles.bars.reward.cash,`${cashBefore}->${cashAfter}`);
+        const secondBefore=Number(window.TGGGame?.getState?.()?.cash||0);
+        const second=api.claim();
+        record('story05-reward-once',second===false&&Number(window.TGGGame?.getState?.()?.cash||0)===secondBefore);
+        record('story05-distinct-styles',api.mission.styles.bars.reward.cash!==api.mission.styles.crowd.reward.cash&&api.mission.styles.bars.consequence!==api.mission.styles.crowd.consequence);
+      }catch(error){record('story05-exception',false,error?.message||String(error));}
+      return {present:true,passed:checks.length>0&&checks.every(x=>x.pass),checks};
+    });
+
     const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
     await context.close();
 
@@ -638,6 +687,7 @@ async function runSmoke(target) {
       storyMission02?.passed === true &&
       storyMission03?.passed === true &&
       storyMission04?.passed === true &&
+      storyMission05?.passed === true &&
       pageErrors.length === 0 &&
       consoleErrors.length === 0 &&
       failedResources.length === 0 &&
@@ -665,6 +715,7 @@ async function runSmoke(target) {
       story_mission_02: storyMission02,
       story_mission_03: storyMission03,
       story_mission_04: storyMission04,
+      story_mission_05: storyMission05,
       gameplay,
       dom,
       console_errors: consoleErrors,

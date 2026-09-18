@@ -23,6 +23,12 @@
       streetEvents.sets.momentum=Math.max(0,Math.min(100,num(streetEvents.sets.momentum,0)));
       streetEvents.sets.bestMomentum=Math.max(streetEvents.sets.momentum,Math.max(0,Math.min(100,num(streetEvents.sets.bestMomentum,0))));
       streetEvents.sets.lastEvent=typeof streetEvents.sets.lastEvent==='string'?streetEvents.sets.lastEvent:null;
+      if(!streetEvents.audience||typeof streetEvents.audience!=='object'||Array.isArray(streetEvents.audience))streetEvents.audience={people:{},crews:{},history:[],updatedAt:0,lastEvent:null};
+      if(!streetEvents.audience.people||typeof streetEvents.audience.people!=='object'||Array.isArray(streetEvents.audience.people))streetEvents.audience.people={};
+      if(!streetEvents.audience.crews||typeof streetEvents.audience.crews!=='object'||Array.isArray(streetEvents.audience.crews))streetEvents.audience.crews={};
+      if(!Array.isArray(streetEvents.audience.history))streetEvents.audience.history=[];
+      streetEvents.audience.updatedAt=num(streetEvents.audience.updatedAt,Date.now());
+      streetEvents.audience.lastEvent=typeof streetEvents.audience.lastEvent==='string'?streetEvents.audience.lastEvent:null;
       streetEvents.updatedAt=num(streetEvents.updatedAt,Date.now());
       localStorage.setItem(keys.streetEvents,JSON.stringify(streetEvents));
     }

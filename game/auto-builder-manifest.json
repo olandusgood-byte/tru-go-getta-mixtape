@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.33",
-  "module": "GAME-V1.33",
-  "name": "Street Reputation + Event Variants Checkpoint",
+  "version": "1.34",
+  "module": "GAME-V1.34",
+  "name": "Street Sets + Crowd Momentum Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -114,10 +114,18 @@
     "street_rank": true,
     "event_variant_catalog": true,
     "street_rep_persistence": true,
-    "street_rep_achievements": true
+    "street_rep_achievements": true,
+    "street_sets_api": true,
+    "street_set_ordering": true,
+    "street_set_persistence": true,
+    "crowd_momentum": true,
+    "momentum_crowd_bonus": true,
+    "street_sets_no_rewards": true,
+    "street_sets_single_store": true,
+    "street_set_achievements": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.34 STREET SETS + CROWD MOMENTUM",
-  "verification": "passed"
+  "next": "V1.35 STREET CREWS + AUDIENCE MEMORY",
+  "verification": "pending_ci"
 }

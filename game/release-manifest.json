@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.24 Living 3D City Playtest",
-  "base": "V1.23 3D City Destinations Playtest",
+  "release": "V1.25 Cinematic Camera + Radar Playtest",
+  "base": "V1.24 Living 3D City Playtest",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -85,7 +85,11 @@
     "V1.23-NEON-LABELS",
     "V1.24-3D-PEDESTRIANS",
     "V1.24-AMBIENT-TRAFFIC",
-    "V1.24-LIVING-CITY-ANIMATION"
+    "V1.24-LIVING-CITY-ANIMATION",
+    "V1.25-CAMERA-MODES",
+    "V1.25-LIVE-RADAR",
+    "V1.25-NIGHT-SKY-POLISH",
+    "V1.25-PLAYER-CAR-RADAR-TRACKING"
   ],
   "gates": [
     "runtime_api_presence",
@@ -216,10 +220,16 @@
     "pedestrian_population",
     "pedestrian_animation",
     "ambient_traffic",
-    "traffic_animation"
+    "traffic_animation",
+    "camera_mode_orbit",
+    "camera_mode_chase",
+    "camera_mode_top",
+    "live_radar",
+    "radar_destinations",
+    "night_sky_polish"
   ],
   "static_gate": "passed",
   "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.24-LIVING-3D-CITY-PLAYTEST-CANDIDATE",
+  "release_checkpoint": "V1.25-CINEMATIC-RADAR-PLAYTEST-CANDIDATE",
   "production": "playtest"
 }

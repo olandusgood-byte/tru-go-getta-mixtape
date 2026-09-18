@@ -194,6 +194,18 @@
   const car=makeCar();
   car.position.set(5.7,0,4.6);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
   const vehicleDynamics={speed:0,steer:0,braking:false,handbrake:false};
+  const playerDynamics={speed:0,targetSpeed:0,moving:false,sprinting:false,blocked:false,vx:0,vy:0,heading:0};
+  function setPlayerDynamics(next={}){
+    playerDynamics.speed=Math.max(0,Number(next.speed)||0);
+    playerDynamics.targetSpeed=Math.max(0,Number(next.targetSpeed)||0);
+    playerDynamics.moving=!!next.moving;
+    playerDynamics.sprinting=!!next.sprinting;
+    playerDynamics.blocked=!!next.blocked;
+    playerDynamics.vx=Number(next.vx)||0;
+    playerDynamics.vy=Number(next.vy)||0;
+    playerDynamics.heading=Number(next.heading)||0;
+    return {...playerDynamics};
+  }
   function setVehicleDynamics(next={}){
     vehicleDynamics.speed=Number(next.speed)||0;
     vehicleDynamics.steer=Math.max(-1,Math.min(1,Number(next.steer)||0));
@@ -230,6 +242,12 @@
   function getCameraMode(){return cameraMode;}
 
   let lastPlayerX=0,lastPlayerZ=0,walkPhase=0;
+  const smoothCameraTarget=new THREE.Vector3(0,2.2,0);
+  function lerpAngleRad(a,b,t){
+    let d=(b-a+Math.PI)%(Math.PI*2)-Math.PI;
+    if(d<-Math.PI)d+=Math.PI*2;
+    return a+d*t;
+  }
 
   renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture?.(e.pointerId)});
   renderer.domElement.addEventListener('pointermove',e=>{
@@ -452,23 +470,34 @@
       syncCarFromState(s);
     }else{
       player.visible=true;
-      player.position.x=THREE.MathUtils.lerp(player.position.x,p.x,.18);
-      player.position.z=THREE.MathUtils.lerp(player.position.z,p.z,.18);
-      player.rotation.y=-((Number(s.heading)||0)*Math.PI/180)+Math.PI/2;
+      const posResponse=playerDynamics.sprinting?16:12;
+      const posAlpha=1-Math.exp(-posResponse*dt);
+      player.position.x=THREE.MathUtils.lerp(player.position.x,p.x,posAlpha);
+      player.position.z=THREE.MathUtils.lerp(player.position.z,p.z,posAlpha);
+      const targetRotation=-((Number(s.heading)||0)*Math.PI/180)+Math.PI/2;
+      player.rotation.y=lerpAngleRad(player.rotation.y,targetRotation,1-Math.exp(-14*dt));
     }
 
     const vx=player.position.x-lastPlayerX,vz=player.position.z-lastPlayerZ;
-    const speed=Math.min(1,Math.hypot(vx,vz)*8);
+    const measured=Math.hypot(vx,vz)/Math.max(dt,.001);
+    const motionRatio=s.inVehicle?0:Math.min(1,Math.max(playerDynamics.speed/13.4,measured/10));
     lastPlayerX=player.position.x;lastPlayerZ=player.position.z;
     const parts=player.userData.parts;
     if(parts){
-      if(speed>.025&&!s.inVehicle)walkPhase+=dt*(7+speed*8);
-      const swing=!s.inVehicle?Math.sin(walkPhase)*.72*speed:0;
-      parts.leftArm.rotation.x=THREE.MathUtils.lerp(parts.leftArm.rotation.x,swing,.22);
-      parts.rightArm.rotation.x=THREE.MathUtils.lerp(parts.rightArm.rotation.x,-swing,.22);
-      parts.leftLeg.rotation.x=THREE.MathUtils.lerp(parts.leftLeg.rotation.x,-swing*.85,.22);
-      parts.rightLeg.rotation.x=THREE.MathUtils.lerp(parts.rightLeg.rotation.x,swing*.85,.22);
-      parts.body.rotation.z=THREE.MathUtils.lerp(parts.body.rotation.z,Math.sin(walkPhase*2)*.025*speed,.18);
+      if(motionRatio>.015&&!s.inVehicle){
+        const cadence=playerDynamics.sprinting?13.5:8.8;
+        walkPhase+=dt*(cadence+motionRatio*4.5);
+      }
+      const gait=playerDynamics.sprinting?1.0:.72;
+      const swing=!s.inVehicle?Math.sin(walkPhase)*gait*motionRatio:0;
+      const animAlpha=1-Math.exp(-16*dt);
+      parts.leftArm.rotation.x=THREE.MathUtils.lerp(parts.leftArm.rotation.x,swing,animAlpha);
+      parts.rightArm.rotation.x=THREE.MathUtils.lerp(parts.rightArm.rotation.x,-swing,animAlpha);
+      parts.leftLeg.rotation.x=THREE.MathUtils.lerp(parts.leftLeg.rotation.x,-swing*.88,animAlpha);
+      parts.rightLeg.rotation.x=THREE.MathUtils.lerp(parts.rightLeg.rotation.x,swing*.88,animAlpha);
+      parts.body.rotation.z=THREE.MathUtils.lerp(parts.body.rotation.z,Math.sin(walkPhase*2)*.035*motionRatio,animAlpha);
+      parts.body.rotation.x=THREE.MathUtils.lerp(parts.body.rotation.x,playerDynamics.sprinting?.07:.015*motionRatio,animAlpha);
+      player.position.y=THREE.MathUtils.lerp(player.position.y,!s.inVehicle&&motionRatio>.03?Math.abs(Math.sin(walkPhase))*0.045*motionRatio:0,animAlpha);
     }
 
     const visualSpeed=s.inVehicle?vehicleDynamics.speed:0;
@@ -492,21 +521,26 @@
     traffic.forEach(v=>animateTraffic(v,t,dt));
 
     const subject=s.inVehicle?car.position:player.position;
-    const target=new THREE.Vector3(subject.x,s.inVehicle?1.5:2.2,subject.z);
+    const leadScale=s.inVehicle?.10:.085;
+    const leadX=s.inVehicle?Math.cos((Number(s.heading)||0)*Math.PI/180)*vehicleDynamics.speed*leadScale:playerDynamics.vx*leadScale;
+    const leadZ=s.inVehicle?Math.sin((Number(s.heading)||0)*Math.PI/180)*vehicleDynamics.speed*leadScale:playerDynamics.vy*leadScale;
+    const rawTarget=new THREE.Vector3(subject.x+leadX,s.inVehicle?1.5:2.2,subject.z+leadZ);
+    smoothCameraTarget.lerp(rawTarget,1-Math.exp(-(s.inVehicle?8:10)*dt));
+    const target=smoothCameraTarget;
     let desired;
-    let cameraLerp=.09;
+    let cameraResponse=7.5;
     if(cameraMode==='top'){
       desired=new THREE.Vector3(target.x,32,target.z+.01);
-      cameraLerp=.14;
+      cameraResponse=10;
     }else if(cameraMode==='chase'){
       const heading=(Number(s.heading)||0)*Math.PI/180;
-      const chaseDistance=s.inVehicle?18:13;
+      const chaseDistance=s.inVehicle?18:(playerDynamics.sprinting?14.5:13);
       desired=new THREE.Vector3(
         target.x-Math.cos(heading)*chaseDistance,
         target.y+(s.inVehicle?7.5:6.2),
         target.z-Math.sin(heading)*chaseDistance
       );
-      cameraLerp=s.inVehicle ? .16 : .12;
+      cameraResponse=s.inVehicle?10:8.5;
     }else{
       const cp=Math.cos(pitch),sp=Math.sin(pitch);
       const followDistance=s.inVehicle?Math.max(12,distance):distance;
@@ -515,9 +549,9 @@
         target.y+followDistance*sp,
         target.z+Math.cos(yaw)*followDistance*cp
       );
-      cameraLerp=s.inVehicle ? .12 : .085;
+      cameraResponse=s.inVehicle?8:6.5;
     }
-    camera.position.lerp(desired,cameraLerp);
+    camera.position.lerp(desired,1-Math.exp(-cameraResponse*dt));
     camera.lookAt(target);
 
     npc.position.y=Math.sin(t*2)*.05;
@@ -570,6 +604,8 @@
     getCarHeading:()=>Number(car.userData.headingDeg)||0,
     setVehicleDynamics,
     getVehicleDynamics:()=>({...vehicleDynamics}),
+    setPlayerDynamics,
+    getPlayerDynamics:()=>({...playerDynamics}),
     setCarAppearance,
     destinations,
     nearbyDestination,

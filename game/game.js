@@ -75,7 +75,7 @@
     $('hudCash') && ($('hudCash').textContent=state.cash);
     $('hudXp') && ($('hudXp').textContent=state.xp);
     $('hudNext') && ($('hudNext').textContent=state.level*100);
-    if($('player')){$('player').style.left=state.x+'%';$('player').style.top=state.y+'%'}
+    if($('player')){$('player').style.left=state.x+'%';$('player').style.top=state.y+'%';$('player').style.setProperty('--player-turn',Math.max(-18,Math.min(18,Math.cos((Number(state.heading)||0)*Math.PI/180)*18))+'deg')}
     window.TGGAvatar?.renderMini?.();
     $('missionStatus') && ($('missionStatus').textContent=state.accepted?'Mission active — finish the job.':'Find M and start a mission.');
     $('missionBtn') && ($('missionBtn').textContent=state.mission?(state.accepted?'COMPLETE MISSION':'TAKE MISSION'):'TALK TO M');

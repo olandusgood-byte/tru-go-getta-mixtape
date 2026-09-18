@@ -1,0 +1,28 @@
+/* V2.19 CITY INTERACTIONS 100 */
+body.tgg-v219 .v219-panel{position:fixed;left:50%;top:50%;z-index:165;display:grid;gap:10px;width:min(430px,calc(100vw - 24px));padding:16px;transform:translate(-50%,-46%) scale(.97);opacity:0;pointer-events:none;border:1px solid #ffffff20;border-radius:21px;background:linear-gradient(145deg,#080b12f8,#111827f8);box-shadow:0 32px 110px #000e;transition:.2s ease}
+body.tgg-v219 .v219-panel.active{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+body.tgg-v219 .v219-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+body.tgg-v219 .v219-head small{font-size:7px;font-weight:900;letter-spacing:.18em;color:#c7ff00}
+body.tgg-v219 .v219-head button{width:30px;height:30px;border:1px solid #ffffff18;border-radius:50%;background:#111722;color:#fff;font-size:18px;cursor:pointer}
+body.tgg-v219 .v219-panel>b{font-size:18px;color:#fff}
+body.tgg-v219 .v219-panel>span{font-size:10px;line-height:1.5;color:#c4cbda}
+body.tgg-v219 .v219-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+body.tgg-v219 .v219-actions button{min-height:43px;border:1px solid #ffffff18;border-radius:11px;background:#111722;color:#fff;font-size:8px;font-weight:900;letter-spacing:.09em;cursor:pointer}
+body.tgg-v219 .v219-actions button:hover,body.tgg-v219 .v219-actions button:focus-visible{outline:none;border-color:#c7ff00;color:#c7ff00}
+body.tgg-v219 .v219-near-hud{position:absolute;left:50%;bottom:20px;z-index:14;display:none;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;min-width:240px;padding:8px 10px;transform:translateX(-50%);border:1px solid #ffffff16;border-radius:999px;background:#070b12df;box-shadow:0 12px 40px #0009}
+body.tgg-v219 .v219-near-hud.active{display:grid}
+body.tgg-v219 .v219-near-hud small{font-size:6px;font-weight:900;letter-spacing:.14em;color:#7f899c}
+body.tgg-v219 .v219-near-hud b{font-size:8px;color:#fff;letter-spacing:.08em}
+body.tgg-v219 .v219-near-hud span{font-size:7px;font-weight:900;color:#c7ff00}
+body.tgg-v219 .v219-photo-flash{position:fixed;inset:0;z-index:180;pointer-events:none;background:#fff;opacity:0}
+body.tgg-v219 .v219-photo-flash.active{animation:v219-flash .26s ease-out}
+body.tgg-v219 .sr-only{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@keyframes v219-flash{0%{opacity:.92}100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){body.tgg-v219 .v219-panel{transition:none!important}body.tgg-v219 .v219-photo-flash.active{animation-duration:.05s!important}}
+@media(max-width:700px){
+ body.tgg-v219 .v219-panel{padding:13px;border-radius:17px}
+ body.tgg-v219 .v219-actions{grid-template-columns:1fr}
+ body.tgg-v219 .v219-actions button{min-height:48px}
+ body.tgg-v219 .v219-near-hud{bottom:max(8px,env(safe-area-inset-bottom));min-width:0;width:calc(100% - 34px)}
+}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v219 .v219-panel{width:min(520px,72vw);max-height:90vh;overflow:auto}body.tgg-v219 .v219-actions{grid-template-columns:1fr 1fr}}

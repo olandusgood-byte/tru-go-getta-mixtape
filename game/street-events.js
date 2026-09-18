@@ -24,7 +24,7 @@
       {min:5,id:'mixtape-ave-live',name:'MIXTAPE AVE LIVE'},
       {min:9,id:'city-premiere',name:'CITY PREMIERE'}
     ]
-  ];
+  };
   let state={completed:[],runs:{},lastEvent:null,crowdHype:0,bestHype:0,streetRep:0,updatedAt:0};
   let active=null;
   let activeTimer=null;

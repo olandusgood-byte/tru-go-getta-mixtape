@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.21",
-  "module": "GAME-V1.21",
-  "name": "3D World Foundation Checkpoint",
+  "version": "1.22",
+  "module": "GAME-V1.22",
+  "name": "3D Collision + Walkable Districts Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -78,10 +78,16 @@
     "third_person_camera": true,
     "player_state_sync_3d": true,
     "webgl_fallback": true,
-    "three_pin_0_186_0": true
+    "three_pin_0_186_0": true,
+    "world3d_collision_api": true,
+    "building_collision_map": true,
+    "authoritative_move_collision": true,
+    "collision_slide": true,
+    "district_awareness": true,
+    "mission_npc_alignment": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.22 3D COLLISION + WALKABLE DISTRICTS",
-  "verification": "passed"
+  "next": "V1.23 3D ANIMATION + INTERACTION PROMPTS",
+  "verification": "pending_ci"
 }

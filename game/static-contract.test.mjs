@@ -18,8 +18,8 @@ const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',impor
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.22/);
-assert.match(html,/GAME V1\.22 • 3D COLLISION \+ WALKABLE DISTRICTS/);
+assert.match(html,/Game V1\.23/);
+assert.match(html,/GAME V1\.23 • 3D ANIMATION \+ INTERACTION PROMPTS/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/<script src="district-story\.js"><\/script>/);
@@ -28,6 +28,7 @@ assert.match(html,/<script src="contact-opportunities\.js"><\/script>/);
 assert.match(html,/<script src="world3d\.js"><\/script>/);
 assert.match(html,/id="world3dBadge"/);
 assert.match(html,/id="worldDistrictBadge"/);
+assert.match(html,/id="interactionPrompt"/);
 assert.match(html,/id="businessBoard"/);
 assert.match(html,/id="businessBtn"/);
 assert.match(html,/id="cityAssetsBtn"/);
@@ -53,6 +54,13 @@ assert.match(world3d,/districtAtPercent/);
 assert.match(world3d,/collisionBoxes/);
 assert.match(world3d,/percentToWorld\(72,36\)/);
 assert.match(game,/TGGWorld3D\?\.constrainPercent/);
+assert.match(world3d,/version:'1\.23\.0'/);
+assert.match(world3d,/userData\.rig/);
+assert.match(world3d,/walkPhase/);
+assert.match(world3d,/nearestInteraction/);
+assert.match(world3d,/activateNearest/);
+assert.match(world3d,/interactionPrompt/);
+assert.match(world3d,/missionBtn/);
 
 assert.match(business,/VERSION='1\.14\.0'/);
 assert.match(business,/window\.TGGBusiness/);
@@ -235,10 +243,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.22 3D Collision + Walkable Districts');
-assert.equal(release.base,'V1.21 3D World Foundation');
-assert.equal(auto.version,'1.22');
-assert.equal(qaManifest.version,'1.22');
+assert.equal(release.release,'V1.23 3D Animation + Interaction Prompts');
+assert.equal(release.base,'V1.22 3D Collision + Walkable Districts');
+assert.equal(auto.version,'1.23');
+assert.equal(qaManifest.version,'1.23');
 assert.ok(['candidate_pending_ci','automated_ci_pass','automated_webgl_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -271,5 +279,8 @@ assert.ok(release.gates.includes('player_state_sync_3d'));
 assert.ok(release.gates.includes('world3d_collision_api'));
 assert.ok(release.gates.includes('authoritative_move_collision'));
 assert.ok(release.gates.includes('mission_npc_alignment'));
+assert.ok(release.gates.includes('walk_rig_animation'));
+assert.ok(release.gates.includes('proximity_interaction_api'));
+assert.ok(release.gates.includes('shared_mission_action'));
 
-console.log('GAME_V1_22_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_23_STATIC_CONTRACT_PASS');

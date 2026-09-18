@@ -197,6 +197,74 @@ app.get('/v1/realtime/events', auth, async (req,res,next)=>{
   } catch(e){next(e);}
 });
 
+
+app.get('/v1/storage/buckets', auth, async (_req,res,next)=>{
+  try {
+    const r=await pool.query('select bucket_key,visibility,max_bytes,allowed_mime_types from tgg_storage_buckets order by bucket_key');
+    res.json({buckets:r.rows});
+  } catch(e){next(e);}
+});
+
+app.post('/v1/storage/uploads', auth, async (req,res,next)=>{
+  try {
+    const {bucket_key,object_key,mime_type,size_bytes,metadata={}}=req.body||{};
+    if(!bucket_key||!object_key) return res.status(400).json({error:'bucket_key_and_object_key_required'});
+    const b=await pool.query('select bucket_key from tgg_storage_buckets where bucket_key=$1',[bucket_key]);
+    if(!b.rowCount) return res.status(404).json({error:'storage_bucket_not_found'});
+    const r=await pool.query(
+      'insert into tgg_media_uploads(owner_user_id,bucket_key,object_key,metadata) values($1,$2,$3,$4) returning *',
+      [req.user.id,bucket_key,object_key,{...metadata,mime_type:mime_type||null,size_bytes:size_bytes||null}]
+    );
+    res.status(201).json({upload:r.rows[0]});
+  } catch(e){next(e);}
+});
+
+app.post('/v1/jobs', auth, async (req,res,next)=>{
+  try {
+    const {queue='default',job_type,payload={},priority=0,max_attempts=3}=req.body||{};
+    if(!job_type) return res.status(400).json({error:'job_type_required'});
+    const r=await pool.query(
+      'insert into tgg_jobs(queue,job_type,payload,priority,max_attempts) values($1,$2,$3,$4,$5) returning *',
+      [queue,job_type,payload,priority,max_attempts]
+    );
+    await pool.query('select pg_notify($1,$2)',['tgg_jobs',JSON.stringify({id:r.rows[0].id,queue,job_type})]);
+    res.status(201).json({job:r.rows[0]});
+  } catch(e){next(e);}
+});
+
+app.get('/v1/jobs', auth, async (req,res,next)=>{
+  try {
+    const queue=String(req.query.queue||'default');
+    const r=await pool.query(
+      "select * from tgg_jobs where queue=$1 and status in ('queued','running') order by priority desc,created_at asc limit 100",
+      [queue]
+    );
+    res.json({jobs:r.rows});
+  } catch(e){next(e);}
+});
+
+app.post('/v1/browser/sessions', auth, async (req,res,next)=>{
+  try {
+    const r=await pool.query(
+      'insert into tgg_browser_sessions(user_id,session_key,metadata) values($1,$2,$3) returning *',
+      [req.user.id,crypto.randomBytes(24).toString('hex'),req.body?.metadata||{}]
+    );
+    res.status(201).json({session:r.rows[0]});
+  } catch(e){next(e);}
+});
+
+app.post('/v1/certifications', auth, async (req,res,next)=>{
+  try {
+    const {browser_session_id,certification_type,evidence={}}=req.body||{};
+    if(!certification_type) return res.status(400).json({error:'certification_type_required'});
+    const r=await pool.query(
+      'insert into tgg_certifications(browser_session_id,user_id,certification_type,evidence) values($1,$2,$3,$4) returning *',
+      [browser_session_id||null,req.user.id,certification_type,evidence]
+    );
+    res.status(201).json({certification:r.rows[0]});
+  } catch(e){next(e);}
+});
+
 app.use((err,_req,res,_next)=>{
   console.error('[TGG Core]',err);
   res.status(500).json({error:'internal_error'});

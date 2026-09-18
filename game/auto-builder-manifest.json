@@ -48,5 +48,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
   "next": "V1.17 DISTRICT CIRCUITS + STORY ROUTING",
-  "verification": "pending_ci"
+  "verification": "passed"
 }

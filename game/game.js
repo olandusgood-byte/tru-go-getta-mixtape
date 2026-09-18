@@ -101,9 +101,15 @@
 
   function move(dx,dy){
     if(activeScreen!=='game')return false;
+    const nextX=Math.max(3,Math.min(94,state.x+dx));
+    const nextY=Math.max(8,Math.min(88,state.y+dy));
+    if(window.TGGWorld3D?.canMovePercent&&!window.TGGWorld3D.canMovePercent(nextX,nextY)){
+      toast('BLOCKED — GO AROUND');
+      return false;
+    }
     if(dx||dy)state.heading=Math.atan2(dy,dx)*180/Math.PI;
-    state.x=Math.max(3,Math.min(94,state.x+dx));
-    state.y=Math.max(8,Math.min(88,state.y+dy));
+    state.x=nextX;
+    state.y=nextY;
     update();
     if(state.accepted&&Math.abs(state.x-72)<5&&Math.abs(state.y-36)<6)toast('You found the mission spot — hit COMPLETE MISSION');
     return true;

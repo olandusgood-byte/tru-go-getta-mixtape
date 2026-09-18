@@ -1,44 +1,59 @@
-# TRU GO GETTA Game V1.22
+# TRU GO GETTA Game V1.24
 
-V1.22 turns the V1.21 WebGL city into a walkable 3D space with building collision and live district awareness.
+V1.24 consolidates the two verified V1.23 3D tracks into one gameplay branch instead of keeping separate animation and landmark experiments.
 
-## 3D movement
+## Unified 3D gameplay
 
-- Authoritative `TGGGame.move()` now asks the 3D world to constrain proposed movement.
-- Building footprints block the player.
-- Diagonal movement can slide along an open axis instead of stopping unnecessarily.
-- Existing x/y save coordinates remain the single player-position store.
-- WebGL failure still falls back to the verified 2.5D movement surface.
+The V1.24 WebGL city now keeps all of the verified V1.23 animation/interaction behavior:
 
-## District awareness
+- animated walk rig;
+- building collision + slide;
+- live district awareness;
+- third-person follow/orbit camera;
+- Manager M facing the player;
+- one in-world proximity prompt;
+- keyboard/click interaction through the same action path.
 
-The 3D HUD reports the nearest live district while you move:
+It also adds the five verified 3D hub landmarks:
 
-- Studio Row
-- Downtown
-- Mixtape Ave
+- TRU GO GETTA STUDIOS → Recording Studio
+- THE PARK → Park
+- SHOP DISTRICT → Shops
+- MY APARTMENT → Home
+- MEDIA DISTRICT → Media
 
-## Mission alignment
+## One interaction system
 
-Manager M's 3D model now uses the same x=72 / y=36 target that the existing mission system checks, so the visible NPC and gameplay objective agree.
+The same `E` / proximity action selects the nearest valid target.
+
+- Near M: **TALK TO M**
+- Near a hub: **ENTER <HUB>**
+
+No second interaction UI or duplicate input handler is introduced.
+
+## Preserved systems
+
+The V1.20–V1.23 gameplay stack remains intact: save/continue, missions, economy, city events/mastery, circuits, district story, NPC memory, relationships, contact opportunities, read-only Creator OS/world discovery, and the 2.5D fallback.
 
 ## Verification
 
-- [x] V1.22 static contract
-- [x] collision map loaded from the same building footprints used by the renderer
-- [x] known building footprint blocks occupancy
-- [x] collision resolver slides when one axis is open
-- [x] real keyboard movement is stopped by a building
-- [x] collision counter increments
-- [x] Downtown live district badge updates
-- [x] Manager M 3D position matches mission coordinates
-- [x] all V1.21 camera/player WebGL checks remain green
+- [x] V1.24 static contract
+- [x] five 3D hub catalog entries
+- [x] animated player movement preserved
+- [x] Manager M interaction preserved
+- [x] nearest-target interaction chooses NPC or hub
+- [x] Studio hub entry + return
+- [x] Park hub entry + return
+- [x] Shops hub entry + return
+- [x] Apartment hub entry + return
+- [x] Media hub entry + return
+- [x] existing mission/economy/NPC regression coverage remains green
 - [x] Static CI PASS
-- [x] 3D Collision Chromium Smoke PASS
+- [x] WebGL Chromium Smoke PASS
 - [x] production remains gated
 
 ## Release status
 
-**V1.22-3D-COLLISION-WALKABLE-DISTRICTS-VERIFIED.**
+**V1.24-UNIFIED-3D-GAMEPLAY-SLICE-VERIFIED.**
 
-Next internal development layer: **V1.23 3D Animation + Interaction Prompts**.
+Next internal development layer: **V1.25 Starter Car + Drive Mode**.

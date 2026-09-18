@@ -5,20 +5,29 @@ const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
 const business=fs.readFileSync(new URL('./business.js',import.meta.url),'utf8');
 const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
 const qa=fs.readFileSync(new URL('./qa.js',import.meta.url),'utf8');
+const releaseQa=fs.readFileSync(new URL('./release-qa.js',import.meta.url),'utf8');
 const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.13/);
-assert.match(html,/GAME V1\.13 • PROGRESSION \+ BUSINESS DISCOVERY/);
+assert.match(html,/Game V1\.14/);
+assert.match(html,/GAME V1\.14 • LIVE CITY \+ READ-ONLY WORLD ASSETS/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/id="businessBoard"/);
 assert.match(html,/id="businessBtn"/);
+assert.match(html,/id="cityAssetsBtn"/);
 
+assert.match(business,/VERSION='1\.14\.0'/);
 assert.match(business,/window\.TGGBusiness/);
 assert.match(business,/worldAssetsBundle/);
 assert.match(business,/tgg-business-v1/);
-assert.match(business,/V1\.13 • CITY BUSINESS \+ VEHICLE HUB/);
+assert.match(business,/V1\.14 • LIVE CITY \+ READ-ONLY WORLD ASSETS/);
+for (const api of ['loadAssets','renderAssets','activitySnapshot','inspectProperty','inspectVehicle']) {
+  assert.match(business,new RegExp('function '+api+'\\b'));
+}
+assert.match(business,/readOnly:true/);
+assert.match(business,/const esc=/);
+assert.match(business,/esc\(assetName\(/);
 
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
@@ -50,13 +59,21 @@ for (const token of forbidden) {
   assert.equal(business.includes(token),false,'business layer must not contain '+token);
 }
 
-assert.match(qa,/business-api/);
-assert.match(qa,/business-catalog/);
-assert.match(qa,/business-persistence/);
-assert.equal(release.release,'V1.13 Progression + Business Discovery');
-assert.equal(auto.version,'1.13');
-assert.equal(qaManifest.version,'1.13');
+for (const token of ['business-assets-loader','live-city-activity-snapshot','property-readonly-inspect','vehicle-readonly-inspect','city-assets-hotspot']) {
+  assert.match(qa,new RegExp(token));
+}
+for (const token of ['business assets loader','live city activity snapshot','property readonly inspect','vehicle readonly inspect','city assets hotspot']) {
+  assert.match(releaseQa,new RegExp(token));
+}
+
+assert.equal(release.release,'V1.14 Live City + Read-Only World Assets');
+assert.equal(release.base,'V1.13 Progression + Business Discovery');
+assert.equal(auto.version,'1.14');
+assert.equal(qaManifest.version,'1.14');
 assert.equal(release.browser_smoke,'manual_only');
 assert.equal(release.production,'gated');
+assert.ok(release.modules.includes('V1.14-LIVE-CITY-ACTIVITY-SURFACE'));
+assert.ok(release.modules.includes('V1.14-WORLD-ASSET-READONLY-INSPECT'));
+assert.ok(release.gates.includes('remote_label_escape'));
 
-console.log('GAME_V1_13_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_14_STATIC_CONTRACT_PASS');

@@ -165,15 +165,35 @@
     const wheels=[];
     [[-1.35,.46,-1.02],[-1.35,.46,1.02],[1.35,.46,-1.02],[1.35,.46,1.02]].forEach(([x,y,z])=>{
       const w=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.34,14),dark);
-      w.rotation.x=Math.PI/2;w.position.set(x,y,z);w.castShadow=true;car.add(w);wheels.push(w);
+      w.rotation.x=Math.PI/2;w.position.set(x,y,z);w.castShadow=true;w.userData.front=x>0;car.add(w);wheels.push(w);
     });
-    const headMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xeaffff,emissiveIntensity:2.5});
-    [-.65,.65].forEach(z=>{const h=new THREE.Mesh(new THREE.BoxGeometry(.06,.24,.34),headMat);h.position.set(2.12,1.0,z);car.add(h)});
+    const headMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xeaffff,emissiveIntensity:3.4});
+    const brakeMat=new THREE.MeshStandardMaterial({color:0xff2020,emissive:0xff1010,emissiveIntensity:.9});
+    const headlights=[];
+    const brakeLights=[];
+    [-.65,.65].forEach(z=>{
+      const h=new THREE.Mesh(new THREE.BoxGeometry(.06,.24,.34),headMat);
+      h.position.set(2.12,1.0,z);car.add(h);headlights.push(h);
+      const b=new THREE.Mesh(new THREE.BoxGeometry(.06,.22,.30),brakeMat.clone());
+      b.position.set(-2.12,.95,z);car.add(b);brakeLights.push(b);
+    });
+    const headGlow=new THREE.PointLight(0xdff8ff,3.8,12,2);
+    headGlow.position.set(2.45,1.15,0);car.add(headGlow);
     car.userData.wheels=wheels;
+    car.userData.headlights=headlights;
+    car.userData.brakeLights=brakeLights;
+    car.userData.headGlow=headGlow;
     return car;
   }
   const car=makeCar();
   car.position.set(5.7,0,4.6);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
+  const vehicleDynamics={speed:0,steer:0,braking:false};
+  function setVehicleDynamics(next={}){
+    vehicleDynamics.speed=Number(next.speed)||0;
+    vehicleDynamics.steer=Math.max(-1,Math.min(1,Number(next.steer)||0));
+    vehicleDynamics.braking=!!next.braking;
+    return {...vehicleDynamics};
+  }
 
   const skylineGlow=new THREE.Mesh(new THREE.RingGeometry(32,49,64),new THREE.MeshBasicMaterial({color:0x2a3040,transparent:true,opacity:.25,side:THREE.DoubleSide}));
   skylineGlow.rotation.x=-Math.PI/2;skylineGlow.position.y=.02;scene.add(skylineGlow);
@@ -434,7 +454,20 @@
       parts.body.rotation.z=THREE.MathUtils.lerp(parts.body.rotation.z,Math.sin(walkPhase*2)*.025*speed,.18);
     }
 
-    car.userData.wheels?.forEach(w=>{if(s.inVehicle)w.rotation.z-=dt*10});
+    const visualSpeed=s.inVehicle?vehicleDynamics.speed:0;
+    car.userData.wheels?.forEach(w=>{
+      if(s.inVehicle)w.rotation.z-=visualSpeed*dt*1.9;
+      const targetSteer=w.userData.front?vehicleDynamics.steer*.42:0;
+      w.rotation.y=THREE.MathUtils.lerp(w.rotation.y,targetSteer,.22);
+    });
+    const speedRatio=Math.min(1,Math.abs(vehicleDynamics.speed)/10);
+    const targetLean=s.inVehicle?(-vehicleDynamics.steer*speedRatio*.075):0;
+    car.rotation.z=THREE.MathUtils.lerp(car.rotation.z,targetLean,.12);
+    const brakeGlow=vehicleDynamics.braking||vehicleDynamics.speed<-.2;
+    car.userData.brakeLights?.forEach(light=>{
+      light.material.emissiveIntensity=THREE.MathUtils.lerp(light.material.emissiveIntensity,brakeGlow?5.5:.9,.25);
+    });
+    if(car.userData.headGlow)car.userData.headGlow.intensity=s.inVehicle?4.8:2.2;
     pedestrians.forEach(h=>animatePedestrian(h,dt));
     traffic.forEach(v=>animateTraffic(v,t,dt));
 
@@ -515,6 +548,8 @@
     canMovePercent,
     distanceToCarPercent,
     getCarHeading:()=>Number(car.userData.headingDeg)||0,
+    setVehicleDynamics,
+    getVehicleDynamics:()=>({...vehicleDynamics}),
     destinations,
     nearbyDestination,
     interactNearest,

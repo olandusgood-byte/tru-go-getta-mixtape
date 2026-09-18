@@ -20,6 +20,7 @@
   function save(){localStorage.setItem(KEY,JSON.stringify(state));}
   function apply(quiet=false){
     window.TGG3D?.setCarAppearance?.({color:state.color,wheelColor:state.wheelColor});
+    window.TGGGarage3D?.setAppearance?.({color:state.color,wheelColor:state.wheelColor});
     window.TGGGame?.setDriveTuning?.(presets[state.tuning]||presets.street);
     render();
     if(!quiet)window.__tggToast?.('GARAGE SETUP APPLIED');

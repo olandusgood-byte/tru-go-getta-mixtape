@@ -113,5 +113,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
   "next": "V1.32 STREET EVENTS + CROWD REACTIONS",
-  "verification": "pending_ci"
+  "verification": "passed"
 }

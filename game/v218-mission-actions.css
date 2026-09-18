@@ -1,0 +1,31 @@
+/* V2.18 MISSION ACTIONS 100 */
+body.tgg-v218 .v218-mission-action{position:fixed;left:50%;bottom:18px;z-index:155;display:grid;gap:7px;width:min(470px,calc(100vw - 24px));padding:14px 15px;transform:translate(-50%,18px);opacity:0;pointer-events:none;border:1px solid #ffffff1c;border-radius:19px;background:linear-gradient(145deg,#080b12f7,#111827f7);box-shadow:0 28px 90px #000d;transition:.2s ease}
+body.tgg-v218 .v218-mission-action.active{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+body.tgg-v218 .v218-mission-action>small{font-size:7px;font-weight:900;letter-spacing:.18em;color:#c7ff00}
+body.tgg-v218 .v218-mission-action>b{font-size:17px;letter-spacing:.04em;color:#fff}
+body.tgg-v218 .v218-mission-action>span{font-size:9px;line-height:1.45;color:#c4cada}
+body.tgg-v218 .v218-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+body.tgg-v218 .v218-stats i{display:grid;gap:2px;padding:6px 8px;border:1px solid #ffffff0f;border-radius:9px;background:#ffffff05;font-style:normal}
+body.tgg-v218 .v218-stats small{font-size:6px;font-weight:900;letter-spacing:.14em;color:#7e899d}
+body.tgg-v218 .v218-stats strong{font-size:9px;color:#fff}
+body.tgg-v218 .v218-track{height:6px;overflow:hidden;border-radius:999px;background:#ffffff10}
+body.tgg-v218 .v218-track i{display:block;width:0;height:100%;background:linear-gradient(90deg,#61d9ff,#c7ff00);transition:width .16s ease}
+body.tgg-v218 #v218ActionBtn{min-height:46px;border:1px solid #c7ff004a;border-radius:13px;background:linear-gradient(135deg,#182313,#0d1510);color:#eaffc2;font-size:9px;font-weight:1000;letter-spacing:.1em;cursor:pointer}
+body.tgg-v218 #v218ActionBtn:hover,body.tgg-v218 #v218ActionBtn:focus-visible{outline:none;border-color:#c7ff00;box-shadow:0 0 0 2px #c7ff0022,0 0 26px #c7ff0018}
+body.v218-step-hit .v218-mission-action{border-color:#61d9ff75}
+body.v218-action-complete .v218-mission-action{border-color:#c7ff00;box-shadow:0 0 0 1px #c7ff0030,0 28px 90px #000d,0 0 35px #c7ff0020}
+body.v218-mission-action-live .v217-interior-overlay{bottom:190px}
+body.tgg-v218 .sr-only{position:absolute!important;width:1px!important;height:1px!important;margin:-1px!important;padding:0!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(prefers-reduced-motion:reduce){body.tgg-v218 .v218-mission-action,body.tgg-v218 .v218-track i{transition:none!important}}
+@media(max-width:700px){
+ body.tgg-v218 .v218-mission-action{bottom:max(8px,env(safe-area-inset-bottom));padding:11px 12px;border-radius:16px}
+ body.tgg-v218 .v218-mission-action>b{font-size:14px}
+ body.tgg-v218 .v218-stats{gap:4px}
+ body.tgg-v218 #v218ActionBtn{min-height:50px}
+ body.v218-mission-action-live .v217-interior-overlay{bottom:184px}
+}
+@media(max-width:700px) and (orientation:landscape){
+ body.tgg-v218 .v218-mission-action{left:auto;right:8px;bottom:8px;width:min(370px,46vw);transform:translateY(16px)}
+ body.tgg-v218 .v218-mission-action.active{transform:translateY(0)}
+ body.v218-mission-action-live .v217-interior-overlay{left:8px;right:auto;bottom:8px}
+}

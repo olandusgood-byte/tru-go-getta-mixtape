@@ -7,15 +7,17 @@ const game=fs.readFileSync(new URL('./game.js',import.meta.url),'utf8');
 const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
 const events=fs.readFileSync(new URL('./events.js',import.meta.url),'utf8');
 const progression=fs.readFileSync(new URL('./progression.js',import.meta.url),'utf8');
+const circuits=fs.readFileSync(new URL('./circuits.js',import.meta.url),'utf8');
 const qa=fs.readFileSync(new URL('./qa.js',import.meta.url),'utf8');
 const releaseQa=fs.readFileSync(new URL('./release-qa.js',import.meta.url),'utf8');
 const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.15/);
-assert.match(html,/GAME V1\.15 • CITY ACTIVITY MASTERY/);
+assert.match(html,/Game V1\.16/);
+assert.match(html,/GAME V1\.16 • CITY CIRCUITS \+ EVENT VARIANTS/);
 assert.match(html,/<script src="business\.js"><\/script>/);
+assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/id="businessBoard"/);
 assert.match(html,/id="businessBtn"/);
 assert.match(html,/id="cityAssetsBtn"/);
@@ -61,6 +63,23 @@ for (const reward of [
 ]) assert.match(events,reward);
 for (const achievement of ['city-regular','city-known','city-headliner']) assert.match(progression,new RegExp(achievement));
 
+
+assert.match(circuits,/tgg-circuits-v1/);
+assert.match(circuits,/window\.TGGCircuits/);
+for (const api of ['start','expected','status','onEventComplete','variant','render']) {
+  assert.match(circuits,new RegExp('function '+api+'\\b'));
+}
+assert.match(circuits,/first-lap/);
+assert.match(circuits,/city-run/);
+assert.match(circuits,/rewardMultiplier:1/);
+assert.match(circuits,/cosmeticOnly:true/);
+assert.equal(circuits.includes('TGGGame?.reward'),false);
+assert.equal(circuits.includes('TGGCareer?.addRep'),false);
+assert.match(events,/TGGCircuits\?\.onEventComplete/);
+assert.match(events,/TGGCircuits\?\.variant/);
+assert.match(events,/TGGCircuits\?\.render/);
+for (const achievement of ['first-circuit','city-circuit']) assert.match(progression,new RegExp(achievement));
+
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
 }
@@ -98,10 +117,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.15 City Activity Mastery');
-assert.equal(release.base,'V1.14 Live City + Read-Only World Assets');
-assert.equal(auto.version,'1.15');
-assert.equal(qaManifest.version,'1.15');
+assert.equal(release.release,'V1.16 City Circuits + Event Variants');
+assert.equal(release.base,'V1.15 City Activity Mastery');
+assert.equal(auto.version,'1.16');
+assert.equal(qaManifest.version,'1.16');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -113,5 +132,8 @@ assert.ok(release.modules.includes('V1.14-WORLD-ASSET-READONLY-INSPECT'));
 assert.ok(release.gates.includes('remote_label_escape'));
 assert.ok(release.gates.includes('city_mastery_api'));
 assert.ok(release.gates.includes('base_event_economy_unchanged'));
+assert.ok(release.gates.includes('circuit_api'));
+assert.ok(release.gates.includes('circuit_ordering'));
+assert.ok(release.gates.includes('event_variants_cosmetic_only'));
 
-console.log('GAME_V1_15_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_16_STATIC_CONTRACT_PASS');

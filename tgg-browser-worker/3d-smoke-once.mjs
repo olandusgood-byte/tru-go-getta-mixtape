@@ -48,6 +48,7 @@ async function run(){
       const checks=[]; const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
 
       let snap=await page.evaluate(()=>({
+        api:typeof window.TGGStoryWorld3D?.getStatus==='function',
         title:document.title,
         canvas:!!document.querySelector('#city3d canvas'),
         story:window.TGGStoryMissions.status(),
@@ -61,7 +62,7 @@ async function run(){
         beacon:window.TGGStoryWorld3D.beacon.visible,
         route:window.TGGStoryWorld3D.routeLine.visible
       }));
-      record('story3d-api',typeof window.TGGStoryWorld3D?.getStatus==='function',JSON.stringify(snap.world));
+      record('story3d-api',snap.api,JSON.stringify(snap.world));
       record('story3d-webgl-canvas',snap.canvas);
       record('story3d-three-contacts',snap.contacts.length===3&&snap.contacts.map(x=>x.id).join(',')==='manager,kane,director',JSON.stringify(snap.contacts));
       record('story3d-contact-geometry',snap.contacts.every(x=>x.visible&&x.children>=8),JSON.stringify(snap.contacts));
@@ -247,8 +248,7 @@ async function run(){
           overflowX:document.documentElement.scrollWidth>innerWidth+1,
           hud:hud?{left:hud.left,right:hud.right,width:hud.width}:null,
           button:button?{width:button.width,height:button.height}:null
-        };
-      });
+        };      });
       record('chapter2-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
       record('chapter2-mobile-hud-contained',!layout.hud||layout.hud.left>=0&&layout.hud.right<=layout.width+1,JSON.stringify(layout.hud));
       record('chapter2-mobile-action-readable',!layout.button||layout.button.height>=42,JSON.stringify(layout.button));
@@ -497,8 +497,7 @@ async function run(){
       const [htmlResponse,cssResponse]=await Promise.all([fetch(base+'/index.html'),fetch(base+'/style.css')]);
       if(!htmlResponse.ok||!cssResponse.ok)throw new Error('Career mobile harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status);
       let html=await htmlResponse.text();
-      const css=await cssResponse.text();
-      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+      const css=await cssResponse.text();      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
                .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
       const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
       const mp=await mobile.newPage();
@@ -747,8 +746,7 @@ async function run(){
           actionCount:buttons.length,
           minButtonHeight:buttons.length?Math.min(...buttons.map(x=>x.height)):0,
           controlText:document.querySelector('.move-pad .control-title small')?.textContent||''
-        };
-      });
+        };      });
       const checks=[];
       const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
       record('mobile-source-http',htmlResponse.status===200&&cssResponse.status===200,'html='+htmlResponse.status+',css='+cssResponse.status);
@@ -997,8 +995,7 @@ async function run(){
       console.log(JSON.stringify({tgg_3d_smoke_step:'mobile-complete'}));
     result={
         ok:false,status:'webgl_not_ready',target:TARGET,
-        error:error?.message||String(error),
-        diagnostics,
+        error:error?.message||String(error),        diagnostics,
         console_errors:consoleErrors,
         page_errors:pageErrors,
         failed_resources:failedResources,
@@ -1247,8 +1244,7 @@ async function run(){
       gearText:document.getElementById('gearValue')?.textContent,
       hudActive:document.getElementById('vehicleHud')?.classList.contains('active')
     }));
-    const accelSpeed=Number(accelerated.driving?.speed)||0;
-    const accelDistance=Math.hypot(Number(accelerated.state?.x)-startX,Number(accelerated.state?.y)-startY);
+    const accelSpeed=Number(accelerated.driving?.speed)||0;    const accelDistance=Math.hypot(Number(accelerated.state?.x)-startX,Number(accelerated.state?.y)-startY);
     record('smooth-acceleration',accelSpeed>3,`speed=${accelSpeed}`);
     record('continuous-forward-travel',accelDistance>1.5,`distance=${accelDistance}`);
     record('speedometer-hud',accelerated.hudActive&&Number(accelerated.speedText)>0,`mph=${accelerated.speedText}`);

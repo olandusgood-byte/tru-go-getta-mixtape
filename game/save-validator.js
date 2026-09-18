@@ -27,6 +27,10 @@
       if(!routeMemory.districts||typeof routeMemory.districts!=='object'||Array.isArray(routeMemory.districts))routeMemory.districts={};
       if(!Array.isArray(routeMemory.encounters))routeMemory.encounters=[];
       if(!routeMemory.relationships||typeof routeMemory.relationships!=='object'||Array.isArray(routeMemory.relationships))routeMemory.relationships={};
+      if(!routeMemory.opportunities||typeof routeMemory.opportunities!=='object'||Array.isArray(routeMemory.opportunities))routeMemory.opportunities={active:null,completed:[],history:[]};
+      if(!Array.isArray(routeMemory.opportunities.completed))routeMemory.opportunities.completed=[];
+      if(!Array.isArray(routeMemory.opportunities.history))routeMemory.opportunities.history=[];
+      if(routeMemory.opportunities.active&&typeof routeMemory.opportunities.active!=='object')routeMemory.opportunities.active=null;
       routeMemory.lastFingerprint=typeof routeMemory.lastFingerprint==='string'?routeMemory.lastFingerprint:null;
       routeMemory.updatedAt=num(routeMemory.updatedAt,Date.now());
       if(typeof routeMemory.remoteStatus!=='string')routeMemory.remoteStatus='offline_ready';

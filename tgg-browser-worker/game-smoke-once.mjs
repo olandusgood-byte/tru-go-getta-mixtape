@@ -747,6 +747,7 @@ async function runSmoke(target) {
       storyMission03?.passed === true &&
       storyMission04?.passed === true &&
       storyMission05?.passed === true &&
+      mission06?.passed === true &&
       pageErrors.length === 0 &&
       consoleErrors.length === 0 &&
       failedResources.length === 0 &&
@@ -775,6 +776,7 @@ async function runSmoke(target) {
       story_mission_03: storyMission03,
       story_mission_04: storyMission04,
       story_mission_05: storyMission05,
+      mission06,
       gameplay,
       dom,
       console_errors: consoleErrors,

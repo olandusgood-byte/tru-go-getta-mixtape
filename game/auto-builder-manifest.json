@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.18",
-  "module": "GAME-V1.18",
-  "name": "NPC Route Encounters + District Memory Checkpoint",
+  "version": "1.19",
+  "module": "GAME-V1.19",
+  "name": "NPC Dialogue States + Relationship Memory Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -58,10 +58,17 @@
     "story_ui_auto_render": true,
     "remote_memory_readonly": true,
     "route_memory_no_rewards": true,
-    "npc_memory_achievement": true
+    "npc_memory_achievement": true,
+    "relationship_api": true,
+    "relationship_persistence": true,
+    "mastery_driven_dialogue": true,
+    "repeat_talk_no_progress": true,
+    "relationship_no_rewards": true,
+    "trusted_contact_achievement": true,
+    "single_memory_store": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.19 NPC DIALOGUE STATES + RELATIONSHIP MEMORY",
-  "verification": "passed"
+  "next": "V1.20 NPC FAVOR HOOKS + CONTACT OPPORTUNITIES",
+  "verification": "pending_ci"
 }

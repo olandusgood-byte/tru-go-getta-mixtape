@@ -96,7 +96,7 @@ async function runMultiFlowBrowser(page, { flowKey, tggCoreUrl, tggCoreKey, acce
   const rendered = await page.evaluate(() => document.readyState !== 'loading' && !!document.body);
   if (!rendered) throw new Error('BROWSER_PAGE_NOT_RENDERED');
   const auth = await browserAuthUser(page, tggCoreUrl, accessToken);
-  if (!auth.ok || !auth.user?.id) throw new Error(`BROWSER_AUTH_NOT_PRESENT:${auth.status}`);
+  if (!auth.ok || !auth.json?.user?.id) throw new Error(`BROWSER_AUTH_NOT_PRESENT:${auth.status}`);
 
   const loadMs = Date.now() - started;
   const bodyText = await page.locator('body').innerText().catch(() => '');
@@ -141,7 +141,7 @@ async function runMultiFlowBrowser(page, { flowKey, tggCoreUrl, tggCoreKey, acce
     if (!capture.notifications_rpc_ok) throw new Error(`NOTIFICATIONS_RPC_FAILED:${notifications.status}`);
   } else if (flowKey === 'session_recovery_runtime') {
     const secondAuth = await browserAuthUser(page, tggCoreUrl, accessToken);
-    capture.session_recovered = secondAuth.ok && secondAuth.user?.id === auth.user.id;
+    capture.session_recovered = secondAuth.ok && secondAuth.json?.user?.id === auth.json?.user?.id;
     if (!capture.session_recovered) throw new Error(`SESSION_RECOVERY_FAILED:${secondAuth.status}`);
   }
 

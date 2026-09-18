@@ -44,6 +44,14 @@ async function browserRpc(page, supabaseUrl, accessToken, fn, body = {}) {
     const r = await page.evaluate(async ({coreUrl,accessToken}) => { const x=await fetch(coreUrl+'/v1/creator/expansion',{headers:{authorization:'Bearer '+accessToken}}); const json=await x.json().catch(()=>({})); return {ok:x.ok,status:x.status,json,text:JSON.stringify(json)}; }, {coreUrl,accessToken});
     return r;
   }
+  if (fn === 'tgg_get_creator_communications_bundle') {
+    const r = await page.evaluate(async ({coreUrl,accessToken}) => { const x=await fetch(coreUrl+'/v1/creator/messages',{headers:{authorization:'Bearer '+accessToken}}); const json=await x.json().catch(()=>({})); return {ok:x.ok,status:x.status,json,text:JSON.stringify(json)}; }, {coreUrl,accessToken});
+    return r;
+  }
+  if (fn === 'tgg_get_creator_supporters_revenue_bundle') {
+    const r = await page.evaluate(async ({coreUrl,accessToken}) => { const [a,b]=await Promise.all([fetch(coreUrl+'/v1/creator/supporters',{headers:{authorization:'Bearer '+accessToken}}),fetch(coreUrl+'/v1/creator/revenue',{headers:{authorization:'Bearer '+accessToken}})]); const supporters=await a.json().catch(()=>({})); const revenue=await b.json().catch(()=>({})); return {ok:a.ok&&b.ok,status:a.ok?b.status:a.status,json:{supporters:supporters.supporters||[],revenue},text:JSON.stringify({supporters:supporters.supporters||[],revenue})}; }, {coreUrl,accessToken});
+    return r;
+  }
   return {ok:false,status:501,json:{error:'tgg_core_rpc_migration_pending',function:fn},text:'TGG Core RPC migration pending'};
 }
 

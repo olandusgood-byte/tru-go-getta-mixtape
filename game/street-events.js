@@ -169,15 +169,18 @@
     if(screen!=='game'){
       prompt.classList.remove('show');
       hud.classList.remove('show');
+      hud.setAttribute('aria-hidden','true');
       return;
     }
     if(active){
       prompt.classList.remove('show');
       hud.innerHTML='<b>'+active.name+'</b><span>'+active.phase+' • '+active.crowdCount+' PEOPLE LOCKED IN</span><small>CROWD HYPE '+state.crowdHype+'/100</small>';
       hud.classList.add('show');
+      hud.setAttribute('aria-hidden','false');
       return;
     }
     hud.classList.remove('show');
+    hud.setAttribute('aria-hidden','true');
     const hit=nearest();
     if(hit){
       prompt.textContent='G • START '+hit.event.name.toUpperCase();

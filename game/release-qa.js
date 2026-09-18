@@ -21,6 +21,10 @@
     test('city mastery api',typeof window.TGGEvents?.totalRuns==='function'&&typeof window.TGGEvents?.mastery==='function'&&typeof window.TGGEvents?.cityProfile==='function');
     const cityProfile=window.TGGEvents?.cityProfile?.()||{};test('city mastery state',typeof cityProfile.totalRuns==='number'&&typeof cityProfile.streak==='number'&&typeof cityProfile.bestStreak==='number');
     test('city mastery achievements',['city-regular','city-known','city-headliner'].every(id=>window.TGGProgression?.achievements?.some(a=>a.id===id)));
+    test('circuits api',!!window.TGGCircuits&&typeof window.TGGCircuits.start==='function'&&typeof window.TGGCircuits.onEventComplete==='function'&&typeof window.TGGCircuits.status==='function'&&typeof window.TGGCircuits.variant==='function');
+    test('circuits persistence',window.TGGSave?.keys?.circuits==='tgg-circuits-v1'&&Array.isArray(window.TGGCircuits?.state?.completed));
+    const cypherVariant=window.TGGCircuits?.variant?.('street-cypher')||{};test('event variant cosmetic',cypherVariant.cosmeticOnly===true&&cypherVariant.rewardMultiplier===1);
+    test('circuit achievements',['first-circuit','city-circuit'].every(id=>window.TGGProgression?.achievements?.some(a=>a.id===id)));
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

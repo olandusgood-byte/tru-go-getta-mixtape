@@ -192,7 +192,7 @@
     return car;
   }
   const car=makeCar();
-  car.position.set(5.7,0,4.6);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
+  car.position.set(4.5,0,0);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
   const vehicleDynamics={speed:0,steer:0,braking:false,handbrake:false};
   const playerDynamics={speed:0,vx:0,vy:0,sprinting:false,blocked:false};
   function setPlayerDynamics(next={}){
@@ -330,6 +330,9 @@
   function distanceToCarPercent(s){
     const p=toWorld(s);
     return Math.hypot(p.x-car.position.x,p.z-car.position.z);
+  }
+  function getCarPercent(){
+    return {x:50+(car.position.x/.92),y:50+(car.position.z/.92)};
   }
   function syncCarFromState(s){
     if(s?.inVehicle){
@@ -596,6 +599,7 @@
     isReady:()=>true,
     canMovePercent,
     distanceToCarPercent,
+    getCarPercent,
     getCarHeading:()=>Number(car.userData.headingDeg)||0,
     setVehicleDynamics,
     getVehicleDynamics:()=>({...vehicleDynamics}),

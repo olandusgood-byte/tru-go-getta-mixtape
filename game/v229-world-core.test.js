@@ -1,0 +1,20 @@
+(() => {
+  const core=globalThis.__V229CoreUnderTest;
+  const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
+  assert(core,'V2.29 World Forge core API must exist');
+  assert(typeof core.preset==='function','preset API');
+  assert(typeof core.normalize==='function','normalize API');
+  assert(typeof core.modulesFor==='function','modulesFor API');
+  const downtown=core.preset('downtown');
+  assert(downtown.id==='downtown','downtown preset');
+  const studio=core.preset('studio-row');
+  assert(studio.id==='studio-row','studio preset');
+  const shops=core.preset('shops');
+  assert(shops.id==='shops','shops preset');
+  const n=core.normalize({density:99,neon:-2,heightScale:9});
+  assert(n.density<=1&&n.neon>=0&&n.heightScale<=1.35,'clamps');
+  const mods=core.modulesFor('studio-row');
+  assert(Array.isArray(mods)&&mods.includes('studio')&&mods.includes('storefront'),'studio modules');
+  assert(core.modulesFor('park').includes('house'),'park modules');
+  return true;
+})();

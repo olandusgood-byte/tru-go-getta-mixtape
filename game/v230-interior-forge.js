@@ -252,7 +252,7 @@
     if(e.key==='F6'){e.preventDefault();panel?.classList.toggle('active')}
     if(e.key==='Escape'&&panel?.classList.contains('active'))panel.classList.remove('active');
   }
-  document.addEventListener('keydown',keyHandler);
+  if(hasDOM())document.addEventListener('keydown',keyHandler);
 
   function tick(){
     if(!hasDOM())return;requestAnimationFrame(tick);ensureUI();renderUI();

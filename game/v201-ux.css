@@ -1,0 +1,51 @@
+/* V2.01 FINAL UX POLISH — readable controls, grouped actions, calmer driving HUD */
+body.tgg-v201 #game.active{padding:14px 16px 24px}
+body.tgg-v201 .game-shell{width:min(1240px,98vw);grid-template-rows:minmax(430px,62vh) auto;gap:18px}
+body.tgg-v201 .game-controls{grid-template-columns:280px minmax(0,1fr);gap:18px;align-items:stretch;min-height:236px}
+body.tgg-v201 .move-pad,body.tgg-v201 .action-deck{border-radius:24px;border-color:#454a61;background:linear-gradient(145deg,#171b28,#090b12)}
+body.tgg-v201 .move-pad{padding:18px 20px}
+body.tgg-v201 .control-title{align-items:flex-start}
+body.tgg-v201 .control-title b{font-size:12px;letter-spacing:.16em}
+body.tgg-v201 .control-title small{max-width:410px;font-size:10px;line-height:1.5;color:#a8adbf;text-align:right}
+body.tgg-v201 .dpad{width:214px;height:166px;gap:10px}
+body.tgg-v201 .dpad button{min-width:0;min-height:0;border-radius:16px;font-size:20px;display:grid;place-items:center;gap:1px;padding:7px;line-height:1}
+body.tgg-v201 .dpad button span{font-size:20px;line-height:1}
+body.tgg-v201 .dpad button small{display:block;font-size:8px;letter-spacing:.12em;color:#aab0c4;font-weight:900}
+body.tgg-v201 .dpad button.held small{color:#071000}
+body.tgg-v201 .d-core{font-size:10px!important}
+body.tgg-v201 .action-deck{padding:16px 17px 18px;overflow:hidden}
+body.tgg-v201 .action-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+body.tgg-v201 .action-tabs button{margin:0;padding:9px 12px;border:1px solid #454b63;border-radius:999px;background:#10131d;color:#b8bdcc;font-size:9px;font-weight:900;letter-spacing:.12em;cursor:pointer}
+body.tgg-v201 .action-tabs button.active{border-color:#c7ff00;background:#c7ff00;color:#071000;box-shadow:0 0 18px #c7ff0024}
+body.tgg-v201 .action-deck .actions{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:11px;max-height:none;overflow:visible;padding:0}
+body.tgg-v201 .action-deck .actions button{min-height:66px;padding:13px 14px;border-radius:15px;font-size:11px;line-height:1.2;display:flex;align-items:center;justify-content:flex-start}
+body.tgg-v201 .action-deck .actions button[data-action-group]{display:none}
+body.tgg-v201 .action-deck[data-active-group="core"] .actions button[data-action-group="core"],
+body.tgg-v201 .action-deck[data-active-group="places"] .actions button[data-action-group="places"],
+body.tgg-v201 .action-deck[data-active-group="career"] .actions button[data-action-group="career"],
+body.tgg-v201 .action-deck .actions button[data-action-group="utility"]{display:flex}
+body.tgg-v201 .action-deck .actions button[data-action-group="utility"]{min-height:48px;opacity:.82}
+body.tgg-v201 .action-deck .actions .action-primary{font-size:12px}
+body.tgg-v201 .control-mode-badge{display:inline-flex;align-items:center;gap:7px;margin-left:8px;padding:5px 8px;border:1px solid #ffffff1a;border-radius:999px;background:#0c1018;color:#c7ff00;font-size:8px;letter-spacing:.12em;vertical-align:middle}
+body.tgg-v201 .move-pad.drive-mode .control-mode-badge{color:#7b86ff}
+body.tgg-v201 .vehicle-hud{min-width:205px}
+body.tgg-v201 .drive-hint{font-size:9px;line-height:1.4;white-space:normal;max-width:205px}
+body.tgg-v201 .player-move-hud{min-width:205px}
+body.tgg-v201 .v201-badge{margin-right:10px;padding:5px 8px;border:1px solid #c7ff0040;border-radius:999px;background:#0a0d12;color:#c7ff00;font-size:8px;font-weight:900;letter-spacing:.12em}
+@media(max-width:980px){
+  body.tgg-v201 .game-controls{grid-template-columns:240px minmax(0,1fr)}
+  body.tgg-v201 .dpad{width:190px;height:154px}
+  body.tgg-v201 .action-deck .actions{grid-template-columns:repeat(2,minmax(135px,1fr))}
+}
+@media(max-width:700px){
+  body.tgg-v201 #game.active{padding:10px}
+  body.tgg-v201 .game-shell{width:100%;grid-template-rows:minmax(350px,52vh) auto}
+  body.tgg-v201 .game-controls{grid-template-columns:1fr}
+  body.tgg-v201 .move-pad{padding:14px}
+  body.tgg-v201 .dpad{width:min(260px,78vw);height:184px}
+  body.tgg-v201 .action-deck .actions{grid-template-columns:1fr 1fr;gap:9px}
+  body.tgg-v201 .action-deck .actions button{min-height:64px;font-size:11px}
+  body.tgg-v201 .control-title{display:block}
+  body.tgg-v201 .control-title small{display:block;max-width:none;margin-top:6px;text-align:left}
+  body.tgg-v201 .action-tabs{overflow:auto;flex-wrap:nowrap;padding-bottom:2px}
+}

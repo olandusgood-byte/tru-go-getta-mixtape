@@ -27,6 +27,7 @@ async function init() {
     initPromise = (async () => {
       const schema = await fs.readFile(schemaPath, 'utf8');
       await pool.query(schema);
+      await pool.query(`create table if not exists tgg_worker_registry (id uuid primary key default gen_random_uuid(), worker_id text not null unique, worker_token_hash text not null, status text not null default 'active', metadata jsonb not null default '{}'::jsonb, last_seen_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now()); create table if not exists tgg_browser_jobs (id uuid primary key default gen_random_uuid(), worker_id uuid references tgg_worker_registry(id) on delete set null, flow_key text not null, status text not null default 'queued', payload jsonb not null default '{}'::jsonb, result jsonb, evidence jsonb not null default '[]'::jsonb, lease_token text, lease_expires_at timestamptz, attempts integer not null default 0, max_attempts integer not null default 3, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), finished_at timestamptz); create index if not exists tgg_browser_jobs_claim_idx on tgg_browser_jobs(status,lease_expires_at,created_at);`);
     })();
   }
   return initPromise;

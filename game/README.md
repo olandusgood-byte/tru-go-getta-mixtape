@@ -1,46 +1,39 @@
-# TRU GO GETTA Game V1.20
+# TRU GO GETTA Game V1.29
 
-V1.20 turns earned NPC relationships into local contact opportunities that reuse existing city events instead of creating a second reward system.
+V1.29 consolidates the latest 3D world upgrades into a verified playtest checkpoint.
 
-## Contact opportunities
+## Bulk world upgrade
 
-- Manager Introduction — M — requires TRUSTED — complete through Release Rush
-- Producer Lock-In — Kane — requires FAMILIAR — complete through Studio Pop-In
-- DJ Test Spin — DJ V — requires FAMILIAR — complete through Release Rush
-
-Opportunity state is stored inside the existing `tgg-route-memory-v1` object under `opportunities`.
-
-## Completion rules
-
-Starting an opportunity records the linked event's current run count. The opportunity only completes after that existing event successfully runs again and its run count advances.
-
-The opportunity layer itself:
-
-- awards no cash;
-- awards no XP;
-- awards no reputation;
-- calls no economy reward API;
-- creates no separate localStorage key;
-- adds no remote mutation API.
+- persistent TGG Garage using `tgg-garage-v1`
+- live car paint + wheel finish
+- Street / Sport / Drift handling presets
+- tighter vehicle collision margin than walking
+- local bundled Three.js runtime
+- real 3D Recording Studio interior
+- Manager M proximity dialogue
+- on-screen Drift / Handbrake control
+- on-screen Horn control
+- V1.28 driving stack preserved
 
 ## Verification
 
-- [x] Manager Introduction unlocks at M = Trusted
-- [x] Producer Lock-In unlocks at Kane = Familiar
-- [x] DJ Test Spin remains locked while DJ V = Intro
-- [x] opportunity UI auto-renders in City Events
-- [x] Manager Introduction starts successfully
-- [x] Release Rush completes Manager Introduction
-- [x] completion adds exactly the existing 450 cash
-- [x] no opportunity bonus payout
-- [x] no separate opportunity save store
-- [x] Opportunity Knocks achievement unlocks
+- [x] local Three.js revision 152 loads without CDN dependency
+- [x] garage opens from the city
+- [x] paint / wheels / tune apply to the live 3D car
+- [x] garage state persists through reload
+- [x] drift tune updates authoritative drive tuning
+- [x] vehicle collision footprint is stricter than walking
+- [x] Manager M proximity dialogue appears near M
+- [x] 3D studio renderer boots and displays a canvas
+- [x] on-screen drift control changes handbrake state
+- [x] on-screen horn control triggers HONK
+- [x] mission and save controls remain intact
 - [x] Static CI PASS
-- [x] Chromium Smoke PASS on `6095ecc`
+- [x] Chromium Smoke PASS on `4eab567`
 - [x] production remains gated
 
 ## Release status
 
-**V1.20-NPC-FAVOR-HOOKS-CONTACT-OPPORTUNITIES-VERIFIED.**
+**V1.29-BULK-WORLD-UPGRADE-VERIFIED.**
 
-Next internal development layer: **V1.21 Contact Chains + Opportunity History**.
+Next internal development layer: **V1.30 City Interiors + Traffic Interaction**.

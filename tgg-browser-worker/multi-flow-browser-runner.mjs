@@ -21,6 +21,10 @@ async function browserRpc(page, supabaseUrl, accessToken, fn, body = {}) {
     const r = await page.evaluate(async ({coreUrl,accessToken}) => { const x=await fetch(coreUrl+'/v1/creator/workspace',{headers:{authorization:'Bearer '+accessToken}}); const json=await x.json().catch(()=>({})); return {ok:x.ok,status:x.status,json,text:JSON.stringify(json)}; }, {coreUrl,accessToken});
     return r;
   }
+  if (fn === 'tgg_get_creator_dashboard_bundle') {
+    const r = await page.evaluate(async ({coreUrl,accessToken}) => { const x=await fetch(coreUrl+'/v1/creator/dashboard',{headers:{authorization:'Bearer '+accessToken}}); const json=await x.json().catch(()=>({})); return {ok:x.ok,status:x.status,json,text:JSON.stringify(json)}; }, {coreUrl,accessToken});
+    return r;
+  }
   return {ok:false,status:501,json:{error:'tgg_core_rpc_migration_pending',function:fn},text:'TGG Core RPC migration pending'};
 }
 

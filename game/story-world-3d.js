@@ -9,6 +9,7 @@
     manager:0xff466d,
     kane:0x7b86ff,
     director:0xc56cff,
+    dj:0x48d7ff,
     objective:0xc7ff00
   };
 
@@ -107,6 +108,7 @@
   const contacts=[
     makeContact({id:'manager',name:'M',role:'MANAGER',x:72,y:36,color:COLORS.manager,skin:0x8d5b3f}),
     makeContact({id:'kane',name:'KANE',role:'PRODUCER',x:24,y:37,color:COLORS.kane,skin:0xa16f4f}),
+    makeContact({id:'dj',name:'DJ V',role:'CITY DJ',x:76,y:63,color:COLORS.dj,skin:0x8f6045}),
     makeContact({id:'director',name:'DIRECTOR K',role:'MEDIA',x:50,y:89,color:COLORS.director,skin:0x7f513a})
   ];
 
@@ -154,6 +156,7 @@
     if(!target)return COLORS.objective;
     if(target.id==='manager-return')return COLORS.manager;
     if(target.id==='kane')return COLORS.kane;
+    if(target.id==='dj-v')return COLORS.dj;
     if(target.id==='director')return COLORS.director;
     try{return new THREE.Color(target.color||'#c7ff00').getHex()}catch{return COLORS.objective}
   }
@@ -177,7 +180,7 @@
     beaconLight.color.setHex(color);
     routeLine.material.color.setHex(color);
     if(target.id!==lastTargetId){
-      beaconLabel.userData.draw?.(String(target.label||'STORY OBJECTIVE').replace(/^CITY BUZZ • /,''),'#'+new THREE.Color(color).getHexString());
+      beaconLabel.userData.draw?.(String(target.label||'STORY OBJECTIVE').replace(/^(?:CITY BUZZ|CITY TAKEOVER) • /,''),'#'+new THREE.Color(color).getHexString());
       lastTargetId=target.id||'';
     }
   }
@@ -207,7 +210,7 @@
   function activeContactId(){
     const st=story.status?.();
     const step=st?.current;
-    if(st?.chapter!==2||!st?.active||step?.kind!=='talk')return '';
+    if((Number(st?.chapter)||0)<2||!st?.active||step?.kind!=='talk')return '';
     return step.talk||'';
   }
 
@@ -216,21 +219,23 @@
     const step=st?.current;
     const button=document.getElementById('interact3dBtn');
     const dialogue=document.getElementById('npcDialogue');
-    const talk=st?.chapter===2&&st?.active&&step?.kind==='talk';
+    const talk=(Number(st?.chapter)||0)>=2&&st?.active&&step?.kind==='talk';
     nearTarget=!!currentTarget&&isNearTarget(currentTarget);
 
     if(talk&&nearTarget){
       if(button){
         button.disabled=false;
-        button.textContent='TALK TO '+(step.talk==='manager'?'M':step.talk==='kane'?'KANE':'DIRECTOR K');
+        button.textContent='TALK TO '+(step.talk==='manager'?'M':step.talk==='kane'?'KANE':step.talk==='dj'?'DJ V':'DIRECTOR K');
         button.classList.add('nearby','story-contact-near');
       }
       if(dialogue){
         dialogue.textContent=step.talk==='manager'
-          ?'M: The city is watching. Let’s make the next move.'
+          ?(st.chapter===3?'M: That city run was different. Finish strong.':'M: The city is watching. Let’s make the next move.')
           :step.talk==='kane'
             ?'Kane: You made it. Let’s cut something crazy.'
-            :'Director K: Camera’s ready. Let’s turn the record into a visual.';
+            :step.talk==='dj'
+              ?'DJ V: I got the city tuned in. Give them a show.'
+              :'Director K: Camera’s ready. Let’s turn the record into a visual.';
         dialogue.classList.add('show');
       }
     }else if(button){
@@ -241,7 +246,7 @@
   const interact=document.getElementById('interact3dBtn');
   interact?.addEventListener('click',e=>{
     const st=story.status?.();
-    if(st?.chapter===2&&st?.active&&st?.current?.kind==='talk'&&isNearTarget()){
+    if((Number(st?.chapter)||0)>=2&&st?.active&&st?.current?.kind==='talk'&&isNearTarget()){
       e.preventDefault();
       e.stopImmediatePropagation();
       story.doCurrent?.();

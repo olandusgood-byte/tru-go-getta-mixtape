@@ -7,9 +7,17 @@ let result={ok:false,status:'pending',checked_at:null};
 
 async function run(){
   try{
-    const response=await fetch(URL+'/rest/v1/',{
-      method:'GET',
-      headers:{apikey:KEY,...(KEY.startsWith('sb_')?{}:{Authorization:'Bearer '+KEY})},
+    const response=await fetch(URL+'/rest/v1/rpc/tgg_browser_cert_worker_bootstrap',{
+      method:'POST',
+      headers:{
+        apikey:KEY,
+        ...(KEY.startsWith('sb_')?{}:{Authorization:'Bearer '+KEY}),
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        p_worker_id:'00000000-0000-0000-0000-000000000001',
+        p_bootstrap_secret:'tgg-schema-probe-invalid'
+      }),
       signal:AbortSignal.timeout(8000)
     });
     const body=await response.text();

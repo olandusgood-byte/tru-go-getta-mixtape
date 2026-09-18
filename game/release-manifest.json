@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.21 True 3D City Foundation",
-  "base": "V1.20 NPC Favor Hooks + Contact Opportunities",
+  "release": "V1.22 3D Collision + Camera Orbit",
+  "base": "V1.21 True 3D City Foundation",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -73,7 +73,11 @@
     "V1.21-THREEJS-WEBGL",
     "V1.21-THIRD-PERSON-CAMERA",
     "V1.21-3D-CITY-BLOCKS",
-    "V1.21-3D-PLAYER-NPC"
+    "V1.21-3D-PLAYER-NPC",
+    "V1.22-BUILDING-COLLISION",
+    "V1.22-CAMERA-ORBIT",
+    "V1.22-CAMERA-ZOOM",
+    "V1.22-MISSION-COLLISION-SAFE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -193,10 +197,16 @@
     "third_person_camera",
     "world3d_buildings",
     "world3d_player_sync",
-    "world3d_fallback"
+    "world3d_fallback",
+    "world3d_collision_api",
+    "world3d_building_collision",
+    "world3d_camera_orbit",
+    "world3d_camera_zoom",
+    "world3d_mission_reachable",
+    "world3d_game_move_guard"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.21-TRUE-3D-CITY-FOUNDATION-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.22-3D-COLLISION-CAMERA-ORBIT-CANDIDATE",
   "production": "gated"
 }

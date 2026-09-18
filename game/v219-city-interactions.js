@@ -151,7 +151,14 @@
   function interactNearest(){
     if(window.TGGGame?.getActiveScreen?.()!=='game')return originalInteract?.()??false;
     if(priorityBlocked())return originalInteract?.()??false;
-    const n=nearestInteraction();if(n&&n.distance<=4.8){n.interact?.();return true}
+    const n=nearestInteraction();
+    if(n&&n.distance<=4.8){
+      if(window.TGGGame?.getState?.()?.inVehicle){
+        window.__tggToast?.('EXIT THE CAR TO USE '+n.name);
+        return true;
+      }
+      n.interact?.();return true;
+    }
     return originalInteract?.()??false;
   }
   function wrapInteract(){

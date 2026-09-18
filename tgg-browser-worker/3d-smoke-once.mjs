@@ -13,7 +13,7 @@ const PLAYER_SMOOTH_ONLY=String(process.env.TGG_3D_PLAYER_SMOOTH_ONLY||'0')==='1
 const WORLD_ONLY=String(process.env.TGG_3D_WORLD_ONLY||'0')==='1';
 const GAMEPAD_ONLY=String(process.env.TGG_3D_GAMEPAD_ONLY||'0')==='1';
 const DESKTOP_DRIVE_ONLY=String(process.env.TGG_3D_DESKTOP_DRIVE_ONLY||'0')==='1';
-const MOBILE_LAYOUT_ONLY=String(process.env.TGG_3D_MOBILE_LAYOUT_ONLY||'0')==='1';
+const MOBILE_LAYOUT_ONLY=String(process.env.TGG_3D_MOBILE_LAYOUT_ONLY||'0')==='1';\nconst WORLD_LIFE_ONLY=String(process.env.TGG_3D_WORLD_LIFE_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -21,6 +21,107 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(WORLD_LIFE_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,cssResponse,lifeResponse,gameResponse]=await Promise.all([
+        fetch(base+'/index.html'),fetch(base+'/style.css'),fetch(base+'/world-life.js'),fetch(base+'/game.js')
+      ]);
+      if(!htmlResponse.ok||!cssResponse.ok||!lifeResponse.ok||!gameResponse.ok){
+        throw new Error('World Life harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', life='+lifeResponse.status+', game='+gameResponse.status);
+      }
+      let html=await htmlResponse.text();
+      const [css,lifeSource,gameSource]=await Promise.all([cssResponse.text(),lifeResponse.text(),gameResponse.text()]);
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      const errors=[];
+      mp.on('pageerror',e=>errors.push(e.message||String(e)));
+      await mp.setContent(html,{waitUntil:'domcontentloaded'});
+      await mp.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
+        window.__qaGame={level:5,cash:10000,xp:0};
+        window.__qaRep=0;
+        window.__qaToasts=[];
+        window.TGGGame={
+          getState:()=>window.__qaGame,
+          reward:(cash,xp)=>{window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return {...window.__qaGame}},
+          spend:amount=>{amount=Number(amount)||0;if(window.__qaGame.cash<amount)return false;window.__qaGame.cash-=amount;return true},
+          show:()=>true
+        };
+        window.TGGCareer={career:{studioLevel:3,reputation:0,recordings:4,mixtapes:1},addRep:n=>{window.__qaRep+=Number(n)||0}};
+        window.TGGProgression={sync:()=>true};
+        window.TGGWorldSync={sync:()=>true};
+        window.__tggToast=t=>window.__qaToasts.push(String(t));
+      });
+      await mp.addScriptTag({content:lifeSource});
+      await mp.waitForTimeout(120);
+      const checks=[];
+      const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      const initial=await mp.evaluate(()=>({
+        api:typeof window.TGGWorldLife?.battleChoice==='function'&&typeof window.TGGWorldLife?.showMove==='function'&&typeof window.TGGWorldLife?.callContact==='function'&&typeof window.TGGWorldLife?.train==='function',
+        button:!!document.getElementById('worldLifeBtn'),
+        board:!!document.getElementById('worldLifeBoard'),
+        tabs:document.querySelectorAll('[data-life-tab]').length,
+        gameIntegrated:window.__gameSourceCheck||false
+      }));
+      record('world-life-api',initial.api);
+      record('world-life-entry-button',initial.button);
+      record('world-life-board',initial.board);
+      record('world-life-tabs',initial.tabs===4,String(initial.tabs));
+      record('world-life-game-runtime-hook',gameSource.includes('worldLifeBoard')&&gameSource.includes('worldLifeBtn'));
+
+      await mp.evaluate(()=>{
+        window.TGGWorldLife.startBattle();
+        window.TGGWorldLife.battleChoice('bars');
+        window.TGGWorldLife.battleChoice('flow');
+        window.TGGWorldLife.battleChoice('crowd');
+      });
+      let snap=await mp.evaluate(()=>({life:window.TGGWorldLife.getState(),game:{...window.__qaGame},rep:window.__qaRep}));
+      record('rap-battle-three-rounds',snap.life.battle.active===false&&snap.life.battle.round===3,JSON.stringify(snap.life.battle));
+      record('rap-battle-recorded',(snap.life.battleWins+snap.life.battleLosses)===1,JSON.stringify({wins:snap.life.battleWins,losses:snap.life.battleLosses}));
+
+      await mp.evaluate(()=>{
+        window.TGGWorldLife.startShow();
+        window.TGGWorldLife.showMove('hype');
+        window.TGGWorldLife.showMove('hype');
+        window.TGGWorldLife.showMove('perform');
+        window.TGGWorldLife.showMove('perform');
+      });
+      snap=await mp.evaluate(()=>({life:window.TGGWorldLife.getState(),game:{...window.__qaGame},rep:window.__qaRep}));
+      record('live-show-completes',snap.life.show.active===false&&snap.life.show.move===4,JSON.stringify(snap.life.show));
+      record('live-show-recorded',snap.life.shows===1,String(snap.life.shows));
+
+      await mp.evaluate(()=>window.TGGWorldLife.callContact('director'));
+      snap=await mp.evaluate(()=>window.TGGWorldLife.getState());
+      record('phone-contact-opportunity',snap.activeOpportunity?.contactId==='director',JSON.stringify(snap.activeOpportunity));
+
+      const before=await mp.evaluate(()=>window.TGGWorldLife.getState().attributes.stamina);
+      await mp.evaluate(()=>window.TGGWorldLife.train('stamina'));
+      snap=await mp.evaluate(()=>({life:window.TGGWorldLife.getState(),stored:JSON.parse(localStorage.getItem('tgg-world-life-v1')||'null'),game:{...window.__qaGame}}));
+      record('gym-training',snap.life.attributes.stamina===before+1,JSON.stringify(snap.life.attributes));
+      record('world-life-persistence',snap.stored?.attributes?.stamina===snap.life.attributes.stamina&&snap.stored?.activeOpportunity?.contactId==='director');
+
+      const layout=await mp.evaluate(()=>{
+        document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
+        document.getElementById('worldLifeBoard')?.classList.add('active');
+        const shell=document.querySelector('.world-life-shell')?.getBoundingClientRect();
+        const tabs=[...document.querySelectorAll('.life-tabs button')].map(x=>x.getBoundingClientRect());
+        return {width:innerWidth,scrollWidth:document.documentElement.scrollWidth,overflowX:document.documentElement.scrollWidth>innerWidth+1,shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,minTab:tabs.length?Math.min(...tabs.map(x=>x.height)):0};
+      });
+      record('world-life-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
+      record('world-life-mobile-tabs-readable',layout.minTab>=48,String(layout.minTab));
+      result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'world_life_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
 
     if(MOBILE_LAYOUT_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');

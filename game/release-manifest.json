@@ -238,8 +238,8 @@
     "single_e_vehicle_action",
     "vehicle_no_reward_path"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.25-STARTER-CAR-DRIVE-MODE-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.25-STARTER-CAR-DRIVE-MODE-VERIFIED",
   "production": "gated"
 }

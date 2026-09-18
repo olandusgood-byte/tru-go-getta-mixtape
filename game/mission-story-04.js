@@ -26,7 +26,7 @@
 
   let state={
     accepted:false,choice:null,step:'locked',completed:false,rewardClaimed:false,
-    consequence:null,priorCareer:null,performanceScore:0,updatedAt:0
+    consequence:null,priorCareer:null,performanceScore:0,kitGranted:false,updatedAt:0
   };
 
   const notify=text=>window.__tggToast?.(text);
@@ -71,6 +71,12 @@
       state.priorCareer=mission03State()?.consequence||state.priorCareer;
       state.step='choice';
       window.TGGInventory?.mission04Pack?.();
+      if(!state.kitGranted){
+        ['club-booking','festival-kit','headline-pass'].forEach(id=>{
+          if(!window.TGGInventory?.has?.(id,1))window.TGGInventory?.add?.(id,1);
+        });
+        state.kitGranted=true;
+      }
       window.TGGPerformance?.reset?.();
       save();
       notify('MISSION 04 ACCEPTED — THE HEADLINER');

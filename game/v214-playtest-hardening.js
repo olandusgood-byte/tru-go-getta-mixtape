@@ -24,7 +24,7 @@
 
   function install(){
     document.body.classList.add('tgg-v214');
-    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.14 PLAYTEST HARDENING 100';
+    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.15 CHARACTER + MISSION DEPTH 100';
     const top=document.querySelector('.topbar');
     if(top&&!$('v214FullBtn')){
       fullBtn=document.createElement('button');fullBtn.id='v214FullBtn';fullBtn.className='v214-mini-btn';fullBtn.type='button';fullBtn.textContent='FULL';
@@ -196,7 +196,7 @@
 
   function tick(now=performance.now()){
     requestAnimationFrame(tick);install();bindEvents();sampleFPS(now);detectGamepad();guardPlayerState(false);updateQualityBridge();renderDiag(false);
-    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.14 PLAYTEST HARDENING 100';
+    const badge=document.querySelector('.v201-badge');if(badge)badge.textContent='V2.15 CHARACTER + MISSION DEPTH 100';
     state.ready=true;
   }
   function status(){

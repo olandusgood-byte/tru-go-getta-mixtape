@@ -18,6 +18,7 @@ const MOBILE_LAYOUT_ONLY=String(process.env.TGG_3D_MOBILE_LAYOUT_ONLY||'0')==='1
 const WORLD_LIFE_ONLY=String(process.env.TGG_3D_WORLD_LIFE_ONLY||'0')==='1';
 const CAREER_DIRECTOR_ONLY=String(process.env.TGG_3D_CAREER_DIRECTOR_ONLY||'0')==='1';
 const CAREER_MOBILE_ONLY=String(process.env.TGG_3D_CAREER_MOBILE_ONLY||'0')==='1';
+const STORY_MISSION_ONLY=String(process.env.TGG_3D_STORY_MISSION_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -25,6 +26,143 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(STORY_MISSION_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,cssResponse,storyResponse]=await Promise.all([
+        fetch(base+'/index.html'),fetch(base+'/style.css'),fetch(base+'/story-missions.js')
+      ]);
+      if(!htmlResponse.ok||!cssResponse.ok||!storyResponse.ok){
+        throw new Error('Story Mission harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', story='+storyResponse.status);
+      }
+      let html=await htmlResponse.text();
+      const [css,storySource]=await Promise.all([cssResponse.text(),storyResponse.text()]);
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      const errors=[];
+      mp.on('pageerror',e=>errors.push(e.message||String(e)));
+      await mp.setContent(html,{waitUntil:'domcontentloaded'});
+      await mp.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
+        window.__qaGame={cash:0,xp:0,level:1};
+        window.__qaCareer={recordings:0,mixtapes:0,reputation:0,studioLevel:1};
+        window.__qaContent={completed:[]};
+        window.__qaLife={battleWins:0,shows:0,activeOpportunity:null};
+        window.__qaDirector={activeContract:null,history:[]};
+        window.__qaShown=null; window.__qaTab=null; window.__qaToasts=[];
+        window.TGGGame={
+          show:id=>{window.__qaShown=id;document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));document.getElementById(id)?.classList.add('active');return true},
+          reward:(cash,xp)=>{window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return true}
+        };
+        window.TGGCareer={career:window.__qaCareer,addRep:n=>{window.__qaCareer.reputation+=Number(n)||0;return true}};
+        window.TGGContent={state:window.__qaContent};
+        window.TGGWorldLife={
+          getState:()=>JSON.parse(JSON.stringify(window.__qaLife)),
+          setTab:t=>{window.__qaTab=t;return true},
+          callContact:id=>{window.__qaLife.activeOpportunity={contactId:id,createdAt:Date.now(),title:'QA',detail:'QA'};return true}
+        };
+        window.TGGCareerDirector={
+          getState:()=>JSON.parse(JSON.stringify(window.__qaDirector)),
+          captureOpportunity:()=>{
+            if(window.__qaLife.activeOpportunity?.contactId==='manager'){
+              window.__qaDirector.activeContract={contactId:'manager',title:'MANAGER MOVE'};
+              return true;
+            }
+            return false;
+          }
+        };
+        window.TGGProgression={sync:()=>true};
+        window.__tggToast=t=>window.__qaToasts.push(String(t));
+      });
+      await mp.addScriptTag({content:storySource});
+      await mp.waitForTimeout(120);
+
+      const checks=[];
+      const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      let snap=await mp.evaluate(()=>({
+        api:typeof window.TGGStoryMissions?.start==='function'&&typeof window.TGGStoryMissions?.sync==='function',
+        button:!!document.getElementById('storyMissionsBtn'),
+        board:!!document.getElementById('storyMissionsBoard'),
+        status:window.TGGStoryMissions?.status?.()
+      }));
+      record('story-api',snap.api);
+      record('story-entry-button',snap.button);
+      record('story-board',snap.board);
+      record('story-six-steps',snap.status?.steps?.length===6,JSON.stringify(snap.status));
+
+      await mp.evaluate(()=>window.TGGStoryMissions.start());
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('story-starts',snap.active===true&&snap.step===0,JSON.stringify(snap));
+
+      await mp.evaluate(()=>window.TGGStoryMissions.doCurrent());
+      await mp.waitForTimeout(50);
+      await mp.evaluate(()=>window.TGGStoryMissions.sync());
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('story-manager-step',snap.step===1,JSON.stringify(snap));
+
+      await mp.evaluate(()=>{window.__qaContent.completed.push('flyer-run');window.TGGStoryMissions.sync();});
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('story-city-job-step',snap.step===2,JSON.stringify(snap));
+
+      await mp.evaluate(()=>{window.__qaCareer.recordings=1;window.TGGStoryMissions.sync();});
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('story-studio-step',snap.step===3,JSON.stringify(snap));
+
+      await mp.evaluate(()=>{window.__qaLife.battleWins=1;window.TGGStoryMissions.sync();});
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('story-battle-step',snap.step===4,JSON.stringify(snap));
+
+      await mp.evaluate(()=>{window.__qaLife.shows=1;window.TGGStoryMissions.sync();});
+      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      record('story-show-step',snap.step===5,JSON.stringify(snap));
+
+      await mp.evaluate(()=>{window.__qaCareer.mixtapes=1;window.TGGStoryMissions.sync();});
+      snap=await mp.evaluate(()=>({
+        status:window.TGGStoryMissions.status(),
+        game:{...window.__qaGame},
+        career:{...window.__qaCareer},
+        stored:JSON.parse(localStorage.getItem('tgg-story-missions-v1')||'null'),
+        progress:document.getElementById('storyMissionProgressLabel')?.textContent||''
+      }));
+      record('story-completes',snap.status?.completed===true&&snap.status?.step===6,JSON.stringify(snap.status));
+      record('story-final-reward',snap.game.cash===1000&&snap.game.xp===250&&snap.career.reputation===100,JSON.stringify({game:snap.game,career:snap.career}));
+      record('story-persistence',snap.stored?.completed===true&&snap.stored?.step===6,JSON.stringify(snap.stored));
+      record('story-progress-ui',snap.progress==='100% COMPLETE',snap.progress);
+
+      const layout=await mp.evaluate(()=>{
+        document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
+        document.getElementById('storyMissionsBoard')?.classList.add('active');
+        const shell=document.querySelector('.story-missions-shell')?.getBoundingClientRect();
+        const steps=[...document.querySelectorAll('.story-step')].map(x=>x.getBoundingClientRect());
+        const action=document.getElementById('storyMissionAction')?.getBoundingClientRect();
+        return {
+          width:innerWidth,
+          scrollWidth:document.documentElement.scrollWidth,
+          overflowX:document.documentElement.scrollWidth>innerWidth+1,
+          shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,
+          stepCount:steps.length,
+          minStep:steps.length?Math.min(...steps.map(x=>x.height)):0,
+          action:action?{width:action.width,height:action.height,left:action.left,right:action.right}:null,
+          columns:getComputedStyle(document.querySelector('.story-mission-steps')).gridTemplateColumns
+        };
+      });
+      record('story-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
+      record('story-mobile-shell-contained',!!layout.shell&&layout.shell.left>=0&&layout.shell.right<=layout.width+1,JSON.stringify(layout.shell));
+      record('story-mobile-one-column',!!layout.columns&&!layout.columns.includes(' '),layout.columns);
+      record('story-mobile-action-readable',!!layout.action&&layout.action.height>=50&&layout.action.width>=300,JSON.stringify(layout.action));
+
+      result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'story_mission_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
 
     if(WORLD_LIFE_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');

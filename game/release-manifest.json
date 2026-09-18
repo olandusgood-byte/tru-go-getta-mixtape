@@ -93,7 +93,8 @@
     "V1.26-CAR-RELATIVE-CONTROLS",
     "V1.26-FORWARD-REVERSE-DRIVE",
     "V1.26-STEERING-HEADING",
-    "V1.26-CAR-MESH-ALIGNMENT"
+    "V1.26-CAR-MESH-ALIGNMENT",
+    "V1.26-AUTO-CHASE-CAMERA"
   ],
   "gates": [
     "runtime_api_presence",
@@ -234,7 +235,8 @@
     "car_forward_relative",
     "car_reverse_relative",
     "car_steer_left_right",
-    "car_mesh_heading_alignment"
+    "car_mesh_heading_alignment",
+    "vehicle_auto_chase_camera"
   ],
   "static_gate": "passed",
   "browser_smoke": "automated_ci_pass",

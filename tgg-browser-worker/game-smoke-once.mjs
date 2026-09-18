@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 
 const PORT = Number(process.env.PORT || 10000);
 const TARGET = String(process.env.TGG_GAME_SMOKE_TARGET || '').trim();
+const MAX_STORY_MISSION = Math.max(1, Number(process.env.TGG_MAX_STORY_MISSION || 99) || 99);
 
 function allowedTarget(raw) {
   try {
@@ -786,11 +787,11 @@ async function runSmoke(target) {
       gameplay?.passed === true &&
       storyMission?.passed === true &&
       storyMission02?.passed === true &&
-      storyMission03?.passed === true &&
-      storyMission04?.passed === true &&
-      storyMission05?.passed === true &&
-      mission06?.passed === true &&
-      mission07?.passed === true &&
+      (MAX_STORY_MISSION < 3 || storyMission03?.passed === true) &&
+      (MAX_STORY_MISSION < 4 || storyMission04?.passed === true) &&
+      (MAX_STORY_MISSION < 5 || storyMission05?.passed === true) &&
+      (MAX_STORY_MISSION < 6 || mission06?.passed === true) &&
+      (MAX_STORY_MISSION < 7 || mission07?.passed === true) &&
       pageErrors.length === 0 &&
       consoleErrors.length === 0 &&
       failedResources.length === 0 &&

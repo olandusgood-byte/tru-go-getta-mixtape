@@ -29,7 +29,33 @@ async function run(){
       if(style)style.value='Artist';
       document.getElementById('startGame')?.click();
     });
-    await page.waitForFunction(()=>window.TGG3D?.isReady?.()===true,{timeout:20000});
+    let webglReady=false;
+    try{
+      await page.waitForFunction(()=>window.TGG3D?.isReady?.()===true,{timeout:20000});
+      webglReady=true;
+    }catch(error){
+      const diagnostics=await page.evaluate(()=>({
+        title:document.title,
+        threeType:typeof window.THREE,
+        tgg3dType:typeof window.TGG3D,
+        city3d:!!document.getElementById('city3d'),
+        cityCanvas:!!document.querySelector('#city3d canvas'),
+        scripts:[...document.scripts].map(s=>s.src||'[inline]'),
+        readyState:document.readyState
+      })).catch(()=>({evaluationFailed:true}));
+      result={
+        ok:false,status:'webgl_not_ready',target:TARGET,
+        error:error?.message||String(error),
+        diagnostics,
+        console_errors:consoleErrors,
+        page_errors:pageErrors,
+        failed_resources:failedResources,
+        updated_at:new Date().toISOString()
+      };
+      console.error(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();
+      return;
+    }
     await page.waitForTimeout(500);
 
     const checks=[];

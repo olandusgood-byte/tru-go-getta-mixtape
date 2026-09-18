@@ -645,7 +645,7 @@
         camTarget.set(subject.position.x,driving?1.0:1.35,subject.position.z);
         if(api.cameraMode==='top'){
           desiredCam.set(subject.position.x,driving?30:27,subject.position.z+.01);
-          camera.position.lerp(desiredCam,1-Math.pow(.03,dt));
+          camera.position.lerp(desiredCam,1-Math.pow(.001,dt));
         }else{
           const yaw=heading+(api.cameraMode==='orbit'?api.cameraYawOffset:0);
           const dist=api.cameraMode==='chase'

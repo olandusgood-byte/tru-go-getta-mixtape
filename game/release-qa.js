@@ -100,7 +100,13 @@
     test('v221 battle HUD',!!document.getElementById('v221BattlePanel')&&!!document.getElementById('v221Drop'));
     test('v221 event handoff',typeof window.TGGV221?.shouldHandleEvent==='function');
     test('v221 rap battle css',!!document.querySelector('link[href*="v221-rap-battle.css"]'));
-    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.21 RAP BATTLES + LIVE PERFORMANCE 100');
+    const concert=window.TGGV222?.status?.()||{};
+    test('v222 concert api',!!window.TGGV222&&typeof window.TGGV222.openShow==='function'&&typeof window.TGGV222.performHit==='function');
+    test('v222 100 layers',Array.isArray(window.TGGV222?.layers)&&window.TGGV222.layers.length===100);
+    test('v222 venue HUD',!!document.getElementById('v222ShowPanel')&&!!document.getElementById('v222Perform'));
+    test('v222 cooldown api',typeof window.TGGV222?.cooldownLeft==='function');
+    test('v222 concert css',!!document.querySelector('link[href*="v222-concert.css"]'));
+    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.22 CONCERT + VENUE PERFORMANCE 100');
     test('v2 movement hud',!!document.getElementById('playerMoveHud')&&!!document.getElementById('walkModeValue')&&!!document.getElementById('walkSpeedValue'));
     test('v2 sprint control',!!document.getElementById('sprintBtn'));test('v202 world gameplay',!!window.TGGWorldGameplay&&typeof window.TGGWorldGameplay.getNavTarget==='function'&&typeof window.TGGWorldGameplay.performObjective==='function');test('v202 world objective hud',!!document.getElementById('worldObjective'));test('v203 street contacts',!!window.TGGStreetContacts&&Array.isArray(window.TGGStreetContacts.contacts)&&window.TGGStreetContacts.contacts.length>=3&&typeof window.TGGStreetContacts.startContact==='function');test('v203 contact hud',!!document.getElementById('streetContactCard'));test('career api',!!window.TGGCareer);test('content api',!!window.TGGContent);test('expansion api',!!window.TGGExpansion);test('progression api',!!window.TGGProgression);test('bridge api',!!window.TGGBridge);test('chain api',!!window.TGGChains);test('district api',!!window.TGGDistricts);test('save api',!!window.TGGSave);test('inventory api',!!window.TGGInventory);test('crew api',!!window.TGGCrew);test('events api',!!window.TGGEvents);test('economy api',!!window.TGGEconomy&&typeof window.TGGEconomy.apply==='function');test('avatar api',!!window.TGGAvatar&&typeof window.TGGAvatar.get==='function'&&typeof window.TGGAvatar.save==='function');test('world sync api',!!window.TGGWorldSync&&typeof window.TGGWorldSync.snapshot==='function'&&typeof window.TGGWorldSync.setTransport==='function'&&typeof window.TGGWorldSync.sync==='function');
     ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud'].forEach(id=>test('dom:'+id,!!document.getElementById(id)));

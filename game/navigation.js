@@ -10,6 +10,8 @@
     function targetFor(s){
       const worldTarget=window.TGGWorldGameplay?.getNavTarget?.(s);
       if(worldTarget)return worldTarget;
+      const contactTarget=window.TGGStreetContacts?.getNavTarget?.();
+      if(contactTarget)return contactTarget;
       if(s?.accepted)return {label:'MISSION',x:(72-50)*.92,z:(36-50)*.92,color:'#ff466d'};
       const p=toWorld(s);
       const ds=window.TGG3D?.destinations||[];

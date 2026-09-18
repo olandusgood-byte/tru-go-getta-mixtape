@@ -49,7 +49,12 @@ try:
     crowd_flags=page.evaluate("window.TGG3D.pedestrians.filter(x=>x.userData.streetEventMode).length")
     check('street-event-start',started.get('ok') is True and active_event.get('active',{}).get('id')=='downtown-cypher',json.dumps([started,active_event]))
     check('crowd-gather-3d',crowd_flags>=3,str(crowd_flags))
-    check('street-event-live-hud',page.locator('#streetEventHud').is_visible() and 'DOWNTOWN CYPHER' in page.locator('#streetEventHud').inner_text(),page.locator('#streetEventHud').inner_text())
+    hud_state=page.evaluate("""() => {
+      const e=document.getElementById('streetEventHud');
+      const cs=getComputedStyle(e);
+      return {show:e.classList.contains('show'),aria:e.getAttribute('aria-hidden'),visibility:cs.visibility,display:cs.display,text:e.textContent||''};
+    }""")
+    check('street-event-live-hud',hud_state.get('show') is True and hud_state.get('aria')=='false' and hud_state.get('visibility')!='hidden' and hud_state.get('display')!='none' and 'DOWNTOWN CYPHER' in hud_state.get('text','').upper(),json.dumps(hud_state))
     finished=page.evaluate("window.TGGStreetEvents.finish()")
     page.wait_for_timeout(100)
     after_event=page.evaluate("({cash:window.TGGGame.getState().cash,xp:window.TGGGame.getState().xp,state:window.TGGStreetEvents.status(),crowd:window.TGG3D.pedestrians.filter(x=>x.userData.streetEventMode).length})")

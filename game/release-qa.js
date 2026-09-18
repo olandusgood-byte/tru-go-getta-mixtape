@@ -40,6 +40,10 @@
     test('contact ops single store',!!window.TGGRouteMemory?.state?.opportunities&&typeof window.TGGRouteMemory.state.opportunities==='object');
     test('contact ops catalog',Array.isArray(window.TGGContactOps?.opportunities)&&window.TGGContactOps.opportunities.length>=3);
     test('first opportunity achievement',window.TGGProgression?.achievements?.some(a=>a.id==='first-opportunity'));
+    test('street life api',!!window.TGGStreetLife&&typeof window.TGGStreetLife.nearestPedestrian==='function'&&typeof window.TGGStreetLife.nearestTraffic==='function'&&typeof window.TGGStreetLife.activateNearest==='function'&&typeof window.TGGStreetLife.onHorn==='function');
+    test('street life contacts',Array.isArray(window.TGGStreetLife?.CONTACTS)&&window.TGGStreetLife.CONTACTS.length>=6);
+    test('street life state',Array.isArray(window.TGGStreetLife?.state?.met)&&typeof window.TGGStreetLife?.state?.talks==='number');
+    test('street life prompt',!!document.getElementById('streetLifePrompt')&&!!document.getElementById('streetDialogue'));
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

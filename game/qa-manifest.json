@@ -96,5 +96,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
   "next": "V1.30 CITY INTERIORS + TRAFFIC INTERACTION",
-  "verification": "pending_ci"
+  "verification": "passed"
 }

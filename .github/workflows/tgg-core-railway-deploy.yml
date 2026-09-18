@@ -21,13 +21,14 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy TGG Core to Railway
+    name: Deploy TGG Core and Worker to Railway
     runs-on: ubuntu-latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
       RAILWAY_PROJECT_ID: "49db9e70-3a4b-4737-ac74-716bebd5ad28"
       RAILWAY_ENVIRONMENT: "454e3152-df86-4af5-9f3b-0aae6cf1469e"
-      RAILWAY_SERVICE: "cfa5c70c-9da2-49e6-bea4-21c4474ba8cb"
+      RAILWAY_CORE_SERVICE: "cfa5c70c-9da2-49e6-bea4-21c4474ba8cb"
+      RAILWAY_WORKER_SERVICE: "4508d8f5-c887-4b02-bd04-fc2650ef1f65"
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4
@@ -49,12 +50,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          railway link --project "${RAILWAY_PROJECT_ID}" --environment "${RAILWAY_ENVIRONMENT}" --service "${RAILWAY_SERVICE}" --json
-          railway up --ci --service "${RAILWAY_SERVICE}" --verbose
+          railway link --project "${RAILWAY_PROJECT_ID}" --environment "${RAILWAY_ENVIRONMENT}" --service "${RAILWAY_CORE_SERVICE}" --json
+          railway up --ci --service "${RAILWAY_CORE_SERVICE}" --verbose
+
+      - name: Deploy TGG Job Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          railway link --project "${RAILWAY_PROJECT_ID}" --environment "${RAILWAY_ENVIRONMENT}" --service "${RAILWAY_WORKER_SERVICE}" --json
+          railway up --ci --service "${RAILWAY_WORKER_SERVICE}" --verbose
 
       - name: Report deployed commit
         shell: bash
         run: |
-          echo "TGG Core deploy requested for commit ${GITHUB_SHA}"
-          echo "Railway service: ${RAILWAY_SERVICE}"
+          echo "TGG Core and Job Worker deploy requested for commit ${GITHUB_SHA}"
+          echo "Core service: ${RAILWAY_CORE_SERVICE}"
+          echo "Worker service: ${RAILWAY_WORKER_SERVICE}"
           echo "Railway environment: ${RAILWAY_ENVIRONMENT}"

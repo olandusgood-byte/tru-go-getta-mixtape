@@ -1,13 +1,16 @@
 (() => {
   const MISSION_STAGES={
     'flyer-run':[
-      {destination:'business',label:'DOWNTOWN FLYER DROP',action:'POST FLYERS',color:'#ffcf4a'}
+      {destination:'business',label:'DOWNTOWN FLYER DROP',action:'POST FLYERS',color:'#ffcf4a'},
+      {destination:'park',label:'PARK STREET TEAM',action:'HAND OUT FLYERS',color:'#4cff88'}
     ],
     'studio-session':[
-      {destination:'studio',label:'STUDIO ROW SESSION',action:'RUN SESSION',color:'#ff466d'}
+      {destination:'studio',label:'STUDIO CHECK-IN',action:'CUT VOCALS',color:'#ff466d'},
+      {destination:'media',label:'MEDIA ROUGH MIX',action:'SEND ROUGH MIX',color:'#7b86ff'}
     ],
     'mixtape-promo':[
       {destination:'media',label:'MEDIA DISTRICT PROMO',action:'PUSH THE RELEASE',color:'#c56cff'},
+      {destination:'business',label:'DOWNTOWN DROP',action:'LOCK THE STREET PUSH',color:'#ffcf4a'},
       {destination:'park',label:'PARK STREET TEAM',action:'FINISH PROMO RUN',color:'#4cff88'}
     ]
   };

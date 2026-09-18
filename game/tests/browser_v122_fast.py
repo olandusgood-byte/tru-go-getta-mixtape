@@ -20,6 +20,18 @@ def check(name,ok,detail=''):
 with sync_playwright() as p:
     browser=p.chromium.launch(headless=True)
     page=browser.new_page(viewport={'width':1440,'height':1000})
+    page.evaluate("""() => {
+      const store=new Map();
+      const ls={
+        getItem:k=>store.has(String(k))?store.get(String(k)):null,
+        setItem:(k,v)=>store.set(String(k),String(v)),
+        removeItem:k=>store.delete(String(k)),
+        clear:()=>store.clear(),
+        key:i=>Array.from(store.keys())[i]??null,
+        get length(){return store.size}
+      };
+      Object.defineProperty(window,'localStorage',{value:ls,configurable:true});
+    }""")
     errors=[]
     page.on('pageerror',lambda e: errors.append(str(e)))
     page.on('console',lambda m: errors.append(m.text) if m.type=='error' else None)

@@ -162,6 +162,93 @@ async function runGameSmokeTarget(target) {
       worldSyncApi: Boolean(window.TGGWorldSync)
     }));
 
+    const gameplay = await page.evaluate(() => {
+      const checks = [];
+      const record = (name, pass, detail='') => checks.push({ name, pass: Boolean(pass), detail });
+      const active = id => document.getElementById(id)?.classList.contains('active') === true;
+      const click = id => {
+        const el = document.getElementById(id);
+        if (!el) return false;
+        el.click();
+        return true;
+      };
+      const moveKey = key => document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+
+      try {
+        localStorage.removeItem('tgg-game-v1');
+        window.TGGGame?.show?.('menu');
+
+        record('menu-active', active('menu'));
+        record('create-player-control', click('newGame'));
+        const creatorOpened = active('creator');
+        record('create-player-opens-creator', creatorOpened);
+
+        if (creatorOpened) {
+          const stage = document.getElementById('stageName');
+          const style = document.getElementById('styleChoice');
+          if (stage) stage.value = 'TGG QA PLAYER';
+          if (style) style.value = 'Rapper';
+
+          record('start-game-control', click('startGame'));
+          const gameOpened = active('game');
+          record('start-game-enters-city', gameOpened);
+          record('hud-player-name', document.getElementById('hudName')?.textContent === 'TGG QA PLAYER');
+
+          if (gameOpened && window.TGGGame?.getState) {
+            const beforeMove = Number(window.TGGGame.getState()?.x);
+            moveKey('ArrowRight');
+            const afterMove = Number(window.TGGGame.getState()?.x);
+            record('keyboard-movement', afterMove > beforeMove, `${beforeMove}->${afterMove}`);
+
+            click('saveBtn');
+            record('save-persistence', Boolean(localStorage.getItem('tgg-game-v1')));
+
+            const beforePause = Number(window.TGGGame.getState()?.x);
+            click('pauseBtn');
+            const paused = active('pause');
+            record('pause-opens', paused);
+            moveKey('ArrowRight');
+            const afterPauseMove = Number(window.TGGGame.getState()?.x);
+            record('pause-freezes-movement', paused && afterPauseMove === beforePause, `${beforePause}->${afterPauseMove}`);
+
+            click('resumeBtn');
+            record('resume-returns-city', active('game'));
+
+            window.TGGGame.show('menu');
+            click('continueGame');
+            record('continue-restores-city', active('game'));
+            record('continue-keeps-player', document.getElementById('hudName')?.textContent === 'TGG QA PLAYER');
+
+            window.TGGGame.show('game');
+            click('missionBtn');
+            click('missionBtn');
+            const missionAccepted = window.TGGGame.getState()?.accepted === true;
+            record('mission-accept', missionAccepted);
+            if (missionAccepted) {
+              const s = window.TGGGame.getState();
+              s.x = 72;
+              s.y = 36;
+              window.TGGGame.refresh?.();
+              const cashBefore = Number(s.cash || 0);
+              click('missionBtn');
+              const s2 = window.TGGGame.getState();
+              record('mission-complete', s2?.mission === null && s2?.accepted === false && Number(s2?.cash || 0) >= cashBefore + 250);
+            } else {
+              record('mission-complete', false, 'mission was not accepted');
+            }
+
+            click('businessBtn');
+            record('business-opens', active('businessBoard'));
+            record('business-grid-visible', Boolean(document.querySelector('#businessBoard .business-grid')));
+          }
+        }
+      } catch (error) {
+        record('gameplay-exception', false, error?.message || String(error));
+      }
+
+      return { passed: checks.length > 0 && checks.every(check => check.pass), checks };
+    });
+
     const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
     await context.close();
 
@@ -183,6 +270,7 @@ async function runGameSmokeTarget(target) {
       (mobileResponse?.status() || 0) >= 200 &&
       (mobileResponse?.status() || 0) < 400 &&
       releasePassed &&
+      gameplay?.passed === true &&
       pageErrors.length === 0 &&
       consoleErrors.length === 0 &&
       failedResources.length === 0 &&
@@ -199,6 +287,7 @@ async function runGameSmokeTarget(target) {
       release_qa_passed: releasePassed,
       release_qa_failed_checks: Array.isArray(releaseQa?.checks) ? releaseQa.checks.filter(x => !x.pass).slice(0, 20) : [],
       foundation_qa: foundationQa,
+      gameplay,
       dom,
       console_errors: consoleErrors,
       page_errors: pageErrors,

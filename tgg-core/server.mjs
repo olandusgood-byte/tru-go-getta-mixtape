@@ -7,6 +7,18 @@ import path from 'node:path';
 const { Pool } = pg;
 const app = express();
 app.use(express.json({ limit: '70mb' }));
+const CORS_ORIGINS = new Set(String(process.env.TGG_CORS_ORIGINS || 'https://trugogettamixtapes.blogspot.com').split(',').map(x=>x.trim()).filter(Boolean));
+app.use((req,res,next)=>{
+  const origin=req.get('origin');
+  if(origin && CORS_ORIGINS.has(origin)){
+    res.set('Access-Control-Allow-Origin',origin);
+    res.set('Vary','Origin');
+    res.set('Access-Control-Allow-Headers','Authorization, Content-Type, X-TGG-Worker-ID, X-TGG-Worker-Token, X-TGG-Bootstrap-Secret');
+    res.set('Access-Control-Allow-Methods','GET,POST,PATCH,OPTIONS');
+  }
+  if(req.method==='OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -153,166 +165,23 @@ app.post('/v1/artists/me', auth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-app.get('/v1/creator/messages', auth, async (req,res,next)=>{try{const r=await pool.query('select id,sender_user_id,recipient_user_id,subject,body,read_at,created_at from tgg_creator_messages where sender_user_id=$1 or recipient_user_id=$1 order by created_at desc limit 100',[req.user.id]);res.json({messages:r.rows});}catch(e){next(e);}});
-app.post('/v1/creator/messages', auth, async (req,res,next)=>{try{const {recipient_user_id,subject,body}=req.body||{};if(!recipient_user_id||!body)return res.status(400).json({error:'recipient_user_id_and_body_required'});const r=await pool.query('insert into tgg_creator_messages(sender_user_id,recipient_user_id,subject,body) values($1,$2,$3,$4) returning *',[req.user.id,recipient_user_id,subject||null,body]);res.status(201).json({message:r.rows[0]});}catch(e){next(e);}});
-app.get('/v1/creator/supporters', auth, async (req,res,next)=>{try{const r=await pool.query('select s.* from tgg_creator_supporters s join artists a on a.id=s.artist_id where a.user_id=$1 order by s.created_at desc limit 500',[req.user.id]);res.json({supporters:r.rows});}catch(e){next(e);}});
-app.get('/v1/creator/revenue', auth, async (req,res,next)=>{try{const r=await pool.query("select count(*)::int as events,coalesce(sum(amount_cents),0)::bigint as gross_cents from tgg_creator_revenue_events e join artists a on a.id=e.artist_id where a.user_id=$1 and e.status='recorded'",[req.user.id]);res.json({events:Number(r.rows[0]?.events||0),gross_cents:Number(r.rows[0]?.gross_cents||0)});}catch(e){next(e);}});
-app.get('/v1/creator/expansion', auth, async (req,res,next)=>{try{const [m,a]=await Promise.all([pool.query('select count(*)::int as total from world_missions'),pool.query('select count(*)::int as completed from mission_sessions ms join users u on u.id=ms.user_id where u.id=$1 and ms.status=\'completed\'',[req.user.id])]);res.json({available_missions:Number(m.rows[0]?.total||0),completed_missions:Number(a.rows[0]?.completed||0)});}catch(e){next(e);}});\n\napp.get('/v1/creator/growth', auth, async (req,res,next)=>{try{const [t,r]=await Promise.all([pool.query('select count(*)::int as tracks from tracks t join artists a on a.id=t.artist_id where a.user_id=$1',[req.user.id]),pool.query('select count(*)::int as releases from releases r join artists a on a.id=r.artist_id where a.user_id=$1',[req.user.id])]);res.json({tracks:Number(t.rows[0]?.tracks||0),releases:Number(r.rows[0]?.releases||0)});}catch(e){next(e);}});\n\napp.get('/v1/creator/notifications', auth, async (req,res,next)=>{try{const r=await pool.query("select id,action,metadata,created_at from tgg_audit_log where user_id=$1 order by created_at desc limit 50",[req.user.id]);res.json({notifications:r.rows.map(x=>({id:x.id,type:x.action,metadata:x.metadata,created_at:x.created_at}))});}catch(e){next(e);}});\n\napp.get('/v1/creator/profile', auth, async (req,res,next)=>{try{const r=await pool.query('select a.*,u.email,u.display_name,u.role from artists a join users u on u.id=a.user_id where a.user_id=$1',[req.user.id]);res.json({artist:r.rows[0]||null});}catch(e){next(e);}});\n\napp.get('/v1/creator/workspace', auth, async (req,res,next)=>{try{const r=await pool.query('select a.*,u.email,u.display_name from artists a join users u on u.id=a.user_id where a.user_id=$1',[req.user.id]);if(!r.rowCount)return res.status(404).json({error:'artist_profile_required'});const releases=await pool.query('select * from releases where artist_id=$1 order by created_at desc',[r.rows[0].id]);const tracks=await pool.query('select * from tracks where artist_id=$1 order by created_at desc',[r.rows[0].id]);res.json({artist:r.rows[0],releases:releases.rows,tracks:tracks.rows});}catch(e){next(e);}});\n\napp.get('/v1/protected-audio/candidate', auth, async (req,res,next)=>{try{const r=await pool.query(\`select t.id as track_id,m.storage_key,m.mime_type from tracks t join media_objects m on m.storage_key=replace(t.audio_url,'/v1/storage/object/','') where t.artist_id in (select id from artists where user_id=$1) and t.published=true and t.audio_url is not null and m.media_type='audio' order by t.created_at desc limit 1\`,[req.user.id]);if(!r.rowCount)return res.status(404).json({error:'no_published_protected_audio_candidate'});res.json({track_id:r.rows[0].track_id,object_key:r.rows[0].storage_key,mime_type:r.rows[0].mime_type});}catch(e){next(e);}});\n\nmport express from 'express';
-import pg from 'pg';
-import crypto from 'node:crypto';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+app.get('/v1/creator/workspace', auth, async (req,res,next)=>{try{const r=await pool.query('select a.*,u.email,u.display_name from artists a join users u on u.id=a.user_id where a.user_id=$1',[req.user.id]);if(!r.rowCount)return res.status(404).json({error:'artist_profile_required'});const releases=await pool.query('select * from releases where artist_id=$1 order by created_at desc',[r.rows[0].id]);const tracks=await pool.query('select * from tracks where artist_id=$1 order by created_at desc',[r.rows[0].id]);res.json({artist:r.rows[0],releases:releases.rows,tracks:tracks.rows});}catch(e){next(e);}});
 
-const { Pool } = pg;
-const app = express();
-app.use(express.json({ limit: '70mb' }));
+app.get('/v1/protected-audio/candidate', auth, async (req,res,next)=>{try{const r=await pool.query(\`select t.id as track_id,m.storage_key,m.mime_type from tracks t join media_objects m on m.storage_key=replace(t.audio_url,'/v1/storage/object/','') where t.artist_id in (select id from artists where user_id=$1) and t.published=true and t.audio_url is not null and m.media_type='audio' order by t.created_at desc limit 1\`,[req.user.id]);if(!r.rowCount)return res.status(404).json({error:'no_published_protected_audio_candidate'});res.json({track_id:r.rows[0].track_id,object_key:r.rows[0].storage_key,mime_type:r.rows[0].mime_type});}catch(e){next(e);}});
 
-const PORT = Number(process.env.PORT || 10000);
-const DATABASE_URL = process.env.DATABASE_URL;
-const STORAGE_ROOT = process.env.TGG_STORAGE_ROOT || '/data/media';
-if (!DATABASE_URL) console.warn('[TGG Core] DATABASE_URL is not configured');
+app.get('/v1/protected-audio/candidate', auth, async (req,res,next)=>{try{const r=await pool.query(\`select t.id as track_id,m.storage_key,m.mime_type from tracks t join media_objects m on m.storage_key=replace(t.audio_url,'/v1/storage/object/','') where t.artist_id in (select id from artists where user_id=$1) and t.published=true and t.audio_url is not null and m.media_type='audio' order by t.created_at desc limit 1\`,[req.user.id]);if(!r.rowCount)return res.status(404).json({error:'no_published_protected_audio_candidate'});res.json({track_id:r.rows[0].track_id,object_key:r.rows[0].storage_key,mime_type:r.rows[0].mime_type});}catch(e){next(e);}});
 
-const pool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl: process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false },
-  max: Number(process.env.DB_POOL_MAX || 10)
-});
+app.post('/v1/protected-audio/access', auth, async (req,res,next)=>{try{const trackId=String(req.body?.track_id||'');const r=await pool.query(\`select t.id,m.storage_key,m.mime_type from tracks t join media_objects m on m.storage_key=replace(t.audio_url,'/v1/storage/object/','') where t.id=$1 and t.published=true and t.audio_url is not null and m.media_type='audio' and t.artist_id in (select id from artists where user_id=$2)\`,[trackId,req.user.id]);if(!r.rowCount)return res.status(404).json({error:'protected_audio_not_found'});const key=r.rows[0].storage_key,expires=Math.floor(Date.now()/1000)+300,sig=crypto.createHmac('sha256',TOKEN_SECRET).update('audio/'+key+':'+expires).digest('hex');res.json({source:'protected_storage',url:'/v1/storage/signed/audio/'+key.split('/').map(encodeURIComponent).join('/')+'?expires='+expires+'&sig='+sig,expires_in:300,track_id:r.rows[0].id,mime_type:r.rows[0].mime_type});}catch(e){next(e);}});
 
-const schemaPath = new URL('./schema.sql', import.meta.url);
-let initPromise;
-async function init() {
-  if (!DATABASE_URL) return;
-  if (!initPromise) {
-    initPromise = (async () => {
-      const schema = await fs.readFile(schemaPath, 'utf8');
-      await pool.query(schema);
-      await pool.query(`create table if not exists tgg_worker_registry (id uuid primary key default gen_random_uuid(), worker_id text not null unique, worker_token_hash text not null, status text not null default 'active', metadata jsonb not null default '{}'::jsonb, last_seen_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now()); create table if not exists tgg_browser_jobs (id uuid primary key default gen_random_uuid(), worker_id uuid references tgg_worker_registry(id) on delete set null, flow_key text not null, status text not null default 'queued', payload jsonb not null default '{}'::jsonb, result jsonb, evidence jsonb not null default '[]'::jsonb, lease_token text, lease_expires_at timestamptz, attempts integer not null default 0, max_attempts integer not null default 3, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), finished_at timestamptz); create index if not exists tgg_browser_jobs_claim_idx on tgg_browser_jobs(status,lease_expires_at,created_at);`);
-    })();
-  }
-  return initPromise;
-}
+app.post('/v1/protected-audio/evidence', auth, async (req,res,next)=>{try{const {track_id,playback_started,load_ms,anonymous_status,anonymous_error,qa_denial_proof}=req.body||{};if(!track_id||playback_started!==true)return res.status(400).json({error:'protected_audio_evidence_incomplete'});const r=await pool.query(\`select t.id from tracks t where t.id=$1 and t.published=true and t.artist_id in (select id from artists where user_id=$2)\`,[track_id,req.user.id]);if(!r.rowCount)return res.status(404).json({error:'protected_audio_not_found'});const evidence={track_id,playback_started:true,load_ms:Number(load_ms)||null,anonymous_status:Number(anonymous_status)||null,anonymous_error:anonymous_error||null,qa_denial_proof:qa_denial_proof||null,recorded_at:new Date().toISOString()};await pool.query('insert into tgg_audit_log(user_id,action,metadata) values($1,$2,$3)',[req.user.id,'protected_audio_browser_qa',evidence]);res.json({ok:true,verified:1,required:1,remaining:0,evidence});}catch(e){next(e);}});
 
-const SESSION_DAYS = 30;
-const TOKEN_SECRET = process.env.TGG_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+app.get('/v1/creator/library', auth, async (req,res,next)=>{try{const a=await pool.query('select id,stage_name,bio,avatar_url from artists where user_id=$1',[req.user.id]);if(!a.rowCount)return res.status(404).json({error:'artist_profile_required'});const [releases,tracks]=await Promise.all([pool.query('select * from releases where artist_id=$1 order by created_at desc',[a.rows[0].id]),pool.query('select * from tracks where artist_id=$1 order by created_at desc',[a.rows[0].id])]);res.json({artist:a.rows[0],releases:releases.rows,tracks:tracks.rows});}catch(e){next(e);}});
 
-function hashToken(token) {
-  return crypto.createHash('sha256').update(token).digest('hex');
-}
-function encryptSecret(value){ const iv=crypto.randomBytes(12); const key=crypto.createHash('sha256').update(TOKEN_SECRET).digest(); const cipher=crypto.createCipheriv('aes-256-gcm',key,iv); const encrypted=Buffer.concat([cipher.update(String(value),'utf8'),cipher.final()]); return iv.toString('base64url')+'.'+cipher.getAuthTag().toString('base64url')+'.'+encrypted.toString('base64url'); }
-function decryptSecret(value){ const [ivS,tagS,dataS]=String(value||'').split('.'); if(!ivS||!tagS||!dataS) return null; const key=crypto.createHash('sha256').update(TOKEN_SECRET).digest(); const decipher=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(ivS,'base64url')); decipher.setAuthTag(Buffer.from(tagS,'base64url')); return Buffer.concat([decipher.update(Buffer.from(dataS,'base64url')),decipher.final()]).toString('utf8'); }
+app.post('/v1/creator/tracks', auth, async (req,res,next)=>{try{const {release_id,title,track_number,audio_url,video_url,artwork_url,duration_seconds,published=false}=req.body||{};const a=await pool.query('select id from artists where user_id=$1',[req.user.id]);if(!a.rowCount)return res.status(409).json({error:'artist_profile_required'});const r=await pool.query('select id from releases where id=$1 and artist_id=$2',[release_id,a.rows[0].id]);if(!r.rowCount)return res.status(404).json({error:'release_not_found'});const t=await pool.query('insert into tracks(release_id,artist_id,title,track_number,audio_url,video_url,artwork_url,duration_seconds,published) values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *',[release_id,a.rows[0].id,title,track_number||null,audio_url||null,video_url||null,artwork_url||null,duration_seconds||null,Boolean(published)]);res.status(201).json({track:t.rows[0]});}catch(e){next(e);}});
 
-function passwordHash(password, salt = crypto.randomBytes(16).toString('hex')) {
-  const derived = crypto.scryptSync(password, salt, 64).toString('hex');
-  return `scrypt:${salt}:${derived}`;
-}
+app.get('/v1/creator/dashboard', auth, async (req,res,next)=>{try{const a=await pool.query('select id,stage_name,bio,avatar_url from artists where user_id=$1',[req.user.id]);if(!a.rowCount)return res.status(404).json({error:'artist_profile_required'});const artistId=a.rows[0].id;const [releases,tracks,audit,jobs]=await Promise.all([pool.query('select * from releases where artist_id=$1 order by created_at desc limit 100',[artistId]),pool.query('select * from tracks where artist_id=$1 order by created_at desc limit 200',[artistId]),pool.query('select id,action,payload as metadata,created_at from tgg_audit_log where actor_user_id=$1 order by created_at desc limit 25',[req.user.id]),pool.query('select id,queue,job_type,status,priority,attempts,created_at,finished_at from tgg_jobs where payload->>\'user_id\'=$1 order by created_at desc limit 25',[req.user.id])]);res.json({artist:a.rows[0],releases:releases.rows,tracks:tracks.rows,audit:audit.rows,jobs:jobs.rows});}catch(e){next(e);}});
 
-function verifyPassword(password, stored) {
-  const [scheme, salt, expected] = String(stored).split(':');
-  if (scheme !== 'scrypt' || !salt || !expected) return false;
-  const actual = crypto.scryptSync(password, salt, 64).toString('hex');
-  return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'));
-}
-
-function newToken() {
-  const raw = crypto.randomBytes(48).toString('base64url');
-  const sig = crypto.createHmac('sha256', TOKEN_SECRET).update(raw).digest('base64url');
-  return `${raw}.${sig}`;
-}
-
-async function auth(req, res, next) {
-  try {
-    await init();
-    const header = req.get('authorization') || '';
-    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-    if (!token) return res.status(401).json({ error: 'missing_bearer_token' });
-    const result = await pool.query(
-      `select u.id, u.email, u.display_name, u.role, s.id as session_id
-       from sessions s join users u on u.id=s.user_id
-       where s.token_hash=$1 and s.expires_at > now()`,
-      [hashToken(token)]
-    );
-    if (!result.rowCount) return res.status(401).json({ error: 'invalid_or_expired_session' });
-    req.user = result.rows[0];
-    await pool.query('update sessions set last_seen_at=now() where id=$1', [req.user.session_id]);
-    next();
-  } catch (e) { next(e); }
-}
-
-app.get('/health', async (_req, res) => {
-  try {
-    await init();
-    const db = DATABASE_URL ? (await pool.query('select now() as now')).rows[0].now : null;
-    res.json({ ok: true, service: 'tgg-core', version: '1.0.0', database: Boolean(db), time: new Date().toISOString() });
-  } catch (e) { res.status(503).json({ ok: false, service: 'tgg-core', error: e.message }); }
-});
-
-app.post('/v1/auth/register', async (req, res, next) => {
-  try {
-    await init();
-    const { email, password, display_name } = req.body || {};
-    if (!/^\S+@\S+\.\S+$/.test(String(email || ''))) return res.status(400).json({ error: 'invalid_email' });
-    if (String(password || '').length < 8) return res.status(400).json({ error: 'password_too_short' });
-    const result = await pool.query(
-      'insert into users(email,password_hash,display_name) values($1,$2,$3) returning id,email,display_name,role,created_at',
-      [String(email).toLowerCase().trim(), passwordHash(password), display_name || null]
-    );
-    res.status(201).json({ user: result.rows[0] });
-  } catch (e) {
-    if (e.code === '23505') return res.status(409).json({ error: 'email_already_registered' });
-    next(e);
-  }
-});
-
-app.post('/v1/auth/login', async (req, res, next) => {
-  try {
-    await init();
-    const { email, password } = req.body || {};
-    const result = await pool.query('select * from users where email=$1', [String(email || '').toLowerCase().trim()]);
-    if (!result.rowCount || !verifyPassword(password || '', result.rows[0].password_hash))
-      return res.status(401).json({ error: 'invalid_credentials' });
-    const token = newToken();
-    const expires = new Date(Date.now() + SESSION_DAYS * 86400000);
-    await pool.query('insert into sessions(user_id,token_hash,expires_at) values($1,$2,$3)', [result.rows[0].id, hashToken(token), expires]);
-    const { password_hash, ...user } = result.rows[0];
-    res.json({ access_token: token, token_type: 'Bearer', expires_at: expires.toISOString(), user });
-  } catch (e) { next(e); }
-});
-
-app.post('/v1/auth/logout', auth, async (req, res, next) => {
-  try {
-    const token = req.get('authorization').slice(7);
-    await pool.query('delete from sessions where token_hash=$1', [hashToken(token)]);
-    res.json({ ok: true });
-  } catch (e) { next(e); }
-});
-
-app.get('/v1/me', auth, (req, res) => {
-  res.json({ user: req.user });
-});
-
-app.get('/v1/artists/me', auth, async (req, res, next) => {
-  try {
-    const r = await pool.query('select * from artists where user_id=$1', [req.user.id]);
-    res.json({ artist: r.rows[0] || null });
-  } catch (e) { next(e); }
-});
-
-app.post('/v1/artists/me', auth, async (req, res, next) => {
-  try {
-    const { stage_name, bio, avatar_url } = req.body || {};
-    if (!stage_name) return res.status(400).json({ error: 'stage_name_required' });
-    const r = await pool.query(
-      `insert into artists(user_id,stage_name,bio,avatar_url) values($1,$2,$3,$4)
-       on conflict(user_id) do update set stage_name=excluded.stage_name,bio=excluded.bio,avatar_url=excluded.avatar_url
-       returning *`,
-      [req.user.id, stage_name, bio || null, avatar_url || null]
-    );
-    await pool.query("update users set role='artist' where id=$1", [req.user.id]);
-    res.status(201).json({ artist: r.rows[0] });
-  } catch (e) { next(e); }
-});
-
-app.get('/v1/creator/workspace', auth, async (req,res,next)=>{try{const r=await pool.query('select a.*,u.email,u.display_name from artists a join users u on u.id=a.user_id where a.user_id=$1',[req.user.id]);if(!r.rowCount)return res.status(404).json({error:'artist_profile_required'});const releases=await pool.query('select * from releases where artist_id=$1 order by created_at desc',[r.rows[0].id]);const tracks=await pool.query('select * from tracks where artist_id=$1 order by created_at desc',[r.rows[0].id]);res.json({artist:r.rows[0],releases:releases.rows,tracks:tracks.rows});}catch(e){next(e);}});\n\napp.get('/v1/protected-audio/candidate', auth, async (req,res,next)=>{try{const r=await pool.query(\`select t.id as track_id,m.storage_key,m.mime_type from tracks t join media_objects m on m.storage_key=replace(t.audio_url,'/v1/storage/object/','') where t.artist_id in (select id from artists where user_id=$1) and t.published=true and t.audio_url is not null and m.media_type='audio' order by t.created_at desc limit 1\`,[req.user.id]);if(!r.rowCount)return res.status(404).json({error:'no_published_protected_audio_candidate'});res.json({track_id:r.rows[0].track_id,object_key:r.rows[0].storage_key,mime_type:r.rows[0].mime_type});}catch(e){next(e);}});\n\napp.get('/v1/protected-audio/candidate', auth, async (req,res,next)=>{try{const r=await pool.query(\`select t.id as track_id,m.storage_key,m.mime_type from tracks t join media_objects m on m.storage_key=replace(t.audio_url,'/v1/storage/object/','') where t.artist_id in (select id from artists where user_id=$1) and t.published=true and t.audio_url is not null and m.media_type='audio' order by t.created_at desc limit 1\`,[req.user.id]);if(!r.rowCount)return res.status(404).json({error:'no_published_protected_audio_candidate'});res.json({track_id:r.rows[0].track_id,object_key:r.rows[0].storage_key,mime_type:r.rows[0].mime_type});}catch(e){next(e);}});\n\napp.post('/v1/protected-audio/access', auth, async (req,res,next)=>{try{const trackId=String(req.body?.track_id||'');const r=await pool.query(\`select t.id,m.storage_key,m.mime_type from tracks t join media_objects m on m.storage_key=replace(t.audio_url,'/v1/storage/object/','') where t.id=$1 and t.published=true and t.audio_url is not null and m.media_type='audio' and t.artist_id in (select id from artists where user_id=$2)\`,[trackId,req.user.id]);if(!r.rowCount)return res.status(404).json({error:'protected_audio_not_found'});const key=r.rows[0].storage_key,expires=Math.floor(Date.now()/1000)+300,sig=crypto.createHmac('sha256',TOKEN_SECRET).update('audio/'+key+':'+expires).digest('hex');res.json({source:'protected_storage',url:'/v1/storage/signed/audio/'+key.split('/').map(encodeURIComponent).join('/')+'?expires='+expires+'&sig='+sig,expires_in:300,track_id:r.rows[0].id,mime_type:r.rows[0].mime_type});}catch(e){next(e);}});\n\napp.post('/v1/protected-audio/evidence', auth, async (req,res,next)=>{try{const {track_id,playback_started,load_ms,anonymous_status,anonymous_error,qa_denial_proof}=req.body||{};if(!track_id||playback_started!==true)return res.status(400).json({error:'protected_audio_evidence_incomplete'});const r=await pool.query(\`select t.id from tracks t where t.id=$1 and t.published=true and t.artist_id in (select id from artists where user_id=$2)\`,[track_id,req.user.id]);if(!r.rowCount)return res.status(404).json({error:'protected_audio_not_found'});const evidence={track_id,playback_started:true,load_ms:Number(load_ms)||null,anonymous_status:Number(anonymous_status)||null,anonymous_error:anonymous_error||null,qa_denial_proof:qa_denial_proof||null,recorded_at:new Date().toISOString()};await pool.query('insert into tgg_audit_log(user_id,action,metadata) values($1,$2,$3)',[req.user.id,'protected_audio_browser_qa',evidence]);res.json({ok:true,verified:1,required:1,remaining:0,evidence});}catch(e){next(e);}});\n\napp.get('/v1/creator/library', auth, async (req,res,next)=>{try{const a=await pool.query('select id,stage_name,bio,avatar_url from artists where user_id=$1',[req.user.id]);if(!a.rowCount)return res.status(404).json({error:'artist_profile_required'});const [releases,tracks]=await Promise.all([pool.query('select * from releases where artist_id=$1 order by created_at desc',[a.rows[0].id]),pool.query('select * from tracks where artist_id=$1 order by created_at desc',[a.rows[0].id])]);res.json({artist:a.rows[0],releases:releases.rows,tracks:tracks.rows});}catch(e){next(e);}});\n\napp.post('/v1/creator/tracks', auth, async (req,res,next)=>{try{const {release_id,title,track_number,audio_url,video_url,artwork_url,duration_seconds,published=false}=req.body||{};const a=await pool.query('select id from artists where user_id=$1',[req.user.id]);if(!a.rowCount)return res.status(409).json({error:'artist_profile_required'});const r=await pool.query('select id from releases where id=$1 and artist_id=$2',[release_id,a.rows[0].id]);if(!r.rowCount)return res.status(404).json({error:'release_not_found'});const t=await pool.query('insert into tracks(release_id,artist_id,title,track_number,audio_url,video_url,artwork_url,duration_seconds,published) values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *',[release_id,a.rows[0].id,title,track_number||null,audio_url||null,video_url||null,artwork_url||null,duration_seconds||null,Boolean(published)]);res.status(201).json({track:t.rows[0]});}catch(e){next(e);}});\n\napp.get('/v1/creator/dashboard', auth, async (req,res,next)=>{try{const a=await pool.query('select id,stage_name,bio,avatar_url from artists where user_id=$1',[req.user.id]);if(!a.rowCount)return res.status(404).json({error:'artist_profile_required'});const artistId=a.rows[0].id;const [releases,tracks,audit,jobs]=await Promise.all([pool.query('select * from releases where artist_id=$1 order by created_at desc limit 100',[artistId]),pool.query('select * from tracks where artist_id=$1 order by created_at desc limit 200',[artistId]),pool.query('select id,action,metadata,created_at from tgg_audit_log where user_id=$1 order by created_at desc limit 25',[req.user.id]),pool.query('select id,queue,job_type,status,priority,attempts,created_at,finished_at from tgg_jobs where payload->>\'user_id\'=$1 order by created_at desc limit 25',[req.user.id])]);res.json({artist:a.rows[0],releases:releases.rows,tracks:tracks.rows,audit:audit.rows,jobs:jobs.rows});}catch(e){next(e);}});\n\napp.get('/v1/releases', auth, async (req, res, next) => {
+app.get('/v1/releases', auth, async (req, res, next) => {
   try {
     const r = await pool.query(
       `select r.* from releases r join artists a on a.id=r.artist_id where a.user_id=$1 order by r.created_at desc`,
@@ -429,7 +298,13 @@ app.post('/v1/storage/uploads', auth, async (req,res,next)=>{
   } catch(e){next(e);}
 });
 
-app.get('/v1/storage/object-auth/:bucket/*key', auth, async (req,res,next)=>{try{const bucketKey=String(req.params.bucket||''),key=String(req.params.key||'').replace(/^\\/+/,''),r=await pool.query('select * from media_objects where storage_key=$1 and owner_user_id=$2',[path.posix.join(bucketKey,key),req.user.id]);if(!r.rowCount)return res.status(404).json({error:'media_object_not_found'});const target=path.resolve(STORAGE_ROOT,path.posix.join(bucketKey,key)),root=path.resolve(STORAGE_ROOT);if(!target.startsWith(root+path.sep))return res.status(400).json({error:'invalid_object_key'});const stat=await fs.stat(target);res.set('Content-Length',String(stat.size));if(r.rows[0].mime_type)res.type(r.rows[0].mime_type);res.sendFile(target);}catch(e){next(e);}});\n\napp.get('/v1/storage/signed/:bucket/*key', async (req,res,next)=>{try{const bucketKey=String(req.params.bucket||''),key=String(req.params.key||'').replace(/^\\/+/,''),expires=Number(req.query.expires||0),sig=String(req.query.sig||'');if(!expires||expires<Math.floor(Date.now()/1000)||expires>Math.floor(Date.now()/1000)+3600||!sig)return res.status(401).json({error:'signed_url_invalid'});const expected=crypto.createHmac('sha256',TOKEN_SECRET).update(bucketKey+'/'+key+':'+expires).digest('hex');if(sig.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(expected)))return res.status(401).json({error:'signed_url_invalid'});const target=path.resolve(STORAGE_ROOT,path.posix.join(bucketKey,key)),root=path.resolve(STORAGE_ROOT);if(!target.startsWith(root+path.sep))return res.status(400).json({error:'invalid_object_key'});const stat=await fs.stat(target);res.set('Content-Length',String(stat.size));res.sendFile(target);}catch(e){next(e);}});\n\napp.post('/v1/storage/sign', auth, async (req,res,next)=>{try{const {bucket_key,object_key,expires_in=300}=req.body||{};if(!bucket_key||!object_key)return res.status(400).json({error:'bucket_key_and_object_key_required'});const key=String(object_key).replace(/^\\/+/,''),max=Math.min(3600,Math.max(30,Number(expires_in)||300)),expires=Math.floor(Date.now()/1000)+max;const r=await pool.query('select id from media_objects where owner_user_id=$1 and storage_key=$2',[req.user.id,path.posix.join(bucket_key,key)]);if(!r.rowCount)return res.status(404).json({error:'media_object_not_found'});const sig=crypto.createHmac('sha256',TOKEN_SECRET).update(bucket_key+'/'+key+':'+expires).digest('hex');res.json({url:'/v1/storage/signed/'+encodeURIComponent(bucket_key)+'/'+key.split('/').map(encodeURIComponent).join('/')+'?expires='+expires+'&sig='+sig,expires_in:max});}catch(e){next(e);}});\n\napp.get('/v1/storage/object/:bucket/*key', async (req,res,next)=>{
+app.get('/v1/storage/object-auth/:bucket/*key', auth, async (req,res,next)=>{try{const bucketKey=String(req.params.bucket||''),key=String(req.params.key||'').replace(/^\\/+/,''),r=await pool.query('select * from media_objects where storage_key=$1 and owner_user_id=$2',[path.posix.join(bucketKey,key),req.user.id]);if(!r.rowCount)return res.status(404).json({error:'media_object_not_found'});const target=path.resolve(STORAGE_ROOT,path.posix.join(bucketKey,key)),root=path.resolve(STORAGE_ROOT);if(!target.startsWith(root+path.sep))return res.status(400).json({error:'invalid_object_key'});const stat=await fs.stat(target);res.set('Content-Length',String(stat.size));if(r.rows[0].mime_type)res.type(r.rows[0].mime_type);res.sendFile(target);}catch(e){next(e);}});
+
+app.get('/v1/storage/signed/:bucket/*key', async (req,res,next)=>{try{const bucketKey=String(req.params.bucket||''),key=String(req.params.key||'').replace(/^\\/+/,''),expires=Number(req.query.expires||0),sig=String(req.query.sig||'');if(!expires||expires<Math.floor(Date.now()/1000)||expires>Math.floor(Date.now()/1000)+3600||!sig)return res.status(401).json({error:'signed_url_invalid'});const expected=crypto.createHmac('sha256',TOKEN_SECRET).update(bucketKey+'/'+key+':'+expires).digest('hex');if(sig.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(expected)))return res.status(401).json({error:'signed_url_invalid'});const target=path.resolve(STORAGE_ROOT,path.posix.join(bucketKey,key)),root=path.resolve(STORAGE_ROOT);if(!target.startsWith(root+path.sep))return res.status(400).json({error:'invalid_object_key'});const stat=await fs.stat(target);res.set('Content-Length',String(stat.size));res.sendFile(target);}catch(e){next(e);}});
+
+app.post('/v1/storage/sign', auth, async (req,res,next)=>{try{const {bucket_key,object_key,expires_in=300}=req.body||{};if(!bucket_key||!object_key)return res.status(400).json({error:'bucket_key_and_object_key_required'});const key=String(object_key).replace(/^\\/+/,''),max=Math.min(3600,Math.max(30,Number(expires_in)||300)),expires=Math.floor(Date.now()/1000)+max;const r=await pool.query('select id from media_objects where owner_user_id=$1 and storage_key=$2',[req.user.id,path.posix.join(bucket_key,key)]);if(!r.rowCount)return res.status(404).json({error:'media_object_not_found'});const sig=crypto.createHmac('sha256',TOKEN_SECRET).update(bucket_key+'/'+key+':'+expires).digest('hex');res.json({url:'/v1/storage/signed/'+encodeURIComponent(bucket_key)+'/'+key.split('/').map(encodeURIComponent).join('/')+'?expires='+expires+'&sig='+sig,expires_in:max});}catch(e){next(e);}});
+
+app.get('/v1/storage/object/:bucket/*key', async (req,res,next)=>{
   try {
     const bucketKey=String(req.params.bucket||'');
     const key=String(req.params.key||'').replace(/^\\/+/, '');
@@ -445,7 +320,9 @@ app.get('/v1/storage/object-auth/:bucket/*key', auth, async (req,res,next)=>{try
   } catch(e){ if(e.code==='ENOENT') return res.status(404).json({error:'object_not_found'}); next(e); }
 });
 
-app.post('/v1/browser/jobs/protected-audio', auth, async (req,res,next)=>{try{const object_key=String(req.body?.object_key||'').replace(/^\\/+/,''),mime_type=String(req.body?.mime_type||'audio/mpeg');if(!object_key)return res.status(400).json({error:'object_key_required'});const r=await pool.query('select id from media_objects where owner_user_id=$1 and storage_key=$2 and media_type=\'audio\'',[req.user.id,object_key]);if(!r.rowCount)return res.status(404).json({error:'owned_audio_object_not_found'});const j=await pool.query(\`insert into tgg_browser_jobs(flow_key,payload) values('protected_audio_runtime',$1) returning *\`,[{object_key,mime_type,user_id:req.user.id}]);res.status(201).json({job:j.rows[0]});}catch(e){next(e);}});\n\napp.post('/v1/jobs', auth, async (req,res,next)=>{
+app.post('/v1/browser/jobs/protected-audio', auth, async (req,res,next)=>{try{const object_key=String(req.body?.object_key||'').replace(/^\\/+/,''),mime_type=String(req.body?.mime_type||'audio/mpeg');if(!object_key)return res.status(400).json({error:'object_key_required'});const r=await pool.query('select id from media_objects where owner_user_id=$1 and storage_key=$2 and media_type=\'audio\'',[req.user.id,object_key]);if(!r.rowCount)return res.status(404).json({error:'owned_audio_object_not_found'});const j=await pool.query(\`insert into tgg_browser_jobs(flow_key,payload) values('protected_audio_runtime',$1) returning *\`,[{object_key,mime_type,user_id:req.user.id}]);res.status(201).json({job:j.rows[0]});}catch(e){next(e);}});
+
+app.post('/v1/jobs', auth, async (req,res,next)=>{
   try {
     const {queue='default',job_type,payload={},priority=0,max_attempts=3}=req.body||{};
     if(!job_type) return res.status(400).json({error:'job_type_required'});
@@ -484,7 +361,9 @@ async function requireWorker(req,res){
   return r.rows[0];
 }
 
-app.post('/v1/workers/bootstrap', async (req,res,next)=>{try{const secret=String(process.env.TGG_WORKER_BOOTSTRAP_SECRET||'');if(!secret||req.headers['x-tgg-bootstrap-secret']!==secret)return res.status(403).json({error:'bootstrap_auth_failed'});const worker_id=String(req.body?.worker_id||'').trim();if(!worker_id)return res.status(400).json({error:'worker_id_required'});const worker_token=crypto.randomBytes(32).toString('base64url');const r=await pool.query(\`insert into tgg_worker_registry(worker_id,worker_token_hash,metadata,last_seen_at) values($1,$2,$3,now()) on conflict(worker_id) do update set worker_token_hash=excluded.worker_token_hash,status='active',updated_at=now(),last_seen_at=now() returning id,worker_id,status\`,[worker_id,hashWorkerToken(worker_token),req.body?.metadata||{}]);res.status(201).json({worker:r.rows[0],worker_token});}catch(e){next(e);}});\n\napp.post('/v1/workers/register', async (req,res,next)=>{
+app.post('/v1/workers/bootstrap', async (req,res,next)=>{try{const secret=String(process.env.TGG_WORKER_BOOTSTRAP_SECRET||'');if(!secret||req.headers['x-tgg-bootstrap-secret']!==secret)return res.status(403).json({error:'bootstrap_auth_failed'});const worker_id=String(req.body?.worker_id||'').trim();if(!worker_id)return res.status(400).json({error:'worker_id_required'});const worker_token=crypto.randomBytes(32).toString('base64url');const r=await pool.query(\`insert into tgg_worker_registry(worker_id,worker_token_hash,metadata,last_seen_at) values($1,$2,$3,now()) on conflict(worker_id) do update set worker_token_hash=excluded.worker_token_hash,status='active',updated_at=now(),last_seen_at=now() returning id,worker_id,status\`,[worker_id,hashWorkerToken(worker_token),req.body?.metadata||{}]);res.status(201).json({worker:r.rows[0],worker_token});}catch(e){next(e);}});
+
+app.post('/v1/workers/register', async (req,res,next)=>{
   try{
     const secret=String(process.env.TGG_WORKER_BOOTSTRAP_SECRET||'');
     if(!secret || req.headers['x-tgg-bootstrap-secret']!==secret) return res.status(403).json({error:'bootstrap_auth_failed'});
@@ -607,6 +486,17 @@ app.post('/v1/certifications', auth, async (req,res,next)=>{
     res.status(201).json({certification:r.rows[0]});
   } catch(e){next(e);}
 });
+
+
+// Creator compatibility endpoints retained while the frontend migrates off Supabase.
+app.get('/v1/creator/messages', auth, async (req,res,next)=>{try{const r=await pool.query('select id,sender_user_id,recipient_user_id,subject,body,read_at,created_at from tgg_creator_messages where sender_user_id=$1 or recipient_user_id=$1 order by created_at desc limit 100',[req.user.id]);res.json({messages:r.rows});}catch(e){next(e);}});
+app.post('/v1/creator/messages', auth, async (req,res,next)=>{try{const {recipient_user_id,subject,body}=req.body||{};if(!recipient_user_id||!body)return res.status(400).json({error:'recipient_user_id_and_body_required'});const r=await pool.query('insert into tgg_creator_messages(sender_user_id,recipient_user_id,subject,body) values($1,$2,$3,$4) returning *',[req.user.id,recipient_user_id,subject||null,body]);res.status(201).json({message:r.rows[0]});}catch(e){next(e);}});
+app.get('/v1/creator/supporters', auth, async (req,res,next)=>{try{const r=await pool.query('select s.* from tgg_creator_supporters s join artists a on a.id=s.artist_id where a.user_id=$1 order by s.created_at desc limit 500',[req.user.id]);res.json({supporters:r.rows});}catch(e){next(e);}});
+app.get('/v1/creator/revenue', auth, async (req,res,next)=>{try{const r=await pool.query("select count(*)::int as events,coalesce(sum(amount_cents),0)::bigint as gross_cents from tgg_creator_revenue_events e join artists a on a.id=e.artist_id where a.user_id=$1 and e.status='recorded'",[req.user.id]);res.json({events:Number(r.rows[0]?.events||0),gross_cents:Number(r.rows[0]?.gross_cents||0)});}catch(e){next(e);}});
+app.get('/v1/creator/expansion', auth, async (req,res,next)=>{try{const [m,a]=await Promise.all([pool.query('select count(*)::int as total from world_missions'),pool.query('select count(*)::int as completed from mission_sessions ms join users u on u.id=ms.user_id where u.id=$1 and ms.status=\'verified\'',[req.user.id])]);res.json({available_missions:Number(m.rows[0]?.total||0),completed_missions:Number(a.rows[0]?.completed||0)});}catch(e){next(e);}});
+app.get('/v1/creator/growth', auth, async (req,res,next)=>{try{const [t,r]=await Promise.all([pool.query('select count(*)::int as tracks from tracks t join artists a on a.id=t.artist_id where a.user_id=$1',[req.user.id]),pool.query('select count(*)::int as releases from releases r join artists a on a.id=r.artist_id where a.user_id=$1',[req.user.id])]);res.json({tracks:Number(t.rows[0]?.tracks||0),releases:Number(r.rows[0]?.releases||0)});}catch(e){next(e);}});
+app.get('/v1/creator/notifications', auth, async (req,res,next)=>{try{const r=await pool.query("select id,action,metadata,created_at from tgg_audit_log where user_id=$1 order by created_at desc limit 50",[req.user.id]);res.json({notifications:r.rows.map(x=>({id:x.id,type:x.action,metadata:x.metadata,created_at:x.created_at}))});}catch(e){next(e);}});
+app.get('/v1/creator/profile', auth, async (req,res,next)=>{try{const r=await pool.query('select a.*,u.email,u.display_name,u.role from artists a join users u on u.id=a.user_id where a.user_id=$1',[req.user.id]);res.json({artist:r.rows[0]||null});}catch(e){next(e);}});
 
 app.use((err,_req,res,_next)=>{
   console.error('[TGG Core]',err);

@@ -1,4 +1,5 @@
 (() => {
+  function boot(){
   const host=document.getElementById('studio3d');
   const screen=document.getElementById('studio');
   if(!host||!screen||!window.THREE)return;
@@ -126,4 +127,7 @@
   resize();animate();
 
   window.TGGStudio3D={scene,camera,renderer,isReady:()=>true,resize};
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
 })();

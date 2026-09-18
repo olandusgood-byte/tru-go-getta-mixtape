@@ -18,8 +18,8 @@ const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',impor
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.23/);
-assert.match(html,/GAME V1\.23 • 3D ANIMATION \+ INTERACTION PROMPTS/);
+assert.match(html,/Game V1\.24/);
+assert.match(html,/GAME V1\.24 • UNIFIED 3D GAMEPLAY SLICE/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/<script src="district-story\.js"><\/script>/);
@@ -46,7 +46,7 @@ assert.match(world3d,/TGGGame\?\.getState/);
 assert.equal(world3d.includes('localStorage.setItem'),false);
 assert.equal(world3d.includes('TGGGame?.reward'),false);
 assert.equal(world3d.includes('TGGCareer?.addRep'),false);
-assert.match(world3d,/version:'1\.23\.0'/);
+assert.match(world3d,/version:'1\.24\.0'/);
 assert.match(world3d,/const BUILDINGS=/);
 assert.match(world3d,/constrainPercent/);
 assert.match(world3d,/isBlockedPercent/);
@@ -54,13 +54,22 @@ assert.match(world3d,/districtAtPercent/);
 assert.match(world3d,/collisionBoxes/);
 assert.match(world3d,/percentToWorld\(72,36\)/);
 assert.match(game,/TGGWorld3D\?\.constrainPercent/);
-assert.match(world3d,/version:'1\.23\.0'/);
+assert.match(world3d,/version:'1\.24\.0'/);
 assert.match(world3d,/userData\.rig/);
 assert.match(world3d,/walkPhase/);
 assert.match(world3d,/nearestInteraction/);
 assert.match(world3d,/activateNearest/);
 assert.match(world3d,/interactionPrompt/);
 assert.match(world3d,/missionBtn/);
+
+assert.match(world3d,/const HUBS=/);
+for (const hub of ['studio-hub','park-hub','shops-hub','apartment-hub','media-hub']) assert.match(world3d,new RegExp(hub));
+assert.match(world3d,/buildHubLandmarks/);
+assert.match(world3d,/type:'hub'/);
+assert.match(world3d,/status:'entered_hub'/);
+assert.match(world3d,/ENTER '\+hub\.name/);
+assert.match(world3d,/candidates\.sort/);
+
 
 assert.match(business,/VERSION='1\.14\.0'/);
 assert.match(business,/window\.TGGBusiness/);
@@ -243,10 +252,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.23 3D Animation + Interaction Prompts');
-assert.equal(release.base,'V1.22 3D Collision + Walkable Districts');
-assert.equal(auto.version,'1.23');
-assert.equal(qaManifest.version,'1.23');
+assert.equal(release.release,'V1.24 Unified 3D Gameplay Slice');
+assert.equal(release.base,'V1.23 Verified 3D Animation + Landmarks');
+assert.equal(auto.version,'1.24');
+assert.equal(qaManifest.version,'1.24');
 assert.ok(['candidate_pending_ci','automated_ci_pass','automated_webgl_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -283,4 +292,11 @@ assert.ok(release.gates.includes('walk_rig_animation'));
 assert.ok(release.gates.includes('proximity_interaction_api'));
 assert.ok(release.gates.includes('shared_mission_action'));
 
-console.log('GAME_V1_23_STATIC_CONTRACT_PASS');
+assert.ok(release.gates.includes('hub_catalog'));
+assert.ok(release.gates.includes('five_hub_routes'));
+assert.ok(release.gates.includes('unified_nearest_interaction'));
+assert.ok(release.gates.includes('hub_enter_action'));
+assert.ok(release.gates.includes('single_e_action'));
+
+
+console.log('GAME_V1_24_STATIC_CONTRACT_PASS');

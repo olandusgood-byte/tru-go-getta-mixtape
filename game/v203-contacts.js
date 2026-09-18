@@ -6,6 +6,7 @@
   ];
   let originalInteract=null;
   let contactCard=null;
+  let focusedContactId=null;
   const objects={};
 
   function toWorld(s){return {x:((Number(s?.x)||50)-50)*.92,z:((Number(s?.y)||50)-50)*.92}}
@@ -48,8 +49,8 @@
     CONTACTS.forEach(c=>{if(!objects[c.id])objects[c.id]=makeContact(c)});
     return true;
   }
-  function nearest(){
-    if(window.TGGContent?.current?.())return null;
+  function closest(){
+    if(!bootContacts())return null;
     const s=window.TGGGame?.getState?.();if(!s)return null;
     const p=toWorld(s);let best=null,bestDist=Infinity;
     CONTACTS.forEach(c=>{
@@ -57,13 +58,33 @@
       const d=Math.hypot(p.x-o.position.x,p.z-o.position.z);
       if(d<bestDist){best={...c,object:o,distance:d};bestDist=d}
     });
-    return best&&bestDist<=6.6?best:null;
+    return best;
+  }
+  function nearest(){
+    if(window.TGGContent?.current?.())return null;
+    const best=closest();
+    return best&&best.distance<=6.6?best:null;
+  }
+  function focusNearest(){
+    if(window.TGGContent?.current?.()){window.__tggToast?.('ACTIVE JOB — FOLLOW THE OBJECTIVE MARKER');return false;}
+    const c=closest();if(!c)return false;
+    focusedContactId=c.id;
+    window.__tggToast?.('JOB NAV — GO SEE '+c.name+' • '+c.role);
+    return true;
+  }
+  function getNavTarget(){
+    if(window.TGGContent?.current?.())return null;
+    const c=CONTACTS.find(x=>x.id===focusedContactId);
+    const o=c?objects[c.id]:null;
+    if(!c||!o)return null;
+    return {label:'MEET '+c.name,x:o.position.x,z:o.position.z,color:'#7b86ff'};
   }
   function missionName(id){return window.TGGContent?.content?.missions?.find(m=>m.id===id)?.name||id}
   function startContact(contact=nearest()){
     if(!contact)return false;
     const ok=window.TGGContent?.start?.(contact.mission)===true;
     if(ok){
+      focusedContactId=null;
       window.__tggToast?.(contact.name+' — JOB STARTED: '+missionName(contact.mission));
       window.TGGGame?.save?.(true);
       return true;
@@ -102,6 +123,6 @@
     requestAnimationFrame(tick);
   }
   function status(){const c=nearest();return {ready:!!c,contact:c?.id||null,mission:c?.mission||null,distance:c?Number(c.distance.toFixed(2)):null}}
-  window.TGGStreetContacts={contacts:CONTACTS,nearest,startContact,status};
+  window.TGGStreetContacts={contacts:CONTACTS,closest,nearest,focusNearest,getNavTarget,startContact,status};
   requestAnimationFrame(tick);
 })();

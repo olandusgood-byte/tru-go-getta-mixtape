@@ -39,6 +39,8 @@ const TOKEN_SECRET = process.env.TGG_TOKEN_SECRET || crypto.randomBytes(32).toSt
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
+function encryptSecret(value){ const iv=crypto.randomBytes(12); const key=crypto.createHash('sha256').update(TOKEN_SECRET).digest(); const cipher=crypto.createCipheriv('aes-256-gcm',key,iv); const encrypted=Buffer.concat([cipher.update(String(value),'utf8'),cipher.final()]); return iv.toString('base64url')+'.'+cipher.getAuthTag().toString('base64url')+'.'+encrypted.toString('base64url'); }
+function decryptSecret(value){ const [ivS,tagS,dataS]=String(value||'').split('.'); if(!ivS||!tagS||!dataS) return null; const key=crypto.createHash('sha256').update(TOKEN_SECRET).digest(); const decipher=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(ivS,'base64url')); decipher.setAuthTag(Buffer.from(tagS,'base64url')); return Buffer.concat([decipher.update(Buffer.from(dataS,'base64url')),decipher.final()]).toString('utf8'); }
 
 function passwordHash(password, salt = crypto.randomBytes(16).toString('hex')) {
   const derived = crypto.scryptSync(password, salt, 64).toString('hex');
@@ -371,8 +373,8 @@ app.post('/v1/browser/worker-session', auth, async (req,res,next)=>{
     const refresh_token=String(req.body?.refresh_token||'');
     const worker_id=String(req.body?.worker_id||'');
     if(!refresh_token||!worker_id)return res.status(400).json({error:'worker_session_fields_required'});
-    const encrypted=crypto.createHmac('sha256',TOKEN_SECRET).update(refresh_token).digest('hex');
-    const r=await pool.query("update tgg_worker_registry set metadata=jsonb_set(jsonb_set(coalesce(metadata,'{}'::jsonb),'{owner_refresh_token_hash}',to_jsonb($2::text),true),'{owner_user_id}',to_jsonb($3::text),true),updated_at=now() where worker_id=$1 returning worker_id",[worker_id,encrypted,req.user.id]);
+    const encrypted=encryptSecret(refresh_token);
+    const r=await pool.query("update tgg_worker_registry set metadata=jsonb_set(jsonb_set(coalesce(metadata,'{}'::jsonb),'{owner_refresh_token_encrypted}',to_jsonb($2::text),true),'{owner_user_id}',to_jsonb($3::text),true),updated_at=now() where worker_id=$1 returning worker_id",[worker_id,encrypted,req.user.id]);
     if(!r.rowCount)return res.status(404).json({error:'worker_not_found'});
     res.json({ok:true});
   }catch(e){next(e);}
@@ -380,9 +382,10 @@ app.post('/v1/browser/worker-session', auth, async (req,res,next)=>{
 app.post('/v1/browser/worker-session/restore', async (req,res,next)=>{
   try{
     const w=workerAuthorized(req); if(!w)return res.status(401).json({error:'worker_credentials_required'});
-    const r=await pool.query("select metadata->>'owner_refresh_token' as refresh_token from tgg_worker_registry where worker_id=$1 and worker_token_hash=$2 and status='active'",[w.id,w.hash]);
-    if(!r.rowCount||!r.rows[0].refresh_token_hash)return res.status(404).json({error:'owner_session_not_found'});
-    return res.status(501).json({error:'owner_refresh_token_recovery_requires_encrypted_secret_store'});
+    const r=await pool.query("select metadata->>'owner_refresh_token_encrypted' as refresh_token from tgg_worker_registry where worker_id=$1 and worker_token_hash=$2 and status='active'",[w.id,w.hash]);
+    if(!r.rowCount||!r.rows[0].refresh_token)return res.status(404).json({error:'owner_session_not_found'});
+    const refresh_token=decryptSecret(r.rows[0].refresh_token); if(!refresh_token)return res.status(500).json({error:'owner_session_decrypt_failed'});
+    res.json({ok:true,refresh_token});
   }catch(e){next(e);}
 });
 app.post('/v1/browser/sessions', auth, async (req,res,next)=>{

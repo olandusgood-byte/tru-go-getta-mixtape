@@ -13,7 +13,7 @@
     glass:{roughness:.08,metalness:.12}
   };
   const PRESETS={
-    street:{id:'street',height:1,shoulders:1.03,build:1,legLength:1,armLength:1,headScale:1,skin:0x9d6a49,outfit:{top:0x111827,pants:0x0b0e14,shoes:0x12151c,accent:0xc7ff00,hair:0x07090d}},
+    street:{id:'street',height:1,shoulders:1,build:1,legLength:1,armLength:1,headScale:1,skin:0x9d6a49,outfit:{top:0x111827,pants:0x0b0e14,shoes:0x12151c,accent:0xc7ff00,hair:0x07090d}},
     stage:{id:'stage',height:1.04,shoulders:1.08,build:1.04,legLength:1.02,armLength:1,headScale:.98,skin:0x9d6a49,outfit:{top:0x17111f,pants:0x0d1118,shoes:0x080a0d,accent:0xff466d,hair:0x07090d}},
     luxury:{id:'luxury',height:1.02,shoulders:1.05,build:1.02,legLength:1.01,armLength:1,headScale:.99,skin:0x9d6a49,outfit:{top:0x181818,pants:0x101218,shoes:0x0b0c10,accent:0xd8dde7,hair:0x08090d}}
   };

@@ -15,9 +15,16 @@
     {id:'downtown',name:'DOWNTOWN',x:18,z:10,color:0xc7ff00},
     {id:'mixtape-ave',name:'MIXTAPE AVE',x:18,z:-14,color:0xff3b7b}
   ];
+  const HUBS=[
+    {id:'studio-hub',name:'TRU GO GETTA STUDIOS',screen:'studio',x:-13,z:-3,color:0xc7ff00},
+    {id:'park-hub',name:'THE PARK',screen:'park',x:0,z:18,color:0x4d77ff},
+    {id:'shops-hub',name:'SHOP DISTRICT',screen:'shops',x:14,z:3,color:0xff397e},
+    {id:'apartment-hub',name:'MY APARTMENT',screen:'home',x:-20,z:12,color:0xf2b84b},
+    {id:'media-hub',name:'MEDIA DISTRICT',screen:'media',x:20,z:-12,color:0x8b5cf6}
+  ];
 
   const api={
-    version:'1.23.0',
+    version:'1.24.0',
     library:'three@0.186.0',
     ready:false,
     failed:false,
@@ -34,6 +41,7 @@
     district:null,
     motion:{moving:false,walkPhase:0},
     interaction:null,
+    hubs:HUBS.map(h=>({...h})),
     snapshot(){
       const p=this.player?.position;
       const c=this.camera?.position;
@@ -144,12 +152,16 @@
     const state=window.TGGGame?.getState?.();
     if(!state)return null;
     const p=percentToWorld(state.x,state.y);
+    const candidates=[];
     const m=percentToWorld(72,36);
-    const distance=Math.hypot(p.x-m.x,p.z-m.z);
-    if(distance<=5){
-      return {id:'manager-m',type:'npc',label:'TALK TO M',key:'E',distance};
+    const managerDistance=Math.hypot(p.x-m.x,p.z-m.z);
+    if(managerDistance<=5)candidates.push({id:'manager-m',type:'npc',label:'TALK TO M',key:'E',distance:managerDistance});
+    for(const hub of HUBS){
+      const distance=Math.hypot(p.x-hub.x,p.z-hub.z);
+      if(distance<=3.4)candidates.push({id:hub.id,type:'hub',label:'ENTER '+hub.name,key:'E',distance,screen:hub.screen,name:hub.name});
     }
-    return null;
+    candidates.sort((a,b)=>a.distance-b.distance);
+    return candidates[0]||null;
   }
 
   function activateNearest(){
@@ -158,6 +170,12 @@
     if(interaction.id==='manager-m'){
       document.getElementById('missionBtn')?.click();
       return {ok:true,status:'activated',interaction};
+    }
+    if(interaction.type==='hub'&&interaction.screen){
+      if(interaction.screen==='businessBoard')window.TGGBusiness?.open?.();
+      else window.TGGGame?.show?.(interaction.screen);
+      window.__tggToast?.('ENTERED '+interaction.name);
+      return {ok:true,status:'entered_hub',interaction};
     }
     return {ok:false,status:'unsupported',interaction};
   }
@@ -303,6 +321,46 @@
     }
   }
 
+  function addHubLandmark(THREE,scene,hub){
+    const root=new THREE.Group();
+    root.position.set(hub.x,0,hub.z);
+    root.name='Hub:'+hub.id;
+
+    const base=new THREE.Mesh(
+      new THREE.CylinderGeometry(.85,1.05,.3,20),
+      makeMaterial(THREE,0x151922,.55,.35)
+    );
+    base.position.y=.15;
+
+    const pole=new THREE.Mesh(
+      new THREE.BoxGeometry(.18,2.6,.18),
+      makeMaterial(THREE,0x343949,.35,.5)
+    );
+    pole.position.y=1.45;
+
+    const sign=new THREE.Mesh(
+      new THREE.BoxGeometry(2.8,.72,.16),
+      new THREE.MeshStandardMaterial({color:hub.color,emissive:hub.color,emissiveIntensity:3.2,roughness:.3})
+    );
+    sign.position.y=2.7;
+
+    const ring=new THREE.Mesh(
+      new THREE.RingGeometry(1.15,1.55,30),
+      new THREE.MeshBasicMaterial({color:hub.color,transparent:true,opacity:.58,side:THREE.DoubleSide})
+    );
+    ring.rotation.x=-Math.PI/2;
+    ring.position.y=.05;
+
+    root.add(base,pole,sign,ring);
+    root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+    scene.add(root);
+    return root;
+  }
+
+  function buildHubLandmarks(THREE,scene){
+    HUBS.forEach(hub=>addHubLandmark(THREE,scene,hub));
+  }
+
   function buildCity(THREE,scene){
     const ground=new THREE.Mesh(new THREE.PlaneGeometry(80,60),makeMaterial(THREE,0x171b22,.95,.01));
     ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
@@ -310,6 +368,7 @@
     addRoadNetwork(THREE,scene);
     addStreetLights(THREE,scene);
     addDistrictPads(THREE,scene);
+    buildHubLandmarks(THREE,scene);
     BUILDINGS.forEach(v=>addBuilding(THREE,scene,...v));
   }
 

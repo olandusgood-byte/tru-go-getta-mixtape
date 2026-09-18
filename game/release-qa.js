@@ -18,6 +18,9 @@
     test('inventory catalog',Array.isArray(window.TGGInventory?.catalog)&&window.TGGInventory.catalog.length>=4);test('inventory persistence',typeof window.TGGInventory?.save==='function'&&typeof window.TGGInventory?.load==='function');
     test('crew catalog',Array.isArray(window.TGGCrew?.catalog)&&window.TGGCrew.catalog.length>=3);test('crew persistence',typeof window.TGGCrew?.save==='function'&&typeof window.TGGCrew?.load==='function');test('crew bonus',typeof window.TGGCrew?.bonus==='function');
     test('events catalog',Array.isArray(window.TGGEvents?.events)&&window.TGGEvents.events.length>=3);test('events persistence',typeof window.TGGEvents?.save==='function'&&typeof window.TGGEvents?.load==='function');test('events run',typeof window.TGGEvents?.run==='function');
+    test('city mastery api',typeof window.TGGEvents?.totalRuns==='function'&&typeof window.TGGEvents?.mastery==='function'&&typeof window.TGGEvents?.cityProfile==='function');
+    const cityProfile=window.TGGEvents?.cityProfile?.()||{};test('city mastery state',typeof cityProfile.totalRuns==='number'&&typeof cityProfile.streak==='number'&&typeof cityProfile.bestStreak==='number');
+    test('city mastery achievements',['city-regular','city-known','city-headliner'].every(id=>window.TGGProgression?.achievements?.some(a=>a.id===id)));
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

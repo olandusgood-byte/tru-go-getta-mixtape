@@ -1,6 +1,6 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.21 True 3D City Foundation",
+  "release": "V1.21 True 3D City Runtime",
   "base": "V1.20 NPC Favor Hooks + Contact Opportunities",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
@@ -195,8 +195,8 @@
     "world3d_player_sync",
     "world3d_fallback"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.21-TRUE-3D-CITY-FOUNDATION-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.21-TRUE-3D-CITY-RUNTIME-CANDIDATE",
   "production": "gated"
 }

@@ -262,3 +262,39 @@ values
  ('audio','public'),('videos','public'),('covers','public'),
  ('media-thumbnails','public'),('artist-images','public')
 on conflict(bucket_key) do nothing;
+
+
+create table if not exists tgg_creator_messages (
+  id uuid primary key default gen_random_uuid(),
+  sender_user_id uuid not null references users(id) on delete cascade,
+  recipient_user_id uuid not null references users(id) on delete cascade,
+  subject text,
+  body text not null,
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists tgg_creator_messages_recipient_idx on tgg_creator_messages(recipient_user_id,created_at desc);
+
+create table if not exists tgg_creator_supporters (
+  id uuid primary key default gen_random_uuid(),
+  artist_id uuid not null references artists(id) on delete cascade,
+  supporter_user_id uuid references users(id) on delete set null,
+  display_name text,
+  status text not null default 'active' check (status in ('active','inactive')),
+  created_at timestamptz not null default now(),
+  unique(artist_id,supporter_user_id)
+);
+create index if not exists tgg_creator_supporters_artist_idx on tgg_creator_supporters(artist_id,created_at desc);
+
+create table if not exists tgg_creator_revenue_events (
+  id uuid primary key default gen_random_uuid(),
+  artist_id uuid not null references artists(id) on delete cascade,
+  supporter_user_id uuid references users(id) on delete set null,
+  amount_cents integer not null default 0 check (amount_cents >= 0),
+  currency text not null default 'USD',
+  source text not null default 'manual',
+  status text not null default 'recorded' check (status in ('recorded','void')),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists tgg_creator_revenue_artist_idx on tgg_creator_revenue_events(artist_id,created_at desc);

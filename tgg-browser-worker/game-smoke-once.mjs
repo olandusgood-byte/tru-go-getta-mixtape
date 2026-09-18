@@ -654,6 +654,65 @@ async function runSmoke(target) {
       return {present:true,passed:checks.length>0&&checks.every(x=>x.pass),checks};
     });
 
+    const mission06 = await page.evaluate(() => {
+      const api = window.TGGStoryMission06;
+      const campaign = window.TGGCrewCampaign;
+      const crew = window.TGGCrew;
+      if (!api || !campaign || !crew) return { present: false, passed: false, checks: [{name:'mission06-api',pass:false,detail:'missing API'}] };
+      const checks = [];
+      const record = (name, pass, detail='') => checks.push({ name, pass: Boolean(pass), detail });
+      try {
+        localStorage.setItem('tgg-story-mission-v5', JSON.stringify({ completed: true, rewardClaimed: true }));
+        localStorage.removeItem('tgg-story-mission-v6');
+        localStorage.removeItem('tgg-crew-campaign-v1');
+        localStorage.setItem('tgg-crew-v1', JSON.stringify({ members: [], updatedAt: Date.now() }));
+        crew.load();
+        campaign.load();
+        campaign.reset();
+        api.state.accepted=false;
+        api.state.step='offer';
+        api.state.recruited=[];
+        api.state.completed=false;
+        api.state.rewardClaimed=false;
+        api.state.campaignScore=0;
+        api.save();
+        api.sync(false);
+
+        record('mission06-api', api.mission?.id === 'build-the-team');
+        record('mission06-unlocked', api.mission05Complete() === true && api.state.step === 'offer');
+        record('mission06-accept', api.accept() === true && api.state.accepted === true);
+        record('mission06-recruit-kane', api.recruit('kane') === true && crew.has('kane'));
+        record('mission06-recruit-nova', api.recruit('nova') === true && crew.has('nova'));
+        record('mission06-recruit-lens', api.recruit('lens') === true && crew.has('lens'));
+        api.sync(false);
+        record('mission06-campaign-step', api.state.step === 'campaign' && crew.campaignReady() === true);
+
+        const started = campaign.start();
+        record('crew-campaign-start', started === true && campaign.state.started === true);
+        record('crew-campaign-record', campaign.act('record') === true);
+        record('crew-campaign-visual', campaign.act('visual') === true);
+        record('crew-campaign-promo', campaign.act('promo') === true);
+        record('crew-campaign-complete', campaign.state.completed === true && campaign.state.score >= 132, String(campaign.state.score));
+
+        api.sync(false);
+        record('mission06-return-step', api.state.step === 'return');
+
+        const cashBefore = Number(window.TGGGame?.getState?.()?.cash || 0);
+        const claim = api.claim();
+        const cashAfter = Number(window.TGGGame?.getState?.()?.cash || 0);
+        record('mission06-claim', claim === true && api.state.completed === true && api.state.rewardClaimed === true);
+        record('mission06-reward', cashAfter >= cashBefore + 2000, `${cashBefore}->${cashAfter}`);
+
+        const cashBeforeAgain = Number(window.TGGGame?.getState?.()?.cash || 0);
+        const second = api.claim();
+        const cashAfterAgain = Number(window.TGGGame?.getState?.()?.cash || 0);
+        record('mission06-reward-once', second === false && cashAfterAgain === cashBeforeAgain);
+      } catch (error) {
+        record('mission06-exception', false, error?.message || String(error));
+      }
+      return { present: true, passed: checks.length > 0 && checks.every(x=>x.pass), checks };
+    });
+
     const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
     await context.close();
 

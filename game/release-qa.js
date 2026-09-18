@@ -46,6 +46,9 @@
     test('world3d collision api',typeof window.TGGWorld3D?.constrainPercent==='function'&&typeof window.TGGWorld3D?.isBlockedPercent==='function');
     test('world3d collision map',Array.isArray(window.TGGWorld3D?.collisionBoxes)&&window.TGGWorld3D.collisionBoxes.length>=10);
     test('world3d district api',typeof window.TGGWorld3D?.districtAtPercent==='function'&&!!document.getElementById('worldDistrictBadge'));
+    test('world3d animation state',!!window.TGGWorld3D?.motion&&typeof window.TGGWorld3D.motion.moving==='boolean');
+    test('world3d interaction api',typeof window.TGGWorld3D?.nearestInteraction==='function'&&typeof window.TGGWorld3D?.activateNearest==='function');
+    test('world3d interaction prompt',!!document.getElementById('interactionPrompt'));
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

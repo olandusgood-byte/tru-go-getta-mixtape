@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.21 Real WebGL 3D City Playtest",
-  "base": "V1.20 NPC Favor Hooks + Contact Opportunities",
+  "release": "V1.22 3D Movement + Starter Car Playtest",
+  "base": "V1.21 Real WebGL 3D City Playtest",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -73,7 +73,12 @@
     "V1.21-WEBGL-3D-CITY",
     "V1.21-3D-PLAYER",
     "V1.21-FOLLOW-CAMERA",
-    "V1.21-3D-BUILDINGS-LIGHTING"
+    "V1.21-3D-BUILDINGS-LIGHTING",
+    "V1.22-3D-WALK-ANIMATION",
+    "V1.22-BUILDING-COLLISIONS",
+    "V1.22-STREET-PROPS",
+    "V1.22-STARTER-CAR",
+    "V1.22-DRIVE-MODE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -190,10 +195,16 @@
     "webgl_renderer",
     "3d_player_sync",
     "3d_follow_camera",
-    "3d_city_scene"
+    "3d_city_scene",
+    "3d_walk_animation",
+    "building_collision_gate",
+    "street_props",
+    "starter_car_render",
+    "drive_mode_toggle",
+    "vehicle_movement"
   ],
   "static_gate": "passed",
   "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.21-WEBGL-3D-PLAYTEST-CANDIDATE",
+  "release_checkpoint": "V1.22-3D-ANIMATION-CAR-PLAYTEST-CANDIDATE",
   "production": "playtest"
 }

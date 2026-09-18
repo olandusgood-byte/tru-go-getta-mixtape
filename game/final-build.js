@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.18 MISSION ACTIONS 100';
+  const VERSION='V2.19 CITY INTERACTIONS 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

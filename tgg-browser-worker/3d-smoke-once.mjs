@@ -558,7 +558,6 @@ async function run(){
       gearText:document.getElementById('gearValue')?.textContent,
       hudActive:document.getElementById('vehicleHud')?.classList.contains('active')
     }));
-    await page.keyboard.up('ArrowUp');
     const accelSpeed=Number(accelerated.driving?.speed)||0;
     const accelDistance=Math.hypot(Number(accelerated.state?.x)-startX,Number(accelerated.state?.y)-startY);
     record('smooth-acceleration',accelSpeed>3,`speed=${accelSpeed}`);
@@ -578,6 +577,7 @@ async function run(){
       frontWheelAngles:(window.TGG3D?.car?.userData?.wheels||[]).filter(w=>w.userData?.front).map(w=>w.rotation.y)
     }));
     await page.keyboard.up('ArrowRight');
+    await page.keyboard.up('ArrowUp');
     const headingAfterSteer=Number(steeringVisual.state?.heading)||0;
     record('speed-sensitive-steering',headingAfterSteer!==headingBeforeSteer,`${headingBeforeSteer}->${headingAfterSteer}`);
     record('front-wheel-visual-steer',steeringVisual.frontWheelAngles.some(v=>Math.abs(Number(v)||0)>.02),JSON.stringify(steeringVisual.frontWheelAngles));
@@ -591,7 +591,7 @@ async function run(){
     console.log(JSON.stringify({tgg_3d_smoke_step:'steering-complete'}));
     const speedBeforeBrake=Math.abs(Number(steeringVisual.driving?.speed)||0);
     await page.keyboard.down('ArrowDown');
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(900);
     const braking=await page.evaluate(()=>({
       state:window.TGGGame?.getState?.(),
       driving:window.TGGGame?.getDrivingState?.(),
@@ -602,19 +602,11 @@ async function run(){
     const brakeSpeed=Number(braking.driving?.speed)||0;
     record('smooth-braking-reverse',Math.abs(brakeSpeed)<speedBeforeBrake||brakeSpeed<0,`before=${speedBeforeBrake},after=${brakeSpeed}`);
     record('brake-lights',braking.brakeGlow.some(v=>Number(v)>1.5),JSON.stringify(braking.brakeGlow));
+    record('reverse-gear',Number(braking.driving?.speed)<-.2&&braking.gearText==='R',`speed=${braking.driving?.speed},gear=${braking.gearText}`);
 
     console.log(JSON.stringify({tgg_3d_smoke_step:'braking-complete'}));
-    await page.keyboard.down('ArrowDown');
-    await page.waitForTimeout(900);
-    const reversed=await page.evaluate(()=>({
-      state:window.TGGGame?.getState?.(),
-      driving:window.TGGGame?.getDrivingState?.(),
-      gearText:document.getElementById('gearValue')?.textContent
-    }));
-    await page.keyboard.up('ArrowDown');
-    record('reverse-gear',Number(reversed.driving?.speed)<-.2&&reversed.gearText==='R',`speed=${reversed.driving?.speed},gear=${reversed.gearText}`);
-
     console.log(JSON.stringify({tgg_3d_smoke_step:'reverse-complete'}));
+    const reversed=braking;
     await page.waitForTimeout(500);
     const coast=await page.evaluate(()=>window.TGGGame?.getDrivingState?.());
     record('coast-deceleration',Math.abs(Number(coast?.speed)||0)<Math.abs(Number(reversed.driving?.speed)||0),`reverse=${reversed.driving?.speed},coast=${coast?.speed}`);

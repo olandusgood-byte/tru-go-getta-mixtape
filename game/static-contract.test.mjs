@@ -9,13 +9,14 @@ const studio3d=fs.readFileSync(new URL('./studio-3d.js',import.meta.url),'utf8')
 const interiors3d=fs.readFileSync(new URL('./interiors-3d.js',import.meta.url),'utf8');
 const garage3d=fs.readFileSync(new URL('./garage-3d.js',import.meta.url),'utf8');
 const navigation=fs.readFileSync(new URL('./navigation.js',import.meta.url),'utf8');
+const streetLife=fs.readFileSync(new URL('./street-life.js',import.meta.url),'utf8');
 const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
 const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qa=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.30 3D/);
-assert.match(html,/GAME V1\.30 • CITY LIFE 3D/);
+assert.match(html,/Game V1\.31 3D/);
+assert.match(html,/GAME V1\.31 • STREET LIFE/);
 assert.match(html,/vendor\/three-r152\.min\.js/);
 assert.match(html,/id="garage"/);
 assert.match(html,/id="garageBtn"/);
@@ -27,6 +28,9 @@ for(const id of ['home3d','media3d','shops3d','park3d','garage3d','navHud']) ass
 assert.match(html,/<script src="interiors-3d\.js"><\/script>/);
 assert.match(html,/<script src="garage-3d\.js"><\/script>/);
 assert.match(html,/<script src="navigation\.js"><\/script>/);
+assert.match(html,/<script src="street-life\.js"><\/script>/);
+assert.match(html,/id="streetLifePrompt"/);
+assert.match(html,/id="streetDialogue"/);
 
 assert.match(garage,/tgg-garage-v1/);
 assert.match(garage,/window\.TGGGarage/);
@@ -72,6 +76,20 @@ assert.equal(interiors3d.includes('TGGGame?.reward'),false);
 assert.equal(garage3d.includes('TGGGame?.reward'),false);
 assert.equal(navigation.includes('TGGGame?.reward'),false);
 
+assert.match(streetLife,/tgg-street-life-v1/);
+assert.match(streetLife,/window\.TGGStreetLife/);
+for(const api of ['nearestPedestrian','nearestTraffic','activateNearest','onHorn','snapshot','render']) assert.match(streetLife,new RegExp('function '+api+'\\b'));
+assert.match(streetLife,/Tasha/);
+assert.match(streetLife,/Rico/);
+assert.match(streetLife,/Nova/);
+assert.match(game,/tgg:horn/);
+assert.match(game,/TGGStreetLife\?\.activateNearest/);
+assert.equal(streetLife.includes('TGGGame?.reward'),false);
+assert.equal(streetLife.includes('TGGCareer?.addRep'),false);
+assert.equal(streetLife.includes('TGGEconomy?.apply'),false);
+assert.equal(streetLife.includes('TGGWorldSync'),false);
+
+
 for(const forbidden of [
   'SUPABASE_SERVICE_ROLE_KEY',
   'sb_secret_',
@@ -87,10 +105,10 @@ for(const forbidden of [
   assert.equal(game3d.includes(forbidden),false,'3D runtime must exclude '+forbidden);
 }
 
-assert.equal(release.release,'V1.30 City Life 3D');
-assert.equal(release.base,'V1.29 Bulk World Upgrade');
-assert.equal(auto.version,'1.30');
-assert.equal(qa.version,'1.30');
+assert.equal(release.release,'V1.31 Street Life + Traffic Proximity');
+assert.equal(release.base,'V1.30 City Life 3D');
+assert.equal(auto.version,'1.31');
+assert.equal(qa.version,'1.31');
 assert.equal(release.production,'gated');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.ok(['candidate_pending_ci','passed'].includes(release.static_gate));
@@ -102,7 +120,8 @@ for(const gate of [
   'vehicle_collision_margin','studio_3d_renderer','studio_3d_entry','manager_dialogue_proximity',
   'mobile_drift_control','mobile_horn_control','local_three_runtime','studio_dom_ready_boot',
   'interiors_3d_runtime','home_3d','media_3d','shops_3d','park_3d','garage_3d_runtime',
-  'navigation_hud','traffic_population','traffic_animation','interior_no_reward_path'
+  'navigation_hud','traffic_population','traffic_animation','interior_no_reward_path',
+  'street_life_api','pedestrian_proximity','street_contact_memory','street_talk_no_rewards','traffic_proximity','horn_reaction','contextual_prompt'
 ]) assert.ok(release.gates.includes(gate),'missing V1.30 gate '+gate);
 
-console.log('GAME_V1_30_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_31_STATIC_CONTRACT_PASS');

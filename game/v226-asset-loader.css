@@ -1,0 +1,12 @@
+/* V2.26 REAL ASSET LOADER 100 */
+body.tgg-v226 .v226-asset-hud{position:absolute;right:18px;top:102px;z-index:13;display:grid;gap:2px;max-width:250px;padding:8px 10px;border:1px solid #ffffff14;border-radius:11px;background:#070b12dd;color:#fff;text-align:left;cursor:pointer;box-shadow:0 12px 36px #0007}
+body.tgg-v226 .v226-asset-hud small{font-size:6px;font-weight:900;letter-spacing:.15em;color:#61d9ff}
+body.tgg-v226 .v226-asset-hud b{font-size:8px}
+body.tgg-v226 .v226-asset-hud span{font-size:7px;color:#9ca6b7}
+body.tgg-v226 .v226-asset-hud em{display:none;font-size:7px;line-height:1.35;color:#7f899c;font-style:normal}
+body.tgg-v226 .v226-asset-hud.expanded em{display:block}
+body.tgg-v226 .v226-asset-hud[data-state="ready"]{border-color:#c7ff0055}
+body.tgg-v226 .v226-asset-hud[data-state="fallback"]{border-color:#ffcf4a55}
+body.tgg-v226 .v226-asset-hud[data-state="loading"]{border-color:#61d9ff55}
+@media(max-width:700px){body.tgg-v226 .v226-asset-hud{right:10px;top:74px;max-width:210px}}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v226 .v226-asset-hud{top:8px;right:8px;max-width:220px}}

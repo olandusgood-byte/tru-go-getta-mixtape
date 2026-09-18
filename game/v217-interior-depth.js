@@ -72,7 +72,7 @@
     window.TGGStudio3D?.ensure?.();
     const rt=window.TGGStudio3D;if(!rt?.scene||state.decorated.studio)return;
     const THREE=T(),scene=rt.scene,g=tagGroup(scene,'studio');
-    const red=new THREE.PointLight(0xff2e42,0,10,2);red.position.set(-4,4,-.3);red.userData.v217Base=5;g.add(red);state.lights++;
+    const red=new THREE.PointLight(0xff2e42,0,10,2);red.position.set(-4,4,-.3);red.userData.v217Base=5;red.userData.v217Dynamic=true;g.add(red);state.lights++;
     const halo=new THREE.Mesh(new THREE.TorusGeometry(.48,.035,10,30),mat('studio-halo',0xc7ff00,{emissive:0xc7ff00,emissiveIntensity:3.2}));
     halo.position.set(-3.25,3.05,-.4);halo.rotation.y=Math.PI/2;g.add(halo);
     for(let x=-5.7;x<=-1.3;x+=1.1){
@@ -131,7 +131,7 @@
     const rt=findInterior('media');if(!rt?.scene||state.decorated.media)return;
     const THREE=T(),g=tagGroup(rt.scene,'media');
     const wall=box(g,6.8,2.8,.09,0x0b1017,0,2.3,-5.18,{emissive:0xc56cff,emissiveIntensity:.9,shadow:false},'led-wall');
-    const flash=light(g,0xffffff,0,16,-2.7,4.8,1.8,'camera-flash');
+    const flash=light(g,0xffffff,0,16,-2.7,4.8,1.8,'camera-flash');if(flash)flash.userData.v217Dynamic=true;
     for(let i=-2;i<=2;i++)box(g,.55,.025,.08,0xffcf4a,i*1.1,.03,-.2,{emissive:0xffcf4a,emissiveIntensity:1.3,shadow:false},'floor-mark');
     const board=box(g,1.5,.8,.1,0x121722,-3.6,2.1,1.2,{metalness:.48,roughness:.45},'clapboard');
     g.userData.flash=flash;g.userData.wall=wall;g.userData.board=board;state.decorated.media=true;
@@ -271,7 +271,7 @@
     const q=window.TGGV212?.status?.()?.quality||'high';
     const intensity=q==='performance'?.55:q==='balanced'?.78:1;
     for(const rt of [window.TGGStudio3D,window.TGGGarage3D,...(window.TGGInteriors3D?.runtimes||[])]){
-      rt?.scene?.traverse?.(o=>{if(o.isLight&&o.userData?.v217&&Number.isFinite(o.userData.v217Base))o.intensity=o.userData.v217Base*intensity});
+      rt?.scene?.traverse?.(o=>{if(o.isLight&&o.userData?.v217&&!o.userData.v217Dynamic&&Number.isFinite(o.userData.v217Base))o.intensity=o.userData.v217Base*intensity});
     }
     document.body.dataset.v217Quality=q;
   }

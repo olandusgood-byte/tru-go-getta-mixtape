@@ -18,8 +18,8 @@ const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',impor
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.26/);
-assert.match(html,/GAME V1\.26 • FIXED DRIVING CONTROLS/);
+assert.match(html,/Game V1\.27/);
+assert.match(html,/GAME V1\.27 • CINEMATIC CAMERA \+ RADAR/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/<script src="district-story\.js"><\/script>/);
@@ -32,6 +32,12 @@ assert.match(html,/id="interactionPrompt"/);
 assert.match(html,/id="businessBoard"/);
 assert.match(html,/id="businessBtn"/);
 assert.match(html,/id="cityAssetsBtn"/);
+
+assert.match(html,/id="radar3d"/);
+assert.match(html,/id="radarDestinations"/);
+assert.match(html,/id="radarPlayer"/);
+assert.match(html,/id="radarCar"/);
+assert.match(html,/id="camera3dBtn"/);
 
 
 assert.match(world3d,/window\.TGGWorld3D/);
@@ -46,7 +52,19 @@ assert.match(world3d,/TGGGame\?\.getState/);
 assert.equal(world3d.includes('localStorage.setItem'),false);
 assert.equal(world3d.includes('TGGGame?.reward'),false);
 assert.equal(world3d.includes('TGGCareer?.addRep'),false);
-assert.match(world3d,/version:'1\.25\.0'/);
+
+assert.match(world3d,/cameraModes:\['orbit','chase','top'\]/);
+assert.match(world3d,/cameraMode:'orbit'/);
+assert.match(world3d,/function cycleCamera/);
+assert.match(world3d,/function getCameraMode/);
+assert.match(world3d,/function updateRadar/);
+assert.match(world3d,/radarDestinations/);
+assert.match(world3d,/radarPlayer/);
+assert.match(world3d,/radarCar/);
+assert.match(world3d,/key==='c'/);
+assert.match(world3d,/cameraMode==='top'/);
+assert.match(world3d,/cameraMode==='chase'/);
+assert.match(world3d,/version:'1\.27\.0'/);
 assert.match(world3d,/const BUILDINGS=/);
 assert.match(world3d,/constrainPercent/);
 assert.match(world3d,/isBlockedPercent/);
@@ -54,7 +72,7 @@ assert.match(world3d,/districtAtPercent/);
 assert.match(world3d,/collisionBoxes/);
 assert.match(world3d,/percentToWorld\(72,36\)/);
 assert.match(game,/TGGWorld3D\?\.constrainPercent/);
-assert.match(world3d,/version:'1\.25\.0'/);
+assert.match(world3d,/version:'1\.27\.0'/);
 assert.match(world3d,/userData\.rig/);
 assert.match(world3d,/walkPhase/);
 assert.match(world3d,/nearestInteraction/);
@@ -275,10 +293,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.26 Fixed Driving Controls');
-assert.equal(release.base,'V1.25 Starter Car + Drive Mode');
-assert.equal(auto.version,'1.26');
-assert.equal(qaManifest.version,'1.26');
+assert.equal(release.release,'V1.27 Cinematic Camera + Radar');
+assert.equal(release.base,'V1.26 Fixed Driving Controls');
+assert.equal(auto.version,'1.27');
+assert.equal(qaManifest.version,'1.27');
 assert.ok(['candidate_pending_ci','automated_ci_pass','automated_webgl_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -338,6 +356,17 @@ assert.ok(release.gates.includes('steering_heading'));
 assert.ok(release.gates.includes('steering_no_strafe'));
 assert.ok(release.gates.includes('vehicle_collision_preserved'));
 
+assert.ok(release.gates.includes('camera_mode_api'));
+assert.ok(release.gates.includes('camera_orbit_mode'));
+assert.ok(release.gates.includes('camera_chase_mode'));
+assert.ok(release.gates.includes('camera_top_mode'));
+assert.ok(release.gates.includes('camera_c_key'));
+assert.ok(release.gates.includes('live_radar'));
+assert.ok(release.gates.includes('radar_player_tracking'));
+assert.ok(release.gates.includes('radar_car_tracking'));
+assert.ok(release.gates.includes('radar_five_hubs'));
+assert.ok(release.gates.includes('camera_radar_no_rewards'));
 
 
-console.log('GAME_V1_26_STATIC_CONTRACT_PASS');
+
+console.log('GAME_V1_27_STATIC_CONTRACT_PASS');

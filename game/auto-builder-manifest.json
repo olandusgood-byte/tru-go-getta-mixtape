@@ -127,5 +127,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
   "next": "V1.28 SMOOTH DRIVING + LIVING TRAFFIC",
-  "verification": "pending_ci"
+  "verification": "passed"
 }

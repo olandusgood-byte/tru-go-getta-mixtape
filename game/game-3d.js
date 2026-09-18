@@ -176,6 +176,72 @@
   function toWorld(s){
     return {x:((Number(s?.x)||50)-50)*.92,z:((Number(s?.y)||50)-50)*.92};
   }
+
+  function makeTextSprite(text,color='#c7ff00'){
+    const canvas=document.createElement('canvas');
+    canvas.width=512;canvas.height=128;
+    const ctx=canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='rgba(3,5,10,.82)';
+    ctx.strokeStyle=color;ctx.lineWidth=4;
+    ctx.beginPath();ctx.roundRect(8,8,496,112,24);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#ffffff';
+    ctx.font='900 36px Arial, sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(text,256,64);
+    const tex=new THREE.CanvasTexture(canvas);
+    tex.colorSpace=THREE.SRGBColorSpace;
+    const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
+    const sprite=new THREE.Sprite(mat);
+    sprite.scale.set(8,2,1);
+    return sprite;
+  }
+
+  const destinationDefs=[
+    {id:'studio',label:'RECORDING STUDIO',buttonId:'studioBtn',x:-24,z:-12,color:0xff466d},
+    {id:'park',label:'THE PARK',buttonId:'parkBtn',x:24,z:12,color:0x4cff88},
+    {id:'shops',label:'SHOP DISTRICT',buttonId:'shopsBtn',x:-12,z:24,color:0x48d7ff},
+    {id:'home',label:'MY APARTMENT',buttonId:'homeBtn',x:12,z:-24,color:0xffc84a},
+    {id:'media',label:'MEDIA DISTRICT',buttonId:'mediaBtn',x:0,z:36,color:0xc56cff},
+    {id:'business',label:'BUSINESS',buttonId:'businessBtn',x:-36,z:0,color:0xc7ff00}
+  ];
+  const destinations=destinationDefs.map(d=>{
+    const group=new THREE.Group();
+    group.position.set(d.x,0,d.z);
+    const color=new THREE.Color(d.color);
+    const ringMat=new THREE.MeshStandardMaterial({color:d.color,emissive:d.color,emissiveIntensity:2.4,transparent:true,opacity:.72,side:THREE.DoubleSide});
+    const ring=new THREE.Mesh(new THREE.RingGeometry(1.8,2.18,36),ringMat);
+    ring.rotation.x=-Math.PI/2;ring.position.y=.07;group.add(ring);
+    const beamMat=new THREE.MeshBasicMaterial({color:d.color,transparent:true,opacity:.14,depthWrite:false});
+    const beam=new THREE.Mesh(new THREE.CylinderGeometry(.62,1.35,7.5,18,1,true),beamMat);
+    beam.position.y=3.8;group.add(beam);
+    const marker=new THREE.Mesh(new THREE.OctahedronGeometry(.48),new THREE.MeshStandardMaterial({color:d.color,emissive:d.color,emissiveIntensity:2.8,metalness:.45,roughness:.25}));
+    marker.position.y=2.25;group.add(marker);
+    const label=makeTextSprite(d.label,'#'+color.getHexString());
+    label.position.y=5.8;group.add(label);
+    scene.add(group);
+    return {...d,group,ring,beam,marker,label};
+  });
+
+  function nearbyDestination(s,radius=7.2){
+    const p=toWorld(s);
+    let best=null,bestDist=Infinity;
+    for(const d of destinations){
+      const dist=Math.hypot(p.x-d.x,p.z-d.z);
+      if(dist<bestDist){bestDist=dist;best=d;}
+    }
+    return best&&bestDist<=radius?{...best,distance:bestDist}:null;
+  }
+
+  function interactNearest(){
+    const d=nearbyDestination(window.TGGGame?.getState?.());
+    if(!d){window.__tggToast?.('MOVE CLOSER TO A 3D DESTINATION');return false;}
+    const button=document.getElementById(d.buttonId);
+    if(!button){window.__tggToast?.(d.label+' IS NOT READY YET');return false;}
+    window.__tggToast?.('ENTERING '+d.label);
+    button.click();
+    return true;
+  }
   function canMovePercent(x,y){
     const p=toWorld({x,y});
     if(Math.abs(p.x)>49||Math.abs(p.z)>49)return false;
@@ -243,6 +309,25 @@
     npc.position.y=Math.sin(t*2)*.05;
     npcRing.rotation.z=t*.55;
     neon.intensity=16+Math.sin(t*1.7)*3;
+
+    const near=nearbyDestination(s);
+    destinations.forEach((d,i)=>{
+      const hot=near?.id===d.id;
+      const pulse=1+Math.sin(t*2.4+i)*.08;
+      d.ring.scale.setScalar(hot?1.18:pulse);
+      d.ring.material.opacity=hot?.96:.62;
+      d.beam.material.opacity=hot?.27:.10;
+      d.marker.rotation.y=t*1.4+i;
+      d.marker.position.y=2.25+Math.sin(t*2+i)*.18;
+      d.label.material.opacity=hot?1:.78;
+    });
+    const interactButton=document.getElementById('interact3dBtn');
+    if(interactButton){
+      interactButton.disabled=!near;
+      interactButton.textContent=near?'ENTER '+near.label:'INTERACT';
+      interactButton.classList.toggle('nearby',!!near);
+    }
+
     renderer.render(scene,camera);
   }
 
@@ -262,6 +347,9 @@
     resetCamera(){yaw=Math.PI*.25;pitch=.48;distance=17},
     isReady:()=>true,
     canMovePercent,
-    distanceToCarPercent
+    distanceToCarPercent,
+    destinations,
+    nearbyDestination,
+    interactNearest
   };
 })();

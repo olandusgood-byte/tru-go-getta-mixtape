@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.24",
-  "module": "GAME-V1.24-QA",
-  "name": "Unified 3D Gameplay Slice",
+  "version": "1.25",
+  "module": "GAME-V1.25-QA",
+  "name": "Starter Car + Drive Mode",
   "checks": [
     "storage",
     "game_api",
@@ -95,7 +95,16 @@
     "hub_enter_action",
     "single_e_action",
     "walk_animation_preserved",
-    "mission_interaction_preserved"
+    "mission_interaction_preserved",
+    "starter_car_mesh",
+    "vehicle_saved_state",
+    "vehicle_proximity_gate",
+    "drive_speed",
+    "vehicle_collision",
+    "car_follow_camera",
+    "wheel_animation",
+    "single_e_vehicle_action",
+    "vehicle_no_reward_path"
   ],
   "workflow": [
     "BUILD",
@@ -108,6 +117,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.25 STARTER CAR + DRIVE MODE",
-  "verification": "passed"
+  "next": "V1.26 VEHICLE HANDLING + GARAGE",
+  "verification": "pending_ci"
 }

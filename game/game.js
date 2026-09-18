@@ -1,7 +1,7 @@
 (() => {
   const KEY='tgg-game-v1';
   const $=id=>document.getElementById(id);
-  let state={name:'PLAYER',style:'Artist',x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0};
+  let state={name:'PLAYER',style:'Artist',x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0,inVehicle:false};
   let activeScreen='menu';
   const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','avatar','park','studio','shops','home','media','businessBoard'];
 
@@ -79,6 +79,7 @@
     window.TGGAvatar?.renderMini?.();
     $('missionStatus') && ($('missionStatus').textContent=state.accepted?'Mission active — finish the job.':'Find M and start a mission.');
     $('missionBtn') && ($('missionBtn').textContent=state.mission?(state.accepted?'COMPLETE MISSION':'TAKE MISSION'):'TALK TO M');
+    $('vehicleBtn') && ($('vehicleBtn').textContent=state.inVehicle?'EXIT STARTER CAR':'ENTER STARTER CAR');
   }
 
   function addXp(n){
@@ -101,15 +102,39 @@
 
   function move(dx,dy){
     if(activeScreen!=='game')return false;
-    if(dx||dy)state.heading=Math.atan2(dy,dx)*180/Math.PI;
-    const nextX=Math.max(3,Math.min(94,state.x+dx));
-    const nextY=Math.max(8,Math.min(88,state.y+dy));
+    const speed=state.inVehicle?1.75:1;
+    const sx=dx*speed,sy=dy*speed;
+    if(sx||sy)state.heading=Math.atan2(sy,sx)*180/Math.PI;
+    const nextX=Math.max(3,Math.min(94,state.x+sx));
+    const nextY=Math.max(8,Math.min(88,state.y+sy));
     const constrained=window.TGGWorld3D?.constrainPercent?.(nextX,nextY,state.x,state.y);
     state.x=Number(constrained?.x??nextX);
     state.y=Number(constrained?.y??nextY);
     update();
     if(state.accepted&&Math.abs(state.x-72)<5&&Math.abs(state.y-36)<6)toast('You found the mission spot — hit COMPLETE MISSION');
     return true;
+  }
+
+  function toggleVehicle(){
+    if(activeScreen!=='game')return {ok:false,status:'not_in_city'};
+    if(state.inVehicle){
+      state.inVehicle=false;
+      update();
+      save(true);
+      toast('EXITED STARTER CAR');
+      return {ok:true,status:'exited'};
+    }
+    const distance=window.TGGWorld3D?.distanceToCarPercent?.(state);
+    if(!Number.isFinite(distance))return {ok:false,status:'car_not_ready'};
+    if(distance>4.6){
+      toast('MOVE CLOSER TO THE STARTER CAR');
+      return {ok:false,status:'too_far',distance};
+    }
+    state.inVehicle=true;
+    update();
+    save(true);
+    toast('STARTER CAR — DRIVE MODE ON');
+    return {ok:true,status:'entered',distance};
   }
 
   function mission(){
@@ -138,7 +163,7 @@
     state={
       name:($('stageName')?.value.trim()||'PLAYER'),
       style:$('styleChoice')?.value||'Artist',
-      x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0
+      x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0,inVehicle:false
     };
     update();
     save(true);
@@ -166,6 +191,7 @@
       window.TGGAvatar?.open?.();
     });
     $('missionBtn')?.addEventListener('click',mission);
+    $('vehicleBtn')?.addEventListener('click',()=>toggleVehicle());
     $('saveBtn')?.addEventListener('click',()=>save(false));
     $('pauseBtn')?.addEventListener('click',()=>show('pause'));
     $('resumeBtn')?.addEventListener('click',()=>show('game'));
@@ -229,7 +255,7 @@
 
   window.__tggToast=toast;
   window.TGGAutoMode={enabled:()=>true,toggle:()=>true};
-  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,mission,resetForNewGame};
+  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,mission,toggleVehicle,resetForNewGame};
 
   load();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindControls,{once:true});

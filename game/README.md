@@ -1,45 +1,65 @@
-# TRU GO GETTA Game V1.31
+# TRU GO GETTA Game V1.32
 
-V1.31 turns the V1.30 living-city layer into an interactive street layer without adding another economy or remote mutation path.
+V1.32 turns the verified V1.31 living street layer into a local 3D event system with crowd reactions, while keeping the existing economy, missions and Creator OS boundaries intact.
 
-## Street Life
+## Street Events
 
-- six ambient pedestrian contacts are proximity-aware;
-- walking near a local surfaces a contextual F-to-talk prompt;
-- talks persist in `tgg-street-life-v1`;
-- repeated street conversations record local contact history but add no cash, XP or reputation;
-- driving near ambient traffic surfaces distance awareness;
-- horn input can trigger a nearby-traffic reaction state;
-- street prompts remain contextual instead of crowding the permanent controller deck.
+Three on-foot hotspots are active in the 3D city:
 
-## Preserved 3D stack
+- Downtown Cypher
+- Studio Sidewalk
+- Mixtape Pop-Out
 
-- local Three.js runtime;
-- smooth car controls, drift, horn and speedometer;
-- cinematic camera + radar;
+Walk into a hotspot and press **G** (or use the contextual prompt) to start the local event.
+
+## Crowd reactions
+
+When a street event starts:
+
+- up to four nearby 3D pedestrians gather around the player;
+- the crowd faces the performance;
+- arms/body animation shifts into a reaction pose;
+- the event HUD moves through BUILD → LIVE → FINISH;
+- completing the event releases pedestrians back to their ambient routes;
+- local crowd hype and event history persist in `tgg-street-events-v1`.
+
+The street-event layer does **not** award cash, XP or reputation and does not call any Creator OS/world mutation API.
+
+## Preserved stack
+
+Everything verified through V1.31 remains intact:
+
+- smooth car driving, braking, drift, horn and collision;
+- cinematic camera + live radar;
 - garage customization and handling presets;
-- 3D apartment, media, shops, park, garage and recording studio;
-- live mission navigation;
-- six ambient traffic vehicles and six pedestrians;
-- mission, save/continue, city events, circuits, story, NPC memory and contact opportunities.
+- 3D Apartment, Media, Shops, Park, Garage and Recording Studio;
+- live navigation;
+- six ambient traffic vehicles + six animated pedestrians;
+- street conversations and traffic proximity;
+- missions, save/continue, economy, city events, circuits and story;
+- NPC memory, relationships and contact opportunities;
+- read-only world/Creator OS discovery.
 
 ## Verification
 
-- [x] Street Life API
-- [x] six local street contacts
-- [x] pedestrian proximity talk
-- [x] contact memory persistence
-- [x] street talk adds no cash or XP
-- [x] traffic proximity HUD
-- [x] horn reaction
-- [x] horn reaction adds no reward
-- [x] mission + save controls preserved
-- [x] Static CI PASS on `42348c1`
-- [x] Chromium Smoke PASS on `42348c1`
+- [x] V1.32 static contract
+- [x] three street-event hotspots
+- [x] contextual G-to-start prompt
+- [x] 3D crowd gather
+- [x] crowd reaction animation
+- [x] live event HUD
+- [x] event completion + crowd release
+- [x] local event persistence
+- [x] crowd hype persistence
+- [x] no cash / XP reward path
+- [x] no remote mutation path
+- [x] V1.31 regression suite preserved
+- [x] Static CI PASS on `36b5803`
+- [x] Chromium Smoke PASS on `36b5803`
 - [x] production remains gated
 
 ## Release status
 
-**V1.31-STREET-LIFE-TRAFFIC-PROXIMITY-VERIFIED.**
+**V1.32-STREET-EVENTS-CROWD-REACTIONS-VERIFIED.**
 
-Next internal development layer: **V1.32 Street Events + Crowd Reactions**.
+Next internal development layer: **V1.33 Street Reputation + Event Variants**.

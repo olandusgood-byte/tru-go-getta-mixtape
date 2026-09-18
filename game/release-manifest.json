@@ -333,8 +333,8 @@
     "street_rep_persistence",
     "street_rep_achievements"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.33-STREET-REPUTATION-EVENT-VARIANTS-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.33-STREET-REPUTATION-EVENT-VARIANTS-VERIFIED",
   "production": "gated"
 }

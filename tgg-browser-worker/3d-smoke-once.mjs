@@ -42,7 +42,7 @@ async function run(){
         }));
       });
       const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
-      await page.waitForFunction(()=>window.TGG3D?.isReady?.()&&window.TGGStoryMissions&&window.TGGStoryWorld3D,{timeout:30000});
+      await page.waitForFunction(()=>window.TGG3D?.isReady?.()&&window.TGGStoryMissions&&window.TGGStoryWorld3D,null,{timeout:30000});
       await page.evaluate(()=>window.TGGStoryMissions.startChapter2());
       await page.waitForTimeout(350);
       const checks=[]; const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
@@ -83,7 +83,7 @@ async function run(){
       record('story3d-interact-talk-m',snap.interact.disabled===false&&snap.interact.text.includes('TALK TO M'),JSON.stringify(snap.interact));
       record('story3d-proximity-dialogue',snap.dialogue.show===true&&snap.dialogue.text.startsWith('M:'),JSON.stringify(snap.dialogue));
 
-      await page.click('#interact3dBtn');
+      await page.evaluate(()=>document.getElementById('interact3dBtn')?.click());
       await page.waitForTimeout(220);
       snap=await page.evaluate(()=>({
         story:window.TGGStoryMissions.status(),
@@ -247,8 +247,7 @@ async function run(){
           width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
           overflowX:document.documentElement.scrollWidth>innerWidth+1,
           hud:hud?{left:hud.left,right:hud.right,width:hud.width}:null,
-          button:button?{width:button.width,height:button.height}:null
-        };      });
+          button:button?{width:button.width,height:button.height}:null        };      });
       record('chapter2-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
       record('chapter2-mobile-hud-contained',!layout.hud||layout.hud.left>=0&&layout.hud.right<=layout.width+1,JSON.stringify(layout.hud));
       record('chapter2-mobile-action-readable',!layout.button||layout.button.height>=42,JSON.stringify(layout.button));
@@ -497,8 +496,7 @@ async function run(){
       const [htmlResponse,cssResponse]=await Promise.all([fetch(base+'/index.html'),fetch(base+'/style.css')]);
       if(!htmlResponse.ok||!cssResponse.ok)throw new Error('Career mobile harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status);
       let html=await htmlResponse.text();
-      const css=await cssResponse.text();      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
-               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
+      const css=await cssResponse.text();      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
       const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
       const mp=await mobile.newPage();
       await mp.setContent(html,{waitUntil:'domcontentloaded'});
@@ -747,8 +745,7 @@ async function run(){
           minButtonHeight:buttons.length?Math.min(...buttons.map(x=>x.height)):0,
           controlText:document.querySelector('.move-pad .control-title small')?.textContent||''
         };      });
-      const checks=[];
-      const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      const checks=[];      const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
       record('mobile-source-http',htmlResponse.status===200&&cssResponse.status===200,'html='+htmlResponse.status+',css='+cssResponse.status);
       record('mobile-no-horizontal-overflow',layout.overflowX===false,JSON.stringify(layout));
       record('mobile-dpad-contained',!!layout.dpad&&layout.dpad.left>=0&&layout.dpad.right<=layout.width+1&&layout.dpad.w>=160,JSON.stringify(layout.dpad));
@@ -997,8 +994,7 @@ async function run(){
         ok:false,status:'webgl_not_ready',target:TARGET,
         error:error?.message||String(error),        diagnostics,
         console_errors:consoleErrors,
-        page_errors:pageErrors,
-        failed_resources:failedResources,
+        page_errors:pageErrors,        failed_resources:failedResources,
         updated_at:new Date().toISOString()
       };
       console.error(JSON.stringify({tgg_3d_smoke_once:true,...result}));
@@ -1247,8 +1243,7 @@ async function run(){
     const accelSpeed=Number(accelerated.driving?.speed)||0;    const accelDistance=Math.hypot(Number(accelerated.state?.x)-startX,Number(accelerated.state?.y)-startY);
     record('smooth-acceleration',accelSpeed>3,`speed=${accelSpeed}`);
     record('continuous-forward-travel',accelDistance>1.5,`distance=${accelDistance}`);
-    record('speedometer-hud',accelerated.hudActive&&Number(accelerated.speedText)>0,`mph=${accelerated.speedText}`);
-    record('drive-gear',accelerated.gearText==='D',String(accelerated.gearText));
+    record('speedometer-hud',accelerated.hudActive&&Number(accelerated.speedText)>0,`mph=${accelerated.speedText}`);    record('drive-gear',accelerated.gearText==='D',String(accelerated.gearText));
 
     console.log(JSON.stringify({tgg_3d_smoke_step:'acceleration-complete'}));
     const headingBeforeSteer=Number(accelerated.state?.heading)||0;

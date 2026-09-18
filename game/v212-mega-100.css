@@ -1,0 +1,33 @@
+/* V2.12 MEGA 100 */
+body.tgg-v212 .condition-readout{display:grid;gap:4px;margin-top:7px;min-width:150px}
+body.tgg-v212 .condition-readout>span{display:flex;justify-content:space-between;gap:12px;font-size:8px;font-weight:900;letter-spacing:.12em;color:#b8bdcc}
+body.tgg-v212 .condition-track{height:6px;border-radius:999px;overflow:hidden;background:#ffffff12;border:1px solid #ffffff18}
+body.tgg-v212 #conditionFill{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff315f,#ffcf4a,#39dd79);transition:width .2s}
+body.tgg-v212 .condition-readout small{font-size:7px;font-weight:900;letter-spacing:.14em;color:#9ea7b8}
+body[data-car-condition="critical"] .vehicle-hud,body[data-car-condition="wrecked"] .vehicle-hud{box-shadow:0 0 0 1px #ff315f66,0 18px 55px #0008}
+body.tgg-v212 .mega-drive-hud{position:absolute;left:18px;top:146px;z-index:13;display:grid;gap:5px;padding:9px 10px;border:1px solid #ffffff14;border-radius:13px;background:#080b11d9;box-shadow:0 12px 34px #0008;backdrop-filter:blur(10px)}
+body.tgg-v212 .mega-drive-hud span{display:flex;justify-content:space-between;gap:14px;font-size:7px;font-weight:900;letter-spacing:.12em;color:#9ea7b8}
+body.tgg-v212 .mega-drive-hud b{color:#fff}
+body.tgg-v212 .mega-help-btn{width:32px;height:32px;margin-left:8px;border:1px solid #ffffff1f;border-radius:50%;background:#0b0f17;color:#c7ff00;font-weight:1000;cursor:pointer}
+body.tgg-v212 .mega-help-panel{position:fixed;right:18px;top:62px;z-index:100;display:none;gap:7px;width:min(300px,calc(100vw - 28px));padding:16px;border:1px solid #ffffff20;border-radius:18px;background:#090c13f5;box-shadow:0 24px 80px #000c;color:#fff}
+body.tgg-v212 .mega-help-panel.active{display:grid}
+body.tgg-v212 .mega-help-panel b{color:#c7ff00;letter-spacing:.14em}
+body.tgg-v212 .mega-help-panel span,body.tgg-v212 .mega-help-panel small{font-size:10px;line-height:1.45;color:#c6ccda}
+body.tgg-v212 #repairCarBtn:disabled{opacity:.46}
+body.tgg-v212 #worldObjective.active{animation:mega-objective-pulse 2.2s ease-in-out infinite}
+body[data-mega-quality="performance"] .street-life-alert,body[data-mega-quality="performance"] .mission-scene{backdrop-filter:none}
+body[data-mega-quality="performance"] .mega-drive-hud,body[data-mega-quality="performance"] .living-traffic-hud{box-shadow:none}
+@keyframes mega-objective-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.15)}}
+@media(prefers-reduced-motion:reduce){body.tgg-v212 *,body.tgg-v212 *:before,body.tgg-v212 *:after{animation-duration:.001ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.001ms!important}}
+@media(max-width:700px){
+ body.tgg-v212{padding-bottom:env(safe-area-inset-bottom)}
+ body.tgg-v212 .mega-drive-hud{left:10px;top:132px;padding:7px 8px}
+ body.tgg-v212 .mega-help-panel{right:10px;top:54px}
+ body.tgg-v212 .dpad button{touch-action:none}
+ body.tgg-v212 .action-deck .actions button{touch-action:manipulation}
+}
+@media(max-width:700px) and (orientation:landscape){
+ body.tgg-v212 .game-shell{grid-template-rows:minmax(300px,70vh) auto}
+ body.tgg-v212 .mega-drive-hud{top:96px}
+ body.tgg-v212 .living-traffic-hud{top:96px}
+}

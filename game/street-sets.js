@@ -151,8 +151,9 @@
       const done=s.completed.includes(set.id);
       return '<button data-street-set="'+set.id+'">'+set.name+(done?' ✓':'')+'</button>';
     }).join('');
-    host.innerHTML='<b>STREET SETS • '+s.momentumRank+'</b>'+active+'<small>MOMENTUM '+s.momentum+'/100 • CROWD +'+s.crowdBonus+'</small><div>'+buttons+'</div>';
+    host.innerHTML='<b>STREET SETS • '+s.momentumRank+'</b>'+active+'<small>MOMENTUM '+s.momentum+'/100 • CROWD +'+s.crowdBonus+'</small><small data-audience-summary>AUDIENCE MEMORY READY</small><div>'+buttons+'</div>';
     host.classList.add('show');
+    window.TGGStreetAudience?.render?.();
     host.querySelectorAll('[data-street-set]').forEach(btn=>btn.onclick=()=>start(btn.dataset.streetSet));
   }
 

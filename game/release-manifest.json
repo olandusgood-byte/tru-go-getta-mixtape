@@ -205,8 +205,8 @@
     "world3d_mission_reachable",
     "world3d_game_move_guard"
   ],
-  "static_gate": "candidate_pending_ci",
-  "browser_smoke": "candidate_pending_ci",
-  "release_checkpoint": "V1.22-3D-COLLISION-CAMERA-ORBIT-CANDIDATE",
+  "static_gate": "passed",
+  "browser_smoke": "automated_ci_pass",
+  "release_checkpoint": "V1.22-3D-COLLISION-CAMERA-ORBIT-VERIFIED",
   "production": "gated"
 }

@@ -100,15 +100,46 @@
     return {cash:state.cash,xp:state.xp,level:state.level};
   }
 
+  function driveVehicle(control){
+    if(activeScreen!=='game'||!state.inVehicle)return false;
+    const turnStep=12;
+    const driveStep=3.1;
+
+    if(control==='left'||control==='right'){
+      const delta=control==='left'?-turnStep:turnStep;
+      state.heading=(Number(state.heading||0)+delta+360)%360;
+      update();
+      return true;
+    }
+
+    if(control!=='forward'&&control!=='reverse')return false;
+    const direction=control==='reverse'?-1:1;
+    const rad=(Number(state.heading)||0)*Math.PI/180;
+    const nx=Math.max(3,Math.min(94,state.x+Math.cos(rad)*driveStep*direction));
+    const ny=Math.max(8,Math.min(88,state.y+Math.sin(rad)*driveStep*direction));
+    if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny)){
+      toast('CAR BLOCKED');
+      return false;
+    }
+    state.x=nx;
+    state.y=ny;
+    update();
+    if(state.accepted&&Math.abs(state.x-72)<5&&Math.abs(state.y-36)<6)toast('You found the mission spot — hit COMPLETE MISSION');
+    return true;
+  }
+
   function move(dx,dy){
     if(activeScreen!=='game')return false;
-    const speed=state.inVehicle?1.75:1;
-    const sx=dx*speed,sy=dy*speed;
-    if(sx||sy)state.heading=Math.atan2(sy,sx)*180/Math.PI;
-    const nx=Math.max(3,Math.min(94,state.x+sx));
-    const ny=Math.max(8,Math.min(88,state.y+sy));
+    if(state.inVehicle){
+      if(Math.abs(dx)>Math.abs(dy))return driveVehicle(dx<0?'left':'right');
+      if(Math.abs(dy)>0)return driveVehicle(dy<0?'forward':'reverse');
+      return false;
+    }
+    if(dx||dy)state.heading=Math.atan2(dy,dx)*180/Math.PI;
+    const nx=Math.max(3,Math.min(94,state.x+dx));
+    const ny=Math.max(8,Math.min(88,state.y+dy));
     if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny)){
-      toast(state.inVehicle?'CAR BLOCKED':'CAN’T WALK THROUGH THAT');
+      toast('CAN’T WALK THROUGH THAT');
       return false;
     }
     state.x=nx;state.y=ny;
@@ -129,8 +160,10 @@
       toast('MOVE CLOSER TO THE STARTER CAR');
       return false;
     }
+    const carHeading=window.TGG3D?.getCarHeading?.();
+    if(Number.isFinite(carHeading))state.heading=carHeading;
     state.inVehicle=true;
-    update();save(true);toast('STARTER CAR — DRIVE MODE ON');
+    update();save(true);toast('STARTER CAR — ↑ GAS • ↓ REVERSE • ←/→ STEER');
     return true;
   }
 
@@ -257,7 +290,7 @@
 
   window.__tggToast=toast;
   window.TGGAutoMode={enabled:()=>true,toggle:()=>true};
-  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,mission,toggleVehicle,resetForNewGame};
+  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,driveVehicle,mission,toggleVehicle,resetForNewGame};
 
   load();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bindControls,{once:true});

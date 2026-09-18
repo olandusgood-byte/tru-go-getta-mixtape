@@ -281,10 +281,11 @@
     "mobile_drift_control",
     "mobile_horn_control",
     "metadata_literal_newline_clean",
-    "local_three_runtime"
+    "local_three_runtime",
+    "studio_dom_ready_boot"
   ],
   "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.29-BULK-WORLD-UPGRADE-CANDIDATE",
+  "browser_smoke": "pending_runtime_verification",
+  "release_checkpoint": "V1.29-BULK-WORLD-UPGRADE-RC2",
   "production": "playtest"
 }

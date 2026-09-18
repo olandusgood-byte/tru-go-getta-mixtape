@@ -5,11 +5,50 @@
     {id:'studio-sidewalk',name:'Studio Sidewalk',x:-14,z:-10,radius:5.5,type:'PERFORMANCE',detail:'Run a quick performance outside Studio Row.'},
     {id:'mixtape-popout',name:'Mixtape Pop-Out',x:18,z:-14,radius:5.5,type:'POP-OUT',detail:'Pull a small crowd on Mixtape Ave.'}
   ];
-  let state={completed:[],runs:{},lastEvent:null,crowdHype:0,updatedAt:0};
+  const VARIANTS={
+    'downtown-cypher':[
+      {min:0,id:'open-circle',name:'OPEN CIRCLE'},
+      {min:2,id:'local-buzz',name:'LOCAL BUZZ CYPHER'},
+      {min:5,id:'city-circle',name:'CITY CIRCLE'},
+      {min:9,id:'headline-circle',name:'HEADLINE CYPHER'}
+    ],
+    'studio-sidewalk':[
+      {min:0,id:'sidewalk-set',name:'SIDEWALK SET'},
+      {min:2,id:'late-night-set',name:'LATE NIGHT SET'},
+      {min:5,id:'studio-row-set',name:'STUDIO ROW FEATURE'},
+      {min:9,id:'lockout-set',name:'STUDIO LOCKOUT'}
+    ],
+    'mixtape-popout':[
+      {min:0,id:'block-popout',name:'BLOCK POP-OUT'},
+      {min:2,id:'corner-takeover',name:'CORNER TAKEOVER'},
+      {min:5,id:'mixtape-ave-live',name:'MIXTAPE AVE LIVE'},
+      {min:9,id:'city-premiere',name:'CITY PREMIERE'}
+    ]
+  ];
+  let state={completed:[],runs:{},lastEvent:null,crowdHype:0,bestHype:0,streetRep:0,updatedAt:0};
   let active=null;
   let activeTimer=null;
   let crowd=[];
   const $=id=>document.getElementById(id);
+
+  function totalRuns(){
+    return Object.values(state.runs||{}).reduce((sum,v)=>sum+Math.max(0,Number(v)||0),0);
+  }
+
+  function calculateStreetRep(){
+    return Math.max(0,Math.min(100,totalRuns()*6+Math.floor((Number(state.crowdHype)||0)/2)));
+  }
+
+  function repRank(value=state.streetRep){
+    const rep=Math.max(0,Number(value)||0);
+    return rep>=80?'CITY HEADLINER':rep>=55?'CITY KNOWN':rep>=30?'LOCAL NAME':rep>=12?'ON THE RADAR':'NEW FACE';
+  }
+
+  function updateStreetRep(){
+    state.streetRep=calculateStreetRep();
+    state.bestHype=Math.max(Number(state.bestHype)||0,Number(state.crowdHype)||0);
+    return state.streetRep;
+  }
 
   function load(){
     try{
@@ -19,10 +58,13 @@
     if(!Array.isArray(state.completed))state.completed=[];
     if(!state.runs||typeof state.runs!=='object')state.runs={};
     state.crowdHype=Math.max(0,Math.min(100,Number(state.crowdHype)||0));
+    state.bestHype=Math.max(0,Math.min(100,Number(state.bestHype)||0));
+    updateStreetRep();
     return state;
   }
 
   function save(){
+    updateStreetRep();
     state.updatedAt=Date.now();
     localStorage.setItem(KEY,JSON.stringify(state));
     return state;
@@ -35,6 +77,35 @@
   }
 
   function get(id){return HOTSPOTS.find(x=>x.id===id)||null}
+
+  function variant(id){
+    const runs=Math.max(0,Number(state.runs?.[id])||0);
+    const list=VARIANTS[id]||[{min:0,id:'standard',name:'STANDARD'}];
+    const current=[...list].reverse().find(x=>runs>=x.min)||list[0];
+    const index=list.findIndex(x=>x.id===current.id);
+    const next=list[index+1]||null;
+    return {
+      eventId:id,
+      id:current.id,
+      name:current.name,
+      runs,
+      nextAt:next?.min??null,
+      remaining:next?Math.max(0,next.min-runs):0,
+      cosmeticOnly:true,
+      rewardMultiplier:1
+    };
+  }
+
+  function streetProfile(){
+    return {
+      reputation:state.streetRep,
+      rank:repRank(),
+      totalRuns:totalRuns(),
+      crowdHype:state.crowdHype,
+      bestHype:state.bestHype,
+      completed:state.completed.slice()
+    };
+  }
 
   function nearest(radiusBoost=0){
     const p=playerWorld();
@@ -65,9 +136,9 @@
     crowd=[];
   }
 
-  function captureCrowd(event){
+  function captureCrowd(event,count=4){
     releaseCrowd();
-    crowd=crowdCandidates(event,4);
+    crowd=crowdCandidates(event,count);
     crowd.forEach(({human},slot)=>{
       human.userData.streetEventOldSpeed=Number(human.userData.speed)||.02;
       human.userData.streetEventMode=true;
@@ -86,13 +157,24 @@
     if(distance>event.radius+1)return {ok:false,status:'too_far',distance};
     if(active)return {ok:false,status:'event_already_active',active:{...active}};
 
-    const crowdCount=captureCrowd(event);
-    active={id:event.id,name:event.name,type:event.type,startedAt:Date.now(),crowdCount,phase:'BUILD'};
+    const v=variant(id);
+    const desiredCrowd=v.runs>=5?6:v.runs>=2?5:4;
+    const crowdCount=captureCrowd(event,desiredCrowd);
+    active={
+      id:event.id,
+      name:event.name,
+      type:event.type,
+      variantId:v.id,
+      variantName:v.name,
+      startedAt:Date.now(),
+      crowdCount,
+      phase:'BUILD'
+    };
     render();
-    window.__tggToast?.(event.name.toUpperCase()+' — CROWD BUILDING');
+    window.__tggToast?.(v.name+' — CROWD BUILDING');
     clearTimeout(activeTimer);
     activeTimer=setTimeout(()=>finish(),6200);
-    return {ok:true,status:'started',active:{...active}};
+    return {ok:true,status:'started',active:{...active},variant:v};
   }
 
   function startNearest(){
@@ -108,14 +190,16 @@
     if(!state.completed.includes(done.id))state.completed.push(done.id);
     state.lastEvent=done.id;
     state.crowdHype=Math.min(100,state.crowdHype+8+done.crowdCount*2);
+    updateStreetRep();
     save();
     active=null;
     clearTimeout(activeTimer);
     activeTimer=null;
     releaseCrowd();
+    window.TGGProgression?.sync?.();
     render();
-    window.__tggToast?.(done.name.toUpperCase()+' — CROWD FELT THAT');
-    return {ok:true,status:'completed',event:done.id,hype:state.crowdHype};
+    window.__tggToast?.(done.variantName+' — '+repRank());
+    return {ok:true,status:'completed',event:done.id,hype:state.crowdHype,streetRep:state.streetRep,rank:repRank(),variant:variant(done.id)};
   }
 
   function status(){
@@ -125,8 +209,12 @@
       runs:{...state.runs},
       lastEvent:state.lastEvent,
       crowdHype:state.crowdHype,
+      bestHype:state.bestHype,
+      streetRep:state.streetRep,
+      streetRank:repRank(),
       crowdCount:crowd.length,
-      nearest:nearest()
+      nearest:nearest(),
+      variants:Object.fromEntries(HOTSPOTS.map(e=>[e.id,variant(e.id)]))
     };
   }
 
@@ -174,7 +262,7 @@
     }
     if(active){
       prompt.classList.remove('show');
-      hud.innerHTML='<b>'+active.name+'</b><span>'+active.phase+' • '+active.crowdCount+' PEOPLE LOCKED IN</span><small>CROWD HYPE '+state.crowdHype+'/100</small>';
+      hud.innerHTML='<b>'+active.variantName+'</b><span>'+active.phase+' • '+active.crowdCount+' PEOPLE LOCKED IN</span><small>STREET REP '+state.streetRep+'/100 • '+repRank()+' • HYPE '+state.crowdHype+'/100</small>';
       hud.classList.add('show');
       hud.setAttribute('aria-hidden','false');
       return;
@@ -183,7 +271,8 @@
     hud.setAttribute('aria-hidden','true');
     const hit=nearest();
     if(hit){
-      prompt.textContent='G • START '+hit.event.name.toUpperCase();
+      const v=variant(hit.event.id);
+      prompt.textContent='G • '+v.name+' • '+repRank();
       prompt.disabled=false;
       prompt.classList.add('show');
       return;
@@ -204,7 +293,7 @@
   }
 
   load();
-  window.TGGStreetEvents={HOTSPOTS,state,load,save,get,nearest,start,startNearest,finish,status,captureCrowd,releaseCrowd,render};
+  window.TGGStreetEvents={HOTSPOTS,VARIANTS,state,load,save,get,variant,totalRuns,calculateStreetRep,repRank,streetProfile,nearest,start,startNearest,finish,status,captureCrowd,releaseCrowd,render};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{bind();animateCrowd()},{once:true});
   else {bind();animateCrowd();}
 })();

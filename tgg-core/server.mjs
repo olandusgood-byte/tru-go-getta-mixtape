@@ -153,7 +153,7 @@ app.post('/v1/artists/me', auth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-app.get('/v1/releases', auth, async (req, res, next) => {
+app.get('/v1/protected-audio/candidate', auth, async (req,res,next)=>{try{const r=await pool.query(\`select t.id as track_id,m.storage_key,m.mime_type from tracks t join media_objects m on m.storage_key=replace(t.audio_url,'/v1/storage/object/','') where t.artist_id in (select id from artists where user_id=$1) and t.published=true and t.audio_url is not null and m.media_type='audio' order by t.created_at desc limit 1\`,[req.user.id]);if(!r.rowCount)return res.status(404).json({error:'no_published_protected_audio_candidate'});res.json({track_id:r.rows[0].track_id,object_key:r.rows[0].storage_key,mime_type:r.rows[0].mime_type});}catch(e){next(e);}});\n\napp.get('/v1/releases', auth, async (req, res, next) => {
   try {
     const r = await pool.query(
       `select r.* from releases r join artists a on a.id=r.artist_id where a.user_id=$1 order by r.created_at desc`,

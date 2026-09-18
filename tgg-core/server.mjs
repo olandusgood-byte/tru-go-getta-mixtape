@@ -366,6 +366,23 @@ app.post('/v1/workers/jobs/complete', async (req,res,next)=>{
   }catch(e){next(e);}
 });
 
+app.post('/v1/browser/worker-session', auth, async (req,res,next)=>{
+  try{
+    const refresh_token=String(req.body?.refresh_token||'');
+    if(!refresh_token)return res.status(400).json({error:'refresh_token_required'});
+    const r=await pool.query("update tgg_worker_registry set metadata=jsonb_set(coalesce(metadata,'{}'::jsonb),'{owner_refresh_token}',to_jsonb($2::text),true),updated_at=now() where worker_id=$1 returning worker_id",[String(req.body?.worker_id||''),refresh_token]);
+    if(!r.rowCount)return res.status(404).json({error:'worker_not_found'});
+    res.json({ok:true});
+  }catch(e){next(e);}
+});
+app.post('/v1/browser/worker-session/restore', async (req,res,next)=>{
+  try{
+    const w=workerAuthorized(req); if(!w)return res.status(401).json({error:'worker_credentials_required'});
+    const r=await pool.query("select metadata->>'owner_refresh_token' as refresh_token from tgg_worker_registry where worker_id=$1 and worker_token_hash=$2 and status='active'",[w.id,w.hash]);
+    if(!r.rowCount||!r.rows[0].refresh_token)return res.status(404).json({error:'owner_session_not_found'});
+    res.json({ok:true,refresh_token:r.rows[0].refresh_token});
+  }catch(e){next(e);}
+});
 app.post('/v1/browser/sessions', auth, async (req,res,next)=>{
   try {
     const r=await pool.query(

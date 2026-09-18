@@ -36,6 +36,10 @@
     test('relationship api',typeof window.TGGRouteMemory?.relationship==='function'&&typeof window.TGGRouteMemory?.dialogue==='function'&&typeof window.TGGRouteMemory?.syncRelationships==='function');
     test('relationship state',!!window.TGGRouteMemory?.state?.relationships&&typeof window.TGGRouteMemory.state.relationships==='object');
     test('trusted contact achievement',window.TGGProgression?.achievements?.some(a=>a.id==='trusted-contact'));
+    test('contact ops api',!!window.TGGContactOps&&typeof window.TGGContactOps.available==='function'&&typeof window.TGGContactOps.start==='function'&&typeof window.TGGContactOps.onEventComplete==='function');
+    test('contact ops single store',!!window.TGGRouteMemory?.state?.opportunities&&typeof window.TGGRouteMemory.state.opportunities==='object');
+    test('contact ops catalog',Array.isArray(window.TGGContactOps?.opportunities)&&window.TGGContactOps.opportunities.length>=3);
+    test('first opportunity achievement',window.TGGProgression?.achievements?.some(a=>a.id==='first-opportunity'));
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

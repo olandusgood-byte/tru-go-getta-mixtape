@@ -1,0 +1,154 @@
+{
+  "name": "TRU GO GETTA WORLD AAA Stack",
+  "version": "1.0",
+  "browserPrototype": "../",
+  "tools": [
+    {
+      "id": "unreal",
+      "name": "Unreal Engine",
+      "role": [
+        "runtime",
+        "world",
+        "vehicles",
+        "lighting",
+        "physics"
+      ],
+      "status": "desktop_required",
+      "handoff": "unreal/"
+    },
+    {
+      "id": "metahuman",
+      "name": "MetaHuman",
+      "role": [
+        "characters",
+        "face",
+        "body-animation"
+      ],
+      "status": "desktop_required",
+      "handoff": "characters/metahuman/"
+    },
+    {
+      "id": "fab",
+      "name": "Fab / Megascans",
+      "role": [
+        "environment-assets",
+        "props",
+        "materials",
+        "vfx"
+      ],
+      "status": "desktop_required",
+      "handoff": "assets/fab/"
+    },
+    {
+      "id": "houdini",
+      "name": "Houdini Engine",
+      "role": [
+        "procedural-city",
+        "roads",
+        "buildings",
+        "districts"
+      ],
+      "status": "desktop_required",
+      "handoff": "world/houdini/"
+    },
+    {
+      "id": "blender",
+      "name": "Blender",
+      "role": [
+        "custom-modeling",
+        "vehicles",
+        "jewelry",
+        "props",
+        "clothing"
+      ],
+      "status": "desktop_required",
+      "handoff": "assets/blender/"
+    },
+    {
+      "id": "reallusion",
+      "name": "Character Creator + iClone",
+      "role": [
+        "npc-generation",
+        "clothing",
+        "animation"
+      ],
+      "status": "desktop_required",
+      "handoff": "characters/reallusion/"
+    },
+    {
+      "id": "nvidia-ace",
+      "name": "NVIDIA ACE",
+      "role": [
+        "npc-ai",
+        "dialogue",
+        "speech"
+      ],
+      "status": "desktop_required",
+      "handoff": "ai/ace/"
+    },
+    {
+      "id": "runway",
+      "name": "Runway",
+      "role": [
+        "concepts",
+        "cinematics",
+        "trailers",
+        "shot-design"
+      ],
+      "status": "connected",
+      "handoff": "cinematics/runway/"
+    },
+    {
+      "id": "figma",
+      "name": "Figma",
+      "role": [
+        "hud",
+        "phone",
+        "menus",
+        "career-ui",
+        "garage-ui"
+      ],
+      "status": "connected",
+      "handoff": "ui/figma/"
+    },
+    {
+      "id": "github",
+      "name": "GitHub + AI coding",
+      "role": [
+        "source-control",
+        "automation",
+        "qa",
+        "releases"
+      ],
+      "status": "connected",
+      "handoff": "../../"
+    }
+  ],
+  "sharedFormats": {
+    "models": [
+      "glb",
+      "gltf",
+      "fbx"
+    ],
+    "textures": [
+      "png",
+      "exr"
+    ],
+    "audio": [
+      "wav"
+    ],
+    "metadata": [
+      "json"
+    ]
+  },
+  "certifiedGameplay": [
+    "locomotion",
+    "sprint",
+    "vehicle-physics",
+    "gamepad",
+    "mobile-controls",
+    "world-life",
+    "career-director",
+    "first-contract-story"
+  ]
+}

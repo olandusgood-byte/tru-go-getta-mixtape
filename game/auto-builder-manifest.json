@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.15",
-  "module": "GAME-V1.15",
-  "name": "City Activity Mastery Checkpoint",
+  "version": "1.16",
+  "module": "GAME-V1.16",
+  "name": "City Circuits + Event Variants Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -38,10 +38,15 @@
     "city_rank": true,
     "city_streak": true,
     "city_mastery_achievements": true,
-    "base_event_economy_unchanged": true
+    "base_event_economy_unchanged": true,
+    "circuit_api": true,
+    "circuit_ordering": true,
+    "circuit_persistence": true,
+    "event_variants_cosmetic_only": true,
+    "circuit_achievements": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.16 CITY CIRCUITS + EVENT VARIANTS",
-  "verification": "passed"
+  "next": "V1.17 DISTRICT CIRCUITS + STORY ROUTING",
+  "verification": "pending_ci"
 }

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.04 CAR MOVEMENT FIX';
+  const VERSION='V2.05 DRIVING RECOVERY';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

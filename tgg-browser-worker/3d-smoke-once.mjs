@@ -20,6 +20,7 @@ const CAREER_DIRECTOR_ONLY=String(process.env.TGG_3D_CAREER_DIRECTOR_ONLY||'0')=
 const CAREER_MOBILE_ONLY=String(process.env.TGG_3D_CAREER_MOBILE_ONLY||'0')==='1';
 const STORY_MISSION_ONLY=String(process.env.TGG_3D_STORY_MISSION_ONLY||'0')==='1';
 const STORY_CHAPTER2_ONLY=String(process.env.TGG_3D_STORY_CHAPTER2_ONLY||'0')==='1';
+const STORY_WORLD_3D_ONLY=String(process.env.TGG_3D_STORY_WORLD_3D_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -27,6 +28,94 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(STORY_WORLD_3D_ONLY){
+      const errors=[]; const consoleErrors=[]; const failedResources=[];
+      page.on('pageerror',e=>errors.push(e.message||String(e)));
+      page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      page.on('requestfailed',req=>failedResources.push(req.url()));
+      await page.addInitScript(()=>{
+        localStorage.setItem('tgg-story-missions-v1',JSON.stringify({
+          active:false,completed:true,step:6,startedAt:1,completedAt:2,
+          baselines:{jobs:0,recordings:0,battleWins:0,shows:0,mixtapes:0},
+          chapter2:{active:false,completed:false,step:0,startedAt:0,completedAt:0,baselines:null,flags:{manager:false,kane:false,director:false,visual:false}}
+        }));
+      });
+      const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
+      await page.waitForFunction(()=>window.TGG3D?.isReady?.()&&window.TGGStoryMissions&&window.TGGStoryWorld3D,{timeout:30000});
+      await page.evaluate(()=>window.TGGStoryMissions.startChapter2());
+      await page.waitForTimeout(350);
+      const checks=[]; const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+
+      let snap=await page.evaluate(()=>({
+        title:document.title,
+        canvas:!!document.querySelector('#city3d canvas'),
+        story:window.TGGStoryMissions.status(),
+        world:window.TGGStoryWorld3D.getStatus(),
+        contacts:window.TGGStoryWorld3D.contacts.map(c=>({
+          id:c.id,name:c.name,role:c.role,x:c.x,y:c.y,
+          wx:c.group.position.x,wz:c.group.position.z,
+          visible:c.group.visible,
+          children:c.group.children.length
+        })),
+        beacon:window.TGGStoryWorld3D.beacon.visible,
+        route:window.TGGStoryWorld3D.routeLine.visible
+      }));
+      record('story3d-api',typeof window.TGGStoryWorld3D?.getStatus==='function',JSON.stringify(snap.world));
+      record('story3d-webgl-canvas',snap.canvas);
+      record('story3d-three-contacts',snap.contacts.length===3&&snap.contacts.map(x=>x.id).join(',')==='manager,kane,director',JSON.stringify(snap.contacts));
+      record('story3d-contact-geometry',snap.contacts.every(x=>x.visible&&x.children>=8),JSON.stringify(snap.contacts));
+      const manager=snap.contacts.find(x=>x.id==='manager');
+      record('story3d-manager-world-position',Math.abs(manager.wx-20.24)<.15&&Math.abs(manager.wz+12.88)<.15,JSON.stringify(manager));
+      record('story3d-beacon-visible',snap.beacon===true);
+      record('story3d-route-visible',snap.route===true);
+      record('story3d-manager-target',snap.world?.target?.id==='manager-return'&&snap.world?.activeContact==='manager',JSON.stringify(snap.world));
+
+      await page.evaluate(()=>{const s=window.TGGGame.getState();s.x=72;s.y=36;window.TGGStoryMissions.render();});
+      await page.waitForTimeout(320);
+      snap=await page.evaluate(()=>({
+        world:window.TGGStoryWorld3D.getStatus(),
+        interact:{text:document.getElementById('interact3dBtn')?.textContent||'',disabled:document.getElementById('interact3dBtn')?.disabled},
+        dialogue:{text:document.getElementById('npcDialogue')?.textContent||'',show:document.getElementById('npcDialogue')?.classList.contains('show')}
+      }));
+      record('story3d-manager-proximity',snap.world?.near===true,JSON.stringify(snap.world));
+      record('story3d-interact-talk-m',snap.interact.disabled===false&&snap.interact.text.includes('TALK TO M'),JSON.stringify(snap.interact));
+      record('story3d-proximity-dialogue',snap.dialogue.show===true&&snap.dialogue.text.startsWith('M:'),JSON.stringify(snap.dialogue));
+
+      await page.click('#interact3dBtn');
+      await page.waitForTimeout(220);
+      snap=await page.evaluate(()=>({
+        story:window.TGGStoryMissions.status(),
+        world:window.TGGStoryWorld3D.getStatus()
+      }));
+      record('story3d-contact-interaction-advances',snap.story?.step===1&&snap.story?.current?.id==='studio-arrival',JSON.stringify(snap.story));
+      record('story3d-beacon-retargets',snap.world?.target?.id==='studio-arrival',JSON.stringify(snap.world));
+
+      await page.evaluate(()=>{const s=window.TGGGame.getState();s.x=24;s.y=37;window.TGGStoryMissions.sync();});
+      await page.waitForTimeout(260);
+      snap=await page.evaluate(()=>({
+        story:window.TGGStoryMissions.status(),
+        world:window.TGGStoryWorld3D.getStatus(),
+        interact:document.getElementById('interact3dBtn')?.textContent||''
+      }));
+      record('story3d-kane-becomes-active',snap.story?.step===2&&snap.world?.activeContact==='kane',JSON.stringify(snap));
+      record('story3d-kane-interact',snap.world?.near===true&&snap.interact.includes('TALK TO KANE'),snap.interact);
+
+      result={
+        ok:checks.every(x=>x.pass)&&errors.length===0,
+        status:'done',
+        mode:'story_world_3d_harness',
+        target:TARGET,
+        http_status:response?.status?.()||0,
+        checks,
+        console_errors:consoleErrors,
+        page_errors:errors,
+        failed_resources:failedResources,
+        updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();return;
+    }
 
     if(STORY_CHAPTER2_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
@@ -248,7 +337,6 @@ async function run(){
       await mp.waitForTimeout(50);
       await mp.evaluate(()=>window.TGGStoryMissions.sync());
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());      record('story-manager-step',snap.step===1,JSON.stringify(snap));
-
       await mp.evaluate(()=>{window.__qaContent.completed.push('flyer-run');window.TGGStoryMissions.sync();});      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('story-city-job-step',snap.step===2,JSON.stringify(snap));
 
@@ -497,8 +585,7 @@ async function run(){
       record('career-director-api',await page.evaluate(()=>typeof window.TGGCareerDirector?.getState==='function'));
 
       async function runContract(contactId,advance){        await page.evaluate(({contactId,stamp})=>{window.__qaLife.activeOpportunity={contactId,title:'QA',detail:'QA',createdAt:stamp}}, {contactId,stamp:Date.now()});
-        await page.waitForTimeout(1050);        const active=await page.evaluate(()=>window.TGGCareerDirector?.getState?.().activeContract);
-        advance();
+        await page.waitForTimeout(1050);        const active=await page.evaluate(()=>window.TGGCareerDirector?.getState?.().activeContract);        advance();
         await page.waitForTimeout(1050);
         const after=await page.evaluate(()=>window.TGGCareerDirector?.getState?.());
         return {active,after};
@@ -747,8 +834,7 @@ async function run(){
         ok:checks.every(x=>x.pass)&&harnessErrors.length===0,
         status:'done',        mode:'gamepad_logic_harness',        target:TARGET,
         checks,
-        page_errors:harnessErrors,
-        updated_at:new Date().toISOString()
+        page_errors:harnessErrors,        updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await ctx.close();
@@ -997,8 +1083,7 @@ async function run(){
       await page.keyboard.down('ArrowUp');      await page.keyboard.down('ArrowRight');
       await page.waitForTimeout(650);
       const diagonal=await page.evaluate(()=>({walk:window.TGGGame?.getWalkingState?.(),tune:window.TGGGame?.getWalkTuning?.()}));
-      await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowRight');
-      record('diagonal-normalized',Number(diagonal.walk?.speed)<=Number(diagonal.tune?.walkSpeed)*1.08,JSON.stringify(diagonal));
+      await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowRight');      record('diagonal-normalized',Number(diagonal.walk?.speed)<=Number(diagonal.tune?.walkSpeed)*1.08,JSON.stringify(diagonal));
       console.log(JSON.stringify({tgg_3d_smoke_step:'player-diagonal-pass'}));
 
       await page.waitForTimeout(250);
@@ -1248,7 +1333,6 @@ async function run(){
     await mobile.close();
     record('mobile-http',mr?.status()===200,String(mr?.status()));
     record('mobile-no-overflow',mobileLayout.overflowX===false,JSON.stringify(mobileLayout));
-
     result={
       ok:(res?.status()===200)&&checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&failedResources.length===0,
       status:'done',

@@ -141,3 +141,9 @@
 .player,.npc{transition:opacity .25s ease,left .08s linear,top .08s linear,transform .08s linear}
 .game-shell .city{background:#05070d}
 
+/* V1.22 COLLISION + CAMERA ORBIT */
+.world3d-canvas{cursor:grab}
+.world3d-canvas.camera-dragging{cursor:grabbing}
+.world3d-hint{position:absolute;right:14px;top:64px;z-index:4;padding:7px 10px;border:1px solid #ffffff24;border-radius:999px;background:#070912c9;color:#c9cedd;font-size:9px;font-weight:800;letter-spacing:1.2px;pointer-events:none;backdrop-filter:blur(8px);box-shadow:0 8px 22px #0008}
+@media(max-width:650px){.world3d-hint{top:58px;right:10px;font-size:8px;padding:6px 8px}}
+

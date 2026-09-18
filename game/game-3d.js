@@ -193,7 +193,7 @@
   }
   const car=makeCar();
   car.position.set(4.5,0,0);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
-  const vehicleDynamics={speed:0,steer:0,braking:false,handbrake:false};
+  const vehicleDynamics={speed:0,steer:0,braking:false,handbrake:false,blocked:false,boosting:false,boostEnergy:100};
   const playerDynamics={speed:0,vx:0,vy:0,sprinting:false,blocked:false};
   function setPlayerDynamics(next={}){
     playerDynamics.speed=Math.max(0,Number(next.speed)||0);
@@ -208,6 +208,9 @@
     vehicleDynamics.steer=Math.max(-1,Math.min(1,Number(next.steer)||0));
     vehicleDynamics.braking=!!next.braking;
     vehicleDynamics.handbrake=!!next.handbrake;
+    vehicleDynamics.blocked=!!next.blocked;
+    vehicleDynamics.boosting=!!next.boosting;
+    if(Number.isFinite(Number(next.boostEnergy)))vehicleDynamics.boostEnergy=Math.max(0,Math.min(100,Number(next.boostEnergy)));
     return {...vehicleDynamics};
   }
   function setCarAppearance(next={}){
@@ -508,7 +511,7 @@
     car.userData.brakeLights?.forEach(light=>{
       light.material.emissiveIntensity=THREE.MathUtils.lerp(light.material.emissiveIntensity,brakeGlow?5.5:.9,.25);
     });
-    if(car.userData.headGlow)car.userData.headGlow.intensity=s.inVehicle?4.8:2.2;
+    if(car.userData.headGlow)car.userData.headGlow.intensity=s.inVehicle?(vehicleDynamics.boosting?8.5:4.8):2.2;
     pedestrians.forEach(h=>animatePedestrian(h,dt));
     traffic.forEach(v=>animateTraffic(v,t,dt));
 
@@ -516,7 +519,7 @@
     const footLookX=!s.inVehicle?playerDynamics.vx*.11:0;
     const footLookZ=!s.inVehicle?playerDynamics.vy*.11:0;
     const target=new THREE.Vector3(subject.x+footLookX,s.inVehicle?1.5:2.2,subject.z+footLookZ);
-    const targetFov=s.inVehicle?60:(playerDynamics.sprinting?64:58);
+    const targetFov=s.inVehicle?(vehicleDynamics.boosting?68:60):(playerDynamics.sprinting?64:58);
     camera.fov=THREE.MathUtils.lerp(camera.fov,targetFov,.08);
     camera.updateProjectionMatrix();
     let desired;
@@ -526,7 +529,7 @@
       cameraLerp=.14;
     }else if(cameraMode==='chase'){
       const heading=(Number(s.heading)||0)*Math.PI/180;
-      const chaseDistance=s.inVehicle?18:(playerDynamics.sprinting?14.5:13);
+      const chaseDistance=s.inVehicle?(vehicleDynamics.boosting?20:18):(playerDynamics.sprinting?14.5:13);
       desired=new THREE.Vector3(
         target.x-Math.cos(heading)*chaseDistance,
         target.y+(s.inVehicle?7.5:(playerDynamics.sprinting?6.8:6.2)),

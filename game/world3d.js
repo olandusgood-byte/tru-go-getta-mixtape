@@ -1,8 +1,9 @@
 (() => {
   const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.min.js';
-  const state={ready:false,failed:false,reason:null,revision:null,frame:0};
+  const state={ready:false,failed:false,reason:null,revision:null,frame:0,collisions:0};
   let THREE,scene,camera,renderer,player,npc,clock,host;
-  const world={buildings:[],roads:[],lights:[]};
+  const world={buildings:[],roads:[],lights:[],colliders:[]};
+  const orbit={yaw:0,pitch:0.56,distance:10,dragging:false,lastX:0,lastY:0};
 
   function mapX(v){return (Number(v||50)-50)*0.7}
   function mapZ(v){return (Number(v||55)-50)*0.56}
@@ -30,6 +31,11 @@
       renderer.domElement.className='world3d-canvas';
       host.innerHTML='';
       host.appendChild(renderer.domElement);
+      const hint=document.createElement('div');
+      hint.className='world3d-hint';
+      hint.textContent='DRAG CAMERA • WHEEL ZOOM';
+      host.appendChild(hint);
+      bindCameraControls();
 
       buildLights();
       buildGround();
@@ -141,6 +147,15 @@
     cap.castShadow=true;
     scene.add(cap);
     world.buildings.push(mesh);
+    const pad=0.55;
+    const missionX=mapX(72),missionZ=mapZ(36);
+    const nearMission=Math.abs(missionX-x)<w/2+2.4&&Math.abs(missionZ-z)<d/2+2.4;
+    if(!nearMission){
+      world.colliders.push({
+        minX:x-w/2-pad,maxX:x+w/2+pad,
+        minZ:z-d/2-pad,maxZ:z+d/2+pad
+      });
+    }
   }
 
   function buildBuildings(){
@@ -225,16 +240,67 @@
     player.position.z=THREE.MathUtils.lerp(player.position.z,tz,0.3);
   }
 
+  function bindCameraControls(){
+    const el=renderer?.domElement;
+    if(!el)return;
+    const stop=()=>{orbit.dragging=false;el.releasePointerCapture?.(orbit.pointerId)};
+    el.addEventListener('pointerdown',e=>{
+      orbit.dragging=true;orbit.lastX=e.clientX;orbit.lastY=e.clientY;orbit.pointerId=e.pointerId;
+      el.setPointerCapture?.(e.pointerId);
+      el.classList.add('camera-dragging');
+    });
+    el.addEventListener('pointermove',e=>{
+      if(!orbit.dragging)return;
+      const dx=e.clientX-orbit.lastX,dy=e.clientY-orbit.lastY;
+      orbit.lastX=e.clientX;orbit.lastY=e.clientY;
+      orbit.yaw-=dx*0.006;
+      orbit.pitch=Math.max(0.22,Math.min(1.05,orbit.pitch+dy*0.0045));
+    });
+    el.addEventListener('pointerup',e=>{orbit.dragging=false;el.releasePointerCapture?.(e.pointerId);el.classList.remove('camera-dragging')});
+    el.addEventListener('pointercancel',()=>{orbit.dragging=false;el.classList.remove('camera-dragging')});
+    el.addEventListener('wheel',e=>{
+      e.preventDefault();
+      orbit.distance=Math.max(5.5,Math.min(18,orbit.distance+Math.sign(e.deltaY)*0.8));
+    },{passive:false});
+    el.addEventListener('dblclick',()=>resetCamera());
+  }
+
+  function resetCamera(){
+    orbit.yaw=0;orbit.pitch=0.56;orbit.distance=10;
+    return cameraState();
+  }
+
+  function cameraState(){
+    return {yaw:orbit.yaw,pitch:orbit.pitch,distance:orbit.distance};
+  }
+
+  function canMove(gameX,gameY){
+    if(!state.ready||!world.colliders.length)return true;
+    const x=mapX(gameX),z=mapZ(gameY);
+    const blocked=world.colliders.some(b=>x>=b.minX&&x<=b.maxX&&z>=b.minZ&&z<=b.maxZ);
+    if(blocked)state.collisions++;
+    return !blocked;
+  }
+
+  function collisionSnapshot(){
+    return {
+      colliders:world.colliders.length,
+      collisions:state.collisions,
+      missionReachable:canMove(72,36)
+    };
+  }
+
   function followCamera(){
     if(!player||!camera)return;
-    const forward=new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y));
+    const base=player.rotation.y+Math.PI+orbit.yaw;
+    const horizontal=Math.cos(orbit.pitch)*orbit.distance;
     const desired=new THREE.Vector3(
-      player.position.x-forward.x*8,
-      6.6,
-      player.position.z-forward.z*8
+      player.position.x+Math.sin(base)*horizontal,
+      1.5+Math.sin(orbit.pitch)*orbit.distance,
+      player.position.z+Math.cos(base)*horizontal
     );
-    camera.position.lerp(desired,0.07);
-    const target=new THREE.Vector3(player.position.x,1.4,player.position.z);
+    camera.position.lerp(desired,0.09);
+    const target=new THREE.Vector3(player.position.x,1.35,player.position.z);
     camera.lookAt(target);
   }
 
@@ -269,13 +335,16 @@
       buildings:world.buildings.length,
       roads:world.roads.length,
       lights:world.lights.length,
+      colliders:world.colliders.length,
+      collisions:state.collisions,
+      orbit:cameraState(),
       frame:state.frame,
       player:player?{x:player.position.x,y:player.position.y,z:player.position.z,yaw:player.rotation.y}:null,
       camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z}:null
     };
   }
 
-  window.TGGWorld3D={boot,status,resize,state};
+  window.TGGWorld3D={boot,status,resize,state,canMove,collisionSnapshot,cameraState,resetCamera};
   window.addEventListener('resize',resize);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();

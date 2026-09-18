@@ -11,7 +11,7 @@ import { buildStoredSupabaseSession } from './access-session.mjs';
 import { protectedAudioBrowserFlow } from './protected-audio-browser-flow.mjs';
 import { prepareTrustedQaNavigationResponse } from './qa-navigation-response.mjs';
 import { runMultiFlowBrowser } from './multi-flow-browser-runner.mjs';
-import { tggCoreEnabled, tggWorkerHeartbeat, tggWorkerClaim, tggWorkerComplete, tggStoreOwnerRefreshToken, tggRestoreOwnerRefreshToken } from './tgg-core-client.mjs';
+import { tggCoreEnabled, tggWorkerHeartbeat, tggWorkerClaim, tggWorkerComplete, tggStoreOwnerRefreshToken, tggRestoreOwnerRefreshToken, tggWorkerBootstrap } from './tgg-core-client.mjs';
 
 const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvlpj.supabase.co';
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || 'sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv';
@@ -23,7 +23,7 @@ app.use(express.json({ limit: '2mb' }));
 let workerId = process.env.TGG_WORKER_ID || globalThis.__TGG_WORKER_ID || '';
 let workerToken = process.env.TGG_WORKER_TOKEN || globalThis.__TGG_WORKER_TOKEN || '';
 const bootstrapSecret = process.env.TGG_WORKER_BOOTSTRAP_SECRET || '';
-async function ensureWorkerToken(){ if(workerToken)return true; return false; }
+async function ensureWorkerToken(){ if(workerToken)return true; if(!workerId||!bootstrapSecret||!tggCoreEnabled())return false; try{ const r=await tggWorkerBootstrap(workerId); if(!r?.worker_token)return false; workerToken=r.worker_token; process.env.TGG_WORKER_TOKEN=workerToken; globalThis.__TGG_WORKER_TOKEN=workerToken; console.log(JSON.stringify({tgg_core_worker_bootstrap:true,ok:true,worker_id:workerId})); return true; }catch(e){ console.error(JSON.stringify({tgg_core_worker_bootstrap:true,ok:false,error:e?.message||String(e)})); return false; } }
 let ownerSession = null;
 let running = false;
 let last = { status: 'idle', updated_at: new Date().toISOString() };

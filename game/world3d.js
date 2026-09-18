@@ -2,7 +2,7 @@
   const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.min.js';
   const state={ready:false,failed:false,reason:null,revision:null,frame:0,cameraOrbit:{yaw:0,pitch:0.5,distance:10,dragging:false,lastX:0,lastY:0}};
   let THREE,scene,camera,renderer,player,npc,clock,host;
-  const world={buildings:[],roads:[],lights:[],colliders:[]};
+  const world={buildings:[],roads:[],lights:[],colliders:[],landmarks:[]};
 
   function mapX(v){return (Number(v||50)-50)*0.7}
   function mapZ(v){return (Number(v||55)-50)*0.56}
@@ -170,7 +170,37 @@
     return m;
   }
 
+  function addHubLandmark(id,name,screen,x,z,color){
+    const root=new THREE.Group();
+    root.position.set(x,0,z);
+    const base=new THREE.Mesh(
+      new THREE.CylinderGeometry(0.85,1.05,0.3,20),
+      new THREE.MeshStandardMaterial({color:0x151922,metalness:0.35,roughness:0.55})
+    );
+    base.position.y=0.15;
+    const pole=new THREE.Mesh(
+      new THREE.BoxGeometry(0.18,2.6,0.18),
+      new THREE.MeshStandardMaterial({color:0x343949,metalness:0.5,roughness:0.35})
+    );
+    pole.position.y=1.45;
+    const sign=new THREE.Mesh(
+      new THREE.BoxGeometry(2.8,0.72,0.16),
+      new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:3.2,roughness:0.3})
+    );
+    sign.position.y=2.7;
+    root.add(base,pole,sign);
+    root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+    scene.add(root);
+    world.landmarks.push({id,name,screen,x,z,color,root});
+    return root;
+  }
+
   function buildLandmarks(){
+    addHubLandmark('studio-row','TRU GO GETTA STUDIOS','studio',-13,-3,0xc7ff00);
+    addHubLandmark('park','THE PARK','park',0,18,0x4d77ff);
+    addHubLandmark('shops','SHOP DISTRICT','shops',14,3,0xff397e);
+    addHubLandmark('apartment','MY APARTMENT','home',-20,12,0xf2b84b);
+    addHubLandmark('media','MEDIA DISTRICT','media',20,-12,0x8b5cf6);
     neonSign(0xc7ff00,-13,4,-9,5);
     neonSign(0x5178ff,14,4,8,5);
     neonSign(0xff397e,2,3.3,18,4);
@@ -267,6 +297,40 @@
     return !world.colliders.some(b=>x>=b.minX&&x<=b.maxX&&z>=b.minZ&&z<=b.maxZ);
   }
 
+  function nearestLandmark(maxDistance=3.2){
+    if(!player)return null;
+    let best=null;
+    for(const lm of world.landmarks){
+      const distance=Math.hypot(player.position.x-lm.x,player.position.z-lm.z);
+      if(distance<=maxDistance&&(!best||distance<best.distance))best={id:lm.id,name:lm.name,screen:lm.screen,distance,x:lm.x,z:lm.z};
+    }
+    return best;
+  }
+
+  function updatePrompt(){
+    const prompt=document.getElementById('world3dPrompt');
+    if(!prompt)return;
+    const near=nearestLandmark();
+    if(near&&window.TGGGame?.getActiveScreen?.()==='game'){
+      prompt.textContent='E • ENTER '+near.name;
+      prompt.classList.add('show');
+      prompt.dataset.landmark=near.id;
+    }else{
+      prompt.classList.remove('show');
+      prompt.textContent='';
+      delete prompt.dataset.landmark;
+    }
+  }
+
+  function tryEnterLandmark(){
+    const near=nearestLandmark();
+    if(!near)return {ok:false,status:'no_landmark_nearby'};
+    if(near.screen==='businessBoard')window.TGGBusiness?.open?.();
+    else window.TGGGame?.show?.(near.screen);
+    window.__tggToast?.('ENTERED '+near.name);
+    return {ok:true,status:'entered',landmark:near.id,name:near.name,screen:near.screen};
+  }
+
   function followCamera(){
     if(!player||!camera)return;
     const orbit=state.cameraOrbit;
@@ -286,6 +350,7 @@
     state.frame++;
     syncPlayer();
     followCamera();
+    updatePrompt();
     const t=clock.getElapsedTime();
     if(npc)npc.position.y=Math.sin(t*1.8)*0.04;
     world.lights.forEach((light,i)=>light.intensity=16+Math.sin(t*1.4+i)*3);
@@ -313,6 +378,8 @@
       roads:world.roads.length,
       lights:world.lights.length,
       colliders:world.colliders.length,
+      landmarks:world.landmarks.length,
+      nearby:nearestLandmark(),
       orbit:{yaw:state.cameraOrbit.yaw,pitch:state.cameraOrbit.pitch,distance:state.cameraOrbit.distance,dragging:state.cameraOrbit.dragging},
       frame:state.frame,
       player:player?{x:player.position.x,y:player.position.y,z:player.position.z,yaw:player.rotation.y}:null,
@@ -320,7 +387,7 @@
     };
   }
 
-  window.TGGWorld3D={boot,status,resize,canMovePercent,state};
+  window.TGGWorld3D={boot,status,resize,canMovePercent,nearestLandmark,tryEnterLandmark,state};
   window.addEventListener('resize',resize);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();

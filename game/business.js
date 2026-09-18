@@ -6,22 +6,164 @@
     {id:'media-block',name:'Media Block',type:'MEDIA',unlock:3,detail:'Photo sets, interviews and release promotion.'},
     {id:'executive-ave',name:'Executive Ave',type:'BUSINESS',unlock:5,detail:'Properties, offices and higher-tier opportunities.'}
   ];
-  let state={discovered:[],selected:null,assets:{status:'offline_ready',properties:[],propertyUpgrades:[],vehicles:[]}};
-  function load(){try{state={...state,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch(e){}if(!Array.isArray(state.discovered))state.discovered=[]}
-  function save(){localStorage.setItem(KEY,JSON.stringify(state))}
-  function sync(){const level=Number(window.TGGGame?.getState?.()?.level)||1;catalog.forEach(x=>{if(level>=x.unlock&&!state.discovered.includes(x.id))state.discovered.push(x.id)});save();return state}
-  function available(){sync();return catalog.filter(x=>state.discovered.includes(x.id))}
-  function open(){render();window.TGGGame?.show?.('businessBoard');loadAssets()}
+
+  let state={
+    discovered:[],
+    selected:null,
+    assets:{status:'offline_ready',properties:[],propertyUpgrades:[],vehicles:[]}
+  };
+
+  function load(){
+    try{
+      const saved=JSON.parse(localStorage.getItem(KEY)||'{}');
+      if(saved&&typeof saved==='object') state={...state,...saved};
+    }catch(e){}
+    if(!Array.isArray(state.discovered)) state.discovered=[];
+    if(!state.assets||typeof state.assets!=='object'){
+      state.assets={status:'offline_ready',properties:[],propertyUpgrades:[],vehicles:[]};
+    }
+    return state;
+  }
+
+  function save(){
+    localStorage.setItem(KEY,JSON.stringify(state));
+    return state;
+  }
+
+  function sync(){
+    const level=Number(window.TGGGame?.getState?.()?.level)||1;
+    catalog.forEach(item=>{
+      if(level>=item.unlock&&!state.discovered.includes(item.id)){
+        state.discovered.push(item.id);
+      }
+    });
+    save();
+    return state;
+  }
+
+  function available(){
+    sync();
+    return catalog.filter(item=>state.discovered.includes(item.id));
+  }
+
+  function open(){
+    render();
+    window.TGGGame?.show?.('businessBoard');
+    void loadAssets();
+  }
+
   function render(){
     let el=document.getElementById('businessBoard');
-    if(!el){el=document.createElement('section');el.id='businessBoard';el.className='screen';document.querySelector('main')?.appendChild(el)}
-    const rows=available().map(x=>'<button class="business-card" data-business="'+x.id+'"><b>'+x.name+'</b><span>'+x.type+' • LVL '+x.unlock+'</span><small>'+x.detail+'</small></button>').join('');
-    el.innerHTML='<div class="panel"><p class="eyebrow">V1.13 • CITY BUSINESS + VEHICLE HUB</p><h2>KNOW THE CITY.</h2><p>Discover businesses, inspect available properties and track vehicle progression. Discovery never triggers a purchase.</p><div class="business-grid">'+rows+'</div><div id="businessDetail" class="mission-card">Select a location to inspect it.</div><div id="worldAssetsPanel" class="mission-card"><b>WORLD ASSETS</b><span id="worldAssetsStatus">Loading local/offline-ready state…</span><div id="worldProperties"></div><div id="worldVehicles"></div></div><button id="businessSync" class="primary">REFRESH WORLD ASSETS</button><button id="businessBack" class="secondary">BACK TO CITY</button></div>';
-    el.querySelectorAll('[data-business]').forEach(b=>b.onclick=()=>select(b.dataset.business));
-    document.getElementById('businessBack').onclick=()=>window.TGGGame?.show?.('game');    document.getElementById('businessSync').setAttribute('aria-label','Check connected world assets');
-    document.getElementById('businessSync').onclick=loadAssets; renderAssets();
+    if(!el){
+      el=document.createElement('section');
+      el.id='businessBoard';
+      el.className='screen';
+      document.querySelector('main')?.appendChild(el);
+    }
+
+    const rows=available().map(item=>
+      '<button class="business-card" data-business="'+item.id+'">'+
+        '<b>'+item.name+'</b>'+
+        '<span>'+item.type+' • LVL '+item.unlock+'</span>'+
+        '<small>'+item.detail+'</small>'+
+      '</button>'
+    ).join('');
+
+    el.innerHTML=
+      '<div class="panel">'+
+        '<p class="eyebrow">V1.13 • CITY BUSINESS + VEHICLE HUB</p>'+
+        '<h2>KNOW THE CITY.</h2>'+
+        '<p>Discover businesses, inspect available properties and track vehicle progression. Discovery never triggers a purchase.</p>'+
+        '<div class="business-grid">'+rows+'</div>'+
+        '<div id="businessDetail" class="mission-card">Select a location to inspect it.</div>'+
+        '<div id="worldAssetsPanel" class="mission-card">'+
+          '<b>WORLD ASSETS</b>'+
+          '<span id="worldAssetsStatus">Loading local/offline-ready state…</span>'+
+          '<div id="worldProperties"></div>'+
+          '<div id="worldVehicles"></div>'+
+        '</div>'+
+        '<button id="businessSync" class="primary">REFRESH WORLD ASSETS</button>'+
+        '<button id="businessBack" class="secondary">BACK TO CITY</button>'+
+      '</div>';
+
+    el.querySelectorAll('[data-business]').forEach(button=>{
+      button.onclick=()=>select(button.dataset.business);
+    });
+
+    const back=document.getElementById('businessBack');
+    if(back) back.onclick=()=>window.TGGGame?.show?.('game');
+
+    const refresh=document.getElementById('businessSync');
+    if(refresh){
+      refresh.setAttribute('aria-label','Check connected world assets');
+      refresh.onclick=()=>void loadAssets();
+    }
+
+    renderAssets();
+    return el;
   }
-  async function loadAssets(){const r=await window.TGGWorldSync?.worldAssetsBundle?.();state.assets=r||{ok:false,status:'offline_ready'};save();renderAssets();window.__tggToast?.(r?.ok?'WORLD ASSETS READY':'WORLD ASSETS OFFLINE-READY');return state.assets;}\n  function renderAssets(){const a=state.assets||{};const s=document.getElementById('worldAssetsStatus');if(!s)return;s.textContent=(a.status||'offline_ready').toUpperCase().replaceAll('_',' ')+' • '+(a.ok?'CONNECTED':'LOCAL READY');const props=Array.isArray(a.properties)?a.properties:[];const vehicles=Array.isArray(a.vehicles)?a.vehicles:[];document.getElementById('worldProperties').innerHTML=props.length?'<b>PROPERTIES</b>'+props.map(x=>'<small>'+String(x.name||x.title||x.id||'Property')+'</small>').join(''):'<small>Property market will appear when the world transport is connected.</small>';document.getElementById('worldVehicles').innerHTML=vehicles.length?'<b>VEHICLES</b>'+vehicles.map(x=>'<small>'+String(x.name||x.model||x.id||'Vehicle')+'</small>').join(''):'<small>Vehicle progression will appear when the world transport is connected.</small>';}\n  function select(id){const x=catalog.find(v=>v.id===id);if(!x)return;state.selected=id;save();const el=document.getElementById('businessDetail');if(el)el.innerHTML='<b>'+x.name+'</b><span>'+x.type+'</span><small>'+x.detail+'</small>';}
-  load();sync();
-  window.TGGBusiness={catalog,state,load,save,sync,available,open,render,select};
+
+  async function loadAssets(){
+    let result=null;
+    try{
+      result=await window.TGGWorldSync?.worldAssetsBundle?.();
+    }catch(error){
+      result={ok:false,status:'offline_ready',error:error?.message||String(error)};
+    }
+
+    state.assets=result&&typeof result==='object'
+      ? result
+      : {ok:false,status:'offline_ready',properties:[],propertyUpgrades:[],vehicles:[]};
+
+    save();
+    renderAssets();
+    window.__tggToast?.(state.assets?.ok?'WORLD ASSETS READY':'WORLD ASSETS OFFLINE-READY');
+    return state.assets;
+  }
+
+  function renderAssets(){
+    const assets=state.assets||{};
+    const status=document.getElementById('worldAssetsStatus');
+    if(!status) return assets;
+
+    status.textContent=
+      String(assets.status||'offline_ready').toUpperCase().replaceAll('_',' ')+
+      ' • '+(assets.ok?'CONNECTED':'LOCAL READY');
+
+    const properties=Array.isArray(assets.properties)?assets.properties:[];
+    const vehicles=Array.isArray(assets.vehicles)?assets.vehicles:[];
+
+    const propertiesEl=document.getElementById('worldProperties');
+    if(propertiesEl){
+      propertiesEl.innerHTML=properties.length
+        ? '<b>PROPERTIES</b>'+properties.map(item=>'<small>'+String(item.name||item.title||item.id||'Property')+'</small>').join('')
+        : '<small>Property market will appear when the world transport is connected.</small>';
+    }
+
+    const vehiclesEl=document.getElementById('worldVehicles');
+    if(vehiclesEl){
+      vehiclesEl.innerHTML=vehicles.length
+        ? '<b>VEHICLES</b>'+vehicles.map(item=>'<small>'+String(item.name||item.model||item.id||'Vehicle')+'</small>').join('')
+        : '<small>Vehicle progression will appear when the world transport is connected.</small>';
+    }
+
+    return assets;
+  }
+
+  function select(id){
+    const item=catalog.find(value=>value.id===id);
+    if(!item) return null;
+    state.selected=id;
+    save();
+    const el=document.getElementById('businessDetail');
+    if(el){
+      el.innerHTML='<b>'+item.name+'</b><span>'+item.type+'</span><small>'+item.detail+'</small>';
+    }
+    return item;
+  }
+
+  load();
+  sync();
+  window.TGGBusiness={catalog,state,load,save,sync,available,open,render,select,loadAssets,renderAssets};
+  render();
 })();

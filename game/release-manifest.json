@@ -1,6 +1,6 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.21 True 3D City Runtime",
+  "release": "V1.21 True 3D City Foundation",
   "base": "V1.20 NPC Favor Hooks + Contact Opportunities",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [

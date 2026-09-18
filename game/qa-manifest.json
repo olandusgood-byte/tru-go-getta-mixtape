@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.16",
-  "module": "GAME-V1.16-QA",
-  "name": "City Circuits + Event Variants",
+  "version": "1.17",
+  "module": "GAME-V1.17-QA",
+  "name": "District Circuits + Story Routing",
   "checks": [
     "storage",
     "game_api",
@@ -41,7 +41,14 @@
     "circuit_ordering",
     "circuit_persistence",
     "event_variants_cosmetic_only",
-    "circuit_achievements"
+    "circuit_achievements",
+    "district_story_api",
+    "district_story_persistence",
+    "district_lock_gate",
+    "story_route_completion",
+    "remote_story_readonly",
+    "no_story_mutation_bridge",
+    "story_router_no_rewards"
   ],
   "workflow": [
     "BUILD",
@@ -54,6 +61,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.17 DISTRICT CIRCUITS + STORY ROUTING",
-  "verification": "passed"
+  "next": "V1.18 NPC ROUTE ENCOUNTERS + DISTRICT MEMORY",
+  "verification": "pending_ci"
 }

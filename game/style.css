@@ -224,3 +224,13 @@
 .street-event-hud small{margin-top:4px;font-size:9px;color:#9297aa;letter-spacing:.08em}
 @media(max-width:650px){.street-event-prompt{bottom:48px;font-size:9px;padding:9px 12px}.street-event-hud{top:116px;min-width:210px}.street-event-hud b{font-size:10px}.street-event-hud span{font-size:9px}}
 
+/* V1.34 STREET SETS + CROWD MOMENTUM */
+.street-set-hud{position:absolute;left:18px;bottom:18px;z-index:15;width:min(430px,calc(100% - 36px));display:none;gap:5px;padding:11px 12px;border:1px solid #ffffff22;border-radius:14px;background:#080b12e8;backdrop-filter:blur(12px);box-shadow:0 14px 34px #0009;color:#fff}
+.street-set-hud.show{display:grid}
+.street-set-hud>b{font-size:11px;letter-spacing:1.5px;color:#c7ff00}
+.street-set-hud>span,.street-set-hud>small{font-size:10px;color:#d8dbe7}
+.street-set-hud>div{display:flex;gap:6px;overflow:auto;padding-top:3px}
+.street-set-hud button{flex:0 0 auto;margin:0;padding:7px 9px;border:1px solid #40465a;border-radius:9px;background:#171b26;color:#fff;font-size:9px;letter-spacing:.4px}
+.street-set-hud button:hover,.street-set-hud button:focus-visible{border-color:#c7ff00;outline:none}
+@media(max-width:650px){.street-set-hud{left:10px;bottom:10px;width:calc(100% - 20px)}}
+

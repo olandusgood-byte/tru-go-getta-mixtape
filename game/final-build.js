@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.03 STREET CONTACTS';
+  const VERSION='V2.04 CAR MOVEMENT FIX';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

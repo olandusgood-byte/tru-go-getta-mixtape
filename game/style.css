@@ -36,3 +36,12 @@
 /* V1.14 city world-assets hotspot + business hub */
 .city-asset-hotspot{position:absolute;right:4%;bottom:8%;z-index:5;border:1px solid rgba(199,255,0,.55);background:rgba(7,7,7,.88);color:#c7ff00;padding:10px 14px;border-radius:10px;font-weight:800;letter-spacing:.08em;cursor:pointer;box-shadow:0 0 24px rgba(199,255,0,.12)}
 .business-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}.business-card{display:grid;gap:6px;text-align:left;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:#0d0d0d;color:#fff;cursor:pointer}.business-card:hover{border-color:#c7ff00;transform:translateY(-2px)}.business-card b{font-size:1rem}.business-card span,.business-card small{opacity:.72}.business-card small{line-height:1.35}.mission-card small{display:block;margin-top:6px;opacity:.72}
+
+.show-stage{max-width:760px;margin:0 auto}
+.show-crowd{display:grid;gap:12px;margin:18px 0;padding:18px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:rgba(255,255,255,.035)}
+.show-crowd b{font-size:18px;letter-spacing:.08em}
+.show-meter{height:18px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
+.show-meter i{display:block;width:0;height:100%;background:linear-gradient(90deg,#e50914,#ffd166);transition:width .25s ease}
+.show-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.show-actions button:disabled{opacity:.45}
+@media(max-width:700px){.show-actions{grid-template-columns:1fr}}

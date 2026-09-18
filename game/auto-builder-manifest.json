@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.14",
-  "module": "GAME-V1.14",
-  "name": "Live City + Read-Only World Assets Checkpoint",
+  "version": "1.15",
+  "module": "GAME-V1.15",
+  "name": "City Activity Mastery Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -33,9 +33,15 @@
     "core_control_bindings": true,
     "pause_input_lock": true,
     "secondary_world_navigation": true,
-    "browser_smoke_automated": true
+    "browser_smoke_automated": true,
+    "city_mastery_api": true,
+    "city_rank": true,
+    "city_streak": true,
+    "city_mastery_achievements": true,
+    "base_event_economy_unchanged": true
   },
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
-  "next": "V1.15 CITY ACTIVITY DEPTH + SAFE LOCAL PROGRESSION"
+  "next": "V1.16 CITY CIRCUITS + EVENT VARIANTS",
+  "verification": "pending_ci"
 }

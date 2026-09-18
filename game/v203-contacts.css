@@ -1,0 +1,30 @@
+/* V2.03 STREET CONTACTS */
+.street-contact-card{
+  --contact:#7b86ff;
+  position:absolute;
+  right:18px;
+  bottom:178px;
+  z-index:15;
+  width:min(260px,35%);
+  padding:11px 13px;
+  border:1px solid color-mix(in srgb,var(--contact) 50%,transparent);
+  border-radius:15px;
+  background:#070a10e8;
+  box-shadow:0 14px 36px #000b,0 0 22px color-mix(in srgb,var(--contact) 10%,transparent);
+  backdrop-filter:blur(10px);
+  opacity:0;
+  transform:translateY(5px);
+  transition:.18s ease;
+  pointer-events:none
+}
+.street-contact-card.active{opacity:1;transform:translateY(0)}
+.street-contact-card b,.street-contact-card span,.street-contact-card small{display:block}
+.street-contact-card b{font-size:12px;letter-spacing:.08em;color:#fff}
+.street-contact-card span{margin-top:3px;font-size:9px;color:var(--contact);font-weight:900;letter-spacing:.1em}
+.street-contact-card small{margin-top:5px;color:#a7acbc;font-size:8px;line-height:1.4}
+.action-deck .actions #interact3dBtn.contact-ready{background:linear-gradient(145deg,#8792ff,#4854de)!important;color:#fff!important;border-color:#b8beff!important;box-shadow:0 0 22px #6f7cff35!important}
+@media(max-width:700px){
+  .street-contact-card{right:10px;bottom:132px;width:min(190px,46%);padding:8px 9px}
+  .street-contact-card b{font-size:10px}
+  .street-contact-card small{font-size:7px}
+}

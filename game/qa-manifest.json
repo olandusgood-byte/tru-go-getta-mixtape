@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.23",
-  "module": "GAME-V1.23-QA",
-  "name": "3D Animation + Interaction Prompts",
+  "version": "1.24",
+  "module": "GAME-V1.24-QA",
+  "name": "Unified 3D Gameplay Slice",
   "checks": [
     "storage",
     "game_api",
@@ -88,7 +88,14 @@
     "proximity_interaction_api",
     "interaction_prompt",
     "keyboard_e_interaction",
-    "shared_mission_action"
+    "shared_mission_action",
+    "hub_catalog",
+    "five_hub_routes",
+    "unified_nearest_interaction",
+    "hub_enter_action",
+    "single_e_action",
+    "walk_animation_preserved",
+    "mission_interaction_preserved"
   ],
   "workflow": [
     "BUILD",
@@ -101,6 +108,6 @@
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
-  "next": "V1.24 3D NPC DIALOGUE + DISTRICT PORTALS",
+  "next": "V1.25 STARTER CAR + DRIVE MODE",
   "verification": "pending_ci"
 }

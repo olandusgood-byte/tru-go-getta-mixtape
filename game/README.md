@@ -1,73 +1,58 @@
-# TRU GO GETTA Game V1.33
+# TRU GO GETTA Game V1.34
 
-V1.33 builds local street reputation on top of the verified V1.32 street-event system without adding another cash, XP, reputation-currency, or remote mutation path.
+V1.34 adds ordered Street Sets and crowd momentum on top of the verified V1.33 street-reputation system without adding another economy or save store.
 
-## Street Reputation
+## Street Sets
 
-Street reputation is calculated from:
+- Block To Studio: Downtown Cypher → Studio Sidewalk
+- Studio To Ave: Studio Sidewalk → Mixtape Pop-Out
+- Full City Set: Downtown Cypher → Studio Sidewalk → Mixtape Pop-Out
 
-- verified local street-event run count;
-- crowd hype from completed events.
+Set progress lives inside the existing `tgg-street-events-v1` object under `sets`.
 
-Ranks:
+Wrong-order events do not skip a set step.
 
-- NEW FACE
-- ON THE RADAR
-- LOCAL NAME
-- CITY KNOWN
-- CITY HEADLINER
+## Crowd Momentum
 
-Street reputation persists inside the existing `tgg-street-events-v1` state.
+Momentum grows from successful street events, with larger gains when the player changes locations instead of repeating the same hotspot.
 
-## Event Variants
+Momentum states:
 
-Each hotspot evolves through cosmetic/presentation variants as its local run count increases.
+- COLD
+- WARM
+- BUZZING
+- LIVE
+- LOCKED IN
 
-Downtown Cypher:
-- Open Circle
-- Local Buzz Cypher
-- City Circle
-- Headline Cypher
-
-Studio Sidewalk:
-- Sidewalk Set
-- Late Night Set
-- Studio Row Feature
-- Studio Lockout
-
-Mixtape Pop-Out:
-- Block Pop-Out
-- Corner Takeover
-- Mixtape Ave Live
-- City Premiere
-
-Every variant is explicitly `cosmeticOnly: true` with `rewardMultiplier: 1`.
+Momentum can add up to two extra local crowd members to an event. It does not award cash, XP, career reputation, or any remote/world reward.
 
 ## Progression
 
-- Street Known — reach 30 local street reputation.
-- Street Headliner — reach 80 local street reputation.
-- Progression now shows Street Rep, Street Rank, and total Street Events.
+- Run The Set — complete the first ordered Street Set.
+- Crowd Momentum — reach 55 Street Set momentum.
+- Progression now shows Street Sets and Momentum.
 
 ## Verification
 
-- [x] street reputation API
-- [x] street rank calculation
-- [x] event variant catalog
-- [x] variants stay cosmetic-only
-- [x] street reputation save repair
-- [x] first run remains Open Circle
-- [x] third Downtown run unlocks Local Buzz Cypher
-- [x] three runs reach Local Name
-- [x] Street Known achievement unlocks
-- [x] cash and XP remain unchanged across street-event reputation progression
+- [x] V1.34 static contract
+- [x] three Street Sets registered
+- [x] ordered progression
+- [x] wrong-order event cannot skip a step
+- [x] set persistence uses the existing street-event store
+- [x] First Street Set achievement
+- [x] Full City Set completion
+- [x] crowd momentum >=55
+- [x] crowd bonus increases from momentum
+- [x] Crowd Momentum achievement
+- [x] no separate `tgg-street-sets-v1` key
+- [x] no cash / XP reward path
 - [x] no remote mutation path
-- [x] Static CI PASS on `bd60f89`
-- [x] Chromium Smoke PASS on `bd60f89`
+- [x] Static CI PASS on `67d8b06`
+- [x] Chromium Smoke PASS on `67d8b06`
 - [x] production remains gated
 
 ## Release status
 
-**V1.33-STREET-REPUTATION-EVENT-VARIANTS-VERIFIED.**
+**V1.34-STREET-SETS-CROWD-MOMENTUM-VERIFIED.**
 
-Next internal development layer: **V1.34 Street Sets + Crowd Momentum**.
+Next internal development layer: **V1.35 Street Crews + Audience Memory**.

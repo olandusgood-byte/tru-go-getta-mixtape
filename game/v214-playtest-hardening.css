@@ -1,0 +1,36 @@
+/* V2.14 PLAYTEST HARDENING 100 */
+body.tgg-v214{padding-top:max(0px,env(safe-area-inset-top));padding-bottom:max(0px,env(safe-area-inset-bottom))}
+body.tgg-v214 .v214-mini-btn{min-width:44px;height:32px;margin-left:6px;padding:0 9px;border:1px solid #ffffff20;border-radius:999px;background:#0a0e16;color:#c9cfdb;font-size:8px;font-weight:900;letter-spacing:.1em;cursor:pointer}
+body.tgg-v214 .v214-mini-btn:hover,body.tgg-v214 .v214-mini-btn:focus-visible,body.tgg-v214 .v214-mini-btn.active{border-color:#c7ff00;color:#c7ff00;outline:none;box-shadow:0 0 0 2px #c7ff0020}
+body.tgg-v214 .v214-diag-panel{position:fixed;right:14px;top:58px;z-index:120;display:none;width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 78px);overflow:auto;padding:14px;border:1px solid #ffffff1f;border-radius:19px;background:#070a11f7;box-shadow:0 26px 90px #000d;backdrop-filter:blur(16px);color:#fff}
+body.tgg-v214 .v214-diag-panel.active{display:block}
+body.tgg-v214 .v214-diag-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+body.tgg-v214 .v214-diag-head b{font-size:11px;letter-spacing:.16em;color:#c7ff00}
+body.tgg-v214 .v214-diag-head button{width:30px;height:30px;border:1px solid #ffffff1c;border-radius:50%;background:#101520;color:#fff;font-size:18px;cursor:pointer}
+body.tgg-v214 .v214-diag-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+body.tgg-v214 .v214-diag-grid span{display:grid;gap:3px;padding:8px 9px;border:1px solid #ffffff10;border-radius:11px;background:#ffffff05}
+body.tgg-v214 .v214-diag-grid small{font-size:7px;font-weight:900;letter-spacing:.14em;color:#818b9e}
+body.tgg-v214 .v214-diag-grid b{font-size:10px;color:#eef2f8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.tgg-v214 .v214-diag-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+body.tgg-v214 .v214-diag-actions button{min-height:40px;border:1px solid #ffffff18;border-radius:11px;background:#111723;color:#fff;font-size:8px;font-weight:900;letter-spacing:.1em;cursor:pointer}
+body.tgg-v214 .v214-diag-actions button:hover,body.tgg-v214 .v214-diag-actions button:focus-visible{border-color:#c7ff00;color:#c7ff00;outline:none}
+body.v214-offline .v214-mini-btn#v214DiagBtn:after{content:"";display:inline-block;width:6px;height:6px;margin-left:5px;border-radius:50%;background:#ff315f;box-shadow:0 0 8px #ff315f}
+body.tgg-v214 button:focus-visible{outline:2px solid #c7ff00;outline-offset:2px}
+body.tgg-v214 [data-key],body.tgg-v214 #sprintBtn{min-width:44px;min-height:44px;touch-action:none;-webkit-tap-highlight-color:transparent}
+body.tgg-v214 .action-deck button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+body.tgg-v214.v214-fullscreen .game-shell{width:min(1480px,100vw)}
+body[data-playtest-quality="performance"].tgg-v214 .v214-diag-panel{backdrop-filter:none;box-shadow:0 14px 45px #000b}
+@media(prefers-reduced-motion:reduce){body.tgg-v214 *,body.tgg-v214 *:before,body.tgg-v214 *:after{scroll-behavior:auto!important;transition-duration:.001ms!important;animation-duration:.001ms!important;animation-iteration-count:1!important}}
+@media(max-width:700px){
+ body.tgg-v214 .v214-mini-btn{min-width:42px;height:34px;padding:0 8px}
+ body.tgg-v214 .v214-diag-panel{right:8px;top:50px;width:calc(100vw - 16px);max-height:calc(100vh - 60px);padding:11px}
+ body.tgg-v214 .v214-diag-grid{grid-template-columns:1fr 1fr;gap:5px}
+ body.tgg-v214 .v214-diag-grid span{padding:7px}
+ body.tgg-v214 .v214-diag-actions button{min-height:46px}
+}
+@media(max-width:700px) and (orientation:landscape){
+ body.tgg-v214 .v214-diag-panel{left:8px;right:auto;top:8px;width:min(360px,46vw);max-height:calc(100vh - 16px)}
+ body.tgg-v214 .action-tabs button{min-height:38px}
+ body.tgg-v214 .game-controls{padding-bottom:env(safe-area-inset-bottom)}
+}
+@media(forced-colors:active){body.tgg-v214 .v214-mini-btn,body.tgg-v214 .v214-diag-panel,body.tgg-v214 .v214-diag-grid span{border:1px solid CanvasText}}

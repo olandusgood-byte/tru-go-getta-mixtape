@@ -317,6 +317,44 @@ app.post('/v1/browser/sessions', auth, async (req,res,next)=>{
   } catch(e){next(e);}
 });
 
+app.patch('/v1/browser/sessions/:id', auth, async (req,res,next)=>{
+  try {
+    const allowed=['created','bootstrapping','active','closed','failed'];
+    const status=req.body?.status;
+    if(status && !allowed.includes(status)) return res.status(400).json({error:'invalid_session_status'});
+    const r=await pool.query(
+      `update tgg_browser_sessions set status=coalesce($2,status), metadata=coalesce($3,metadata), updated_at=now()
+       where id=$1 and user_id=$4 returning *`,
+      [req.params.id,status ?? null,req.body?.metadata ?? null,req.user.id]
+    );
+    if(!r.rowCount) return res.status(404).json({error:'browser_session_not_found'});
+    res.json({session:r.rows[0]});
+  } catch(e){next(e);}
+});
+
+app.get('/v1/browser/sessions/:id', auth, async (req,res,next)=>{
+  try {
+    const r=await pool.query('select * from tgg_browser_sessions where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!r.rowCount) return res.status(404).json({error:'browser_session_not_found'});
+    res.json({session:r.rows[0]});
+  } catch(e){next(e);}
+});
+
+app.patch('/v1/certifications/:id', auth, async (req,res,next)=>{
+  try {
+    const allowed=['started','passed','failed','expired'];
+    const status=req.body?.status;
+    if(status && !allowed.includes(status)) return res.status(400).json({error:'invalid_certification_status'});
+    const r=await pool.query(
+      `update tgg_certifications set status=coalesce($2,status), evidence=coalesce($3,evidence), completed_at=case when $2 in ('passed','failed','expired') then now() else completed_at end
+       where id=$1 and user_id=$4 returning *`,
+      [req.params.id,status ?? null,req.body?.evidence ?? null,req.user.id]
+    );
+    if(!r.rowCount) return res.status(404).json({error:'certification_not_found'});
+    res.json({certification:r.rows[0]});
+  } catch(e){next(e);}
+});
+
 app.post('/v1/certifications', auth, async (req,res,next)=>{
   try {
     const {browser_session_id,certification_type,evidence={}}=req.body||{};

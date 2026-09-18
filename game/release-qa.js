@@ -29,6 +29,10 @@
     test('district story persistence',window.TGGSave?.keys?.districtStory==='tgg-district-story-v1'&&Array.isArray(window.TGGDistrictStory?.state?.completed));
     test('district story route',Array.isArray(window.TGGDistrictStory?.routes)&&window.TGGDistrictStory.routes.some(r=>r.id==='city-story-lap'&&r.circuit==='city-run'));
     test('district story achievement',window.TGGProgression?.achievements?.some(a=>a.id==='district-story'));
+    test('route memory api',!!window.TGGRouteMemory&&typeof window.TGGRouteMemory.recordBeat==='function'&&typeof window.TGGRouteMemory.encounterCurrent==='function'&&typeof window.TGGRouteMemory.refreshRemoteMemory==='function');
+    test('route memory persistence',window.TGGSave?.keys?.routeMemory==='tgg-route-memory-v1'&&Array.isArray(window.TGGRouteMemory?.state?.encounters));
+    test('route memory npcs',['m','producer','dj'].every(id=>!!window.TGGRouteMemory?.npcs?.[id]));
+    test('route memory achievement',window.TGGProgression?.achievements?.some(a=>a.id==='know-the-city'));
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

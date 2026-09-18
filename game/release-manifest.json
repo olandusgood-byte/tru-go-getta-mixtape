@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.21 3D World Foundation",
-  "base": "V1.20 NPC Favor Hooks + Contact Opportunities",
+  "release": "V1.22 3D Collision + Walkable Districts",
+  "base": "V1.21 3D World Foundation",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -73,7 +73,11 @@
     "V1.21-WEBGL-WORLD",
     "V1.21-THIRD-PERSON-CAMERA",
     "V1.21-3D-PLAYER-NPC",
-    "V1.21-2.5D-FALLBACK"
+    "V1.21-2.5D-FALLBACK",
+    "V1.22-BUILDING-COLLISION",
+    "V1.22-WALKABLE-DISTRICTS",
+    "V1.22-MISSION-NPC-ALIGNMENT",
+    "V1.22-COLLISION-SLIDE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -192,10 +196,16 @@
     "third_person_camera",
     "player_state_sync_3d",
     "webgl_fallback",
-    "three_pin_0_186_0"
+    "three_pin_0_186_0",
+    "world3d_collision_api",
+    "building_collision_map",
+    "authoritative_move_collision",
+    "collision_slide",
+    "district_awareness",
+    "mission_npc_alignment"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_webgl_ci_pass",
-  "release_checkpoint": "V1.21-3D-WORLD-FOUNDATION-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.22-3D-COLLISION-WALKABLE-DISTRICTS-CANDIDATE",
   "production": "gated"
 }

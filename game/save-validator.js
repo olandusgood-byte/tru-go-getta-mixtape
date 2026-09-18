@@ -26,6 +26,7 @@
     const routeMemory=read(keys.routeMemory,null);if(routeMemory){
       if(!routeMemory.districts||typeof routeMemory.districts!=='object'||Array.isArray(routeMemory.districts))routeMemory.districts={};
       if(!Array.isArray(routeMemory.encounters))routeMemory.encounters=[];
+      if(!routeMemory.relationships||typeof routeMemory.relationships!=='object'||Array.isArray(routeMemory.relationships))routeMemory.relationships={};
       routeMemory.lastFingerprint=typeof routeMemory.lastFingerprint==='string'?routeMemory.lastFingerprint:null;
       routeMemory.updatedAt=num(routeMemory.updatedAt,Date.now());
       if(typeof routeMemory.remoteStatus!=='string')routeMemory.remoteStatus='offline_ready';

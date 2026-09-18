@@ -126,3 +126,18 @@
 .world3d-active .city-title{z-index:10}
 .world3d-active .city-asset-hotspot{z-index:10}
 
+/* V1.21 TRUE 3D WORLD */
+.world3d{position:absolute;inset:0;z-index:3;overflow:hidden;background:linear-gradient(180deg,#080b12,#05060a);opacity:0;transition:opacity .35s ease}
+.world3d.ready{opacity:1}
+.world3d.failed{opacity:0;pointer-events:none}
+.world3d-canvas{display:block;width:100%;height:100%;touch-action:none}
+.world3d-fallback{position:absolute;inset:0;display:grid;place-items:center;font-size:10px;letter-spacing:2px;color:#8e93a6}
+.world3d.ready .world3d-fallback{display:none}
+.world3d.ready ~ .city-depth{opacity:0}
+.world3d.ready ~ .player,.world3d.ready ~ .npc{opacity:0;pointer-events:none}
+.world3d.ready ~ .district{z-index:8}
+.world3d.ready ~ .city-asset-hotspot{z-index:9}
+.city-depth{transition:opacity .3s ease}
+.player,.npc{transition:opacity .25s ease,left .08s linear,top .08s linear,transform .08s linear}
+.game-shell .city{background:#05070d}
+

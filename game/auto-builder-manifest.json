@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.13",
-  "module": "GAME-V1.13",
-  "name": "Progression + Business Discovery Checkpoint",
+  "version": "1.14",
+  "module": "GAME-V1.14",
+  "name": "Live City + Read-Only World Assets Checkpoint",
   "workflow": [
     "BUILD",
     "TEST",
@@ -23,9 +23,15 @@
     "business_api": true,
     "business_catalog": true,
     "business_discovery_persistence": true,
-    "business_screen": true
+    "business_screen": true,
+    "business_assets_loader": true,
+    "city_assets_hotspot": true,
+    "live_city_activity_snapshot": true,
+    "property_readonly_inspect": true,
+    "vehicle_readonly_inspect": true,
+    "remote_label_escape": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.14 LIVE CITY ACTIVITIES + VEHICLE/PROPERTY GAMEPLAY"
+  "next": "V1.15 CITY ACTIVITY DEPTH + SAFE LOCAL PROGRESSION"
 }

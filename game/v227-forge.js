@@ -94,8 +94,8 @@
 
     const H=cfg.height,B=cfg.build,S=cfg.shoulders,LL=cfg.legLength,AL=cfg.armLength,HS=cfg.headScale;
 
-    const body=new THREE.Group();body.name='forge-body';body.position.y=2.05*H;root.add(body);
-    add(body,new THREE.CapsuleGeometry(.59*B,.9*H,6,12),top,[0,.03,0],[1.02*S,1,1],'','torso');
+    const body=new THREE.Group();body.name='forge-body';body.position.y=2.05;root.add(body);
+    add(body,new THREE.CapsuleGeometry(.59*B,.9*H,6,12),top,[0,.03,0],[1.02*S,1,1],[0,0,0],'torso');
     const chest=add(body,new THREE.SphereGeometry(.61*B,16,12),top,[0,.38,0],[1.08*S,.62,.76],[0,0,0],'chest');
     add(body,new THREE.CylinderGeometry(.38*B,.48*B,.42,14),top,[0,-.72,0],[1,1,1],[0,0,0],'waist');
     add(body,new THREE.BoxGeometry(.78*B,.34,.48),pants,[0,-.98,0],[1,1,1],[0,0,0],'pelvis');
@@ -178,7 +178,7 @@
   function snapshotLegacy(p){
     if(state.legacyParts)return;
     state.legacyParts=p.userData.parts||null;
-    state.legacyChildren=p.children.filter(c=>!c.userData?.v227Forge);
+    state.legacyChildren=p.children.filter(c=>!c.userData?.v227Forge&&!c.userData?.v226RealAsset);
   }
 
   function hideLegacy(){
@@ -231,7 +231,7 @@
     const real=window.TGGV226?.status?.();
     const realActive=real?.usingFallback===false&&real?.assetStatus==='ready';
     state.root.visible=!realActive;
-    if(realActive)showLegacy();else hideLegacy();
+    if(!realActive)hideLegacy();
   }
 
   function dispatch(type,detail={}){

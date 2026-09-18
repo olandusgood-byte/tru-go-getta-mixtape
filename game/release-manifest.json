@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.20 Crew Campaign — Mission 06",
-  "base": "V1.19 Rival Battle — Mission 05",
+  "release": "V1.21 First Tour — Mission 07",
+  "base": "V1.20 Crew Campaign — Mission 06",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -65,7 +65,11 @@
     "V1.20-MISSION-06-BUILD-THE-TEAM",
     "V1.20-PRODUCER-PROMOTER-DIRECTOR",
     "V1.20-CREW-CAMPAIGN",
-    "V1.20-TEAM-SCORE"
+    "V1.20-TEAM-SCORE",
+    "V1.21-MISSION-07-FIRST-TOUR",
+    "V1.21-TOUR-ROUTE-CHOICE",
+    "V1.21-THREE-STOP-TOUR",
+    "V1.21-TOUR-SCORE"
   ],
   "gates": [
     "runtime_api_presence",
@@ -165,10 +169,17 @@
     "crew_campaign_unique_steps",
     "crew_campaign_score",
     "crew_campaign_reward_once",
-    "story_mission_06_reward_once"
+    "story_mission_06_reward_once",
+    "story_mission_07_api",
+    "story_mission_07_ui",
+    "tour_api",
+    "tour_route_choice",
+    "tour_three_stops",
+    "tour_score",
+    "story_mission_07_reward_once"
   ],
   "static_gate": "candidate_pending_ci",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.20-MISSION-06-BUILD-THE-TEAM-CANDIDATE",
+  "release_checkpoint": "V1.21-MISSION-07-FIRST-TOUR-CANDIDATE",
   "production": "staging_candidate"
 }

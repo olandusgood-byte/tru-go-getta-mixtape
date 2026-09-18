@@ -182,6 +182,22 @@
     [-.72,.72].forEach(z=>{const skid=new THREE.Mesh(new THREE.PlaneGeometry(1.5,.16),skidMat.clone());skid.rotation.x=-Math.PI/2;skid.position.set(-1.45,.03,z);car.add(skid);skidMarks.push(skid)});
     const headGlow=new THREE.PointLight(0xdff8ff,3.8,12,2);
     headGlow.position.set(2.45,1.15,0);car.add(headGlow);
+    const spoilerMat=new THREE.MeshStandardMaterial({color:0x0d1118,metalness:.8,roughness:.26});
+    const spoilerBar=new THREE.Mesh(new THREE.BoxGeometry(.18,.16,2.15),spoilerMat);
+    spoilerBar.position.set(-1.86,1.62,0);car.add(spoilerBar);
+    [-.72,.72].forEach(z=>{const mount=new THREE.Mesh(new THREE.BoxGeometry(.16,.55,.12),spoilerMat);mount.position.set(-1.82,1.34,z);car.add(mount)});
+    const underGlow=new THREE.Mesh(
+      new THREE.PlaneGeometry(4.5,2.05),
+      new THREE.MeshBasicMaterial({color:0x7b86ff,transparent:true,opacity:.18,depthWrite:false,side:THREE.DoubleSide})
+    );
+    underGlow.rotation.x=-Math.PI/2;underGlow.position.y=.055;car.add(underGlow);
+    const boostMat=new THREE.MeshStandardMaterial({color:0xdffcff,emissive:0x5ab8ff,emissiveIntensity:7,transparent:true,opacity:.96});
+    const boostFlames=[];
+    [-.56,.56].forEach(z=>{
+      const flame=new THREE.Mesh(new THREE.ConeGeometry(.18,.95,10),boostMat.clone());
+      flame.rotation.z=-Math.PI/2;flame.position.set(-2.55,.72,z);flame.visible=false;car.add(flame);boostFlames.push(flame);
+    });
+    const boostGlow=new THREE.PointLight(0x5ab8ff,0,8,2);boostGlow.position.set(-2.35,.8,0);car.add(boostGlow);
     car.userData.wheels=wheels;
     car.userData.headlights=headlights;
     car.userData.brakeLights=brakeLights;
@@ -189,6 +205,10 @@
     car.userData.skidMarks=skidMarks;
     car.userData.bodyMaterial=bodyMat;
     car.userData.wheelMaterial=dark;
+    car.userData.spoiler=spoilerBar;
+    car.userData.underGlow=underGlow;
+    car.userData.boostFlames=boostFlames;
+    car.userData.boostGlow=boostGlow;
     return car;
   }
   const car=makeCar();
@@ -512,6 +532,17 @@
       light.material.emissiveIntensity=THREE.MathUtils.lerp(light.material.emissiveIntensity,brakeGlow?5.5:.9,.25);
     });
     if(car.userData.headGlow)car.userData.headGlow.intensity=s.inVehicle?(vehicleDynamics.boosting?8.5:4.8):2.2;
+    const boostActive=!!s.inVehicle&&vehicleDynamics.boosting;
+    car.userData.boostFlames?.forEach((flame,i)=>{
+      flame.visible=boostActive;
+      if(boostActive){
+        const pulse=1+Math.sin(t*34+i*1.7)*.22;
+        flame.scale.set(pulse,1.2+pulse*.35,pulse);
+        flame.material.opacity=.78+Math.sin(t*28+i)*.16;
+      }
+    });
+    if(car.userData.boostGlow)car.userData.boostGlow.intensity=THREE.MathUtils.lerp(car.userData.boostGlow.intensity,boostActive?12:0,.24);
+    if(car.userData.underGlow)car.userData.underGlow.material.opacity=THREE.MathUtils.lerp(car.userData.underGlow.material.opacity,boostActive?.42:.18,.16);
     pedestrians.forEach(h=>animatePedestrian(h,dt));
     traffic.forEach(v=>animateTraffic(v,t,dt));
 

@@ -308,6 +308,64 @@ app.get('/v1/jobs', auth, async (req,res,next)=>{
   } catch(e){next(e);}
 });
 
+function hashWorkerToken(token){ return crypto.createHash('sha256').update(String(token||'')).digest('hex'); }
+function workerAuthorized(req){
+  const id=String(req.headers['x-tgg-worker-id']||req.body?.worker_id||'');
+  const token=String(req.headers['x-tgg-worker-token']||req.body?.worker_token||'');
+  return id && token ? {id,token,hash:hashWorkerToken(token)} : null;
+}
+async function requireWorker(req,res){
+  const w=workerAuthorized(req);
+  if(!w){ res.status(401).json({error:'worker_credentials_required'}); return null; }
+  const r=await pool.query("select * from tgg_worker_registry where worker_id=$1 and worker_token_hash=$2 and status='active'",[w.id,w.hash]);
+  if(!r.rowCount){ res.status(401).json({error:'worker_auth_failed'}); return null; }
+  await pool.query('update tgg_worker_registry set last_seen_at=now(),updated_at=now() where id=$1',[r.rows[0].id]);
+  return r.rows[0];
+}
+
+app.post('/v1/workers/register', async (req,res,next)=>{
+  try{
+    const secret=String(process.env.TGG_WORKER_BOOTSTRAP_SECRET||'');
+    if(!secret || req.headers['x-tgg-bootstrap-secret']!==secret) return res.status(403).json({error:'bootstrap_auth_failed'});
+    const worker_id=String(req.body?.worker_id||'').trim();
+    const worker_token=String(req.body?.worker_token||'').trim();
+    if(!worker_id||!worker_token) return res.status(400).json({error:'worker_credentials_required'});
+    const r=await pool.query(`insert into tgg_worker_registry(worker_id,worker_token_hash,metadata,last_seen_at)
+      values($1,$2,$3,now()) on conflict(worker_id) do update set worker_token_hash=excluded.worker_token_hash,metadata=excluded.metadata,status='active',updated_at=now(),last_seen_at=now() returning id,worker_id,status`,
+      [worker_id,hashWorkerToken(worker_token),req.body?.metadata||{}]);
+    res.status(201).json({worker:r.rows[0]});
+  }catch(e){next(e);}
+});
+
+app.post('/v1/workers/heartbeat', async (req,res,next)=>{
+  try{ const w=await requireWorker(req,res); if(!w)return; res.json({ok:true,worker_id:w.worker_id,at:new Date().toISOString()}); }catch(e){next(e);}
+});
+
+app.post('/v1/workers/jobs/claim', async (req,res,next)=>{
+  try{
+    const w=await requireWorker(req,res); if(!w)return;
+    const r=await pool.query(`with candidate as (
+      select id from tgg_browser_jobs where status='queued' and (lease_expires_at is null or lease_expires_at<now())
+      order by created_at asc limit 1 for update skip locked
+    ) update tgg_browser_jobs j set status='running',worker_id=$1,lease_token=encode(gen_random_bytes(24),'hex'),lease_expires_at=now()+interval '5 minutes',attempts=attempts+1,updated_at=now()
+      from candidate where j.id=candidate.id returning j.*`,[w.id]);
+    res.json({job:r.rows[0]||null});
+  }catch(e){next(e);}
+});
+
+app.post('/v1/workers/jobs/complete', async (req,res,next)=>{
+  try{
+    const w=await requireWorker(req,res); if(!w)return;
+    const verdict=String(req.body?.verdict||'failed');
+    if(!['passed','failed'].includes(verdict)) return res.status(400).json({error:'invalid_verdict'});
+    const r=await pool.query(`update tgg_browser_jobs set status=$1,result=coalesce($2,result),evidence=coalesce($3,evidence),lease_expires_at=null,updated_at=now(),finished_at=now()
+      where id=$4 and worker_id=$5 and lease_token=$6 returning *`,
+      [verdict,req.body?.result||null,req.body?.evidence||[],req.body?.job_id,w.id,req.body?.lease_token]);
+    if(!r.rowCount)return res.status(409).json({error:'job_lease_invalid'});
+    res.json({job:r.rows[0]});
+  }catch(e){next(e);}
+});
+
 app.post('/v1/browser/sessions', auth, async (req,res,next)=>{
   try {
     const r=await pool.query(

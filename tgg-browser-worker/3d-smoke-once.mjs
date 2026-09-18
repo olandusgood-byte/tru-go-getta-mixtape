@@ -7,6 +7,7 @@ const EXPECT_VERSION=String(process.env.TGG_3D_EXPECT_VERSION||'V1.22 3D').trim(
 const REQUIRE_DESTINATIONS=String(process.env.TGG_3D_REQUIRE_DESTINATIONS||'0')==='1';
 const REQUIRE_LIVING_CITY=String(process.env.TGG_3D_REQUIRE_LIVING_CITY||'0')==='1';
 const REQUIRE_CINEMATIC=String(process.env.TGG_3D_REQUIRE_CINEMATIC||'0')==='1';
+const REQUIRE_WORLD_BULK=String(process.env.TGG_3D_REQUIRE_WORLD_BULK||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -51,7 +52,17 @@ async function run(){
       cameraMode:window.TGG3D?.getCameraMode?.()||null,
       radar:!!document.getElementById('radar3d'),
       radarPlayer:!!document.getElementById('radarPlayer'),
-      radarCar:!!document.getElementById('radarCar')
+      radarCar:!!document.getElementById('radarCar'),
+      garageApi:typeof window.TGGGarage?.apply==='function'&&typeof window.TGGGarage?.load==='function',
+      garageButton:!!document.getElementById('garageBtn'),
+      driftButton:!!document.getElementById('driftBtn'),
+      hornButton:!!document.getElementById('hornBtn'),
+      npcDialogue:!!document.getElementById('npcDialogue'),
+      studioHost:!!document.getElementById('studio3d'),
+      studioApi:typeof window.TGGStudio3D?.isReady==='function',
+      carAppearanceApi:typeof window.TGG3D?.setCarAppearance==='function',
+      tuningApi:typeof window.TGGGame?.setDriveTuning==='function',
+      vehicleCollisionMargin:window.TGG3D?.canMovePercent?.(58.1,58.1,true)===false
     }));
     record('title-version',initial.title.includes(EXPECT_VERSION),initial.title);
     record('webgl-canvas',initial.canvas);
@@ -67,6 +78,40 @@ async function run(){
     if(REQUIRE_LIVING_CITY){
       record('pedestrian-population',initial.pedestrians>=6,String(initial.pedestrians));
       record('traffic-population',initial.traffic>=6,String(initial.traffic));
+    }
+    if(REQUIRE_WORLD_BULK){
+      record('garage-api',initial.garageApi);
+      record('garage-button',initial.garageButton);
+      record('mobile-drift-button',initial.driftButton);
+      record('mobile-horn-button',initial.hornButton);
+      record('manager-dialogue',initial.npcDialogue);
+      record('studio-3d-host',initial.studioHost);
+      record('studio-3d-api',initial.studioApi);
+      record('car-appearance-api',initial.carAppearanceApi);
+      record('drive-tuning-api',initial.tuningApi);
+      record('vehicle-collision-margin',initial.vehicleCollisionMargin);
+      const garageResult=await page.evaluate(()=>{
+        const before=window.TGGGarage?.getState?.();
+        document.querySelector('[data-car-color="#ff315f"]')?.click();
+        document.querySelector('[data-car-tune="sport"]')?.click();
+        const after=window.TGGGarage?.getState?.();
+        const tuning=window.TGGGame?.getDriveTuning?.();
+        const paint=window.TGG3D?.car?.userData?.bodyMaterial?.color?.getHexString?.();
+        const stored=JSON.parse(localStorage.getItem('tgg-garage-v1')||'null');
+        return {before,after,tuning,paint,stored};
+      });
+      record('garage-paint-runtime',garageResult.paint==='ff315f',JSON.stringify(garageResult));
+      record('garage-tune-runtime',Number(garageResult.tuning?.maxForward)>10,JSON.stringify(garageResult.tuning));
+      record('garage-persistence',garageResult.stored?.color==='#ff315f'&&garageResult.stored?.tuning==='sport',JSON.stringify(garageResult.stored));
+      await page.evaluate(()=>document.getElementById('studioBtn')?.click());
+      await page.waitForTimeout(350);
+      const studioState=await page.evaluate(()=>({
+        active:document.getElementById('studio')?.classList.contains('active'),
+        canvas:!!document.querySelector('#studio3d canvas'),
+        ready:window.TGGStudio3D?.isReady?.()===true
+      }));
+      record('studio-3d-entry',studioState.active&&studioState.canvas&&studioState.ready,JSON.stringify(studioState));
+      await page.evaluate(()=>document.getElementById('studioBack')?.click());
     }
     if(REQUIRE_CINEMATIC){
       record('camera-api',initial.cameraApi);

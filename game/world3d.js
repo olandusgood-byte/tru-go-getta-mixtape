@@ -25,7 +25,7 @@
   const STARTER_CAR={id:'starter-car',name:'STARTER CAR',x:4,z:-2,color:0xc7ff00};
 
   const api={
-    version:'1.25.0',
+    version:'1.27.0',
     library:'three@0.186.0',
     ready:false,
     failed:false,
@@ -38,6 +38,8 @@
     car:null,
     cameraYawOffset:0,
     cameraDistance:10,
+    cameraMode:'orbit',
+    cameraModes:['orbit','chase','top'],
     collisionCount:0,
     lastCollision:null,
     district:null,
@@ -57,6 +59,7 @@
         camera:c?{x:c.x,y:c.y,z:c.z}:null,
         cameraDistance:this.cameraDistance,
         cameraYawOffset:this.cameraYawOffset,
+        cameraMode:this.cameraMode,
         collisionCount:this.collisionCount,
         lastCollision:this.lastCollision,
         district:this.district,
@@ -423,7 +426,13 @@
       const t=e.target;
       const typing=t instanceof HTMLInputElement||t instanceof HTMLTextAreaElement||t instanceof HTMLSelectElement||t?.isContentEditable;
       if(typing)return;
-      if(String(e.key||'').toLowerCase()==='e'&&window.TGGGame?.getActiveScreen?.()==='game'){
+      const key=String(e.key||'').toLowerCase();
+      if(key==='c'&&window.TGGGame?.getActiveScreen?.()==='game'){
+        e.preventDefault();
+        cycleCamera();
+        return;
+      }
+      if(key==='e'&&window.TGGGame?.getActiveScreen?.()==='game'){
         const near=nearestInteraction();
         if(near){
           e.preventDefault();
@@ -432,6 +441,21 @@
       }
     });
   }
+
+  function cycleCamera(){
+    const modes=api.cameraModes;
+    const index=modes.indexOf(api.cameraMode);
+    api.cameraMode=modes[(index+1)%modes.length];
+    const button=document.getElementById('camera3dBtn');
+    if(button)button.textContent='CAMERA: '+api.cameraMode.toUpperCase();
+    window.__tggToast?.('CAMERA — '+api.cameraMode.toUpperCase());
+    return api.cameraMode;
+  }
+
+  function getCameraMode(){return api.cameraMode}
+
+  api.cycleCamera=cycleCamera;
+  api.getCameraMode=getCameraMode;
 
   function bindCameraInput(canvas){
     let dragging=false;
@@ -514,6 +538,41 @@
 
       api.renderer=renderer;api.scene=scene;api.camera=camera;api.player=player;api.npc=npc;api.car=car;
 
+      const radar=document.getElementById('radar3d');
+      const radarPlayer=document.getElementById('radarPlayer');
+      const radarCar=document.getElementById('radarCar');
+      const radarDestinations=document.getElementById('radarDestinations');
+      const radarDots=[];
+      function radarPlace(el,x,z){
+        if(!el)return;
+        el.style.left=clamp(((x-WORLD.minX)/(WORLD.maxX-WORLD.minX))*100,0,100)+'%';
+        el.style.top=clamp(((WORLD.maxZ-z)/(WORLD.maxZ-WORLD.minZ))*100,0,100)+'%';
+      }
+      if(radarDestinations){
+        radarDestinations.innerHTML='';
+        HUBS.forEach(hub=>{
+          const dot=document.createElement('span');
+          dot.className='radar-destination';
+          dot.dataset.hub=hub.id;
+          dot.title=hub.name;
+          dot.style.setProperty('--radar-color','#'+new THREE.Color(hub.color).getHexString());
+          radarDestinations.appendChild(dot);
+          radarDots.push({dot,hub});
+          radarPlace(dot,hub.x,hub.z);
+        });
+      }
+      function updateRadar(state){
+        const p=stateToWorld(state);
+        radarPlace(radarPlayer,p.x,p.z);
+        radarPlace(radarCar,car.position.x,car.position.z);
+        if(radarPlayer)radarPlayer.style.rotate=(Number(state.heading)||0)+'deg';
+        if(radarCar)radarCar.classList.toggle('active',!!state.inVehicle);
+        if(radar)radar.dataset.mode=api.cameraMode;
+        return {player:{x:p.x,z:p.z},car:{x:car.position.x,z:car.position.z},destinations:radarDots.length,mode:api.cameraMode};
+      }
+      api.updateRadar=updateRadar;
+      document.getElementById('camera3dBtn')?.addEventListener('click',()=>cycleCamera());
+
       function resize(){
         const rect=host.getBoundingClientRect();
         const w=Math.max(1,Math.round(rect.width));
@@ -583,15 +642,22 @@
         }
 
         const subject=driving?car:player;
-        const yaw=heading+api.cameraYawOffset;
-        const dist=driving?Math.max(api.cameraDistance,11):api.cameraDistance;
-        desiredCam.set(
-          subject.position.x-Math.cos(yaw)*dist,
-          driving?5.0:5.6,
-          subject.position.z-Math.sin(yaw)*dist
-        );
-        camera.position.lerp(desiredCam,1-Math.pow(.015,dt));
         camTarget.set(subject.position.x,driving?1.0:1.35,subject.position.z);
+        if(api.cameraMode==='top'){
+          desiredCam.set(subject.position.x,driving?30:27,subject.position.z+.01);
+          camera.position.lerp(desiredCam,1-Math.pow(.03,dt));
+        }else{
+          const yaw=heading+(api.cameraMode==='orbit'?api.cameraYawOffset:0);
+          const dist=api.cameraMode==='chase'
+            ? (driving?10:8)
+            : (driving?Math.max(api.cameraDistance,11):api.cameraDistance);
+          desiredCam.set(
+            subject.position.x-Math.cos(yaw)*dist,
+            api.cameraMode==='chase'?(driving?4.3:4.9):(driving?5.0:5.6),
+            subject.position.z-Math.sin(yaw)*dist
+          );
+          camera.position.lerp(desiredCam,1-Math.pow(api.cameraMode==='chase'?.025:.015,dt));
+        }
         camera.lookAt(camTarget);
 
         npc.rotation.y=Math.atan2(subject.position.x-npc.position.x,subject.position.z-npc.position.z);
@@ -602,6 +668,8 @@
           lastDistrict=district?.id||'';
           if(districtBadge)districtBadge.textContent=district?.name||'CITY';
         }
+
+        updateRadar(state);
 
         const interaction=nearestInteraction();
         api.interaction=interaction;

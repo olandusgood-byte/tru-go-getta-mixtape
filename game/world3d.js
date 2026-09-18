@@ -1,8 +1,8 @@
 (() => {
   const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.min.js';
-  const state={ready:false,failed:false,reason:null,revision:null,frame:0};
+  const state={ready:false,failed:false,reason:null,revision:null,frame:0,cameraOrbit:{yaw:0,pitch:0.5,distance:10,dragging:false,lastX:0,lastY:0}};
   let THREE,scene,camera,renderer,player,npc,clock,host;
-  const world={buildings:[],roads:[],lights:[]};
+  const world={buildings:[],roads:[],lights:[],colliders:[]};
 
   function mapX(v){return (Number(v||50)-50)*0.7}
   function mapZ(v){return (Number(v||55)-50)*0.56}
@@ -30,6 +30,7 @@
       renderer.domElement.className='world3d-canvas';
       host.innerHTML='';
       host.appendChild(renderer.domElement);
+      installCameraControls();
 
       buildLights();
       buildGround();
@@ -141,14 +142,17 @@
     cap.castShadow=true;
     scene.add(cap);
     world.buildings.push(mesh);
+    world.colliders.push({minX:x-w/2-0.55,maxX:x+w/2+0.55,minZ:z-d/2-0.55,maxZ:z+d/2+0.55});
   }
 
   function buildBuildings(){
     const xs=[-34,-27,-13,-7,7,13,27,34];
     const zs=[-36,-28,-14,-8,8,14,28,36];
+    const missionX=mapX(72),missionZ=mapZ(36);
     for(const x of xs){
       for(const z of zs){
         if(Math.abs(x)<5||Math.abs(z)<5)continue;
+        if(Math.hypot(x-missionX,z-missionZ)<5.5)continue;
         const h=seededHeight(x,z);
         const c=(x+z)%3===0?0x2a3142:(x-z)%4===0?0x252938:0x1f2431;
         addBuilding(x,z,4.8+(Math.abs(z)%4),4.8+(Math.abs(x)%4),h,c);
@@ -225,16 +229,55 @@
     player.position.z=THREE.MathUtils.lerp(player.position.z,tz,0.3);
   }
 
+  function installCameraControls(){
+    const canvas=renderer?.domElement;
+    if(!canvas)return;
+    canvas.style.touchAction='none';
+    canvas.addEventListener('pointerdown',e=>{
+      state.cameraOrbit.dragging=true;
+      state.cameraOrbit.lastX=e.clientX;
+      state.cameraOrbit.lastY=e.clientY;
+      canvas.setPointerCapture?.(e.pointerId);
+    });
+    canvas.addEventListener('pointermove',e=>{
+      if(!state.cameraOrbit.dragging)return;
+      const dx=e.clientX-state.cameraOrbit.lastX;
+      const dy=e.clientY-state.cameraOrbit.lastY;
+      state.cameraOrbit.lastX=e.clientX;
+      state.cameraOrbit.lastY=e.clientY;
+      state.cameraOrbit.yaw-=dx*0.006;
+      state.cameraOrbit.pitch=Math.max(0.18,Math.min(1.08,state.cameraOrbit.pitch+dy*0.004));
+    });
+    const end=e=>{
+      state.cameraOrbit.dragging=false;
+      canvas.releasePointerCapture?.(e.pointerId);
+    };
+    canvas.addEventListener('pointerup',end);
+    canvas.addEventListener('pointercancel',end);
+    canvas.addEventListener('wheel',e=>{
+      e.preventDefault();
+      state.cameraOrbit.distance=Math.max(5.5,Math.min(18,state.cameraOrbit.distance+Math.sign(e.deltaY)*0.8));
+    },{passive:false});
+  }
+
+  function canMovePercent(nextX,nextY){
+    if(!state.ready)return true;
+    const x=mapX(nextX),z=mapZ(nextY);
+    if(Math.abs(x)>43||Math.abs(z)>43)return false;
+    return !world.colliders.some(b=>x>=b.minX&&x<=b.maxX&&z>=b.minZ&&z<=b.maxZ);
+  }
+
   function followCamera(){
     if(!player||!camera)return;
-    const forward=new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y));
+    const orbit=state.cameraOrbit;
+    const horizontal=Math.cos(orbit.pitch)*orbit.distance;
+    const target=new THREE.Vector3(player.position.x,1.45,player.position.z);
     const desired=new THREE.Vector3(
-      player.position.x-forward.x*8,
-      6.6,
-      player.position.z-forward.z*8
+      target.x+Math.sin(orbit.yaw)*horizontal,
+      target.y+Math.sin(orbit.pitch)*orbit.distance,
+      target.z+Math.cos(orbit.yaw)*horizontal
     );
-    camera.position.lerp(desired,0.07);
-    const target=new THREE.Vector3(player.position.x,1.4,player.position.z);
+    camera.position.lerp(desired,0.11);
     camera.lookAt(target);
   }
 
@@ -269,13 +312,15 @@
       buildings:world.buildings.length,
       roads:world.roads.length,
       lights:world.lights.length,
+      colliders:world.colliders.length,
+      orbit:{yaw:state.cameraOrbit.yaw,pitch:state.cameraOrbit.pitch,distance:state.cameraOrbit.distance,dragging:state.cameraOrbit.dragging},
       frame:state.frame,
       player:player?{x:player.position.x,y:player.position.y,z:player.position.z,yaw:player.rotation.y}:null,
       camera:camera?{x:camera.position.x,y:camera.position.y,z:camera.position.z}:null
     };
   }
 
-  window.TGGWorld3D={boot,status,resize,state};
+  window.TGGWorld3D={boot,status,resize,canMovePercent,state};
   window.addEventListener('resize',resize);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();

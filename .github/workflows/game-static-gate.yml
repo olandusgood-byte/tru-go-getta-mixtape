@@ -1,9 +1,9 @@
 name: Game Static Gate
-# V1.20 playtest UX hotfix validation
+# V1.21 true-3D isolated validation
 
 on:
   push:
-    branches: [fix/game-v120-playtest-ux-20260918]
+    branches: [feat/game-v121-true-3d-world-20260918]
     paths:
       - 'game/**'
       - '.github/workflows/game-static-gate.yml'

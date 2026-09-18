@@ -1,0 +1,37 @@
+/* V2.02 WORLD GAMEPLAY — contextual objectives inside the 3D city */
+.world-objective{
+  --objective:#c7ff00;
+  position:absolute;
+  left:18px;
+  top:78px;
+  z-index:15;
+  width:min(310px,calc(100% - 190px));
+  padding:12px 14px;
+  border:1px solid color-mix(in srgb,var(--objective) 42%,transparent);
+  border-radius:16px;
+  background:linear-gradient(145deg,#070a10ed,#0d111aed);
+  box-shadow:0 16px 40px #000b,inset 0 0 28px color-mix(in srgb,var(--objective) 7%,transparent);
+  backdrop-filter:blur(11px);
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(-5px);
+  transition:.2s ease;
+}
+.world-objective.active{opacity:1;transform:translateY(0)}
+.world-objective.ready{border-color:var(--objective);box-shadow:0 16px 40px #000b,0 0 24px color-mix(in srgb,var(--objective) 20%,transparent)}
+.world-objective .wo-kicker{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:8px;letter-spacing:.16em;color:#8f95a9}
+.world-objective .wo-kicker b{color:var(--objective)}
+.world-objective .wo-title{margin-top:6px;font-size:14px;font-weight:900;letter-spacing:.035em;color:#fff}
+.world-objective .wo-detail{display:flex;justify-content:space-between;gap:12px;margin-top:5px;color:#a9afc0;font-size:9px;line-height:1.4}
+.world-objective .wo-detail strong{color:var(--objective);white-space:nowrap}
+.world-objective .wo-progress{height:3px;margin-top:9px;border-radius:99px;background:#ffffff12;overflow:hidden}
+.world-objective .wo-progress i{display:block;height:100%;width:0;background:var(--objective);box-shadow:0 0 12px var(--objective);transition:width .25s ease}
+.action-deck .actions #interact3dBtn.objective-ready{background:linear-gradient(145deg,#d9ff54,#8fb800)!important;color:#071000!important;border-color:#e7ff90!important;box-shadow:0 0 22px #c7ff0028!important}
+.city.world-objective-live #navHud{top:142px}
+@media(max-width:700px){
+  .world-objective{left:10px;top:54px;width:calc(100% - 132px);padding:9px 10px}
+  .world-objective .wo-title{font-size:11px}
+  .world-objective .wo-detail{font-size:8px;display:block}
+  .world-objective .wo-detail strong{display:block;margin-top:3px}
+  .city.world-objective-live #navHud{top:132px}
+}

@@ -134,6 +134,7 @@
 
   function openPanel(){
     const e=activeEvent();if(!e)return false;
+    if(window.TGGV221?.shouldHandleEvent?.(e))return window.TGGV221.openBattle?.(e)===true;
     const gs=window.TGGGame?.getState?.();if(gs?.inVehicle){window.__tggToast?.('EXIT THE CAR TO JOIN '+e.name.toUpperCase());return false}
     if(blockedByPriority())return false;
     if(distance()>5.5){window.__tggToast?.('GET CLOSER TO THE LIVE EVENT');return false}

@@ -67,7 +67,8 @@
     state.lastReward={id,cash,xp,rep,run:state.runs[id]};
     save();
     window.TGGProgression?.sync?.();
-    window.__tggToast?.(event.name+' COMPLETE — +
+    window.__tggToast?.(event.name+' COMPLETE — '+String.fromCharCode(36)+cash+' / +'+xp+' XP / +'+rep+' REP');
+    render();return true;
   }
   function render(){
     const el=document.getElementById('eventsList');if(!el)return;

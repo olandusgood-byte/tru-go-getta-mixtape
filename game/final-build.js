@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.22 CONCERT + VENUE PERFORMANCE 100';
+  const VERSION='V2.23 CAREER STORY + PHONE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

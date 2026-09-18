@@ -6,7 +6,14 @@
   const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false};
   const driveRuntime={speed:0,steer:0,lastTime:performance.now(),braking:false,handbrake:false};
   const DRIVE={maxForward:10,maxReverse:-4.5,accel:7.5,reverseAccel:5.5,brake:12,coast:3.4,turnRate:112};
-  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','avatar','park','studio','shops','home','media','businessBoard'];
+  function setDriveTuning(next={}){
+    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate'].forEach(k=>{
+      if(Number.isFinite(Number(next[k])))DRIVE[k]=Number(next[k]);
+    });
+    return {...DRIVE};
+  }
+  function getDriveTuning(){return {...DRIVE};}
+  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','avatar','park','studio','shops','home','media','garage','businessBoard'];
 
   function show(id){
     activeScreen=id;
@@ -87,6 +94,15 @@
     $('speedValue') && ($('speedValue').textContent=String(speedMph));
     $('gearValue') && ($('gearValue').textContent=state.inVehicle?(driveRuntime.speed<-.2?'R':driveRuntime.speed>.2?'D':'N'):'P');
     $('vehicleHud')?.classList.toggle('active',!!state.inVehicle);
+    const md=Math.hypot((Number(state.x)||0)-72,(Number(state.y)||0)-36);
+    const npcDialogue=$('npcDialogue');
+    if(npcDialogue){
+      const line=!state.mission?'M: You ready to make some noise?'
+        :!state.accepted?'M: Take the job when you are ready.'
+        :'M: Finish the move and come back with results.';
+      npcDialogue.textContent=line;
+      npcDialogue.classList.toggle('show',activeScreen==='game'&&md<16);
+    }
     const driveState=driveRuntime.handbrake&&Math.abs(driveRuntime.speed)>2?'DRIFT':driveRuntime.braking?'BRAKE':Math.abs(driveRuntime.speed)>.3?'CRUISE':'IDLE';
     $('driveStateValue') && ($('driveStateValue').textContent=state.inVehicle?driveState:'PARK');
   }
@@ -187,7 +203,7 @@
       const rad=(Number(state.heading)||0)*Math.PI/180;
       const nx=Math.max(3,Math.min(94,state.x+Math.cos(rad)*driveRuntime.speed*dt));
       const ny=Math.max(8,Math.min(88,state.y+Math.sin(rad)*driveRuntime.speed*dt));
-      if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny)){
+      if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny,true)){
         driveRuntime.speed*=.18;
       }else{
         state.x=nx;
@@ -326,6 +342,15 @@
     $('vehicleBtn')?.addEventListener('click',toggleVehicle);
     $('interact3dBtn')?.addEventListener('click',()=>window.TGG3D?.interactNearest?.());
     $('camera3dBtn')?.addEventListener('click',()=>window.TGG3D?.cycleCamera?.());
+    $('hornBtn')?.addEventListener('click',horn);
+    const driftBtn=$('driftBtn');
+    if(driftBtn){
+      driftBtn.addEventListener('pointerdown',e=>{if(state.inVehicle){e.preventDefault();setDriveKey('handbrake',true);driftBtn.setPointerCapture?.(e.pointerId)}});
+      const releaseDrift=()=>setDriveKey('handbrake',false);
+      driftBtn.addEventListener('pointerup',releaseDrift);
+      driftBtn.addEventListener('pointercancel',releaseDrift);
+      driftBtn.addEventListener('pointerleave',releaseDrift);
+    }
     $('saveBtn')?.addEventListener('click',()=>save(false));
     $('pauseBtn')?.addEventListener('click',()=>show('pause'));
     $('resumeBtn')?.addEventListener('click',()=>show('game'));
@@ -340,6 +365,7 @@
     $('homeBtn')?.addEventListener('click',()=>show('home'));
     $('mediaBtn')?.addEventListener('click',()=>show('media'));
     $('businessBtn')?.addEventListener('click',()=>window.TGGBusiness?.open?.());
+    $('garageBtn')?.addEventListener('click',()=>show('garage'));
     $('cityAssetsBtn')?.addEventListener('click',()=>{window.TGGBusiness?.open?.();window.TGGBusiness?.loadAssets?.()});
 
     $('mediaBack')?.addEventListener('click',()=>show('game'));
@@ -421,7 +447,7 @@
 
   window.__tggToast=toast;
   window.TGGAutoMode={enabled:()=>true,toggle:()=>true};
-  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,driveVehicle,setDriveKey,getDrivingState:()=>({...driveRuntime}),horn,mission,toggleVehicle,resetForNewGame};
+  window.TGGGame={getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,driveVehicle,setDriveKey,getDrivingState:()=>({...driveRuntime}),setDriveTuning,getDriveTuning,horn,mission,toggleVehicle,resetForNewGame};
 
   load();
   requestAnimationFrame(updateVehiclePhysics);

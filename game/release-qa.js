@@ -25,6 +25,10 @@
     test('circuits persistence',window.TGGSave?.keys?.circuits==='tgg-circuits-v1'&&Array.isArray(window.TGGCircuits?.state?.completed));
     const cypherVariant=window.TGGCircuits?.variant?.('street-cypher')||{};test('event variant cosmetic',cypherVariant.cosmeticOnly===true&&cypherVariant.rewardMultiplier===1);
     test('circuit achievements',['first-circuit','city-circuit'].every(id=>window.TGGProgression?.achievements?.some(a=>a.id===id)));
+    test('district story api',!!window.TGGDistrictStory&&typeof window.TGGDistrictStory.start==='function'&&typeof window.TGGDistrictStory.currentBeat==='function'&&typeof window.TGGDistrictStory.refreshRemoteStory==='function');
+    test('district story persistence',window.TGGSave?.keys?.districtStory==='tgg-district-story-v1'&&Array.isArray(window.TGGDistrictStory?.state?.completed));
+    test('district story route',Array.isArray(window.TGGDistrictStory?.routes)&&window.TGGDistrictStory.routes.some(r=>r.id==='city-story-lap'&&r.circuit==='city-run'));
+    test('district story achievement',window.TGGProgression?.achievements?.some(a=>a.id==='district-story'));
     const economy=window.TGGEconomy?.reward?.({cash:100,xp:25,rep:5});test('economy normalization',!!economy&&economy.cash>=100&&economy.xp>=25&&economy.rep>=5&&economy.crew&&economy.crew.cash>=0,'shared reward normalization available');
     const integrity=window.TGGV12IntegrityResult||window.TGGV12Integrity?.run?.();test('v12 integrity',!!integrity?.passed);
     test('bridge snapshot',typeof window.TGGBridge?.snapshot==='function');

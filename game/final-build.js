@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.05 DRIVING RECOVERY';
+  const VERSION='V2.06 DRIVE + JOBS';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;
@@ -9,7 +9,7 @@
   let currentPixelRatio=1;
 
   function clearInputs(){
-    ['forward','reverse','left','right','handbrake'].forEach(k=>window.TGGGame?.setDriveKey?.(k,false));
+    ['forward','reverse','left','right','handbrake','boost'].forEach(k=>window.TGGGame?.setDriveKey?.(k,false));
     ['up','down','left','right','sprint'].forEach(k=>window.TGGGame?.setWalkKey?.(k,false));
   }
 

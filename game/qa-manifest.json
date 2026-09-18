@@ -25,7 +25,12 @@
     "live_city_activity_snapshot",
     "property_readonly_inspect",
     "vehicle_readonly_inspect",
-    "remote_label_escape"
+    "remote_label_escape",
+    "core_control_bindings",
+    "pause_input_lock",
+    "secondary_world_navigation",
+    "save_continue_loop",
+    "browser_smoke_automated"
   ],
   "workflow": [
     "BUILD",
@@ -36,7 +41,7 @@
     "ADVANCE"
   ],
   "repairPolicy": "repair only verified missing or disconnected runtime guards; never duplicate active systems or overwrite verified save keys",
-  "browserPolicy": "manual_only",
+  "browserPolicy": "automated_ci_required",
   "networkPolicy": "no automatic network calls; trusted transport injection only",
   "next": "V1.15 CITY ACTIVITY DEPTH + SAFE LOCAL PROGRESSION"
 }

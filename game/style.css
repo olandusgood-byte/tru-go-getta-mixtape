@@ -128,3 +128,7 @@
   .camera-hint{left:10px;top:62px;right:10px;width:max-content;max-width:calc(100% - 20px);font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 
+/* V1.22 WALKABLE 3D DISTRICTS */
+.district3d-badge{display:inline-flex;align-items:center;margin-left:6px;padding:4px 7px;border-radius:999px;border:1px solid #ffffff25;background:#060810d9;color:#fff;font-size:9px;letter-spacing:1px;vertical-align:middle}
+.tgg-webgl-ready .district3d-badge{border-color:#7fd0ff55;color:#bfe9ff;box-shadow:0 0 16px #56bfff14}
+

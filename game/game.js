@@ -471,7 +471,8 @@
       osc.start();
       osc.stop(ctx.currentTime+.19);
     }catch{}
-    toast('HONK!');
+    const reacted=window.TGG3D?.reactToHorn?.()||0;
+    toast(reacted>0?'HONK! • '+reacted+' PEDESTRIANS REACTED':'HONK!');
     return true;
   }
 

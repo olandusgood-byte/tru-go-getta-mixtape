@@ -187,6 +187,8 @@
     car.userData.brakeLights=brakeLights;
     car.userData.headGlow=headGlow;
     car.userData.skidMarks=skidMarks;
+    car.userData.bodyMaterial=bodyMat;
+    car.userData.wheelMaterial=dark;
     return car;
   }
   const car=makeCar();
@@ -198,6 +200,14 @@
     vehicleDynamics.braking=!!next.braking;
     vehicleDynamics.handbrake=!!next.handbrake;
     return {...vehicleDynamics};
+  }
+  function setCarAppearance(next={}){
+    if(next.color&&car.userData.bodyMaterial)car.userData.bodyMaterial.color.set(next.color);
+    if(next.wheelColor&&car.userData.wheelMaterial)car.userData.wheelMaterial.color.set(next.wheelColor);
+    return {
+      color:'#'+car.userData.bodyMaterial.color.getHexString(),
+      wheelColor:'#'+car.userData.wheelMaterial.color.getHexString()
+    };
   }
 
   const skylineGlow=new THREE.Mesh(new THREE.RingGeometry(32,49,64),new THREE.MeshBasicMaterial({color:0x2a3040,transparent:true,opacity:.25,side:THREE.DoubleSide}));
@@ -300,10 +310,12 @@
     button.click();
     return true;
   }
-  function canMovePercent(x,y){
+  function canMovePercent(x,y,vehicle=false){
     const p=toWorld({x,y});
-    if(Math.abs(p.x)>49||Math.abs(p.z)>49)return false;
-    return !obstacles.some(o=>Math.abs(p.x-o.x)<o.hw&&Math.abs(p.z-o.z)<o.hd);
+    const edge=vehicle?47.8:49;
+    if(Math.abs(p.x)>edge||Math.abs(p.z)>edge)return false;
+    const extra=vehicle ? .9 : 0;
+    return !obstacles.some(o=>Math.abs(p.x-o.x)<o.hw+extra&&Math.abs(p.z-o.z)<o.hd+extra);
   }
   function distanceToCarPercent(s){
     const p=toWorld(s);
@@ -558,6 +570,7 @@
     getCarHeading:()=>Number(car.userData.headingDeg)||0,
     setVehicleDynamics,
     getVehicleDynamics:()=>({...vehicleDynamics}),
+    setCarAppearance,
     destinations,
     nearbyDestination,
     interactNearest,

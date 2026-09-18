@@ -16,12 +16,14 @@ async function run(){
     page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
     page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
     page.on('response',r=>{if(r.status()>=400)failedResources.push({url:r.url(),status:r.status()})});
-    const res=await page.goto(TARGET,{waitUntil:'networkidle',timeout:45000});
+    const res=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
+    await page.waitForSelector('#newGame',{state:'visible',timeout:15000});
     await page.click('#newGame');
     await page.fill('#stageName','TGG 3D QA');
     await page.selectOption('#styleChoice',{label:'Artist'});
     await page.click('#startGame');
-    await page.waitForTimeout(1200);
+    await page.waitForFunction(()=>window.TGG3D?.isReady?.()===true,{timeout:20000});
+    await page.waitForTimeout(500);
 
     const checks=[];
     const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});

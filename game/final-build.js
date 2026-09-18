@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.02 WORLD GAMEPLAY';
+  const VERSION='V2.03 STREET CONTACTS';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

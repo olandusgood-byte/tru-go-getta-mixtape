@@ -51,28 +51,34 @@ try:
     stored=page.evaluate("JSON.parse(localStorage.getItem('tgg-street-life-v1')||'{}')")
     check('street-life-save',stored.get('talks',0)>=1 and len(stored.get('met',[]))>=1,json.dumps(stored))
 
-    # Move into a car beside ambient traffic and verify contextual traffic HUD.
-    traffic=page.evaluate("""() => {
-      const v=window.TGG3D.traffic[0];
-      return {x:v.position.x,z:v.position.z};
-    }""")
-    page.evaluate("""p => {
+    # Pin one ambient vehicle to the player's current world position inside a single JS task.
+    traffic_probe=page.evaluate("""() => {
       const s=window.TGGGame.getState();
       s.inVehicle=true;
-      s.x=p.x/.92+50;
-      s.y=p.z/.92+50;
       window.TGGGame.refresh();
-    }""",traffic)
-    page.wait_for_timeout(100)
-    traffic_near=page.evaluate("window.TGGStreetLife.nearestTraffic(7)")
-    check('traffic-proximity',traffic_near is not None and traffic_near.get('distance',99)<=7,json.dumps(traffic_near))
-    page.evaluate("window.TGGStreetLife.render()")
-    prompt=page.locator('#streetLifePrompt').inner_text()
-    check('contextual-traffic-hud','TRAFFIC' in prompt,prompt)
+      const px=((Number(s.x)||50)-50)*.92;
+      const pz=((Number(s.y)||50)-50)*.92;
+      const v=window.TGG3D.traffic[0];
+      v.position.set(px,0,pz);
+      const near=window.TGGStreetLife.nearestTraffic(7);
+      window.TGGStreetLife.render();
+      return {near,prompt:document.getElementById('streetLifePrompt')?.textContent||''};
+    }""")
+    traffic_near=traffic_probe.get('near')
+    check('traffic-proximity',traffic_near is not None and traffic_near.get('distance',99)<=7,json.dumps(traffic_probe))
+    check('contextual-traffic-hud','TRAFFIC' in traffic_probe.get('prompt',''),traffic_probe.get('prompt',''))
 
     cash_before=page.evaluate("window.TGGGame.getState().cash")
-    horned=page.evaluate("window.TGGStreetLife.onHorn()")
-    horn_state=page.evaluate("window.TGGStreetLife.snapshot().lastHornReaction")
+    horn_probe=page.evaluate("""() => {
+      const s=window.TGGGame.getState();
+      const px=((Number(s.x)||50)-50)*.92;
+      const pz=((Number(s.y)||50)-50)*.92;
+      window.TGG3D.traffic[0].position.set(px,0,pz);
+      const horned=window.TGGStreetLife.onHorn();
+      return {horned,state:window.TGGStreetLife.snapshot().lastHornReaction};
+    }""")
+    horned=horn_probe.get('horned')
+    horn_state=horn_probe.get('state')
     cash_after=page.evaluate("window.TGGGame.getState().cash")
     check('horn-reaction',horned is True and horn_state is not None,json.dumps(horn_state))
     check('horn-no-reward',cash_after==cash_before,f'{cash_before}->{cash_after}')

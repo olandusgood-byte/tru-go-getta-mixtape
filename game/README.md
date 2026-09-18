@@ -1,46 +1,48 @@
-# TRU GO GETTA Game V1.20
+# TRU GO GETTA Game V1.30
 
-V1.20 turns earned NPC relationships into local contact opportunities that reuse existing city events instead of creating a second reward system.
+V1.30 promotes the City Life 3D experiment into the verified game stack on top of V1.29.
 
-## Contact opportunities
+## City Life 3D
 
-- Manager Introduction — M — requires TRUSTED — complete through Release Rush
-- Producer Lock-In — Kane — requires FAMILIAR — complete through Studio Pop-In
-- DJ Test Spin — DJ V — requires FAMILIAR — complete through Release Rush
+The city now includes real WebGL interior scenes for:
 
-Opportunity state is stored inside the existing `tgg-route-memory-v1` object under `opportunities`.
+- My Apartment
+- Media District
+- Shop District
+- The Park
+- Recording Studio
+- TGG Custom Garage
 
-## Completion rules
+The V1.29 garage paint, wheel finish, handling presets, drift/horn controls and local Three.js runtime remain intact.
 
-Starting an opportunity records the linked event's current run count. The opportunity only completes after that existing event successfully runs again and its run count advances.
+## Navigation + living city
 
-The opportunity layer itself:
-
-- awards no cash;
-- awards no XP;
-- awards no reputation;
-- calls no economy reward API;
-- creates no separate localStorage key;
-- adds no remote mutation API.
+- live navigation HUD points to an accepted mission or nearest city destination;
+- six animated pedestrians move through city routes;
+- six ambient traffic vehicles continuously travel the street grid;
+- radar, cinematic camera modes and driving systems remain active;
+- traffic and pedestrians are presentation-only and do not create a second save, economy or reward authority.
 
 ## Verification
 
-- [x] Manager Introduction unlocks at M = Trusted
-- [x] Producer Lock-In unlocks at Kane = Familiar
-- [x] DJ Test Spin remains locked while DJ V = Intro
-- [x] opportunity UI auto-renders in City Events
-- [x] Manager Introduction starts successfully
-- [x] Release Rush completes Manager Introduction
-- [x] completion adds exactly the existing 450 cash
-- [x] no opportunity bonus payout
-- [x] no separate opportunity save store
-- [x] Opportunity Knocks achievement unlocks
-- [x] Static CI PASS
-- [x] Chromium Smoke PASS on `6095ecc`
+- [x] V1.30 static contract
+- [x] local Three.js revision 152
+- [x] Apartment 3D canvas
+- [x] Media 3D canvas
+- [x] Shops 3D canvas
+- [x] Park 3D canvas
+- [x] Garage 3D preserved
+- [x] Recording Studio 3D preserved
+- [x] live mission navigation
+- [x] six ambient traffic vehicles present and moving
+- [x] six animated pedestrians present
+- [x] mission and save controls preserved
+- [x] Static CI PASS on `1ae5566`
+- [x] Chromium Smoke PASS on `1ae5566`
 - [x] production remains gated
 
 ## Release status
 
-**V1.20-NPC-FAVOR-HOOKS-CONTACT-OPPORTUNITIES-VERIFIED.**
+**V1.30-CITY-LIFE-3D-VERIFIED.**
 
-Next internal development layer: **V1.21 Contact Chains + Opportunity History**.
+Next internal development layer: **V1.31 Traffic Proximity + Street Interactions**.

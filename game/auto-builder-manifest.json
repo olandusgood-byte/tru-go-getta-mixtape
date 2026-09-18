@@ -83,5 +83,5 @@
   "browserPolicy": "automated_ci_required",
   "networkPolicy": "transport injection only",
   "next": "V1.22 3D COLLISION + WALKABLE DISTRICTS",
-  "verification": "pending_ci"
+  "verification": "passed"
 }

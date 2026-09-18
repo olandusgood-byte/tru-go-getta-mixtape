@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.00 FINAL MASTER';
+  const VERSION='V2.02 WORLD GAMEPLAY';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

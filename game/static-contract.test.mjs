@@ -18,8 +18,8 @@ const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',impor
 const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
 const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
 
-assert.match(html,/Game V1\.21/);
-assert.match(html,/GAME V1\.21 • TRUE 3D CITY FOUNDATION/);
+assert.match(html,/Game V1\.22/);
+assert.match(html,/GAME V1\.22 • 3D COLLISION \+ CAMERA ORBIT/);
 assert.match(html,/<script src="business\.js"><\/script>/);
 assert.match(html,/<script src="circuits\.js"><\/script>/);
 assert.match(html,/<script src="district-story\.js"><\/script>/);
@@ -186,6 +186,16 @@ assert.match(world3d,/buildNpc/);
 assert.match(world3d,/followCamera/);
 assert.match(world3d,/syncPlayer/);
 assert.match(world3d,/host\.classList\.add\('ready'\)/);
+assert.match(world3d,/function canMove\b/);
+assert.match(world3d,/function collisionSnapshot\b/);
+assert.match(world3d,/function bindCameraControls\b/);
+assert.match(world3d,/function cameraState\b/);
+assert.match(world3d,/function resetCamera\b/);
+assert.match(world3d,/world\.colliders/);
+assert.match(world3d,/pointermove/);
+assert.match(world3d,/wheel/);
+assert.match(game,/TGGWorld3D\?\.canMove/);
+assert.match(game,/BUILDING BLOCKED — USE THE STREET/);
 
 for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
   assert.match(world,new RegExp('function '+api+'\\b'));
@@ -224,10 +234,10 @@ for (const token of ['business assets loader','live city activity snapshot','pro
   assert.match(releaseQa,new RegExp(token));
 }
 
-assert.equal(release.release,'V1.21 True 3D City Foundation');
-assert.equal(release.base,'V1.20 NPC Favor Hooks + Contact Opportunities');
-assert.equal(auto.version,'1.21');
-assert.equal(qaManifest.version,'1.21');
+assert.equal(release.release,'V1.22 3D Collision + Camera Orbit');
+assert.equal(release.base,'V1.21 True 3D City Foundation');
+assert.equal(auto.version,'1.22');
+assert.equal(qaManifest.version,'1.22');
 assert.ok(['candidate_pending_ci','automated_ci_pass'].includes(release.browser_smoke));
 assert.equal(auto.browserPolicy,'automated_ci_required');
 assert.ok(['pending_ci','passed'].includes(auto.verification));
@@ -257,5 +267,11 @@ assert.ok(release.gates.includes('opportunities_single_memory_store'));
 assert.ok(release.gates.includes('world3d_api'));
 assert.ok(release.gates.includes('webgl_canvas'));
 assert.ok(release.gates.includes('third_person_camera'));
+assert.ok(release.gates.includes('world3d_collision_api'));
+assert.ok(release.gates.includes('world3d_building_collision'));
+assert.ok(release.gates.includes('world3d_camera_orbit'));
+assert.ok(release.gates.includes('world3d_camera_zoom'));
+assert.ok(release.gates.includes('world3d_mission_reachable'));
+assert.ok(release.gates.includes('world3d_game_move_guard'));
 
-console.log('GAME_V1_21_STATIC_CONTRACT_PASS');
+console.log('GAME_V1_22_STATIC_CONTRACT_PASS');

@@ -17,16 +17,124 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
     if(PLAYER_SMOOTH_ONLY){
-      await page.route('**/*',route=>{
-        const url=route.request().url();
-        if(/\.js(?:\?|$)/.test(url)){
-          const keep=/\/(?:vendor\/three-r152\.min|game|game-3d|final-build)\.js(?:\?|$)/.test(url);
-          if(!keep)return route.abort();
-        }
-        return route.continue();
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [gameResponse,finalResponse]=await Promise.all([
+        fetch(base+'/game.js'),
+        fetch(base+'/final-build.js')
+      ]);
+      if(!gameResponse.ok||!finalResponse.ok){
+        throw new Error('Movement harness could not fetch frozen runtime scripts: game='+gameResponse.status+', final='+finalResponse.status);
+      }
+      const [gameSource,finalSource]=await Promise.all([gameResponse.text(),finalResponse.text()]);
+      await page.setContent(`<!doctype html><html><head><title>TRU GO GETTA — ${EXPECT_VERSION} MOVEMENT QA</title></head><body>
+        <div id="menu" class="screen active"><button id="newGame">CREATE PLAYER</button></div>
+        <div id="creator" class="screen"><input id="stageName"><select id="styleChoice"><option>Artist</option></select><button id="startGame">START</button></div>
+        <div id="game" class="screen">
+          <div id="player"></div><div id="hud"></div><span id="hudName"></span><span id="hudLevel"></span><span id="hudCash"></span><span id="hudXp"></span><span id="hudNext"></span>
+          <span id="missionStatus"></span><button id="missionBtn"></button><button id="vehicleBtn"></button>
+          <span id="speedValue"></span><span id="gearValue"></span><div id="vehicleHud"></div><span id="driveStateValue"></span>
+          <div id="playerMoveHud"></div><span id="walkSpeedValue"></span><span id="walkModeValue"></span><div id="npcDialogue"></div>
+          <button data-key="ArrowUp">UP</button><button data-key="ArrowDown">DOWN</button><button data-key="ArrowLeft">LEFT</button><button data-key="ArrowRight">RIGHT</button>
+          <button id="sprintBtn">RUN</button>
+        </div>
+        <div id="pause" class="screen"></div><div id="toast"></div>
+      </body></html>`);
+      await page.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
+        window.__qaPlayerDynamics={speed:0,vx:0,vy:0,sprinting:false,blocked:false};
+        window.TGG3D={
+          isReady:()=>true,
+          canMovePercent:()=>true,
+          setPlayerDynamics:next=>Object.assign(window.__qaPlayerDynamics,next||{}),
+          getPlayerDynamics:()=>({...window.__qaPlayerDynamics}),
+          setVehicleDynamics:()=>true,
+          getVehicleDynamics:()=>({speed:0,steer:0,braking:false,handbrake:false}),
+          setCameraMode:()=> 'orbit',
+          getCameraMode:()=> 'orbit'
+        };
       });
+      const harnessErrors=[];
+      page.on('pageerror',e=>harnessErrors.push(e.message||String(e)));
+      await page.addScriptTag({content:gameSource});
+      await page.addScriptTag({content:finalSource});
+      await page.waitForTimeout(120);
+      await page.evaluate(()=>{
+        document.getElementById('newGame')?.click();
+        const stage=document.getElementById('stageName');
+        const style=document.getElementById('styleChoice');
+        if(stage)stage.value='TGG MOVEMENT QA';
+        if(style)style.value='Artist';
+        document.getElementById('startGame')?.click();
+      });
+
+      const checks=[];
+      const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      const initial=await page.evaluate(()=>({
+        title:document.title,
+        state:window.TGGGame?.getState?.(),
+        walkingApi:typeof window.TGGGame?.getWalkingState==='function'&&typeof window.TGGGame?.setWalkKey==='function',
+        tune:window.TGGGame?.getWalkTuning?.(),
+        finalBuildVersion:window.TGGFinalBuild?.version||null
+      }));
+      record('title-version',initial.title.includes(EXPECT_VERSION),initial.title);
+      record('walking-api',initial.walkingApi);
+      record('walking-tuning',Number(initial.tune?.walkSpeed)>0&&Number(initial.tune?.sprintSpeed)>Number(initial.tune?.walkSpeed),JSON.stringify(initial.tune));
+      record('final-build-runtime',String(initial.finalBuildVersion).includes('V2.00'),String(initial.finalBuildVersion));
+
+      const x0=Number(initial.state?.x)||0;
+      await page.keyboard.down('ArrowRight');
+      await page.waitForTimeout(650);
+      const walking=await page.evaluate(()=>({state:window.TGGGame?.getState?.(),walk:window.TGGGame?.getWalkingState?.(),dyn:window.TGG3D?.getPlayerDynamics?.()}));
+      await page.keyboard.up('ArrowRight');
+      await page.waitForTimeout(260);
+      const coasting=await page.evaluate(()=>window.TGGGame?.getWalkingState?.());
+      record('smooth-walk-distance',Number(walking.state?.x)>x0+.6,JSON.stringify({start:x0,end:walking.state?.x}));
+      record('smooth-walk-acceleration',Number(walking.walk?.speed)>2,JSON.stringify(walking.walk));
+      record('player-dynamics-sync',Number(walking.dyn?.speed)>2,JSON.stringify(walking.dyn));
+      record('smooth-walk-deceleration',Number(coasting?.speed)<Number(walking.walk?.speed),JSON.stringify({walking:walking.walk?.speed,coast:coasting?.speed}));
+
+      await page.keyboard.down('ArrowUp');
+      await page.keyboard.down('ArrowRight');
+      await page.waitForTimeout(650);
+      const diagonal=await page.evaluate(()=>({walk:window.TGGGame?.getWalkingState?.(),tune:window.TGGGame?.getWalkTuning?.()}));
+      await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowRight');
+      record('diagonal-normalized',Number(diagonal.walk?.speed)<=Number(diagonal.tune?.walkSpeed)*1.08,JSON.stringify(diagonal));
+
+      await page.waitForTimeout(250);
+      await page.keyboard.down('Shift');
+      await page.keyboard.down('ArrowUp');
+      await page.waitForTimeout(750);
+      const sprint=await page.evaluate(()=>({walk:window.TGGGame?.getWalkingState?.(),tune:window.TGGGame?.getWalkTuning?.(),mode:document.getElementById('walkModeValue')?.textContent}));
+      await page.keyboard.up('ArrowUp');await page.keyboard.up('Shift');
+      record('sprint-speed',Number(sprint.walk?.speed)>Number(sprint.tune?.walkSpeed)*1.1,JSON.stringify(sprint));
+      record('sprint-state',sprint.walk?.sprinting===true&&sprint.mode==='SPRINT',JSON.stringify(sprint));
+
+      await page.waitForTimeout(350);
+      const stopped=await page.evaluate(()=>window.TGGGame?.getWalkingState?.());
+      record('walk-settles-after-release',Number(stopped?.speed)<1.2,JSON.stringify(stopped));
+
+      result={
+        ok:checks.every(x=>x.pass)&&harnessErrors.length===0,
+        status:'done',
+        mode:'player_smooth_logic_harness',
+        target:TARGET,
+        checks,
+        page_errors:harnessErrors,
+        updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();
+      return;
     }
+
     const consoleErrors=[],pageErrors=[],failedResources=[];
     page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
     page.on('pageerror',e=>pageErrors.push(e.message||String(e)));

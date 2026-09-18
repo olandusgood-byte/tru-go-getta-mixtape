@@ -1,0 +1,15 @@
+/* V2.17 CITY + INTERIOR DEPTH 100 */
+body.tgg-v217 .v217-interior-overlay{position:fixed;left:50%;bottom:22px;z-index:145;display:grid;gap:5px;width:min(440px,calc(100vw - 24px));padding:13px 15px;transform:translate(-50%,18px);opacity:0;pointer-events:none;border:1px solid #ffffff1c;border-radius:17px;background:#070b12f3;box-shadow:0 24px 75px #000c;transition:.2s ease}
+body.tgg-v217 .v217-interior-overlay.active{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+body.tgg-v217 .v217-interior-overlay small{font-size:7px;font-weight:900;letter-spacing:.18em;color:#8d96a8}
+body.tgg-v217 .v217-interior-overlay b{font-size:16px;color:#fff;letter-spacing:.04em}
+body.tgg-v217 .v217-interior-overlay span{font-size:9px;line-height:1.45;color:#c7cedb}
+body.tgg-v217 .v217-progress{height:5px;overflow:hidden;border-radius:999px;background:#ffffff10}
+body.tgg-v217 .v217-progress i{display:block;width:0;height:100%;background:linear-gradient(90deg,#61d9ff,#c7ff00);transition:width .08s linear}
+body.tgg-v217 .v217-interior-overlay button{justify-self:end;min-height:30px;padding:0 10px;border:1px solid #ffffff18;border-radius:999px;background:#111722;color:#fff;font-size:7px;font-weight:900;letter-spacing:.12em;cursor:pointer}
+body.v217-mission-location .v217-interior-overlay{border-color:#c7ff0066;box-shadow:0 0 0 1px #c7ff0025,0 24px 75px #000c}
+body.v217-activity .studio3d,body.v217-activity .interior3d,body.v217-activity .garage3d{filter:saturate(1.08) contrast(1.025)}
+body[data-v217-quality="performance"].tgg-v217 .v217-interior-overlay{box-shadow:none;backdrop-filter:none}
+@media(prefers-reduced-motion:reduce){body.tgg-v217 .v217-interior-overlay{transition:none!important}body.tgg-v217 .v217-progress i{transition:none!important}}
+@media(max-width:700px){body.tgg-v217 .v217-interior-overlay{bottom:max(10px,env(safe-area-inset-bottom));padding:11px 12px}body.tgg-v217 .v217-interior-overlay b{font-size:13px}}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v217 .v217-interior-overlay{left:auto;right:10px;bottom:10px;width:min(360px,44vw);transform:translateY(14px)}body.tgg-v217 .v217-interior-overlay.active{transform:translateY(0)}}

@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.30 City Life 3D",
-  "base": "V1.29 Bulk World Upgrade",
+  "release": "V1.31 Street Life + Traffic Proximity",
+  "base": "V1.30 City Life 3D",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -121,7 +121,12 @@
     "V1.30-3D-PARK",
     "V1.30-3D-GARAGE",
     "V1.30-LIVE-NAVIGATION",
-    "V1.30-LIVING-TRAFFIC-REGRESSION"
+    "V1.30-LIVING-TRAFFIC-REGRESSION",
+    "V1.31-STREET-CONTACTS",
+    "V1.31-PED-PROXIMITY",
+    "V1.31-TRAFFIC-PROXIMITY",
+    "V1.31-CONTEXTUAL-STREET-HUD",
+    "V1.31-HORN-REACTION"
   ],
   "gates": [
     "runtime_api_presence",
@@ -298,10 +303,17 @@
     "garage_3d_runtime",
     "navigation_hud",
     "traffic_population",
-    "interior_no_reward_path"
+    "interior_no_reward_path",
+    "street_life_api",
+    "pedestrian_proximity",
+    "street_contact_memory",
+    "street_talk_no_rewards",
+    "traffic_proximity",
+    "horn_reaction",
+    "contextual_prompt"
   ],
-  "static_gate": "passed",
-  "browser_smoke": "automated_ci_pass",
-  "release_checkpoint": "V1.30-CITY-LIFE-3D-VERIFIED",
+  "static_gate": "candidate_pending_ci",
+  "browser_smoke": "candidate_pending_ci",
+  "release_checkpoint": "V1.31-STREET-LIFE-CANDIDATE",
   "production": "gated"
 }

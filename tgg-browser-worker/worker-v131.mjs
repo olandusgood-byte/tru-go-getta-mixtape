@@ -11,7 +11,7 @@ import { buildStoredSupabaseSession } from './access-session.mjs';
 import { protectedAudioBrowserFlow } from './protected-audio-browser-flow.mjs';
 import { prepareTrustedQaNavigationResponse } from './qa-navigation-response.mjs';
 import { runMultiFlowBrowser } from './multi-flow-browser-runner.mjs';
-import { tggCoreEnabled, tggWorkerHeartbeat, tggWorkerClaim, tggWorkerComplete } from './tgg-core-client.mjs';
+import { tggCoreEnabled, tggWorkerHeartbeat, tggWorkerClaim, tggWorkerComplete, tggStoreOwnerRefreshToken, tggRestoreOwnerRefreshToken } from './tgg-core-client.mjs';
 
 const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvlpj.supabase.co';
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || 'sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv';
@@ -69,6 +69,7 @@ async function verifyWorkerCredential(id, token) {
 
 async function persistOwnerRefreshToken(id, token, refresh) {
   if (!id || !token || !refresh) return;
+  if(tggCoreEnabled()){ await tggStoreOwnerRefreshToken(id,refresh); return; }
   const result = await rpc.rpc('tgg_browser_cert_worker_session_store', { p_worker_id: id, p_token: token, p_refresh_token: refresh });
   if (result.error) throw result.error;
 }
@@ -76,7 +77,7 @@ async function persistOwnerRefreshToken(id, token, refresh) {
 async function restoreOwnerSessionFromRefreshToken() {
   if (!workerId || !workerToken || ownerSession?.access_token) return Boolean(ownerSession?.access_token);
   try {
-    const stored = await rpc.rpc('tgg_browser_cert_worker_session_restore', { p_worker_id: workerId, p_token: workerToken });
+    const stored = tggCoreEnabled() ? await tggRestoreOwnerRefreshToken() : await rpc.rpc('tgg_browser_cert_worker_session_restore', { p_worker_id: workerId, p_token: workerToken });
     if (stored.error || !stored.data?.ok || !stored.data?.refresh_token) return false;
     const authClient = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
     const refreshed = await authClient.auth.refreshSession({ refresh_token: stored.data.refresh_token });

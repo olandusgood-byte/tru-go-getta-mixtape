@@ -75,6 +75,7 @@
     if(eventId!==want){
       state.lastResult={ok:false,status:'out_of_order',circuit:circuit.id,eventId,expected:want,step:state.step};
       save();
+      window.TGGDistrictStory?.onCircuitResult?.(state.lastResult);
       render();
       return state.lastResult;
     }
@@ -86,6 +87,7 @@
       state.active=null;
       state.step=0;
       save();
+      window.TGGDistrictStory?.onCircuitResult?.(state.lastResult);
       window.TGGProgression?.sync?.();
       window.__tggToast?.('CITY CIRCUIT COMPLETE — '+circuit.name.toUpperCase());
       render();
@@ -93,6 +95,7 @@
     }
     state.lastResult={ok:true,status:'advanced',circuit:circuit.id,eventId,step:state.step,expected:circuit.steps[state.step]};
     save();
+    window.TGGDistrictStory?.onCircuitResult?.(state.lastResult);
     window.__tggToast?.('CIRCUIT ADVANCED — NEXT '+String(circuit.steps[state.step]).toUpperCase().replaceAll('-',' '));
     render();
     return state.lastResult;

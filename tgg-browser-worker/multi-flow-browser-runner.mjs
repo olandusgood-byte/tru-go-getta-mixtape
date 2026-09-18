@@ -71,7 +71,8 @@ async function runMultiFlowBrowser(page, { flowKey, supabaseUrl, supabaseKey, ac
   const control = await browserRpc(page, supabaseUrl, accessToken, 'tgg_get_creator_ui_workspace_states');
   const controlResponded = control.ok;
   const blockingErrorCount = consoleErrors.length + pageErrors.length;
-  const capture = { build: 'ARTIST-HQ-V3-AUTO-QA-V1', load_ms: Math.max(1, loadMs), rendered, page_path: pagePath, auth_present: true, browser_context: true, control_responded: controlResponded, blocking_error_count: blockingErrorCount };
+  const browserErrors = { console: [...consoleErrors], page: [...pageErrors] };
+  const capture = { build: 'ARTIST-HQ-V3-AUTO-QA-V1', load_ms: Math.max(1, loadMs), rendered, page_path: pagePath, auth_present: true, browser_context: true, control_responded: controlResponded, blocking_error_count: blockingErrorCount, browser_errors: browserErrors };
 
   if (config.workspace) {
     const schema = await browserRpc(page, supabaseUrl, accessToken, 'tgg_get_creator_workspace_schema', { p_workspace: config.workspace });
@@ -109,7 +110,10 @@ async function runMultiFlowBrowser(page, { flowKey, supabaseUrl, supabaseKey, ac
   }
 
   if (!controlResponded) throw new Error('CONTROL_DID_NOT_RESPOND');
-  if (blockingErrorCount !== 0) throw new Error(`BLOCKING_BROWSER_ERRORS:${blockingErrorCount}`);
+  if (blockingErrorCount !== 0) {
+    const diagnostic = JSON.stringify(browserErrors).slice(0, 7000);
+    throw new Error(`BLOCKING_BROWSER_ERRORS:${blockingErrorCount}:${diagnostic}`);
+  }
   if (loadMs <= 0) throw new Error('INVALID_BROWSER_LOAD_TIME');
 
   const screenshot = await page.screenshot({ fullPage: true, type: 'png' });

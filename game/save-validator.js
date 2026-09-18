@@ -1,5 +1,5 @@
 (() => {
-  const keys={game:'tgg-game-v1',career:'tgg-career-v1',content:'tgg-content-v1',expansion:'tgg-expansion-v1',progression:'tgg-progression-v1',chains:'tgg-chains-v1',districts:'tgg-districts-v1',inventory:'tgg-inventory-v1',crew:'tgg-crew-v1',events:'tgg-events-v1',circuits:'tgg-circuits-v1',districtStory:'tgg-district-story-v1',avatar:'tgg-avatar-v1'};
+  const keys={game:'tgg-game-v1',career:'tgg-career-v1',content:'tgg-content-v1',expansion:'tgg-expansion-v1',progression:'tgg-progression-v1',chains:'tgg-chains-v1',districts:'tgg-districts-v1',inventory:'tgg-inventory-v1',crew:'tgg-crew-v1',events:'tgg-events-v1',circuits:'tgg-circuits-v1',districtStory:'tgg-district-story-v1',routeMemory:'tgg-route-memory-v1',avatar:'tgg-avatar-v1'};
   const num=(v,f,min=0)=>{v=Number(v);return Number.isFinite(v)&&v>=min?v:f};
   function read(key,fallback){try{const v=JSON.parse(localStorage.getItem(key)||'null');return v&&typeof v==='object'?v:fallback}catch(e){return fallback}}
   function repair(){
@@ -22,6 +22,14 @@
       districtStory.updatedAt=num(districtStory.updatedAt,Date.now());
       if(typeof districtStory.remoteStoryStatus!=='string')districtStory.remoteStoryStatus='offline_ready';
       localStorage.setItem(keys.districtStory,JSON.stringify(districtStory));
+    }
+    const routeMemory=read(keys.routeMemory,null);if(routeMemory){
+      if(!routeMemory.districts||typeof routeMemory.districts!=='object'||Array.isArray(routeMemory.districts))routeMemory.districts={};
+      if(!Array.isArray(routeMemory.encounters))routeMemory.encounters=[];
+      routeMemory.lastFingerprint=typeof routeMemory.lastFingerprint==='string'?routeMemory.lastFingerprint:null;
+      routeMemory.updatedAt=num(routeMemory.updatedAt,Date.now());
+      if(typeof routeMemory.remoteStatus!=='string')routeMemory.remoteStatus='offline_ready';
+      localStorage.setItem(keys.routeMemory,JSON.stringify(routeMemory));
     }
     const av=read(keys.avatar,null);if(av){
       const validHex=v=>typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v);

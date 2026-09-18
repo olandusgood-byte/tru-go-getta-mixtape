@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.28 TGG VEHICLE FORGE 100';
+  const VERSION='V2.29 TGG WORLD FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

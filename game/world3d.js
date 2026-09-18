@@ -42,6 +42,7 @@
       clock=new THREE.Clock();
       state.ready=true;
       host.classList.add('ready');
+      host.closest('.city')?.classList.add('world3d-active');
       window.dispatchEvent(new CustomEvent('tgg-world3d-ready',{detail:{revision:state.revision}}));
       resize();
       animate();

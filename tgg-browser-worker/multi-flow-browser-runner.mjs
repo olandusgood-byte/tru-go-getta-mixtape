@@ -16,17 +16,12 @@ const FLOW_CONFIG = {
 const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex');
 
 async function browserRpc(page, supabaseUrl, accessToken, fn, body = {}) {
-  return page.evaluate(async ({ supabaseUrl, accessToken, fn, body }) => {
-    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${fn}`, {
-      method: 'POST',
-      headers: { apikey: window.__TGG_SUPABASE_KEY, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-      body: JSON.stringify(body)
-    });
-    const text = await response.text();
-    let json = null;
-    try { json = text ? JSON.parse(text) : null; } catch {}
-    return { ok: response.ok, status: response.status, json, text: text.slice(0, 4000) };
-  }, { supabaseUrl, accessToken, fn, body });
+  const coreUrl = String(process.env.TGG_CORE_URL || supabaseUrl).replace(/\/$/,'');
+  if (fn === 'tgg_get_creator_workspace_manifest' || fn === 'tgg_get_creator_ui_workspace_states' || fn === 'tgg_get_creator_workspace_schema') {
+    const r = await page.evaluate(async ({coreUrl,accessToken}) => { const x=await fetch(coreUrl+'/v1/creator/workspace',{headers:{authorization:'Bearer '+accessToken}}); const json=await x.json().catch(()=>({})); return {ok:x.ok,status:x.status,json,text:JSON.stringify(json)}; }, {coreUrl,accessToken});
+    return r;
+  }
+  return {ok:false,status:501,json:{error:'tgg_core_rpc_migration_pending',function:fn},text:'TGG Core RPC migration pending'};
 }
 
 async function browserAuthUser(page, supabaseUrl, accessToken) {

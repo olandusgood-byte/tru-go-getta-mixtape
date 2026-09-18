@@ -173,7 +173,7 @@
     return car;
   }
   const car=makeCar();
-  car.position.set(5.7,0,4.6);car.rotation.y=Math.PI;scene.add(car);
+  car.position.set(5.7,0,4.6);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
 
   const skylineGlow=new THREE.Mesh(new THREE.RingGeometry(32,49,64),new THREE.MeshBasicMaterial({color:0x2a3040,transparent:true,opacity:.25,side:THREE.DoubleSide}));
   skylineGlow.rotation.x=-Math.PI/2;skylineGlow.position.y=.02;scene.add(skylineGlow);
@@ -285,7 +285,8 @@
       const p=toWorld(s);
       car.position.x=THREE.MathUtils.lerp(car.position.x,p.x,.2);
       car.position.z=THREE.MathUtils.lerp(car.position.z,p.z,.2);
-      car.rotation.y=-((Number(s.heading)||0)*Math.PI/180)+Math.PI/2;
+      car.userData.headingDeg=(Number(s.heading)||0);
+      car.rotation.y=-(car.userData.headingDeg*Math.PI/180);
     }
   }
 
@@ -509,6 +510,7 @@
     isReady:()=>true,
     canMovePercent,
     distanceToCarPercent,
+    getCarHeading:()=>Number(car.userData.headingDeg)||0,
     destinations,
     nearbyDestination,
     interactNearest,

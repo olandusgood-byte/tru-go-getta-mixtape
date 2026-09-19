@@ -71,24 +71,23 @@ if (!DATABASE_URL) {
   async function sourceTruthAudit() {
     const r = await pool.query(`
       select
-        (select count(*)::int from public.tgg_master_sites) as master_sites,
-        (select count(*)::int from public.tgg_master_content) as master_content,
-        (select count(*)::int from public.tgg_master_shared_settings) as shared_settings,
-        (select count(*)::int from public.tgg_master_audit_log) as master_audit_log,
-        (select count(*)::int from public.tgg_master_change_queue) as change_queue,
-        (select count(*)::int from public.tgg_code_components) as code_components,
-        (select count(*)::int from public.tgg_code_snapshots) as code_snapshots,
-        (select count(*)::int from public.tgg_code_issues) as code_issues,
-        (select count(*)::int from public.tgg_final_completion_ledger) as completion_ledger,
-        (select count(*)::int from public.tgg_edge_function_runtime_inventory) as edge_runtime_inventory
+        (select count(*)::int from users) as users,
+        (select count(*)::int from artists) as artists,
+        (select count(*)::int from releases) as releases,
+        (select count(*)::int from tracks) as tracks,
+        (select count(*)::int from media_objects) as media_objects,
+        (select count(*)::int from tgg_jobs) as jobs,
+        (select count(*)::int from tgg_browser_sessions) as browser_sessions,
+        (select count(*)::int from tgg_certifications) as certifications,
+        (select count(*)::int from tgg_audit_log) as audit_log
     `);
     return r.rows[0];
   }
 
   async function generateIdeas(snapshot) {
     const ideas = [];
-    if (Number(snapshot.code_issues || 0) > 0)
-      ideas.push(['resolve_open_code_issues','Resolve open code issues','reliability','Open issues exist in the source inventory and should be resolved before adding duplicate implementations.',100]);
+    if (Number(snapshot.jobs || 0) > 0)
+      ideas.push(['process_active_jobs','Process active TGG jobs','reliability','Queued TGG jobs exist in the runtime inventory and should be processed before adding duplicate implementations.',100]);
     if (Number(snapshot.change_queue || 0) > 0)
       ideas.push(['drain_change_queue','Process pending change queue','automation','Existing queued changes should be reconciled through the source-of-truth pipeline.',90]);
     ideas.push(['continuous_drift_scan','Run continuous architecture drift scan','governance','Compare live runtime, master inventory, code snapshots, and completion ledger before new work.',80]);

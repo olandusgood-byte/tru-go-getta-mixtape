@@ -20,8 +20,9 @@ const runtime=JSON.parse(read('runtime-version.json'));
 const photoreal=read('photoreal-core.js');
 const reality=read('reality-master.js');
 
-assert.match(html,/Game V2\.18 STREET PRESENCE/);
-assert.match(html,/GAME V2\.18 • STREET PRESENCE/);
+assert.match(html,/Game V2\.50 REALITY MASTER/);
+assert.match(html,/GAME V2\.50 • REALITY MASTER/);
+assert.equal(runtime.canonical_runtime,'V2.50 REALITY MASTER CONSOLIDATION');
 for(const id of [
   'city3d','radar3d','radarPlayer','radarCar','vehicleHud','speedValue','gearValue',
   'driveStateValue','playerMoveHud','walkModeValue','walkSpeedValue','navHud','navArrow',

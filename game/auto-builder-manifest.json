@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.42",
-  "module": "GAME-V1.42",
-  "name": "World State Orchestration + Recovery Bus + Autonomous Simulation Scheduler",
+  "version": "1.45",
+  "module": "GAME-V1.45",
+  "name": "Cross-System Memory Fabric + Persistent Relationship Intelligence + Autonomous World Decision Engine",
   "workflow": [
     "BUILD",
     "TEST",
@@ -86,9 +86,13 @@
     "v1_40_world_state_orchestration": true,
     "v1_41_world_recovery_bus": true,
     "v1_42_autonomous_simulation_scheduler": true,
-    "v1_42_local_state": true
+    "v1_42_local_state": true,
+    "v1_43_cross_system_memory_fabric": true,
+    "v1_44_relationship_intelligence": true,
+    "v1_45_autonomous_world_decision_engine": true,
+    "v1_45_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.43 CROSS-SYSTEM MEMORY FABRIC + CONSEQUENCE GRAPH"
+  "next": "V1.46 WORLD ACTION QUEUE + CONSEQUENCE RESOLUTION"
 }

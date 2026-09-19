@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { readFile } from 'node:fs/promises';
 
 const file=pathToFileURL(resolve('tgg-core/public/video-studio/index.html')).href;
 const browser=await chromium.launch({headless:true});
@@ -34,7 +35,7 @@ try{
 
   const source=await page.locator('script[src*="app.js"]').getAttribute('src');
   check(Boolean(source),'editor app script missing');
-  const appSource=await page.evaluate(async(src)=>fetch(src).then(r=>r.text()),source);
+  const appSource=await readFile(resolve('tgg-core/public/video-studio/app.js'),'utf8');
   check(appSource.includes('toggleKeyframe'),'keyframe engine missing');
   check(appSource.includes('data-trim="left"'),'trim handle renderer missing');
   check(appSource.includes('data-fx-amount'),'effect amount control missing');

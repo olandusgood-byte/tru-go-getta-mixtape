@@ -2151,12 +2151,23 @@ async function run(){
   } finally {await browser.close();}
 }
 
-http.createServer((_req,res)=>{
+const statusServer=http.createServer((_req,res)=>{
   res.setHeader('content-type','application/json; charset=utf-8');
   res.end(JSON.stringify(result));
-}).listen(PORT,()=>{
+});
+statusServer.listen(PORT,async()=>{
   console.log(JSON.stringify({tgg_3d_smoke_server:true,port:PORT,target:TARGET}));
-  run().catch(error=>{
+  try{
+    await run();
+  }catch(error){
     result={ok:false,status:'error',target:TARGET,error:error?.message||String(error),updated_at:new Date().toISOString()};
-    console.error(JSON.stringify({tgg_3d_smoke_once:true,...result}));  });
+    console.error(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+    process.exitCode=1;
+  }finally{
+    statusServer.closeAllConnections?.();
+    await Promise.race([
+      new Promise(resolve=>statusServer.close(()=>resolve())),
+      new Promise(resolve=>setTimeout(resolve,1000))
+    ]);
+  }
 });

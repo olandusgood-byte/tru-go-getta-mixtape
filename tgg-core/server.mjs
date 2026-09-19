@@ -153,7 +153,7 @@ app.get('/health', async (_req, res) => {
   try {
     await init();
     const db = DATABASE_URL ? (await pool.query('select now() as now')).rows[0].now : null;
-    res.json({ ok: true, service: 'tgg-core', version: '1.0.0', database: Boolean(db), time: new Date().toISOString() });
+    res.json({ ok: true, service: 'tgg-core', version: '1.0.1', database: Boolean(db), time: new Date().toISOString() });
   } catch (e) { res.status(503).json({ ok: false, service: 'tgg-core', error: e.message }); }
 });
 

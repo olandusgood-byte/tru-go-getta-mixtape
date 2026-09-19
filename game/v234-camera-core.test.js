@@ -9,7 +9,7 @@
   const street=core.preset('street');
   assert(street.id==='street'&&street.shake>=0,'street preset');
   const cinematic=core.preset('cinematic');
-  assert(cinematic.letterbox>0&&cinematic.vignette>street.vignette,'cinematic preset');
+  assert(cinematic.letterbox===0&&cinematic.vignette>street.vignette,'cinematic preset keeps full-screen view');
   const action=core.preset('action');
   assert(action.fovBoost>street.fovBoost&&action.roll>street.roll,'action preset');
   const photo=core.preset('photo');

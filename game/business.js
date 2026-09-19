@@ -166,11 +166,29 @@
     state.selectedAsset=null;
     save();
     const el=document.getElementById('businessDetail');
-    if(el)el.innerHTML='<b>'+esc(x.name)+'</b><span>'+esc(x.type)+'</span><small>'+esc(x.detail)+'</small>';
+    if(el)el.innerHTML='<b>'+esc(x.name)+'</b><span>'+esc(x.type)+'</span><small>'+esc(x.detail)+'</small><div class="business-actions"><button id="businessVisit" class="primary">ENTER LOCATION</button><button id="businessActivity" class="secondary">START ACTIVITY</button></div>';
+    document.getElementById('businessVisit')?.addEventListener('click',()=>visit(x));
+    document.getElementById('businessActivity')?.addEventListener('click',()=>activity(x));
     return x;
+  }
+
+  function visit(item){
+    const x=typeof item==='string'?catalog.find(v=>v.id===item):item;
+    if(!x)return false;
+    const ok=window.TGGGame?.startBusinessActivity?.(x,'visit');
+    if(ok!==false)window.__tggToast?.(String(x.name).toUpperCase()+' VISITED');
+    return ok!==false;
+  }
+
+  function activity(item){
+    const x=typeof item==='string'?catalog.find(v=>v.id===item):item;
+    if(!x)return false;
+    const ok=window.TGGGame?.startBusinessActivity?.(x,'activity');
+    if(ok!==false)window.__tggToast?.(String(x.name).toUpperCase()+' ACTIVITY COMPLETE');
+    return ok!==false;
   }
 
   load();
   sync();
-  window.TGGBusiness={version:VERSION,catalog,state,load,save,sync,available,localActivities,activitySnapshot,open,render,loadAssets,renderAssets,inspectProperty,inspectVehicle,select};
+  window.TGGBusiness={version:VERSION,catalog,state,load,save,sync,available,localActivities,activitySnapshot,open,render,loadAssets,renderAssets,inspectProperty,inspectVehicle,select,visit,activity};
 })();

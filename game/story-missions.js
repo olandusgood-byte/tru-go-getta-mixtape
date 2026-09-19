@@ -450,12 +450,144 @@
     renderWorldHud();
   }
 
+  const OPS_KEY='tgg-story-mission-ops-v422';
+  const opsDefaults=()=>({checkpoint:null,history:[],lastCheckpointAt:0});
+  let ops=opsDefaults();
+
+  function loadOps(){
+    try{
+      const saved=JSON.parse(localStorage.getItem(OPS_KEY)||'{}');
+      ops={...opsDefaults(),...saved};
+      if(!Array.isArray(ops.history))ops.history=[];
+      ops.history=ops.history.slice(-30);
+    }catch{ops=opsDefaults();}
+    return ops;
+  }
+
+  function missionEvidence(reason='SYNC'){
+    const st=status();
+    const target=navigationTarget();
+    const g=gameState();
+    const nav=window.TGGNavigation?.getTarget?.()||null;
+    return {
+      at:Date.now(),
+      reason,
+      chapter:st.chapter,
+      chapterName:st.chapterName,
+      step:Number(st.step)||0,
+      progress:Number(st.progress)||0,
+      completed:!!st.completed,
+      active:!!st.active,
+      objective:st.current?{id:st.current.id,title:st.current.title,detail:st.current.detail,kind:st.current.kind||'action'}:null,
+      position:{x:Number(g.x)||50,y:Number(g.y)||55,inVehicle:!!g.inVehicle},
+      target:target?{label:target.label,x:target.x,y:target.y,radius:target.radius,arrived:!!target.arrived}:null,
+      distanceMeters:Number(nav?.meters)||0,
+      screen:window.TGGGame?.getActiveScreen?.()||null
+    };
+  }
+
+  function missionCheckpoint(reason='AUTO'){
+    const now=Date.now();
+    if(reason==='AUTO'&&now-(Number(ops.lastCheckpointAt)||0)<5000)return ops.checkpoint;
+    const point=missionEvidence(reason);
+    ops.checkpoint=point;
+    ops.lastCheckpointAt=now;
+    if(reason!=='AUTO'){
+      ops.history.push(point);
+      ops.history=ops.history.slice(-30);
+    }
+    try{localStorage.setItem(OPS_KEY,JSON.stringify(ops));}catch{}
+    try{window.TGGVerticalSlice?.checkpoint?.('MISSION '+reason);}catch{}
+    renderMissionOps();
+    return point;
+  }
+
+  function routeGuide(){
+    const st=status();
+    const target=navigationTarget();
+    const nav=window.TGGNavigation?.getTarget?.()||null;
+    const current=st.current||null;
+    let action='OPEN STORY';
+    if(st.completed)action='ARC COMPLETE';
+    else if(current?.kind==='talk')action=target?.arrived?'TALK NOW':'FOLLOW MARKER';
+    else if(current?.go)action=target&&!target.arrived?'FOLLOW MARKER':'OPEN '+String(current.go).toUpperCase();
+    else if(target)action=target.arrived?'INTERACT':'FOLLOW MARKER';
+    else if(st.active)action='CONTINUE OBJECTIVE';
+    return {
+      chapter:st.chapter,
+      progress:st.progress,
+      objective:current?.title||st.chapterName,
+      action,
+      target:target?.label||null,
+      arrived:!!target?.arrived,
+      distanceMeters:Number(nav?.meters)||0,
+      inVehicle:!!gameState().inVehicle
+    };
+  }
+
+  function resumeMission(){
+    const point=ops.checkpoint;
+    const st=status();
+    const sameArc=!!point&&Number(point.chapter)===Number(st.chapter);
+    const resumable=!!point&&!st.completed&&sameArc;
+    if(resumable){
+      window.TGGGame?.show?.('game');
+      notify('MISSION RESUMED — '+(st.current?.title||st.chapterName));
+    }else if(!st.completed){
+      doCurrent();
+    }
+    renderMissionOps();
+    return {resumable,sameArc,checkpoint:point,current:missionEvidence('RESUME-CHECK'),guide:routeGuide()};
+  }
+
+  function ensureMissionOpsHud(){
+    ensureWorldHud();
+    const host=$('storyWorldHud');
+    if(!host)return null;
+    let bar=$('storyMissionOpsV422');
+    if(!bar){
+      bar=document.createElement('div');
+      bar.id='storyMissionOpsV422';
+      bar.className='story-mission-ops-v422';
+      bar.innerHTML='<span id="storyMissionOpsText">MISSION OPS • READY</span><button id="storyMissionResumeV422" type="button">RESUME</button>';
+      host.appendChild(bar);
+      $('storyMissionResumeV422')?.addEventListener('click',resumeMission);
+    }
+    if(!$('storyMissionOpsV422Style')){
+      const style=document.createElement('style');
+      style.id='storyMissionOpsV422Style';
+      style.textContent='.story-mission-ops-v422{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:7px;padding:7px 9px;border:1px solid #ffffff16;border-radius:10px;background:#05070bd9;font-size:8px;font-weight:900;letter-spacing:.06em;color:#cbd3df}.story-mission-ops-v422 button{border:1px solid #c7ff0055;background:#c7ff0012;color:#c7ff00;border-radius:8px;padding:6px 8px;font-size:8px;font-weight:900;cursor:pointer}';
+      document.head.appendChild(style);
+    }
+    return bar;
+  }
+
+  function renderMissionOps(){
+    ensureMissionOpsHud();
+    const text=$('storyMissionOpsText');
+    if(!text)return;
+    const guide=routeGuide();
+    const cp=ops.checkpoint;
+    const cpText=cp?new Date(cp.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'READY';
+    const distance=guide.target?(guide.arrived?'ARRIVED':guide.distanceMeters+'m'):'NO ROUTE';
+    text.textContent='MISSION OPS • '+guide.progress+'% • '+distance+' • CP '+cpText+' • '+guide.action;
+  }
+
   function sync(){
-    syncFirst();syncChapter2();syncChapter3();render();return state;
+    const before=status();
+    syncFirst();syncChapter2();syncChapter3();
+    const after=status();
+    if(before.chapter!==after.chapter||before.step!==after.step||before.completed!==after.completed){
+      missionCheckpoint(after.completed?'COMPLETE':'OBJECTIVE');
+    }else{
+      missionCheckpoint('AUTO');
+    }
+    render();renderMissionOps();return state;
   }
 
   function bind(){
     ensureWorldHud();
+    ensureMissionOpsHud();
     $('storyMissionsBtn')?.addEventListener('click',()=>{window.TGGGame?.show?.('storyMissionsBoard');sync();});
     $('storyMissionBack')?.addEventListener('click',()=>window.TGGGame?.show?.('game'));
     $('storyMissionAction')?.addEventListener('click',doCurrent);
@@ -475,6 +607,7 @@
 
   window.TGGStoryMissions={
     start,startChapter2,startChapter3,sync,go,doCurrent,reset,status,render,snapshot,navigationTarget,
+    missionCheckpoint,resumeMission,routeGuide,missionEvidence,missionOps:()=>({...ops,history:ops.history.slice()}),
     chapters:{
       firstContract:firstSteps.map(x=>({...x})),
       cityBuzz:cityBuzzSteps.map(x=>({...x})),
@@ -482,5 +615,6 @@
     }
   };
   load();
+  loadOps();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
 })();

@@ -180,7 +180,7 @@
     beaconLight.color.setHex(color);
     routeLine.material.color.setHex(color);
     if(target.id!==lastTargetId){
-      beaconLabel.userData.draw?.(String(target.label||'STORY OBJECTIVE').replace(/^(?:CITY BUZZ|CITY TAKEOVER) • /,''),'#'+new THREE.Color(color).getHexString());
+      beaconLabel.userData.draw?.(String(target.label||'STORY OBJECTIVE').replace(/^(?:CITY BUZZ|CITY TAKEOVER|APPOINTMENT) • /,''),'#'+new THREE.Color(color).getHexString());
       lastTargetId=target.id||'';
     }
   }
@@ -210,8 +210,10 @@
   function activeContactId(){
     const st=story.status?.();
     const step=st?.current;
-    if((Number(st?.chapter)||0)<2||!st?.active||step?.kind!=='talk')return '';
-    return step.talk||'';
+    if((Number(st?.chapter)||0)>=2&&st?.active&&step?.kind==='talk')return step.talk||'';
+    const invite=window.TGGSocialSchedule?.activeInvite?.();
+    if(!invite)return '';
+    return invite.contact==='producer'?'kane':invite.contact;
   }
 
   function updateInteraction(){
@@ -258,7 +260,7 @@
     requestAnimationFrame(animate);
     const dt=Math.min(.05,clock.getDelta());
     const t=clock.elapsedTime;
-    const target=story.navigationTarget?.()||null;
+    const target=story.navigationTarget?.()||window.TGGSocialSchedule?.navigationTarget?.()||null;
     setBeaconTarget(target);
     updateRoute(target);
 

@@ -1,0 +1,10 @@
+{
+  "name":"TGG Video Studio",
+  "short_name":"TGG Studio",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#05070a",
+  "theme_color":"#07090d",
+  "description":"TRU GO GETTA professional browser video editing workstation"
+}

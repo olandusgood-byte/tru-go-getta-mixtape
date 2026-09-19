@@ -1,0 +1,134 @@
+name: TGG V3.50 Live Browser Certification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/tgg-v350-browser-cert.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TGG_URL: "https://tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app/?_vercel_share=m6LHf9lssRva3VUWcRZjOCOL8oxq0FUU"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run live V3.50 browser certificate
+        run: |
+          cat > /tmp/tgg-cert.mjs <<'EOF'
+          import { chromium } from 'playwright';
+
+          const url=process.env.TGG_URL;
+          const browser=await chromium.launch({
+            headless:true,
+            args:['--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']
+          });
+          const page=await browser.newPage({viewport:{width:1440,height:1000}});
+          const consoleErrors=[];
+          const pageErrors=[];
+          page.on('console',m=>{ if(m.type()==='error') consoleErrors.push(m.text()); });
+          page.on('pageerror',e=>pageErrors.push(String(e)));
+
+          const response=await page.goto(url,{waitUntil:'domcontentloaded',timeout:90000});
+          await page.waitForLoadState('networkidle',{timeout:60000}).catch(()=>{});
+          if(!response || response.status()>=400) throw new Error('HTTP '+(response?.status()||'NO_RESPONSE'));
+
+          const title=await page.title();
+          if(!/V3\.50 GAME FEEL CINEMATIC MEGA/i.test(title)) throw new Error('Wrong title: '+title);
+          await page.getByText('GAME V3.50 • GAME FEEL + CINEMATIC',{exact:false}).waitFor({timeout:30000});
+
+          const runtime=await page.evaluate(()=>({
+            three:!!window.THREE,
+            game:!!window.TGGGame,
+            game3d:!!window.TGG3D?.isReady?.(),
+            polish:window.TGGVisualPolish?.version||null,
+            realism:window.TGGRealismMega?.version||null,
+            motion:window.TGGMotionRealism?.version||null,
+            world:window.TGGCityWorldMega?.version||null,
+            feel:window.TGGGameFeel?.version||null
+          }));
+          if(!runtime.game || !runtime.game3d) throw new Error('Core runtime not ready: '+JSON.stringify(runtime));
+          for(const [k,v] of Object.entries({
+            polish:runtime.polish,realism:runtime.realism,motion:runtime.motion,world:runtime.world,feel:runtime.feel
+          })) if(!v) throw new Error('Missing runtime layer '+k);
+
+          await page.getByRole('button',{name:'CREATE PLAYER'}).click();
+          await page.locator('#stageName').fill('TGG QA');
+          await page.locator('#styleChoice').selectOption({label:'Artist'});
+          await page.getByRole('button',{name:'ENTER THE CITY'}).click();
+          await page.locator('#game.active').waitFor({timeout:30000});
+
+          const start=await page.evaluate(()=>window.TGGGame.getState());
+          await page.keyboard.down('ArrowUp');
+          await page.waitForTimeout(700);
+          await page.keyboard.up('ArrowUp');
+          await page.waitForTimeout(250);
+          const moved=await page.evaluate((before)=>{
+            const s=window.TGGGame.getState();
+            return {before:{x:before.x,y:before.y},after:{x:s.x,y:s.y},distance:Math.hypot(s.x-before.x,s.y-before.y)};
+          },start);
+          if(!(moved.distance>0.01)) throw new Error('Player movement did not change position: '+JSON.stringify(moved));
+
+          await page.getByRole('button',{name:'ENTER CAR'}).click();
+          await page.waitForTimeout(300);
+          const inVehicle=await page.evaluate(()=>!!window.TGGGame.getState().inVehicle);
+          if(!inVehicle) throw new Error('Vehicle entry failed');
+
+          const beforeDrive=await page.evaluate(()=>window.TGGGame.getState());
+          await page.keyboard.down('ArrowUp');
+          await page.waitForTimeout(900);
+          await page.keyboard.up('ArrowUp');
+          await page.waitForTimeout(250);
+          const driven=await page.evaluate((before)=>{
+            const s=window.TGGGame.getState();
+            return {before:{x:before.x,y:before.y},after:{x:s.x,y:s.y},distance:Math.hypot(s.x-before.x,s.y-before.y),drive:window.TGGGame.getDrivingState?.()};
+          },beforeDrive);
+          if(!(driven.distance>0.01)) throw new Error('Vehicle did not move: '+JSON.stringify(driven));
+
+          await page.getByRole('button',{name:/CAMERA:/}).click();
+          await page.getByRole('button',{name:'HORN'}).click();
+          await page.getByRole('button',{name:'SAVE'}).click();
+
+          const final=await page.evaluate(()=>({
+            active:window.TGGGame.getActiveScreen?.(),
+            state:window.TGGGame.getState?.(),
+            qa:window.TGGMegaQA?.getStatus?.()||null,
+            v350:window.TGGGameFeel?.getStatus?.()||null,
+            weather:window.TGGCityWorldMega?.getStatus?.()||null
+          }));
+
+          const benign=consoleErrors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
+          if(pageErrors.length) throw new Error('Page errors: '+JSON.stringify(pageErrors));
+          if(benign.length) throw new Error('Console errors: '+JSON.stringify(benign));
+
+          console.log('TGG_V350_BROWSER_CERT_PASS '+JSON.stringify({title,runtime,moved,driven,final}));
+          await browser.close();
+          EOF
+          node /tmp/tgg-cert.mjs
+
+      - name: Write certificate artifact
+        if: success()
+        run: |
+          mkdir -p cert
+          printf '%s\n' '{"runtime":"V3.50 GAME FEEL CINEMATIC MEGA","production":"READY","browser":"PASS","checks":["load","runtime-layers","create-player","enter-city","player-movement","vehicle-entry","vehicle-movement","camera","horn","save","console-errors"],"result":"CERTIFIED"}' > cert/v350-live-browser-certificate.json
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: tgg-v350-live-browser-certificate
+          path: cert/v350-live-browser-certificate.json

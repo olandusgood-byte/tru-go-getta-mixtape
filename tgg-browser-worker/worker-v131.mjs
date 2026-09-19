@@ -65,11 +65,12 @@ async function restoreOwnerSessionFromRefreshToken() {
   if (!workerId || !workerToken || ownerSession?.access_token) return Boolean(ownerSession?.access_token);
   try {
     const stored = tggCoreEnabled() ? await tggRestoreOwnerRefreshToken() : await rpc.rpc('tgg_browser_cert_worker_session_restore', { p_worker_id: workerId, p_token: workerToken });
-    if (stored.error || !stored.data?.ok || !stored.data?.refresh_token) return false;
+    const refreshToken = tggCoreEnabled() ? stored?.refresh_token : stored?.data?.refresh_token;
+    if ((tggCoreEnabled() && (!stored?.ok || !refreshToken)) || (!tggCoreEnabled() && (stored?.error || !stored?.data?.ok || !refreshToken))) return false;
     const authClient = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-    const refreshed = await authClient.auth.refreshSession({ refresh_token: stored.data.refresh_token });
+    const refreshed = await authClient.auth.refreshSession({ refresh_token: refreshToken });
     if (refreshed.error || !refreshed.data?.session?.access_token) return false;
-    ownerSession = { access_token: refreshed.data.session.access_token, refresh_token: refreshed.data.session.refresh_token || stored.data.refresh_token };
+    ownerSession = { access_token: refreshed.data.session.access_token, refresh_token: refreshed.data.session.refresh_token || refreshToken };
     await persistOwnerRefreshToken(workerId, workerToken, ownerSession.refresh_token);
     last = { status: 'session_restored', worker_id: workerId, updated_at: new Date().toISOString() };
     return true;

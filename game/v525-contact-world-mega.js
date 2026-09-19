@@ -208,6 +208,7 @@
     const failed=Object.keys(checks).filter(k=>!checks[k]);
     return {version:VERSION,mutationPolicy:POLICY,ok:!failed.length,checks,failed,snapshot:snap,at:new Date().toISOString()};
   }
+  window.TGGV525={version:VERSION,mutationPolicy:POLICY,run,snapshot,syncPresence,acceptCallback,registerCallOutcome,recordMissionOutcome,recordContractOutcome};
   function boot(){
     ensureHud();
     window.addEventListener('tgg:meetup-start',syncPresence);
@@ -221,7 +222,6 @@
     setInterval(syncPresence,350);
     syncPresence();render();
     window.TGGContactWorld={version:VERSION,mutationPolicy:POLICY,syncPresence,clearPresence,registerCallOutcome,acceptCallback,recordMissionOutcome,recordContractOutcome,cinematic,snapshot,run};
-    window.TGGV525={version:VERSION,mutationPolicy:POLICY,run,snapshot,syncPresence,acceptCallback,registerCallOutcome,recordMissionOutcome,recordContractOutcome};
     document.documentElement.dataset.tggV525='on';
     window.dispatchEvent(new CustomEvent('tgg:v525-ready',{detail:run()}));
   }

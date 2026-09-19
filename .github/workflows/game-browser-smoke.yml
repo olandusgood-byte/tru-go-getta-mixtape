@@ -63,6 +63,11 @@ jobs:
           if(!/V4\.50 FAMILY HOUSEHOLD LEGACY WORLD MEGA/i.test(title)) throw new Error('Wrong title: '+title);
 
           await page.waitForFunction(()=>!!window.TGGGame&&!!window.TGG3D?.isReady?.(),{timeout:30000});
+          await page.waitForFunction(()=>[
+            'TGGVisualPolish','TGGRealismMega','TGGMotionRealism','TGGCityWorldMega','TGGGameFeel',
+            'TGGLivingCity','TGGWorldInteraction','TGGLifeSim','TGGOpportunityLoop','TGGWorldSystems',
+            'TGGLifestyle','TGGSocialWorld','TGGRoutineWorld','TGGHomeSocial','TGGFamilyHousehold'
+          ].every(x=>!!window[x]),{timeout:30000});
 
           const layerCheck=await page.evaluate(()=>{
             const required=['TGGVisualPolish','TGGRealismMega','TGGMotionRealism','TGGCityWorldMega','TGGGameFeel','TGGLivingCity','TGGWorldInteraction','TGGLifeSim','TGGOpportunityLoop','TGGWorldSystems','TGGLifestyle','TGGSocialWorld','TGGRoutineWorld','TGGHomeSocial','TGGFamilyHousehold'];

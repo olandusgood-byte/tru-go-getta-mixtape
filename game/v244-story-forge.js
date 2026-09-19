@@ -250,7 +250,7 @@
     v.beacon.visible=true;v.route.visible=true;v.beacon.position.set(w.x,0,w.z);
     v.ring.material.color.copy(color);v.beam.material.color.copy(color);v.marker.material.color.copy(color);v.marker.material.emissive.copy(color);v.light.color.copy(color);v.route.material.color.copy(color);
     const g=gameState(),p=core().toWorld({x:Number(g.x)||50,y:Number(g.y)||50});
-    const T=THREE();routeGeo.setFromPoints([new T.Vector3(p.x,.12,p.z),new T.Vector3(w.x,.12,w.z)]);v.route.computeLineDistances();
+    routeGeo.setFromPoints([new T.Vector3(p.x,.12,p.z),new T.Vector3(w.x,.12,w.z)]);v.route.computeLineDistances();
     const activeContact=step.kind==='talk'?step.contact:null;
     v.contacts.forEach(c=>{const hot=c.id===activeContact;c.light.intensity=hot?5.2:1.15;c.ring.material.opacity=hot ? .9 : .22;c.group.scale.setScalar(hot?1.07:1)});
   }

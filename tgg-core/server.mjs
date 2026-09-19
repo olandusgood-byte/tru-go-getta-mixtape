@@ -1143,8 +1143,10 @@ app.post('/v1/browser/worker-session', async (req,res,next)=>{
     const refresh_token=String(req.body?.refresh_token||'');
     const worker_id=String(req.body?.worker_id||'');
     if(!refresh_token||!worker_id||worker_id!==w.worker_id)return res.status(400).json({error:'worker_session_fields_required'});
-    const encrypted=encryptSecret(refresh_token,w.hash);
-    const r=await pool.query("update tgg_worker_registry set metadata=coalesce(metadata,'{}'::jsonb) || jsonb_build_object('owner_refresh_token_encrypted',$2::text),updated_at=now() where worker_id=$1 and worker_token_hash=$3 returning worker_id",[worker_id,encrypted,w.hash]);
+    const workerHash=String(w.worker_token_hash||'');
+    if(!workerHash)return res.status(500).json({error:'worker_token_hash_missing'});
+    const encrypted=encryptSecret(refresh_token,workerHash);
+    const r=await pool.query("update tgg_worker_registry set metadata=coalesce(metadata,'{}'::jsonb) || jsonb_build_object('owner_refresh_token_encrypted',$2::text),updated_at=now() where worker_id=$1 and worker_token_hash=$3 returning worker_id",[worker_id,encrypted,workerHash]);
     if(!r.rowCount)return res.status(404).json({error:'worker_not_found'});
     res.json({ok:true});
   }catch(e){next(e);}

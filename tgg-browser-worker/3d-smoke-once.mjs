@@ -247,7 +247,7 @@ async function run(){
       await mp.evaluate(()=>{
         window.TGGV245.open('manager',{id:'manager-talk'});
       });
-      await mp.waitForTimeout(80);
+      await mp.waitForTimeout(300);
       const layout=await mp.evaluate(()=>{
         const p=document.getElementById('v245DialoguePanel')?.getBoundingClientRect();
         const choices=[...document.querySelectorAll('.v245-choice')].map(x=>x.getBoundingClientRect());

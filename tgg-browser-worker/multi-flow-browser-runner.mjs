@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
 const FLOW_CONFIG = {
+  certification_runtime: { workspace: 'dashboard', rpc: 'tgg_get_creator_dashboard_bundle' },
   command_center_runtime: { workspace: 'dashboard', rpc: 'tgg_get_creator_dashboard_bundle' },
   expansion_runtime: { workspace: 'expansion', rpc: 'tgg_creator_expansion_control_center' },
   growth_runtime: { workspace: 'growth', rpc: 'tgg_get_creator_growth_workspace_bundle' },

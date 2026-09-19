@@ -316,53 +316,100 @@ app.post('/qa/game-smoke', async (req, res) => {
   }
 });
 
+const enrollmentJobs = new Map();
+function enrollmentPublicState(id){
+  const job=enrollmentJobs.get(id);
+  if(!job)return null;
+  return {id,status:job.status,stage:job.stage||null,error:job.error||null,detail:job.detail||null,result:job.result||null,updated_at:job.updated_at};
+}
+async function runEnrollmentJob(id,email,password){
+  const set=(patch)=>{const prev=enrollmentJobs.get(id)||{};enrollmentJobs.set(id,{...prev,...patch,updated_at:new Date().toISOString()});};
+  try{
+    set({status:'running',stage:'server_signin'});
+    let session=null;
+    let lastError='owner_signin_failed';
+    for(let attempt=1;attempt<=4&&!session;attempt++){
+      try{
+        const ctl=new AbortController();
+        const timer=setTimeout(()=>ctl.abort(),45000);
+        let r;
+        try{
+          r=await fetch(SUPABASE_URL+'/auth/v1/token?grant_type=password',{
+            method:'POST',
+            headers:{'content-type':'application/json','apikey':SUPABASE_KEY},
+            body:JSON.stringify({email,password}),
+            signal:ctl.signal
+          });
+        }finally{clearTimeout(timer)}
+        const raw=await r.text();
+        let body={}; try{body=JSON.parse(raw)}catch{}
+        if(r.ok&&body.access_token&&body.refresh_token){
+          session={access_token:body.access_token,refresh_token:body.refresh_token};
+          break;
+        }
+        lastError=String(body.msg||body.error_description||body.error||('HTTP '+r.status));
+        if(![429,502,503,504].includes(r.status))break;
+      }catch(error){
+        lastError=error?.name==='AbortError'?'Supabase auth timed out':(error?.message||String(error));
+      }
+      set({stage:'server_signin_retry_'+attempt,detail:lastError.slice(0,120)});
+      if(attempt<4)await new Promise(r=>setTimeout(r,attempt*1200));
+    }
+    if(!session)throw new Error(lastError||'owner_signin_failed');
+    set({stage:'owner_enrollment'});
+    const done=await finishOwnerEnrollment(session.access_token,session.refresh_token);
+    if(!done.ok)throw new Error((done.body?.error||'owner_enrollment_failed')+':'+(done.body?.stage||'unknown'));
+    set({status:'complete',stage:'done',result:done.body,error:null,detail:null});
+  }catch(error){
+    const detail=String(error?.message||String(error)||'unknown_error').slice(0,180);
+    console.error(JSON.stringify({tgg_owner_enroll:true,stage:'async_enrollment',ok:false,error:detail}));
+    set({status:'failed',stage:'failed',error:'owner_enrollment_failed',detail});
+  }
+}
+setInterval(()=>{
+  const cutoff=Date.now()-30*60*1000;
+  for(const [id,job] of enrollmentJobs){
+    if(Date.parse(job.updated_at||0)<cutoff)enrollmentJobs.delete(id);
+  }
+},5*60*1000).unref?.();
+
 app.get('/enroll', (_req, res) => {
   res.set('Cache-Control','no-store, no-cache, must-revalidate');
   res.set('Pragma','no-cache');
   const html = [
     '<!doctype html><html><head><meta charset="utf-8"><title>TGG Browser Worker Enrollment</title>',
     '<style>body{font-family:Arial;background:#080808;color:#fff;max-width:720px;margin:50px auto;padding:24px}button{background:#e50914;color:#fff;border:0;padding:12px 18px;border-radius:8px;font-weight:700}input{display:block;width:100%;margin:8px 0;padding:12px;background:#151515;color:#fff;border:1px solid #333;border-radius:8px;box-sizing:border-box}pre{white-space:pre-wrap;background:#111;padding:15px;border-radius:8px}</style></head><body>',
-    '<h1>TGG Self-Hosted Browser Worker</h1><p>Owner-only enrollment. Login retries automatically and certification starts after enrollment.</p>',
+    '<h1>TGG Self-Hosted Browser Worker</h1><p>Owner-only enrollment. The Worker now handles slow Supabase authentication without keeping your browser request open.</p>',
     '<input id="email" type="email" autocomplete="username" placeholder="Owner email"><input id="password" type="password" autocomplete="current-password" placeholder="Owner password"><button id="go">Enroll Worker</button><pre id="out">Waiting...</pre>',
-    '<script>window.__TGG_SUPABASE_URL__=',JSON.stringify(SUPABASE_URL),';window.__TGG_SUPABASE_KEY__=',JSON.stringify(SUPABASE_KEY),';</script>',
-    '<script>(function(){const sleep=ms=>new Promise(r=>setTimeout(r,ms));async function directSignIn(email,password){let last="";for(let i=1;i<=5;i++){try{const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),15000);let r;try{r=await fetch(window.__TGG_SUPABASE_URL__+"/auth/v1/token?grant_type=password",{method:"POST",headers:{"content-type":"application/json","apikey":window.__TGG_SUPABASE_KEY__},body:JSON.stringify({email,password}),signal:ctl.signal});}finally{clearTimeout(timer)}const raw=await r.text();let body={};try{body=JSON.parse(raw)}catch{}if(r.ok&&body.access_token&&body.refresh_token)return body;last=(body.msg||body.error_description||body.error||("HTTP "+r.status));if(![502,503,504].includes(r.status)&&r.status!==429)break;}catch(e){last=e&&e.name==="AbortError"?"timeout":(e.message||String(e));}if(i<5)await sleep(i*900);}throw new Error(last||"Direct sign-in failed");}async function handoff(sess){const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),30000);try{const r=await fetch("/enroll/session",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({access_token:sess.access_token,refresh_token:sess.refresh_token}),signal:ctl.signal});const raw=await r.text();let body={};try{body=JSON.parse(raw)}catch{}if(!r.ok)throw new Error((body.error||("Enrollment HTTP "+r.status))+(body.stage?":"+body.stage:"")+(body.detail?": "+body.detail:""));return body;}finally{clearTimeout(timer)}}document.getElementById("go").addEventListener("click",async function(){const out=document.getElementById("out"),btn=this;btn.disabled=true;try{const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value;if(!email||!password)throw new Error("Enter owner email and password.");out.textContent="Signing in securely...";let sess;try{sess=await directSignIn(email,password);}catch(primary){out.textContent="Primary sign-in route unavailable. Trying secure Worker fallback...";const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),30000);let r;try{r=await fetch("/enroll/password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password}),signal:ctl.signal});}finally{clearTimeout(timer)}const raw=await r.text();let body={};try{body=JSON.parse(raw)}catch{}if(!r.ok)throw new Error((body.error||("Enrollment HTTP "+r.status))+(body.stage?":"+body.stage:"")+(body.detail?": "+body.detail:""));out.textContent="Worker enrolled and certification started.";return;}out.textContent="Owner authenticated. Enrolling Worker...";const body=await handoff(sess);out.textContent=body.session_persisted===false?"Worker enrolled; session active and persistence retrying. Certification started.":"Worker enrolled and browser session bootstrapped. Refresh session persisted. TGG certification started.";}catch(e){out.textContent="ERROR: "+(e&&e.name==="AbortError"?"Enrollment request timed out. Retry once.":(e.message||String(e)));}finally{btn.disabled=false}})})();</script></body></html>'
+    '<script>(function(){const sleep=ms=>new Promise(r=>setTimeout(r,ms));document.getElementById("go").addEventListener("click",async function(){const out=document.getElementById("out"),btn=this;btn.disabled=true;try{const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value;if(!email||!password)throw new Error("Enter owner email and password.");out.textContent="Starting secure enrollment...";const start=await fetch("/enroll/start",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password})});const raw=await start.text();let body={};try{body=JSON.parse(raw)}catch{}if(!start.ok||!body.id)throw new Error(body.error||("Enrollment start HTTP "+start.status));document.getElementById("password").value="";for(let i=0;i<120;i++){await sleep(2000);const r=await fetch("/enroll/status/"+encodeURIComponent(body.id),{cache:"no-store"});const s=await r.json();if(!r.ok)throw new Error(s.error||("Enrollment status HTTP "+r.status));if(s.status==="complete"){const result=s.result||{};out.textContent=result.session_persisted===false?"Worker enrolled; session active and persistence retrying. TGG certification started.":"Worker enrolled and browser session bootstrapped. Refresh session persisted. TGG certification started.";return;}if(s.status==="failed")throw new Error((s.error||"Enrollment failed")+(s.detail?": "+s.detail:""));out.textContent="Enrollment in progress — "+(s.stage||"working")+"...";}throw new Error("Enrollment is still processing. Keep this page open and press Enroll Worker once more to re-check.");}catch(e){out.textContent="ERROR: "+(e.message||String(e));}finally{btn.disabled=false}})})();</script></body></html>'
   ].join('');
   return res.type('html').send(html);
 });
 
+app.post('/enroll/start',(req,res)=>{
+  const email=String(req.body?.email||'').trim();
+  const password=String(req.body?.password||'');
+  if(!email||!password)return res.status(400).json({error:'owner_credentials_required'});
+  const id=crypto.randomBytes(18).toString('base64url');
+  enrollmentJobs.set(id,{status:'queued',stage:'queued',updated_at:new Date().toISOString()});
+  res.status(202).json({ok:true,id,status:'queued'});
+  void runEnrollmentJob(id,email,password);
+});
+
+app.get('/enroll/status/:id',(req,res)=>{
+  const state=enrollmentPublicState(String(req.params.id||''));
+  if(!state)return res.status(404).json({error:'enrollment_not_found'});
+  return res.json(state);
+});
+
 app.post('/enroll/password', async (req,res)=>{
-  try{
-    const email=String(req.body?.email||'').trim();
-    const password=String(req.body?.password||'');
-    if(!email||!password) return res.status(400).json({error:'owner_credentials_required',stage:'request'});
-    console.log(JSON.stringify({tgg_owner_enroll:true,stage:'server_signin_start',email_present:true,password_present:true}));
-    const authClient=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:rpcFetch}});
-    let signIn=null;
-    let lastError=null;
-    for(let attempt=1;attempt<=3;attempt++){
-      try{
-        const result=await authClient.auth.signInWithPassword({email,password});
-        if(!result.error&&result.data?.session){signIn=result;break;}
-        lastError=result.error?.message||'owner_signin_failed';
-        if(!/504|timeout|gateway|fetch|network/i.test(String(lastError))||attempt===3)break;
-      }catch(error){
-        lastError=error?.message||String(error);
-        if(!/504|timeout|gateway|fetch|network|aborted/i.test(String(lastError))||attempt===3)break;
-      }
-      await new Promise(r=>setTimeout(r,attempt*700));
-    }
-    if(!signIn?.data?.session){
-      console.error(JSON.stringify({tgg_owner_enroll:true,stage:'server_signin',ok:false,reason:String(lastError||'owner_signin_failed').slice(0,120)}));
-      return res.status(502).json({error:'owner_signin_failed',stage:'server_signin',detail:String(lastError||'Supabase sign-in failed').slice(0,120)});
-    }
-    const sess=signIn.data.session;
-    const done=await finishOwnerEnrollment(sess.access_token,sess.refresh_token);
-    return res.status(done.status).json(done.body);
-  }catch(error){
-    const detail=String(error?.message||String(error)||'unknown_exception').slice(0,180);
-    console.error(JSON.stringify({tgg_owner_enroll:true,ok:false,stage:'password_exception',error:detail}));
-    return res.status(500).json({error:'owner_enrollment_failed',stage:'password_exception',detail});
-  }
+  const email=String(req.body?.email||'').trim();
+  const password=String(req.body?.password||'');
+  if(!email||!password)return res.status(400).json({error:'owner_credentials_required'});
+  const id=crypto.randomBytes(18).toString('base64url');
+  enrollmentJobs.set(id,{status:'queued',stage:'queued',updated_at:new Date().toISOString()});
+  void runEnrollmentJob(id,email,password);
+  return res.status(202).json({ok:true,id,status:'queued'});
 });
 
 app.post('/enroll/session', async (req,res)=>{

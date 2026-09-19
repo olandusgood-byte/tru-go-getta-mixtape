@@ -1,0 +1,10 @@
+(()=>{const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)));const M={
+'studio-run':{id:'studio-run',title:'Studio Run',steps:['Meet producer','Reach studio','Start session','Finish take'],rewardCash:420,rewardXp:160},
+'street-promo':{id:'street-promo',title:'Street Promo',steps:['Pick up flyers','Hit shop district','Visit park','Return to media'],rewardCash:360,rewardXp:140},
+'rival-challenge':{id:'rival-challenge',title:'Rival Challenge',steps:['Meet rival','Choose response','Reach battle spot','Finish showdown'],rewardCash:520,rewardXp:210},
+'concert-setup':{id:'concert-setup',title:'Concert Setup',steps:['Reach media','Check stage','Hype crowd','Perform set'],rewardCash:700,rewardXp:280},
+'vehicle-run':{id:'vehicle-run',title:'Vehicle Run',steps:['Get in car','Reach business','Reach shops','Return home'],rewardCash:450,rewardXp:170},
+'fan-meet':{id:'fan-meet',title:'Fan Meet',steps:['Reach park','Talk to fans','Take photo','Leave park'],rewardCash:260,rewardXp:125},
+'store-drop':{id:'store-drop',title:'Store Drop',steps:['Reach shops','Check inventory','Meet buyer','Close drop'],rewardCash:480,rewardXp:150},
+'media-interview':{id:'media-interview',title:'Media Interview',steps:['Reach media','Check in','Answer questions','Exit studio'],rewardCash:340,rewardXp:145}
+};function normalize(x={}){return{id:String(x.id||'custom'),title:String(x.title||'Mission'),steps:Array.isArray(x.steps)?x.steps.map(String):[],rewardCash:clamp(Number(x.rewardCash)||0,0,5000),rewardXp:clamp(Number(x.rewardXp)||0,0,2000)}}function mission(id){return normalize(M[id]||M['studio-run'])}function nextStep(m,i){return Math.min((m?.steps?.length||0),Math.max(0,(Number(i)||0)+1))}function canComplete(m,i){return(Number(i)||0)>=(m?.steps?.length||0)}const api={mission,normalize,nextStep,canComplete,missions:Object.keys(M)};globalThis.TGGV237Core=api;if(typeof window!=='undefined')window.TGGV237Core=api})();

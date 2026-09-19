@@ -93,13 +93,13 @@ async function run(){
       add('v219-street-phones',Number(snap.crowd?.streetPhones)>=4,snap.crowd?.streetPhones);
       add('v219-total-presented',Number(snap.crowd?.totalPresented)>=20,snap.crowd?.totalPresented);
 
-      await page.evaluate(()=>window.TGGStreetPresence.setDensity('LOW'));
-      await page.waitForTimeout(160);
+      await page.evaluate(()=>window.TGGVerticalSlice.setQuality('PERF'));
+      await page.waitForTimeout(320);
       snap=await page.evaluate(()=>window.TGGCrowdPresentation.getStatus());
       add('v219-low-density',snap.density==='LOW'&&snap.visibleFans===4,JSON.stringify(snap));
 
-      await page.evaluate(()=>window.TGGStreetPresence.setDensity('HIGH'));
-      await page.waitForTimeout(160);
+      await page.evaluate(()=>window.TGGVerticalSlice.setQuality('HIGH'));
+      await page.waitForTimeout(320);
       snap=await page.evaluate(()=>window.TGGCrowdPresentation.getStatus());
       add('v219-high-density',snap.density==='HIGH'&&snap.visibleFans===12,JSON.stringify(snap));
 

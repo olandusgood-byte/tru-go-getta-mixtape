@@ -342,22 +342,28 @@
     const storyHere=!!storyTarget?.arrived;
     const worldBeat=window.TGGWorldDepth?.beatNavigation?.();
     const beatHere=!!worldBeat?.arrived;
+    const meetup=window.TGGMeetups?.navigationTarget?.();
+    const meetupHere=!!meetup?.arrived;
     const storyStatus=storyHere?window.TGGStoryMissions?.status?.():null;
-    interactButton.disabled=!near&&!person&&!storyHere&&!beatHere;
+    interactButton.disabled=!near&&!person&&!storyHere&&!beatHere&&!meetupHere;
     interactButton.textContent=storyHere
       ?'DO '+String(storyStatus?.current?.title||storyTarget?.label||'STORY OBJECTIVE').toUpperCase()
       :beatHere
         ?'DO '+String(worldBeat?.label||'WORLD BEAT').toUpperCase()
-        :person?'TALK TO '+person.name.toUpperCase():near?'ENTER '+near.label:'INTERACT';
-    interactButton.classList.toggle('nearby',!!near||!!person||storyHere||beatHere);
+        :meetupHere
+          ?'MEET '+String(meetup?.name||'CONTACT').toUpperCase()
+          :person?'TALK TO '+person.name.toUpperCase():near?'ENTER '+near.label:'INTERACT';
+    interactButton.classList.toggle('nearby',!!near||!!person||storyHere||beatHere||meetupHere);
     interactButton.classList.toggle('story-ready',storyHere);
     interactButton.classList.toggle('world-beat-ready',beatHere);
+    interactButton.classList.toggle('meetup-ready',meetupHere);
     return {
       ready:!interactButton.disabled,
       near:near?.id||null,
       person:person?.name||null,
       storyHere,
       beatHere,
+      meetupHere,
       text:String(interactButton.textContent||'').trim()
     };
   }
@@ -375,6 +381,14 @@
       const result=window.TGGWorldDepth?.completeBeat?.();
       if(result!==false&&result?.status!=='travel_required'){
         window.__tggToast?.('WORLD BEAT — '+(worldBeat.label||'COMPLETE'));
+        return true;
+      }
+    }
+    const meetup=window.TGGMeetups?.navigationTarget?.();
+    if(meetup?.arrived){
+      const result=window.TGGMeetups?.completeMeetup?.();
+      if(result?.status==='complete'){
+        window.__tggToast?.('MEETUP — '+(meetup.name||'COMPLETE'));
         return true;
       }
     }

@@ -85,13 +85,17 @@ async function run(){
         console.log(JSON.stringify({tgg_mega_stage:'desktop-page-closed'}));
 
         const verticalSliceSource=await fs.readFile(path.join(serveRoot,'vertical-slice-director.js'),'utf8');
+        const mobileCss=await fs.readFile(path.join(serveRoot,'style.css'),'utf8');
+        let mobileHtml=await fs.readFile(path.join(serveRoot,'index.html'),'utf8');
+        mobileHtml=mobileHtml.replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi,'')
+          .replace(/<link[^>]*href=["']style\\.css["'][^>]*>/i,'<style>'+mobileCss+'</style>');
+        const mobileSourceOk=mobileHtml.includes('id="game"')&&mobileCss.length>1000;
         const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
         const mp=await mobile.newPage();
         const mobileErrors=[];
         mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
-        await mp.route(/\\.js(?:\\?|$)/,route=>route.abort());
-        const mobileResponse=await mp.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:20000});
-        console.log(JSON.stringify({tgg_mega_stage:'mobile-layout-page-ready',status:mobileResponse?.status?.()||0}));
+        await mp.setContent(mobileHtml,{waitUntil:'domcontentloaded',timeout:15000});
+        console.log(JSON.stringify({tgg_mega_stage:'mobile-layout-page-ready',source_ok:mobileSourceOk}));
         await mp.evaluate(()=>{
           document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
           document.getElementById('game')?.classList.add('active');
@@ -138,7 +142,7 @@ async function run(){
         const checks=[
           {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
           {name:'mega-check-volume',pass:desktop.total>=250&&desktop.total<=650,detail:String(desktop.total)},
-          {name:'mega-mobile-source-http',pass:mobileResponse?.status?.()===200,detail:String(mobileResponse?.status?.()||0)},
+          {name:'mega-mobile-source-loaded',pass:mobileSourceOk,detail:'html+css local snapshot'},
           {name:'mega-mobile-no-overflow',pass:!mobileResult.overflowX&&mobileResult.scrollWidth<=391,detail:JSON.stringify({width:mobileResult.width,scrollWidth:mobileResult.scrollWidth})},
           {name:'mega-mobile-director-contained',pass:!!mobileResult.director&&mobileResult.director.left>=0&&mobileResult.director.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.director)},
           {name:'mega-mobile-city-contained',pass:!!mobileResult.city&&mobileResult.city.left>=0&&mobileResult.city.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.city)},

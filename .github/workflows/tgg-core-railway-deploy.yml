@@ -1,15 +1,6 @@
 name: TGG Core Railway Deploy
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "tgg-core/**"
-      - "tgg-browser-worker/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/tgg-core-railway-deploy.yml"
   workflow_dispatch:
 
 permissions:

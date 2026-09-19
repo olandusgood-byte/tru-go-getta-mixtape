@@ -127,6 +127,19 @@
     return resolved;
   }
   function closeChoice(){state.pending=null;save();renderPanel();return true}
+  function adjustAffinity(name,delta=0,reason='world-outcome'){
+    if(!PROFILES[name])return {ok:false,status:'unknown_npc',name};
+    const rel=state.relations[name];
+    const before=Number(rel.affinity)||0;
+    rel.affinity=clamp(before+(Number(delta)||0));
+    const entry={type:'affinity',name,delta:Number(delta)||0,before,after:rel.affinity,reason,at:Date.now()};
+    state.history.push(entry);
+    state.history=state.history.slice(-50);
+    state.lastResolved={...(state.lastResolved||{}),name,affinity:rel.affinity,affinityDelta:entry.delta,reason,at:entry.at};
+    save();renderPanel();
+    window.dispatchEvent(new CustomEvent('tgg:npc-affinity-adjusted',{detail:entry}));
+    return {ok:rel.affinity!==before||entry.delta===0,status:'adjusted',...entry};
+  }
   function relationship(name){return PROFILES[name]?{name,profile:{...PROFILES[name]},relation:{...state.relations[name]},propertyLevel:propertyLevel(name),npcState:npcState(name)}:null}
   function snapshot(){
     return {
@@ -149,7 +162,7 @@
   }
   function boot(){
     ensurePanel();renderPanel();
-    window.TGGNPCRelations={version:VERSION,mutationPolicy:POLICY,interact,resolveChoice,closeChoice,relationship,choicePreview,snapshot,run};
+    window.TGGNPCRelations={version:VERSION,mutationPolicy:POLICY,interact,resolveChoice,adjustAffinity,closeChoice,relationship,choicePreview,snapshot,run};
     window.TGGV497={version:VERSION,mutationPolicy:POLICY,run,snapshot};
     document.documentElement.dataset.tggV497='on';
     window.dispatchEvent(new CustomEvent('tgg:v497-ready',{detail:run()}));

@@ -11,8 +11,11 @@ if (!DATABASE_URL) {
   const pool = new Pool({
     connectionString: DATABASE_URL,
     ssl: process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false },
-    max: 3
+    max: 3,
+    connectionTimeoutMillis: 5000,
+    idleTimeoutMillis: 30000
   });
+  pool.on('error', err => console.error('[TGG Autopilot] pool error', err.message));
 
   async function ensureSchema() {
     await pool.query(`
@@ -189,6 +192,7 @@ if (!DATABASE_URL) {
     }
   }
 
+  console.log(JSON.stringify({service:'tgg-autopilot',event:'scheduler_start',interval_ms:INTERVAL_MS}));
   void tick();
   setInterval(() => void tick(), INTERVAL_MS);
   console.log(JSON.stringify({service:'tgg-autopilot',embedded:true,instance_id:INSTANCE_ID,interval_ms:INTERVAL_MS}));

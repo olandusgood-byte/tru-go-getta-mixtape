@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "5.41",
-  "module": "GAME-V5.41-WORLD-CONTINUITY",
-  "name": "V5.41 World Continuity Checkpoint",
+  "version": "5.56",
+  "module": "GAME-V5.56-BULK",
+  "name": "Bulk V5.42-V5.56 Release Browser Live Viewer Audits Gates",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -174,7 +174,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V5.42",
+  "next": "V5.57",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

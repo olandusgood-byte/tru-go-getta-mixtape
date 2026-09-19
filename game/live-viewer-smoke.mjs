@@ -23,18 +23,18 @@ try{
 
   const launchState=await page.locator('#launch').evaluate(el=>({
     disabled:!!el.disabled,
-    visible:!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length),
-    bound:typeof el.onclick==='function'
+    visible:!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length)
   }));
-  if(launchState.disabled||!launchState.visible||!launchState.bound)throw new Error('LiveViewer launch control unavailable '+JSON.stringify(launchState));
-  const launchResult=await page.evaluate(()=>{
-    const el=document.getElementById('launch');
+  if(launchState.disabled||!launchState.visible)throw new Error('LiveViewer launch control unavailable '+JSON.stringify(launchState));
+
+  const launchResult=await page.evaluate(async()=>{
     const action=document.getElementById('action');
-    if(!el||typeof el.onclick!=='function')return{bound:false,action:action?.textContent||''};
-    el.click();
-    return{bound:true,action:action?.textContent||''};
+    const fn=window.TGGLiveViewerLaunch;
+    if(typeof fn!=='function')return{runtime:false,action:action?.textContent||''};
+    await fn();
+    return{runtime:true,action:action?.textContent||''};
   });
-  if(!launchResult.bound||!/Enter your real TGG session token first/i.test(launchResult.action))throw new Error('Real-session guard failed: '+JSON.stringify(launchResult));
+  if(!launchResult.runtime||!/Enter your real TGG session token first/i.test(launchResult.action))throw new Error('Real-session guard failed: '+JSON.stringify(launchResult));
   const guard=launchResult.action;
 
   const source=await page.content();

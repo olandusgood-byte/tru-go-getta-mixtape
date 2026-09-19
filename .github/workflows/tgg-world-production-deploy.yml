@@ -46,9 +46,9 @@ jobs:
         run: |
           set -euo pipefail
           grep -q "TGG_3D_V218_ROOT: 'game'" .github/workflows/game-v218-mega-regression.yml
-          grep -q 'V3.00 FINAL MEGA BUILD' game/runtime-version.json
-          grep -q '"base_runtime": "V2.50 REALITY MASTER CONSOLIDATION"' game/runtime-version.json
-          grep -q 'GAME V2.50' game/index.html
+          grep -q 'V4.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA' game/runtime-version.json
+          grep -q '"base_runtime": "V4.00 WORLD SYSTEMS"' game/runtime-version.json
+          grep -q 'GAME V4.10' game/index.html
           grep -q 'window.TGGMegaQA' game/mega-qa.js
           echo "verified=true" >> "$GITHUB_OUTPUT"
 
@@ -93,13 +93,13 @@ jobs:
           for attempt in 1 2 3 4 5; do
             body="$(vercel curl "$url" 2>/tmp/vercel-curl.log || true)"
             cat /tmp/vercel-curl.log || true
-            if grep -q 'GAME V2.50' <<<"$body" && grep -q 'city3d' <<<"$body"; then
+            if grep -q 'GAME V4.10' <<<"$body" && grep -q 'city3d' <<<"$body"; then
               echo "TGG World production deployment verified: $url"
               exit 0
             fi
             sleep 5
           done
-          echo "Production deployment did not expose the expected V2.50 contract." >&2
+          echo "Production deployment did not expose the expected V4.10 contract." >&2
           exit 1
 
       - name: Credential status

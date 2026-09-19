@@ -1,11 +1,6 @@
-name: TGG World V4.10 Production Deploy
+name: TGG World V4.10 Manual Deploy
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/tgg-world-v350-prod.yml"
-      - "game/**"
   workflow_dispatch:
 
 permissions:

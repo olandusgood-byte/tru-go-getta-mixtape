@@ -3,7 +3,7 @@
   "canonical_runtime": "V3.70 NPC TRAFFIC WORLD INTERACTION MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v360_production_deployed_browser_certified",
+  "verification": "v370_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V3.60 LIVING CITY REACTIVE WORLD MEGA",
   "features": [
@@ -104,7 +104,7 @@
     "keyboard_street_talk_hook",
     "world_heat_interaction_hook"
   ],
-  "release_gate": "v370_validation_pending",
+  "release_gate": "closed_certified",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -112,10 +112,10 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PENDING_V370_REVALIDATION",
+    "browser_gate": "PASS",
     "public_alias": "https://tgg-world-play.vercel.app",
-    "browser_cert_run_id": 35441849417,
-    "browser_cert_artifact_id": 10584062941,
-    "browser_cert_artifact_digest": "sha256:19b1d42a03fc64d93113d4ae9ec1d182dde12f3999656e430e4be5be8286f68b"
+    "browser_cert_run_id": 35442078084,
+    "browser_cert_artifact_id": 10583868279,
+    "browser_cert_artifact_digest": "sha256:d5413641bed206a2bd870cd7e462341ea48a826279e2d76d1d224d255e84aede"
   }
 }

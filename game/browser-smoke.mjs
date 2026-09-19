@@ -468,6 +468,54 @@ try{
     throw new Error('V5.02 incoming call conversation failed '+JSON.stringify(incomingResolved));
   }
 
+  await page.waitForFunction(()=>!!window.TGGMessages&&!!window.TGGV503,{timeout:15000});
+  const messageQueued=await page.evaluate(()=>{
+    const run=window.TGGV503.run();
+    const before=window.TGGMessages.snapshot();
+    const sent=window.TGGMessages.sendMessage('M','Meet me downtown. We need to talk about the next move.','career',{source:'browser-smoke'});
+    const after=window.TGGMessages.snapshot();
+    return {run,before,sent,after};
+  });
+  if(messageQueued.run?.ok!==true||
+     messageQueued.sent?.status!=='delivered'||
+     !(messageQueued.after?.unread?.M>messageQueued.before?.unread?.M)){
+    throw new Error('V5.03 system message delivery failed '+JSON.stringify(messageQueued));
+  }
+  await page.locator('#v501PhoneBtn').click();
+  await page.waitForTimeout(80);
+  const messageAction=page.locator('#v501Contacts [data-v501-message="M"]');
+  if(await messageAction.count()!==1)throw new Error('V5.03 MESSAGE action missing from TGG Phone');
+  await messageAction.click();
+  await page.waitForTimeout(80);
+  const threadOpen=await page.evaluate(()=>({
+    snap:window.TGGMessages.snapshot(),
+    hidden:document.getElementById('v503Messages')?.hidden,
+    title:document.getElementById('v503Title')?.textContent||'',
+    bubbles:document.querySelectorAll('#v503Conversation .v503-msg').length
+  }));
+  if(threadOpen.hidden!==false||
+     threadOpen.snap?.active!=='M'||
+     threadOpen.snap?.unread?.M!==0||
+     !/^M\s+•\s+MESSAGES/.test(threadOpen.title)||
+     threadOpen.bubbles<1){
+    throw new Error('V5.03 thread open failed '+JSON.stringify(threadOpen));
+  }
+  await page.locator('#v503Messages [data-v503-reply="LOCKED IN"]').click();
+  await page.waitForTimeout(80);
+  const messageReply=await page.evaluate(()=>{
+    const snap=window.TGGMessages.snapshot();
+    const thread=snap.threads?.M||[];
+    return {snap,last:thread[thread.length-1]||null};
+  });
+  if(messageReply.last?.direction!=='out'||messageReply.last?.text!=='LOCKED IN'){
+    throw new Error('V5.03 quick reply persistence failed '+JSON.stringify(messageReply));
+  }
+  await page.locator('#v503Close').click();
+  const messagesClosed=await page.evaluate(()=>({snap:window.TGGMessages.snapshot(),hidden:document.getElementById('v503Messages')?.hidden}));
+  if(messagesClosed.hidden!==true||messagesClosed.snap?.active!==null){
+    throw new Error('V5.03 messages close failed '+JSON.stringify(messagesClosed));
+  }
+
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
@@ -606,7 +654,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards,incomingCall:incomingAccepted.calls.lastResult.call.name}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards,incomingCall:incomingAccepted.calls.lastResult.call.name,messageThread:messageReply.last.name,messageReply:messageReply.last.text}));
 }finally{
   await browser.close();
 }

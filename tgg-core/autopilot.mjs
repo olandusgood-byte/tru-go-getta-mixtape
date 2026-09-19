@@ -2,7 +2,7 @@ import pg from 'pg';
 
 const { Pool } = pg;
 const DATABASE_URL = process.env.DATABASE_URL;
-const INTERVAL_MS = Math.max(15000, Number(process.env.TGG_AUTOPILOT_INTERVAL_MS || 60000));
+const INTERVAL_MS = Math.max(15000, Number(process.env.TGG_AUTOPILOT_INTERVAL_MS || 15000));
 const INSTANCE_ID = process.env.TGG_AUTOPILOT_ID || 'tgg-core-autopilot';
 
 if (!DATABASE_URL) {

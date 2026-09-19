@@ -4,7 +4,7 @@ const { Pool } = pg;
 const DATABASE_URL = process.env.DATABASE_URL;
 const INTERVAL_MS = Math.max(15000, Number(process.env.TGG_AUTOPILOT_INTERVAL_MS || 15000));
 const INSTANCE_ID = process.env.TGG_AUTOPILOT_ID || 'tgg-core-autopilot';
-const SUPABASE_URL = String(process.env.TGG_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\\/$/, '');
+const SUPABASE_URL = String(process.env.TGG_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.TGG_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '');
 
 if (!DATABASE_URL) {

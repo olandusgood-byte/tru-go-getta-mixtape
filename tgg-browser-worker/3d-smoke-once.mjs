@@ -32,6 +32,7 @@ const MEGA_QA_ONLY=String(process.env.TGG_3D_MEGA_QA_ONLY||'0')==='1';
 const STREET_PRESENCE_ONLY=String(process.env.TGG_3D_STREET_PRESENCE_ONLY||'0')==='1';
 const V218_MEGA_ONLY=String(process.env.TGG_3D_V218_MEGA_ONLY||'0')==='1';
 const V219_CROWD_ONLY=String(process.env.TGG_3D_V219_CROWD_ONLY||'0')==='1';
+const V220_CINEMATIC_ONLY=String(process.env.TGG_3D_V220_CINEMATIC_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function startV218SnapshotServer(){
@@ -67,6 +68,163 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(V220_CINEMATIC_ONLY){
+      const consoleErrors=[];const pageErrors=[];const failedResources=[];
+      page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+      page.on('requestfailed',req=>failedResources.push(req.url()));
+      const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:30000});
+      await page.waitForFunction(()=>window.TGG3D?.isReady?.()&&window.TGGStoryMissions&&window.TGGStoryCinematics&&window.TGGCrowdPresentation?.getStatus?.(),undefined,{polling:100,timeout:30000});
+      await page.waitForTimeout(450);
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
+
+      await page.evaluate(()=>{
+        window.TGGGame?.show?.('game');
+        window.TGG3D?.setCameraMode?.('top',true);
+      });
+      await page.waitForTimeout(120);
+
+      let snap=await page.evaluate(()=>({
+        title:document.title,
+        version:window.TGGStoryCinematics?.getState?.().version,
+        api:typeof window.TGGStoryCinematics?.show==='function'&&typeof window.TGGStoryCinematics?.hide==='function'&&typeof window.TGGStoryCinematics?.refreshCrowd==='function',
+        root:!!document.getElementById('storyCinematic'),
+        styles:!!document.getElementById('storyCinematicStyles'),
+        camera:window.TGG3D?.getCameraMode?.()
+      }));
+      add('v220-title',snap.title.includes('V2.20'),snap.title);
+      add('v220-version',snap.version==='V2.20',snap.version);
+      add('v220-api',snap.api);
+      add('v220-root',snap.root);
+      add('v220-styles',snap.styles);
+      add('v220-camera-baseline',snap.camera==='top',snap.camera);
+
+      await page.evaluate(()=>window.TGGStoryMissions.start());
+      await page.waitForTimeout(180);
+      snap=await page.evaluate(()=>({
+        cine:window.TGGStoryCinematics.getState(),
+        kicker:document.getElementById('storyCineKicker')?.textContent||'',
+        title:document.getElementById('storyCineTitle')?.textContent||'',
+        badge:document.getElementById('storyCineBadge')?.textContent||'',
+        type:document.getElementById('storyCineType')?.textContent||'',
+        camera:window.TGG3D?.getCameraMode?.()
+      }));
+      add('v220-story-event-integration',snap.cine?.lastEvent?.type==='chapter-start'&&snap.cine?.lastEvent?.chapter===1,JSON.stringify(snap.cine));
+      add('v220-chapter-visible',snap.cine?.visible===true&&String(snap.cine?.className||'').includes('chapter'),snap.cine?.className);
+      add('v220-chapter-copy',snap.kicker.includes('CHAPTER 1')&&snap.title==='FIRST CONTRACT',JSON.stringify(snap));
+      add('v220-chapter-badge',snap.badge==='01',snap.badge);
+      add('v220-chapter-type',snap.type==='STORY CHAPTER',snap.type);
+      add('v220-chapter-camera-cue',snap.camera==='orbit',snap.camera);
+
+      await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tgg-story-event',{detail:{
+        type:'objective',chapter:2,title:'DRIVE TO STUDIO ROW',detail:'TAKE THE CAR OR WALK TO STUDIO ROW.'
+      }})));
+      await page.waitForTimeout(150);
+      snap=await page.evaluate(()=>({
+        cine:window.TGGStoryCinematics.getState(),
+        kicker:document.getElementById('storyCineKicker')?.textContent||'',
+        title:document.getElementById('storyCineTitle')?.textContent||'',
+        type:document.getElementById('storyCineType')?.textContent||'',
+        camera:window.TGG3D?.getCameraMode?.()
+      }));
+      add('v220-objective-visible',snap.cine?.visible===true&&String(snap.cine?.className||'').includes('objective'),snap.cine?.className);
+      add('v220-objective-copy',snap.kicker==='NEW OBJECTIVE'&&snap.title==='DRIVE TO STUDIO ROW',JSON.stringify(snap));
+      add('v220-objective-type',snap.type==='TRAVEL',snap.type);
+      add('v220-objective-camera-cue',snap.camera==='chase',snap.camera);
+
+      await page.waitForTimeout(1750);
+      snap=await page.evaluate(()=>({camera:window.TGG3D?.getCameraMode?.(),visible:window.TGGStoryCinematics.getState().visible}));
+      add('v220-camera-restore',snap.camera==='orbit'||snap.camera==='top',JSON.stringify(snap));
+
+      await page.evaluate(()=>window.TGGWorldLife?.startShow?.());
+      await page.waitForTimeout(220);
+      snap=await page.evaluate(()=>({
+        crowd:window.TGGCrowdPresentation?.getStatus?.(),
+        text:window.TGGStoryCinematics?.refreshCrowd?.(),
+        rendered:document.getElementById('storyCineCrowd')?.textContent||''
+      }));
+      add('v220-crowd-focus',snap.crowd?.focus==='stage',JSON.stringify(snap.crowd));
+      add('v220-crowd-metadata',/FANS|CHEERING|RECORDING|CITY WATCHING/.test(String(snap.text)),JSON.stringify(snap));
+      add('v220-crowd-rendered',snap.rendered===snap.text,JSON.stringify(snap));
+
+      await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tgg-story-event',{detail:{
+        type:'chapter-complete',chapter:2,title:'CITY BUZZ COMPLETE',detail:'+$1800 • +450 XP • +175 REP'
+      }})));
+      await page.waitForTimeout(160);
+      snap=await page.evaluate(()=>({
+        cine:window.TGGStoryCinematics.getState(),
+        kicker:document.getElementById('storyCineKicker')?.textContent||'',
+        title:document.getElementById('storyCineTitle')?.textContent||'',
+        badge:document.getElementById('storyCineBadge')?.textContent||'',
+        type:document.getElementById('storyCineType')?.textContent||''
+      }));
+      add('v220-complete-visible',snap.cine?.visible===true&&String(snap.cine?.className||'').includes('complete'),snap.cine?.className);
+      add('v220-complete-copy',snap.kicker.includes('MISSION PASSED')&&snap.title==='CITY BUZZ COMPLETE',JSON.stringify(snap));
+      add('v220-complete-badge',snap.badge==='✓',snap.badge);
+      add('v220-complete-type',snap.type==='MISSION PASSED',snap.type);
+
+      snap=await page.evaluate(()=>{
+        const payload={type:'objective',chapter:3,title:'LINK DJ V',detail:'GET TO THE CLUB DISTRICT.'};
+        const first=window.TGGStoryCinematics.show(payload);
+        const second=window.TGGStoryCinematics.show(payload);
+        return {first,second,last:window.TGGStoryCinematics.getState().lastEvent};
+      });
+      add('v220-duplicate-suppression',snap.first===true&&snap.second===false,JSON.stringify(snap));
+
+      await page.evaluate(()=>window.TGGStoryCinematics.hide());
+      await page.waitForTimeout(80);
+      snap=await page.evaluate(()=>window.TGGStoryCinematics.getState());
+      add('v220-hide',snap.visible===false,JSON.stringify(snap));
+
+      await page.setViewportSize({width:390,height:844});
+      await page.evaluate(()=>window.TGGStoryCinematics.show({
+        type:'objective',chapter:2,title:'DRIVE TO STUDIO ROW',detail:'TAKE THE CAR OR WALK TO STUDIO ROW.'
+      }));
+      await page.waitForTimeout(100);
+      const mobileObjective=await page.evaluate(()=>{
+        const root=document.getElementById('storyCinematic')?.getBoundingClientRect();
+        const frame=document.querySelector('#storyCinematic .story-cine-frame')?.getBoundingClientRect();
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          overflowX:document.documentElement.scrollWidth>innerWidth+1,
+          root:root?{left:root.left,right:root.right,width:root.width}:null,
+          frame:frame?{left:frame.left,right:frame.right,width:frame.width,height:frame.height}:null
+        };
+      });
+      add('v220-mobile-objective-no-overflow',mobileObjective.overflowX===false&&mobileObjective.scrollWidth<=391,JSON.stringify(mobileObjective));
+      add('v220-mobile-objective-contained',!!mobileObjective.frame&&mobileObjective.frame.left>=0&&mobileObjective.frame.right<=mobileObjective.width+1,JSON.stringify(mobileObjective.frame));
+
+      await page.evaluate(()=>window.TGGStoryCinematics.show({
+        type:'chapter-start',chapter:3,title:'CITY TAKEOVER',detail:'TURN CITY BUZZ INTO REAL MOMENTUM.'
+      }));
+      await page.waitForTimeout(100);
+      const mobileChapter=await page.evaluate(()=>{
+        const frame=document.querySelector('#storyCinematic .story-cine-frame')?.getBoundingClientRect();
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          overflowX:document.documentElement.scrollWidth>innerWidth+1,
+          frame:frame?{left:frame.left,right:frame.right,width:frame.width,height:frame.height}:null
+        };
+      });
+      add('v220-mobile-chapter-no-overflow',mobileChapter.overflowX===false&&mobileChapter.scrollWidth<=391,JSON.stringify(mobileChapter));
+      add('v220-mobile-chapter-contained',!!mobileChapter.frame&&mobileChapter.frame.left>=0&&mobileChapter.frame.right<=mobileChapter.width+1,JSON.stringify(mobileChapter.frame));
+
+      result={
+        ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&failedResources.length===0,
+        status:'done',
+        mode:'v220_cinematic_story_harness',
+        target:TARGET,
+        http_status:response?.status?.()||0,
+        checks,
+        console_errors:consoleErrors,
+        page_errors:pageErrors,
+        failed_resources:failedResources,
+        updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();return;
+    }
 
     if(V219_CROWD_ONLY){
       const consoleErrors=[];const pageErrors=[];const failedResources=[];

@@ -75,6 +75,7 @@
     return {get:()=>tier,set:apply};
   }
   ready().then(()=>{
+    try {
     const THREE=window.THREE,api=window.TGG3D,{scene,renderer,camera,player,npc,car}=api;
     renderer.physicallyCorrectLights=true;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;
     addHumanDetail(THREE,player,0);addHumanDetail(THREE,npc,1);(api.pedestrians||[]).forEach((h,i)=>addHumanDetail(THREE,h,i+2));
@@ -85,5 +86,9 @@
     const status={version:VERSION,mode:'reality-master-consolidated',layers:['human-anatomy-detail','skin-face-eyes-hair','hands-shoes-clothing-materials','vehicle-clearcoat-glass-trim','headlight-cones','street-curbs-grates','storefront-glass-awnings','trees-utility-wires','surface-decals-puddles','atmospheric-moisture','camera-inertia','speed-fov','adaptive-fps-quality'],quality:quality.get()};
     window.TGGRealityMaster={...status,getStatus:()=>({...status,quality:quality.get()}),setQuality:q=>{quality.set(q);status.quality=quality.get();return status.quality}};
     document.documentElement.dataset.tggRealityMaster='v250';window.dispatchEvent(new CustomEvent('tgg:reality-master-ready',{detail:window.TGGRealityMaster.getStatus()}));
-  });
+    } catch(error) {
+      window.TGGRealityMaster={version:VERSION,mode:'safe-fallback',error:String(error?.message||error),getStatus(){return {version:VERSION,mode:'safe-fallback'}}};
+      document.documentElement.dataset.tggRealityMaster='fallback';
+    }
+  }).catch(()=>{ document.documentElement.dataset.tggRealityMaster='fallback'; });
 })();

@@ -874,7 +874,8 @@ try{
     throw new Error('Player movement failed '+JSON.stringify(diagnostics));
   }
 
-  await page.getByRole('button',{name:'ENTER CAR'}).click();
+  await clearIncomingCallOverlay('pre vehicle entry');
+  await clickRuntimeControl('#vehicleBtn','Vehicle entry');
   await page.waitForTimeout(300);
   if(!(await page.evaluate(()=>!!window.TGGGame.getState().inVehicle)))throw new Error('Vehicle entry failed');
   const handlingContract=await page.evaluate(()=>({

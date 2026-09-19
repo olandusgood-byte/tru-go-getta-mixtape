@@ -54,6 +54,52 @@ async function coreOwnerSessionStore(refreshToken) {
     return response.ok;
   } catch { return false; }
 }
+
+async function coreEnsureCertification() {
+  const coreUrl = String(process.env.TGG_CORE_URL || '').replace(/\/$/, '');
+  if (!coreUrl || !workerId || !workerToken || !ownerSession?.access_token) return false;
+  try {
+    const { data, error } = await rpc.auth.getUser(ownerSession.access_token);
+    if (error || !data?.user?.email) return false;
+    const response = await fetch(coreUrl + '/v1/workers/jobs/ensure-certification', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-tgg-worker-id': workerId, 'x-tgg-worker-token': workerToken },
+      body: JSON.stringify({ email: data.user.email, certification_type: 'protected_audio_runtime' }),
+      signal: AbortSignal.timeout(10000)
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) return false;
+    last = { status: 'certification_ready', job_id: payload?.job?.id || null, updated_at: new Date().toISOString() };
+    return true;
+  } catch { return false; }
+}
+
+async function coreClaimJob() {
+  const coreUrl = String(process.env.TGG_CORE_URL || '').replace(/\/$/, '');
+  if (!coreUrl || !workerId || !workerToken) return null;
+  const response = await fetch(coreUrl + '/v1/workers/jobs/claim', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-tgg-worker-id': workerId, 'x-tgg-worker-token': workerToken },
+    body: JSON.stringify({}), signal: AbortSignal.timeout(10000)
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || 'TGG_CORE_JOB_CLAIM_FAILED');
+  return payload?.job || null;
+}
+
+async function coreCompleteJob(job, verdict, result, evidence) {
+  const coreUrl = String(process.env.TGG_CORE_URL || '').replace(/\/$/, '');
+  if (!coreUrl || !workerId || !workerToken) throw new Error('TGG_CORE_NOT_CONFIGURED');
+  const response = await fetch(coreUrl + '/v1/workers/jobs/complete', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-tgg-worker-id': workerId, 'x-tgg-worker-token': workerToken },
+    body: JSON.stringify({ job_id: job.id, lease_token: job.lease_token, verdict, result, evidence }),
+    signal: AbortSignal.timeout(10000)
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || 'TGG_CORE_JOB_COMPLETE_FAILED');
+  return payload?.job || null;
+}
 let running = false;
 let last = { status: 'idle', updated_at: new Date().toISOString() };
 const rpc = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -87,11 +133,7 @@ app.post('/bootstrap', async (req, res) => {
   return res.json({ ok: true, worker_id: id, version: RUNTIME_VERSION, certification_started: true });
 });
 
-async function complete(job, verdict, result, evidence) {
-  const r = await rpc.rpc('tgg_browser_cert_worker_complete', { p_worker_id: workerId, p_token: workerToken, p_job_id: job.id, p_lease_token: job.lease_token, p_verdict: verdict, p_result: result, p_evidence: evidence });
-  if (r.error) throw r.error;
-  return r.data;
-}
+async function complete(job, verdict, result, evidence) { return coreCompleteJob(job, verdict, result, evidence); }
 
 async function restoreBrowserOwnerSession(context) {
   if (!ownerSession?.access_token) throw new Error('OWNER_SESSION_RESTORE_INPUT_MISSING');
@@ -160,14 +202,13 @@ async function runProtectedAudio(job) {
 
 async function loop() {
   if (!ownerSession?.access_token && !ownerSessionRestored) await coreOwnerSessionRestore();
+  if (ownerSession?.access_token) await coreEnsureCertification();
   if (running || !workerId || !workerToken) return;
   running = true;
   try {
     const hb = await rpc.rpc('tgg_browser_cert_worker_heartbeat', { p_worker_id: workerId, p_token: workerToken, p_metadata: { host:'render', version:RUNTIME_VERSION, session_bootstrapped:Boolean(ownerSession?.access_token) } });
     if (hb.error) throw hb.error;
-    const claim = await rpc.rpc('tgg_browser_cert_worker_claim', { p_worker_id: workerId, p_token: workerToken, p_lease_seconds: 300 });
-    if (claim.error) throw claim.error;
-    const job = extractClaimJob(claim.data);
+    const job = await coreClaimJob();
     if (!job?.id) { last = { status:'idle', updated_at:new Date().toISOString() }; return; }
     last = { status:'running', flow_key:job.flow_key, job_id:job.id, updated_at:new Date().toISOString() };
     if (!['protected_audio_runtime','certification_runtime'].includes(job.flow_key)) { await complete(job,'blocked',{reason:'Unsupported flow_key for this worker.'},[]); return; }

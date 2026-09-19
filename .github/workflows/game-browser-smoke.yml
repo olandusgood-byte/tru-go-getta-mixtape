@@ -14,6 +14,10 @@ on:
       - 'tgg-core/public/live-viewer/**'
       - '.github/workflows/game-browser-smoke.yml'
 
+permissions:
+  contents: read
+  actions: read
+
 concurrency:
   group: game-browser-smoke-${{ github.ref }}
   cancel-in-progress: true
@@ -21,7 +25,11 @@ concurrency:
 jobs:
   browser-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: team_TeV8b8Rv4jnchCzdYOOIehl2
+      VERCEL_PROJECT_ID: prj_U2qDy9qZ5EZAKuHTEaA03BMmmplX
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,6 +66,94 @@ jobs:
         run: node game/browser-smoke.mjs
       - name: Run TGG LiveViewer smoke
         run: node game/live-viewer-smoke.mjs
+
+      - name: Verify exact-SHA Static + Mega gates
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const {execFileSync}=require('child_process');
+          const sha=process.env.SOURCE_SHA;
+          const repo=process.env.SOURCE_REPO;
+          const token=process.env.GH_TOKEN;
+          const required=['Game Static Gate','Game V2.18 Mega Regression'];
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          function runs(){
+            return JSON.parse(execFileSync('curl',[
+              '-fsSL',
+              '-H',`Authorization: Bearer ${token}`,
+              '-H','Accept: application/vnd.github+json',
+              '-H','X-GitHub-Api-Version: 2022-11-28',
+              `https://api.github.com/repos/${repo}/actions/runs?head_sha=${sha}&per_page=100`
+            ],{encoding:'utf8'})).workflow_runs||[];
+          }
+          (async()=>{
+            for(let n=1;n<=60;n++){
+              const list=runs().filter(r=>r.head_sha===sha&&r.head_branch==='main');
+              const state={}; let waiting=false;
+              for(const name of required){
+                const latest=list.filter(r=>r.name===name).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at))[0]||null;
+                state[name]=latest?{status:latest.status,conclusion:latest.conclusion,id:latest.id}:null;
+                if(!latest||latest.status!=='completed'){waiting=true;continue;}
+                if(latest.conclusion!=='success')throw new Error('Exact-SHA gate failed '+JSON.stringify(state));
+              }
+              if(!waiting){console.log('Exact-SHA Static + Mega GREEN',sha,JSON.stringify(state));return;}
+              await sleep(10000);
+            }
+            throw new Error('Timed out waiting for exact-SHA Static + Mega gates');
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
+
+      - name: Verify production credential
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          test -n "${VERCEL_TOKEN:-}" || { echo "::error::VERCEL_TOKEN missing"; exit 1; }
+
+      - name: Install pinned Vercel CLI
+        if: github.ref == 'refs/heads/main'
+        run: npm install --global vercel@59.23.1
+
+      - name: Link production project
+        if: github.ref == 'refs/heads/main'
+        working-directory: game
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Deploy exact certified SHA to production
+        if: github.ref == 'refs/heads/main'
+        id: prod
+        working-directory: game
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(vercel deploy --prod --yes --token="$VERCEL_TOKEN" 2>/tmp/vercel-deploy.log | tail -n 1)"
+          cat /tmp/vercel-deploy.log
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Production URL: $url"
+
+      - name: Verify production runtime on same SHA
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="${{ steps.prod.outputs.url }}"
+          expected="$(node -e "const r=require('./game/runtime-version.json');process.stdout.write(String(r.canonical_runtime||''))")"
+          for attempt in 1 2 3 4 5; do
+            body="$(vercel curl "$url" 2>/tmp/vercel-curl.log || true)"
+            cat /tmp/vercel-curl.log || true
+            if grep -Fq "$expected" <<<"$body" && grep -q 'city3d' <<<"$body"; then
+              echo "UNIFIED TGG CERTIFICATION + LIVEVIEWER + PRODUCTION VERIFIED: $url · $expected · ${{ github.sha }}"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Production verification failed for exact SHA ${{ github.sha }}" >&2
+          exit 1
       - name: Stop TGG LiveViewer server
         if: always()
         run: |

@@ -23,7 +23,7 @@ assert(browserWorkflow.includes('run: node game/browser-smoke.mjs'),'Browser wor
 const browserScriptPath=path.join(root,'browser-smoke.mjs');
 assert(fs.existsSync(browserScriptPath),'Checked-in browser smoke runner missing');
 const browserScript=fs.readFileSync(browserScriptPath,'utf8');
-assert(browserScript.includes("const v2=/^v2([0-9]{2})"),'Browser smoke runner missing V2.xx discovery');
+assert(browserScript.includes("Object.keys(window)")&&browserScript.includes("TGGV(\\d{3})"),'Browser smoke runner missing runtime-global discovery');
 const browserSyntax=spawnSync(process.execPath,['--check',browserScriptPath],{encoding:'utf8'});
 assert(browserSyntax.status===0,'Browser smoke JavaScript syntax failed:\n'+(browserSyntax.stderr||browserSyntax.stdout||''));
 

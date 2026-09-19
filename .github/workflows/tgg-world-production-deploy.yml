@@ -2,12 +2,13 @@ name: TGG World Production Deploy
 
 on:
   workflow_run:
-    workflows: ["Game V2.18 Mega Regression"]
+    workflows: ["Game V2.18 Mega Regression", "Game Static Gate", "Game Browser Smoke"]
     types: [completed]
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: tgg-world-production
@@ -39,6 +40,35 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.source.outputs.sha }}
+
+      - name: Verify exact-SHA certification suite
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          SOURCE_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL             -H "Authorization: Bearer $GH_TOKEN"             -H "Accept: application/vnd.github+json"             -H "X-GitHub-Api-Version: 2022-11-28"             "https://api.github.com/repos/$SOURCE_REPO/actions/runs?head_sha=$SOURCE_SHA&status=completed&per_page=100"             > /tmp/tgg-cert-runs.json
+          node <<'NODE'
+          const fs=require('fs');
+          const data=JSON.parse(fs.readFileSync('/tmp/tgg-cert-runs.json','utf8'));
+          const sha=process.env.SOURCE_SHA;
+          const required=['Game Static Gate','Game Browser Smoke','Game V2.18 Mega Regression'];
+          const mainRuns=(data.workflow_runs||[]).filter(r=>r.head_sha===sha&&r.head_branch==='main');
+          const summary={};
+          for(const name of required){
+            const runs=mainRuns.filter(r=>r.name===name).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at));
+            const latest=runs[0]||null;
+            summary[name]=latest?{id:latest.id,conclusion:latest.conclusion,updated_at:latest.updated_at}:null;
+            if(!latest||latest.conclusion!=='success'){
+              console.error('Certification blocked for exact SHA',sha,JSON.stringify(summary,null,2));
+              process.exit(1);
+            }
+          }
+          console.log('Exact-SHA certification GREEN',sha,JSON.stringify(summary));
+          NODE
 
       - name: Verify canonical regression contract
         id: gate

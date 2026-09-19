@@ -1,11 +1,11 @@
 {
   "project": "TRU GO GETTA WORLD",
-  "canonical_runtime": "V3.60 LIVING CITY REACTIVE WORLD MEGA",
+  "canonical_runtime": "V3.70 NPC TRAFFIC WORLD INTERACTION MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
   "verification": "v360_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
-  "base_runtime": "V3.50 GAME FEEL CINEMATIC MEGA",
+  "base_runtime": "V3.60 LIVING CITY REACTIVE WORLD MEGA",
   "features": [
     "threejs_city",
     "smooth_player_locomotion",
@@ -93,9 +93,18 @@
     "context_interaction_prompts",
     "performance_safe_density_sync",
     "district_entry_callouts",
-    "story_activity_reactivity"
+    "story_activity_reactivity",
+    "v370_npc_traffic_world_interaction",
+    "proximity_npc_reactions",
+    "crowd_mood_response",
+    "street_interaction_state",
+    "traffic_player_awareness",
+    "traffic_brake_response",
+    "simulation_tier_scaling",
+    "keyboard_street_talk_hook",
+    "world_heat_interaction_hook"
   ],
-  "release_gate": "closed_certified",
+  "release_gate": "v370_validation_pending",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -103,7 +112,7 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PASS",
+    "browser_gate": "PENDING_V370_REVALIDATION",
     "public_alias": "https://tgg-world-play.vercel.app",
     "browser_cert_run_id": 35441849417,
     "browser_cert_artifact_id": 10584062941,

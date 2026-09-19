@@ -79,7 +79,10 @@ async function run(){
         console.log(JSON.stringify({tgg_mega_stage:'desktop-core-apis-ready'}));
         await page.waitForTimeout(700);
         const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
-        console.log(JSON.stringify({tgg_mega_stage:'desktop-suite-done',total:desktop.total,passed:desktop.passed,failed:desktop.failed}));
+        const desktopFailed=desktop.checks.filter(x=>!x.pass);
+        console.log(JSON.stringify({tgg_mega_stage:'desktop-suite-done',total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktopFailed.slice(0,30)}));
+        await page.close();
+        console.log(JSON.stringify({tgg_mega_stage:'desktop-page-closed'}));
 
         const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
         const mp=await mobile.newPage();
@@ -247,8 +250,7 @@ async function run(){
       record('chapter3-media-arrival',snap.step===5&&snap.current?.id==='premiere',JSON.stringify(snap));
 
       await mp.evaluate(()=>document.querySelector('[data-media="premiere"]')?.click());      await mp.waitForTimeout(25);
-      await mp.evaluate(()=>window.TGGStoryMissions.sync());      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
-      record('chapter3-premiere',snap.step===6&&snap.current?.id==='home-base',JSON.stringify(snap));
+      await mp.evaluate(()=>window.TGGStoryMissions.sync());      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());      record('chapter3-premiere',snap.step===6&&snap.current?.id==='home-base',JSON.stringify(snap));
 
       await mp.evaluate(()=>{window.__qaGame.x=63;window.__qaGame.y=24;window.TGGStoryMissions.sync();});
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
@@ -497,8 +499,7 @@ async function run(){
       await mp.evaluate(()=>window.TGGStoryMissions.startChapter2());
       snap=await mp.evaluate(()=>({status:window.TGGStoryMissions.status(),target:window.TGGStoryMissions.navigationTarget(),nav:window.TGGNavigation?.getTarget?.(),hud:document.getElementById('storyWorldHud')?.classList.contains('active')}));
       record('chapter2-starts',snap.status?.active===true&&snap.status?.step===0&&snap.status?.steps?.length===10,JSON.stringify(snap.status));      record('chapter2-manager-marker',snap.target?.id==='manager-return'&&snap.target?.x===72&&snap.target?.y===36,JSON.stringify(snap.target));
-      record('chapter2-navigation-priority',snap.nav?.story===true&&String(snap.nav?.label||'').includes('CITY BUZZ'),JSON.stringify(snap.nav));
-      record('chapter2-world-hud',snap.hud===true);
+      record('chapter2-navigation-priority',snap.nav?.story===true&&String(snap.nav?.label||'').includes('CITY BUZZ'),JSON.stringify(snap.nav));      record('chapter2-world-hud',snap.hud===true);
 
       await mp.evaluate(()=>{window.__qaGame.x=72;window.__qaGame.y=36;window.TGGStoryMissions.doCurrent();});
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
@@ -747,8 +748,7 @@ async function run(){
         tabs:document.querySelectorAll('[data-life-tab]').length,
         gameIntegrated:window.__gameSourceCheck||false      }));
       record('world-life-api',initial.api);
-      record('world-life-entry-button',initial.button);
-      record('world-life-board',initial.board);      record('world-life-tabs',initial.tabs===4,String(initial.tabs));
+      record('world-life-entry-button',initial.button);      record('world-life-board',initial.board);      record('world-life-tabs',initial.tabs===4,String(initial.tabs));
       record('world-life-game-runtime-hook',gameSource.includes('worldLifeBoard')&&gameSource.includes('worldLifeBtn'));
 
       await mp.evaluate(()=>{
@@ -997,8 +997,7 @@ async function run(){
       await page.waitForTimeout(350);      const coast=await page.evaluate(()=>window.TGGGame?.getDrivingState?.());
       record('vehicle-coast-deceleration',Math.abs(Number(coast?.speed)||0)<Math.abs(Number(reversed.drive?.speed)||0),JSON.stringify({reversed:reversed.drive,coast}));
 
-      await page.evaluate(()=>window.TGGGame?.setDriveKey?.('forward',true));
-      await page.waitForTimeout(400);
+      await page.evaluate(()=>window.TGGGame?.setDriveKey?.('forward',true));      await page.waitForTimeout(400);
       await page.evaluate(()=>window.TGGGame?.setDriveKey?.('handbrake',true));
       await page.waitForTimeout(120);
       const hb=await page.evaluate(()=>({drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.()}));
@@ -1247,8 +1246,7 @@ async function run(){
     const res=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
     await page.waitForSelector('#newGame',{state:'attached',timeout:15000});
     await page.evaluate(()=>document.getElementById('newGame')?.click());
-    await page.evaluate(()=>{
-      const stage=document.getElementById('stageName');      const style=document.getElementById('styleChoice');
+    await page.evaluate(()=>{      const stage=document.getElementById('stageName');      const style=document.getElementById('styleChoice');
       if(stage)stage.value='TGG 3D QA';
       if(style)style.value='Artist';
       document.getElementById('startGame')?.click();
@@ -1497,8 +1495,7 @@ async function run(){
       window.TGGGame?.refresh?.();
     });
     await page.waitForTimeout(120);
-    await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());
-    await page.waitForTimeout(150);
+    await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());    await page.waitForTimeout(150);
     const entered=await page.evaluate(()=>window.TGGGame?.getState?.());
     record('enter-car',entered?.inVehicle===true);
     console.log(JSON.stringify({tgg_3d_smoke_step:'entered-car'}));

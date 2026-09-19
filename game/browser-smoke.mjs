@@ -1060,6 +1060,25 @@ try{
     throw new Error('V5.08 aftermath follow-up completion failed '+JSON.stringify(aftermathResolved));
   }
 
+  await page.waitForFunction(()=>!!window.TGGDistrictReactions&&!!window.TGGV509,{timeout:15000});
+  const districtReaction=await page.evaluate(()=>({
+    run:window.TGGV509.run(),
+    reaction:window.TGGDistrictReactions.snapshot(),
+    relation:window.TGGNPCRelations.relationship('Rico Flame'),
+    messages:window.TGGMessages.snapshot()
+  }));
+  const districtThread=districtReaction.messages?.threads?.['Rico Flame']||[];
+  const districtMessage=[...districtThread].reverse().find(x=>x?.kind==='district-reaction')||null;
+  if(districtReaction.run?.ok!==true||
+     districtReaction.reaction?.lastReaction?.name!=='Rico Flame'||
+     districtReaction.reaction?.lastReaction?.district!=='MIXTAPE AVE'||
+     districtReaction.reaction?.lastReaction?.tier==='UNKNOWN'||
+     !(districtReaction.reaction?.districts?.['MIXTAPE AVE']?.rep>0)||
+     districtReaction.reaction?.completed<1||
+     districtMessage?.direction!=='in'){
+    throw new Error('V5.09 district reaction failed '+JSON.stringify({districtReaction,districtMessage}));
+  }
+
   await clearIncomingCallOverlay('pre keyboard movement');
   await page.evaluate(()=>{
     window.TGGNPCRelations?.closeChoice?.();
@@ -1226,7 +1245,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards,incomingCall:incomingAccepted.calls.lastResult.call.name,messageThread:messageReply.last.name,messageReply:messageReply.last.text,meetupContact:meetupResolved.meetup.lastCompleted.name,callSession:callSessionEnded.session.lastEnded.name}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards,incomingCall:incomingAccepted.calls.lastResult.call.name,messageThread:messageReply.last.name,messageReply:messageReply.last.text,meetupContact:meetupResolved.meetup.lastCompleted.name,callSession:callSessionEnded.session.lastEnded.name,districtReaction:districtReaction.reaction.lastReaction.tier}));
 }finally{
   await browser.close();
 }

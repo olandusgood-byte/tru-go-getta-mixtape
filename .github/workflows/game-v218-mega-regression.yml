@@ -1,27 +1,10 @@
 name: Game V2.18 Mega Regression
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'game/**'
-      - 'tgg-browser-worker/mega-game-snapshot/**'
-      - 'tgg-browser-worker/3d-smoke-once.mjs'
-      - '.github/workflows/game-v218-mega-regression.yml'
-  pull_request:
-    paths:
-      - 'game/**'
-      - 'tgg-browser-worker/mega-game-snapshot/**'
-      - 'tgg-browser-worker/3d-smoke-once.mjs'
-      - '.github/workflows/game-v218-mega-regression.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: game-v218-mega-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   v218-mega:

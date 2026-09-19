@@ -37,11 +37,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install Playwright
+      - name: Install unified certification runtime
         run: |
-          npm init -y
+          npm install --ignore-scripts --no-audit --no-fund
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
+
+      - name: Run Static Gate in unified chain
+        run: node game/ci-static-gate.mjs
+
+      - name: Run Mega Regression in unified chain
+        env:
+          TGG_3D_V218_MEGA_ONLY: '1'
+          TGG_3D_V218_ROOT: 'game'
+        run: node tgg-browser-worker/3d-smoke-once.mjs
       - name: Start local game server
         run: |
           python3 -m http.server 8765 --directory game > /tmp/tgg-game-server.log 2>&1 &
@@ -66,48 +75,6 @@ jobs:
         run: node game/browser-smoke.mjs
       - name: Run TGG LiveViewer smoke
         run: node game/live-viewer-smoke.mjs
-
-      - name: Verify exact-SHA Static + Mega gates
-        if: github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_SHA: ${{ github.sha }}
-          SOURCE_REPO: ${{ github.repository }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          node <<'NODE'
-          const {execFileSync}=require('child_process');
-          const sha=process.env.SOURCE_SHA;
-          const repo=process.env.SOURCE_REPO;
-          const token=process.env.GH_TOKEN;
-          const required=['Game Static Gate','Game V2.18 Mega Regression'];
-          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-          function runs(){
-            return JSON.parse(execFileSync('curl',[
-              '-fsSL',
-              '-H',`Authorization: Bearer ${token}`,
-              '-H','Accept: application/vnd.github+json',
-              '-H','X-GitHub-Api-Version: 2022-11-28',
-              `https://api.github.com/repos/${repo}/actions/runs?head_sha=${sha}&per_page=100`
-            ],{encoding:'utf8'})).workflow_runs||[];
-          }
-          (async()=>{
-            for(let n=1;n<=60;n++){
-              const list=runs().filter(r=>r.head_sha===sha&&r.head_branch==='main');
-              const state={}; let waiting=false;
-              for(const name of required){
-                const latest=list.filter(r=>r.name===name).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at))[0]||null;
-                state[name]=latest?{status:latest.status,conclusion:latest.conclusion,id:latest.id}:null;
-                if(!latest||latest.status!=='completed'){waiting=true;continue;}
-                if(latest.conclusion!=='success')throw new Error('Exact-SHA gate failed '+JSON.stringify(state));
-              }
-              if(!waiting){console.log('Exact-SHA Static + Mega GREEN',sha,JSON.stringify(state));return;}
-              await sleep(10000);
-            }
-            throw new Error('Timed out waiting for exact-SHA Static + Mega gates');
-          })().catch(e=>{console.error(e);process.exit(1)});
-          NODE
 
       - name: Verify production credential
         if: github.ref == 'refs/heads/main'

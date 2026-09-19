@@ -1,25 +1,10 @@
 name: Game Static Gate
 
 on:
-  push:
-    branches: [main, game/v1-foundation, game/v1-2-build, game/v218-canonical-promotion]
-    paths:
-      - 'game/**'
-      - '.github/workflows/game-static-gate.yml'
-      - '.github/workflows/game-browser-smoke.yml'
-  pull_request:
-    paths:
-      - 'game/**'
-      - '.github/workflows/game-static-gate.yml'
-      - '.github/workflows/game-browser-smoke.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: game-static-gate-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   static-gate:

@@ -71,12 +71,13 @@
     }
     const rows=available().map(x=>'<button class="business-card" data-business="'+esc(x.id)+'"><b>'+esc(x.name)+'</b><span>'+esc(x.type)+' • LVL '+esc(x.unlock)+'</span><small>'+esc(x.detail)+'</small></button>').join('');
     const activities=localActivities().map(x=>'<small>'+esc(x.name)+(x.requires.length?' • NEEDS '+esc(x.requires.join(' + ')):'')+'</small>').join('');
-    el.innerHTML='<div class="panel"><p class="eyebrow">V1.14 • LIVE CITY + READ-ONLY WORLD ASSETS</p><h2>KNOW THE CITY.</h2><p>Browse city activity, businesses, properties and vehicles without triggering ownership, travel, spawn or purchase mutations.</p><div class="business-grid">'+rows+'</div><div id="liveCityPanel" class="mission-card"><b>LIVE CITY</b><span>Existing city activities</span>'+(activities||'<small>No local city activities registered.</small>')+'</div><div id="businessDetail" class="mission-card">Select a location or world asset to inspect it.</div><div id="worldAssetsPanel" class="mission-card"><b>WORLD ASSETS</b><span id="worldAssetsStatus">Loading local/offline-ready state…</span><div id="worldProperties"></div><div id="worldVehicles"></div></div><button id="businessSync" class="primary">REFRESH WORLD ASSETS</button><button id="businessBack" class="secondary">BACK TO CITY</button></div>';
+    el.innerHTML='<div class="panel"><p class="eyebrow">V1.14 • LIVE CITY + VEHICLE/PROPERTY GAMEPLAY</p><h2>KNOW THE CITY.</h2><p>Browse city activity, businesses, properties and vehicles without triggering ownership, travel, spawn or purchase mutations.</p><div class="business-grid">'+rows+'</div><div id="liveCityPanel" class="mission-card"><b>LIVE CITY</b><span>Existing city activities</span>'+(activities||'<small>No local city activities registered.</small>')+'</div><div id="businessDetail" class="mission-card">Select a location or world asset to inspect it.</div><div id="v114CityActivities"></div><div id="worldAssetsPanel" class="mission-card"><b>WORLD ASSETS</b><span id="worldAssetsStatus">Loading local/offline-ready state…</span><div id="worldProperties"></div><div id="worldVehicles"></div></div><button id="businessSync" class="primary">REFRESH WORLD ASSETS</button><button id="businessBack" class="secondary">BACK TO CITY</button></div>';
     el.querySelectorAll('[data-business]').forEach(b=>b.onclick=()=>select(b.dataset.business));
     document.getElementById('businessBack').onclick=()=>window.TGGGame?.show?.('game');
     document.getElementById('businessSync').setAttribute('aria-label','Check connected world assets');
     document.getElementById('businessSync').onclick=loadAssets;
     renderAssets();
+    window.TGGV114?.render?.('v114CityActivities');
     return el;
   }
 

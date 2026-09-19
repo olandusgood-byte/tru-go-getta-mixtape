@@ -81,9 +81,9 @@
     const idx=(state.tick+Math.round(state.opportunityHeat)+Math.round(state.socialMomentum))%pool.length;
     return pool[idx];
   }
-  function activateBeat(beat,source='world'){
+  function activateBeat(beat,source='world',meta={}){
     if(!beat)return null;
-    state.activeBeat=hydrateBeat({...beat,source,createdAt:Date.now(),expiresAt:Date.now()+180000});
+    state.activeBeat=hydrateBeat({...beat,source,...meta,createdAt:Date.now(),expiresAt:Date.now()+180000});
     state.lastEventAt=Date.now();
     state.history.push({type:'beat',id:beat.id,source,at:state.lastEventAt});
     state.history=state.history.slice(-40);
@@ -96,10 +96,10 @@
     if(state.activeBeat&&!force)return state.activeBeat;
     return activateBeat(chooseBeat(),'world');
   }
-  function spawnBeatFor(id,{force=false,source='npc-favor'}={}){
+  function spawnBeatFor(id,{force=false,source='npc-favor',npcName=null}={}){
     if(state.activeBeat&&!force)return state.activeBeat;
     const beat=BEATS.find(x=>x.id===id);
-    return beat?activateBeat(beat,source):null;
+    return beat?activateBeat(beat,source,npcName?{npcName}:{}):null;
   }
   function completeBeat(){
     const beat=hydrateBeat(state.activeBeat);if(!beat)return false;
@@ -122,10 +122,12 @@
     if(beat.kind==='property')window.TGGWorldSystems?.coolConsequence?.(3);
     window.TGGWorldSystems?.coolConsequence?.(1);
     state.npcTrust=clamp(state.npcTrust+2+state.missionIntensity);
-    state.history.push({type:'complete',id:beat.id,cash,xp,at:Date.now()});
+    const completedBeat={id:beat.id,label:beat.label,source:beat.source||'world',npcName:beat.npcName||null,cash,xp,at:Date.now()};
+    state.history.push({type:'complete',...completedBeat});
     state.history=state.history.slice(-40);
     state.activeBeat=null;save();render();
     window.TGGGameFeel?.objective?.('WORLD BEAT COMPLETE','+$'+cash+' • +'+xp+' XP');
+    window.dispatchEvent(new CustomEvent('tgg:world-beat-complete',{detail:completedBeat}));
     return true;
   }
   function updateNpcStates(){
@@ -176,8 +178,10 @@
   function tick(){
     state.tick++;recalc();updateNpcStates();
     if(state.activeBeat&&Date.now()>state.activeBeat.expiresAt){
-      state.history.push({type:'expired',id:state.activeBeat.id,at:Date.now()});
+      const expired={id:state.activeBeat.id,label:state.activeBeat.label,source:state.activeBeat.source||'world',npcName:state.activeBeat.npcName||null,at:Date.now()};
+      state.history.push({type:'expired',...expired});
       state.activeBeat=null;
+      window.dispatchEvent(new CustomEvent('tgg:world-beat-expired',{detail:expired}));
     }
     const shouldSpawn=!state.activeBeat && (state.tick%24===0 || state.opportunityHeat>72) && Date.now()-state.lastEventAt>30000;
     if(shouldSpawn)spawnBeat();

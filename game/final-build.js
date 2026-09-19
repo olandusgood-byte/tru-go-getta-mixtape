@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.34 TGG CAMERA + CINEMATIC FORGE 100';
+  const VERSION='V2.35 TGG PLAYER MOVEMENT FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

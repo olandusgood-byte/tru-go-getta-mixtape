@@ -976,6 +976,90 @@ try{
     throw new Error('V5.07 mission completion failed '+JSON.stringify(streetMissionResolved));
   }
 
+  await page.waitForFunction(()=>!!window.TGGMissionAftermath&&!!window.TGGV508,{timeout:15000});
+  const aftermathReady=await page.evaluate(()=>({
+    run:window.TGGV508.run(),
+    aftermath:window.TGGMissionAftermath.snapshot(),
+    world:window.TGGWorldDepth.getStatus(),
+    beat:window.TGGWorldDepth.beatNavigation(),
+    nav:window.TGGNavigation?.getTarget?.()||null,
+    messages:window.TGGMessages.snapshot(),
+    start:{...window.TGGGame.getState()}
+  }));
+  const aftermathThread=aftermathReady.messages?.threads?.['Rico Flame']||[];
+  const aftermathMessage=[...aftermathThread].reverse().find(x=>x?.kind==='mission-aftermath')||null;
+  if(aftermathReady.run?.ok!==true||
+     aftermathReady.aftermath?.lastAftermath?.name!=='Rico Flame'||
+     aftermathReady.aftermath?.lastAftermath?.district!=='MIXTAPE AVE'||
+     aftermathReady.aftermath?.lastAftermath?.choice!=='street'||
+     !(aftermathReady.aftermath?.lastAftermath?.repDelta>0)||
+     !(aftermathReady.aftermath?.districtRep?.['MIXTAPE AVE']>0)||
+     aftermathReady.aftermath?.lastAftermath?.followup?.id!=='brand-meeting'||
+     aftermathReady.aftermath?.lastAftermath?.followup?.success!==true||
+     aftermathReady.world?.activeBeat?.id!=='brand-meeting'||
+     aftermathReady.beat?.beatId!=='brand-meeting'||
+     aftermathReady.nav?.worldBeat!==true||
+     aftermathMessage?.direction!=='in'){
+    throw new Error('V5.08 mission aftermath creation failed '+JSON.stringify({aftermathReady,aftermathMessage}));
+  }
+
+  const aftermathRoute=await page.evaluate(()=>{
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    const nav=window.TGGWorldDepth.beatNavigation();
+    const routed=!!nav&&stepAxis('y',50)&&stepAxis('x',nav.x)&&stepAxis('y',nav.y);
+    return {routed,nav:window.TGGWorldDepth.beatNavigation(),state:{...window.TGGGame.getState()}};
+  });
+  if(!aftermathRoute.routed||aftermathRoute.nav?.arrived!==true){
+    throw new Error('V5.08 follow-up world route failed '+JSON.stringify(aftermathRoute));
+  }
+  await page.waitForTimeout(140);
+  const aftermathInteract=await inspectInteractControl();
+  if(!aftermathInteract.exists||aftermathInteract.disabled||!aftermathInteract.worldBeatReady||!/^DO\s+BRAND MEETING/i.test(aftermathInteract.text)){
+    throw new Error('V5.08 follow-up INTERACT unavailable '+JSON.stringify(aftermathInteract));
+  }
+  await clickRuntimeControl('#interact3dBtn','V5.08 aftermath brand meeting interact');
+  await page.waitForTimeout(120);
+
+  const aftermathResolved=await page.evaluate(start=>{
+    const world=window.TGGWorldDepth.getStatus();
+    const aftermath=window.TGGMissionAftermath.snapshot();
+    const completed=[...(world.history||[])].reverse().find(x=>x?.type==='complete'&&x?.id==='brand-meeting')||null;
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    const restored=stepAxis('y',50)&&stepAxis('x',start.x)&&stepAxis('y',start.y);
+    return {world,aftermath,completed,restored,current:{...window.TGGGame.getState()}};
+  },aftermathReady.start);
+  if(aftermathResolved.world?.activeBeat||
+     aftermathResolved.completed?.source!=='street-mission-aftermath'||
+     aftermathResolved.completed?.npcName!=='Rico Flame'||
+     aftermathResolved.aftermath?.completed<1||
+     aftermathResolved.aftermath?.contactStreaks?.['Rico Flame']<1||
+     !aftermathResolved.restored||
+     Math.hypot(aftermathResolved.current.x-aftermathReady.start.x,aftermathResolved.current.y-aftermathReady.start.y)>.05){
+    throw new Error('V5.08 aftermath follow-up completion failed '+JSON.stringify(aftermathResolved));
+  }
+
   await clearIncomingCallOverlay('pre keyboard movement');
   await page.evaluate(()=>{
     window.TGGNPCRelations?.closeChoice?.();

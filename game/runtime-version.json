@@ -1,9 +1,9 @@
 {
   "project": "TRU GO GETTA WORLD",
-  "canonical_runtime": "V2.18 STREET PRESENCE",
+  "canonical_runtime": "V2.45 PHOTOREAL CORE BULK",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "pending_v218_mega_regression",
+  "verification": "v245_photoreal_contract_pending",
   "features": [
     "threejs_city",
     "smooth_player_locomotion",
@@ -17,6 +17,13 @@
     "3d_interiors",
     "story_missions",
     "street_presence",
-    "adaptive_performance"
+    "adaptive_performance",
+    "photoreal_core",
+    "aces_filmic",
+    "cinematic_atmosphere",
+    "physical_road_materials",
+    "adaptive_graphics_quality",
+    "texture_anisotropy",
+    "cinematic_overlay"
   ]
 }

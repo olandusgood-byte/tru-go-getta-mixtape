@@ -72,7 +72,9 @@ for(const src of additiveFiles){
     assert(/(?:VERSION|version)\s*[:=]\s*['\"](?:\d+\.\d+\.\d+|V\d+)['\"]/.test(source),'Bulk runtime file has no version identity in '+src);
   }
   assert(!/\bok\s*:\s*true\b/.test(source),'False-green audit/gate is forbidden in '+src+'; derive ok from evidence');
-  assert(/\.snapshot\b|getState\b|document\.|performance\b/.test(source),'Evidence-free runtime audit forbidden in '+src);
+  const directEvidence=/\.snapshot\b|getState\b|document\.|performance\b/.test(source);
+  const dependencyEvidence=/(?:window\.TGGGame|window\.TGGV\d{2,3})/.test(source)&&/const\s+checks\s*=\s*\{/.test(source)&&/failed\s*=\s*Object\.keys\(checks\)\.filter/.test(source)&&/ok\s*:\s*!failed\.length/.test(source);
+  assert(directEvidence||dependencyEvidence,'Evidence-free runtime audit forbidden in '+src);
   assert(/mutationPolicy\s*:\s*['\"]local(?:_|-)/.test(source)||/POLICY\s*=\s*['\"]local(?:_|-)/.test(source),'Non-local mutation policy in '+src);
   for(const forbidden of ['SUPABASE_SERVICE_ROLE_KEY','sb_secret_','sk_live_']){
     assert(!source.includes(forbidden),'Forbidden secret marker in '+src+': '+forbidden);

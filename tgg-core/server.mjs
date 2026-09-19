@@ -934,6 +934,12 @@ app.post('/v1/workers/jobs/claim', async (req,res,next)=>{
     ) update tgg_browser_jobs j set status='running',worker_id=$1,lease_token=encode(gen_random_bytes(24),'hex'),lease_expires_at=now()+interval '5 minutes',attempts=attempts+1,updated_at=now()
       from candidate where j.id=candidate.id returning j.*`,[w.id]);
     const job=r.rows[0]||null;
+    if(job?.id && job?.payload?.browser_session_id){
+      await pool.query(
+        'insert into tgg_browser_viewer_events(browser_session_id,event_type,payload) values($1,$2,$3)',
+        [job.payload.browser_session_id,'job_running',{job_id:job.id,flow_key:job.flow_key,worker_id:w.worker_id,attempts:job.attempts}]);
+      await pool.query('select pg_notify($1,$2)',['tgg_browser_viewer',JSON.stringify({browser_session_id:job.payload.browser_session_id,event_type:'job_running'})]);
+    }
     if(job?.id && job?.payload?.user_id){
       const token=newToken();
       const expires=new Date(Date.now()+SESSION_DAYS*86400000);

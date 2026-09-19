@@ -4,11 +4,13 @@
   if(!host||!city||!window.THREE)return;
 
   const THREE=window.THREE;
+  const WORLD_SCALE=2.75;
+  const WORLD_HALF=WORLD_SCALE*50;
   const scene=new THREE.Scene();
   scene.background=new THREE.Color(0x04060b);
-  scene.fog=new THREE.FogExp2(0x05070d,0.017);
+  scene.fog=new THREE.FogExp2(0x05070d,0.0065);
 
-  const camera=new THREE.PerspectiveCamera(58,1,0.1,240);
+  const camera=new THREE.PerspectiveCamera(58,1,0.1,650);
   const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));
   renderer.shadowMap.enabled=true;
@@ -259,7 +261,7 @@
     return car;
   }
   const car=makeCar();
-  car.position.set(5.7,0,4.6);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
+  car.position.set(WORLD_SCALE*6.2,0,WORLD_SCALE*5.0);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
   const vehicleDynamics={speed:0,steer:0,braking:false,handbrake:false};
   const playerDynamics={speed:0,vx:0,vy:0,sprinting:false,blocked:false};
   function setPlayerDynamics(next={}){
@@ -319,7 +321,10 @@
   renderer.domElement.addEventListener('wheel',e=>{distance=Math.max(8,Math.min(30,distance+Math.sign(e.deltaY)*1.4));e.preventDefault()},{passive:false});
 
   function toWorld(s){
-    return {x:((Number(s?.x)||50)-50)*.92,z:((Number(s?.y)||50)-50)*.92};
+    return {x:((Number(s?.x)||50)-50)*WORLD_SCALE,z:((Number(s?.y)||50)-50)*WORLD_SCALE};
+  }
+  function toPercent(x,z){
+    return {x:50+(Number(x)||0)/WORLD_SCALE,y:50+(Number(z)||0)/WORLD_SCALE};
   }
 
   function makeTextSprite(text,color='#c7ff00'){
@@ -343,13 +348,13 @@
   }
 
   const destinationDefs=[
-    {id:'studio',label:'RECORDING STUDIO',buttonId:'studioBtn',x:-24,z:-12,color:0xff466d},
-    {id:'park',label:'THE PARK',buttonId:'parkBtn',x:24,z:12,color:0x4cff88},
-    {id:'shops',label:'SHOP DISTRICT',buttonId:'shopsBtn',x:-12,z:24,color:0x48d7ff},
-    {id:'home',label:'MY APARTMENT',buttonId:'homeBtn',x:12,z:-24,color:0xffc84a},
-    {id:'media',label:'MEDIA DISTRICT',buttonId:'mediaBtn',x:0,z:36,color:0xc56cff},
-    {id:'business',label:'BUSINESS',buttonId:'businessBtn',x:-36,z:0,color:0xc7ff00},
-    {id:'garage',label:'GARAGE',buttonId:'garageBtn',x:24,z:-24,color:0x7a8cff}
+    {id:'studio',label:'RECORDING STUDIO',buttonId:'studioBtn',x:-82,z:-56,color:0xff466d},
+    {id:'park',label:'THE PARK',buttonId:'parkBtn',x:74,z:58,color:0x4cff88},
+    {id:'shops',label:'SHOP DISTRICT',buttonId:'shopsBtn',x:-72,z:76,color:0x48d7ff},
+    {id:'home',label:'MY APARTMENT',buttonId:'homeBtn',x:48,z:-82,color:0xffc84a},
+    {id:'media',label:'MEDIA DISTRICT',buttonId:'mediaBtn',x:6,z:108,color:0xc56cff},
+    {id:'business',label:'BUSINESS',buttonId:'businessBtn',x:-112,z:8,color:0xc7ff00},
+    {id:'garage',label:'GARAGE',buttonId:'garageBtn',x:88,z:-74,color:0x7a8cff}
   ];
   const destinations=destinationDefs.map(d=>{
     const group=new THREE.Group();
@@ -369,7 +374,7 @@
     return {...d,group,ring,beam,marker,labelSprite};
   });
 
-  function nearbyDestination(s,radius=7.2){
+  function nearbyDestination(s,radius=WORLD_SCALE*4.8){
     const p=toWorld(s);
     let best=null,bestDist=Infinity;
     for(const d of destinations){
@@ -560,7 +565,7 @@
   }
   function canMovePercent(x,y,vehicle=false){
     const p=toWorld({x,y});
-    const edge=vehicle?47.8:49;
+    const edge=vehicle?WORLD_HALF-4.2:WORLD_HALF-2.2;
     if(Math.abs(p.x)>edge||Math.abs(p.z)>edge)return false;
     const extra=vehicle ? .9 : 0;
     return !obstacles.some(o=>Math.abs(p.x-o.x)<o.hw+extra&&Math.abs(p.z-o.z)<o.hd+extra);
@@ -570,10 +575,7 @@
     return Math.hypot(p.x-car.position.x,p.z-car.position.z);
   }
   function getCarPositionPercent(){
-    return {
-      x:50+(Number(car.position.x)||0)/.92,
-      y:50+(Number(car.position.z)||0)/.92
-    };
+    return toPercent(car.position.x,car.position.z);
   }
   function dampAlpha(rate,dt){return 1-Math.exp(-Math.max(0,rate)*Math.max(0,dt));}
   function angleDeltaDegrees(from,to){return ((to-from+540)%360)-180;}
@@ -666,10 +668,7 @@
       name:h.userData.name,
       state:h.userData.state||'around',
       override:namedNpcOverrides.get(h.userData.name)?{...namedNpcOverrides.get(h.userData.name)}:null,
-      position:{
-        x:50+(Number(h.position.x)||0)/.92,
-        y:50+(Number(h.position.z)||0)/.92
-      }
+      position:toPercent(h.position.x,h.position.z)
     }));
   }
   function syncNamedNpcs(dt){
@@ -705,7 +704,7 @@
       const d=Math.hypot(p.x-h.position.x,p.z-h.position.z);
       if(d<bestDist){bestDist=d;best=h;}
     }
-    return best&&bestDist<=radius*.92?{name:best.userData.name,state:best.userData.state||'around',distance:bestDist,human:best}:null;
+    return best&&bestDist<=radius*WORLD_SCALE?{name:best.userData.name,state:best.userData.state||'around',distance:bestDist,human:best}:null;
   }
   function interactNamedNpc(name){
     const relationship=window.TGGNPCRelations?.interact?.(name);
@@ -795,8 +794,8 @@
   }
   function radarPlace(el,x,z){
     if(!el)return;
-    el.style.left=((x+50)/100*100)+'%';
-    el.style.top=((z+50)/100*100)+'%';
+    el.style.left=((x+WORLD_HALF)/(WORLD_HALF*2)*100)+'%';
+    el.style.top=((z+WORLD_HALF)/(WORLD_HALF*2)*100)+'%';
   }
   function updateRadar(s){
     const p=toWorld(s);
@@ -958,8 +957,8 @@
   resize();animate();
 
   window.TGG3D={
-    scene,camera,renderer,player,npc,car,
-    resetCamera(){yaw=Math.PI*.25;pitch=.48;distance=17},
+    scene,camera,renderer,player,npc,car,WORLD_SCALE,WORLD_HALF,toWorld,toPercent,
+    resetCamera(){yaw=Math.PI*.25;pitch=.48;distance=20},
     isReady:()=>true,
     canMovePercent,
     distanceToCarPercent,

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "7.52",
-  "module": "GAME-V7.52-MEGA",
-  "name": "Mega V7.04-V7.52 Release Browser Live Viewer Audits Gates",
+  "version": "7.53",
+  "module": "GAME-V7.53-OPEN-WORLD",
+  "name": "V7.53 Open World Expansion — Highways Woods Country Long-Distance Travel",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -170,11 +170,14 @@
     "v2_02_local_state": true,
     "v5_41_world_continuity": true,
     "v5_41_prior_v540_required": true,
-    "v5_41_local_only": true
+    "v5_41_local_only": true,
+    "v7_53_open_world_expansion": true,
+    "v7_53_world_scale": true,
+    "v7_53_highways_woods_country": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V7.53",
+  "next": "V7.54",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

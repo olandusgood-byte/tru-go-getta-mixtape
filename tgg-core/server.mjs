@@ -527,37 +527,37 @@ app.post('/v1/video-studio/projects/:id/server-render',auth,async(req,res,next)=
     const p=await client.query('select * from video_studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);
     if(!p.rowCount)return res.status(404).json({error:'video_project_not_found'});
     const sourceId=req.body?.source_export_id||null;
-    const source=sourceId
-      ? await client.query("select e.*,m.storage_key,m.mime_type as source_mime_type,m.size_bytes as source_size_bytes from video_studio_exports e join media_objects m on m.id=e.output_media_object_id where e.id=$1 and e.project_id=$2 and e.user_id=$3 and e.provider='browser' and e.status='ready'",[sourceId,req.params.id,req.user.id])
-      : await client.query("select e.*,m.storage_key,m.mime_type as source_mime_type,m.size_bytes as source_size_bytes from video_studio_exports e join media_objects m on m.id=e.output_media_object_id where e.project_id=$1 and e.user_id=$2 and e.provider='browser' and e.status='ready' order by e.finished_at desc nulls last,e.created_at desc limit 1",[req.params.id,req.user.id]);
-    if(!source.rowCount)return res.status(409).json({error:'browser_master_required',detail:'Create a Quick Browser Render first.'});
-    const s=source.rows[0];
-    const existing=await client.query(
-      "select * from video_studio_exports where project_id=$1 and user_id=$2 and provider='server' and preset=$3 and status in ('queued','processing','ready') and metadata->>'source_export_id'=$4 order by created_at desc limit 1",
-      [req.params.id,req.user.id,preset,String(s.id)]
-    );
+    let source=null;
+    if(sourceId){
+      const q=await client.query("select e.*,m.storage_key,m.mime_type as source_mime_type,m.size_bytes as source_size_bytes from video_studio_exports e join media_objects m on m.id=e.output_media_object_id where e.id=$1 and e.project_id=$2 and e.user_id=$3 and e.provider='browser' and e.status='ready'",[sourceId,req.params.id,req.user.id]);
+      if(q.rowCount)source=q.rows[0];
+    }
+    if(!source){
+      const q=await client.query("select m.id as source_media_object_id,m.storage_key,m.mime_type as source_mime_type,m.size_bytes as source_size_bytes from media_objects m where m.id=$1 and m.owner_user_id=$2 and m.media_type='video' and m.storage_key like $3",[req.body?.source_media_object_id||'',req.user.id,'creator-media/'+req.user.id+'/'+req.params.id+'/%']);
+      if(q.rowCount)source={...q.rows[0],output_media_object_id:q.rows[0].source_media_object_id,width:p.rows[0].width,height:p.rows[0].height,duration_ms:p.rows[0].duration_ms,finished_at:null,created_at:new Date().toISOString(),direct_source:true};
+    }
+    if(!source){
+      const q=await client.query("select e.*,m.storage_key,m.mime_type as source_mime_type,m.size_bytes as source_size_bytes from video_studio_exports e join media_objects m on m.id=e.output_media_object_id where e.project_id=$1 and e.user_id=$2 and e.provider='browser' and e.status='ready' order by e.finished_at desc nulls last,e.created_at desc limit 1",[req.params.id,req.user.id]);
+      if(q.rowCount)source=q.rows[0];
+    }
+    if(!source){
+      const q=await client.query("select id as source_media_object_id,storage_key,mime_type as source_mime_type,size_bytes as source_size_bytes from media_objects where owner_user_id=$1 and media_type='video' and storage_key like $2 order by created_at desc limit 1",[req.user.id,'creator-media/'+req.user.id+'/'+req.params.id+'/%']);
+      if(q.rowCount)source={...q.rows[0],output_media_object_id:q.rows[0].source_media_object_id,width:p.rows[0].width,height:p.rows[0].height,duration_ms:p.rows[0].duration_ms,finished_at:null,created_at:new Date().toISOString(),direct_source:true};
+    }
+    if(!source)return res.status(409).json({error:'video_source_required',detail:'Upload a video asset to this project or create a Quick Browser Render first.'});
+    const sourceKey=String(source.storage_key||'');
+    if(!sourceKey||!sourceKey.startsWith('creator-media/'+req.user.id+'/'+req.params.id+'/'))return res.status(403).json({error:'video_source_not_owned'});
+    const sourceRevision=String(source.finished_at||source.created_at||new Date().toISOString());
+    const existing=await client.query("select * from video_studio_exports where project_id=$1 and user_id=$2 and provider='server' and preset=$3 and status in ('queued','processing','ready') and metadata->>'source_revision'=$4 order by created_at desc limit 1",[req.params.id,req.user.id,preset,sourceRevision]);
     if(existing.rowCount)return res.json({export:existing.rows[0],existing:true});
     await client.query('begin');
-    const payload={
-      user_id:req.user.id,project_id:req.params.id,preset,source_export_id:s.id,
-      source_media_object_id:s.output_media_object_id,source_storage_key:s.storage_key,
-      source_mime_type:s.source_mime_type,source_size_bytes:Number(s.source_size_bytes||0),
-      source_revision:String(s.finished_at||s.created_at||new Date().toISOString()),
-      width:Number(s.width||p.rows[0].width),height:Number(s.height||p.rows[0].height),
-      duration_ms:Number(s.duration_ms||p.rows[0].duration_ms)
-    };
-    const job=await client.query(
-      "insert into tgg_jobs(queue,job_type,payload,priority,max_attempts) values('video-render','master_transcode',$1,10,3) returning *",
-      [payload]
-    );
-    const exp=await client.query(
-      "insert into video_studio_exports(project_id,user_id,provider,preset,status,job_id,metadata,width,height,duration_ms) values($1,$2,'server',$3,'queued',$4,$5,$6,$7,$8) returning *",
-      [req.params.id,req.user.id,preset,job.rows[0].id,{source_export_id:String(s.id),source_media_object_id:String(s.output_media_object_id),source_revision:payload.source_revision,progress:0},payload.width,payload.height,payload.duration_ms]
-    );
+    const payload={user_id:req.user.id,project_id:req.params.id,preset,source_export_id:source.direct_source?null:source.id,source_media_object_id:source.output_media_object_id,source_storage_key:sourceKey,source_mime_type:source.source_mime_type,source_size_bytes:Number(source.source_size_bytes||0),source_revision:sourceRevision,width:Number(source.width||p.rows[0].width),height:Number(source.height||p.rows[0].height),duration_ms:Number(source.duration_ms||p.rows[0].duration_ms),source_mode:source.direct_source?'direct_upload':'browser_master'};
+    const job=await client.query("insert into tgg_jobs(queue,job_type,payload,priority,max_attempts) values('video-render','master_transcode',$1,10,3) returning *",[payload]);
+    const exp=await client.query("insert into video_studio_exports(project_id,user_id,provider,preset,status,job_id,metadata,width,height,duration_ms) values($1,$2,'server',$3,'queued',$4,$5,$6,$7,$8) returning *",[req.params.id,req.user.id,preset,job.rows[0].id,{source_export_id:source.direct_source?null:String(source.id||''),source_media_object_id:String(source.output_media_object_id),source_revision:sourceRevision,source_mode:source.direct_source?'direct_upload':'browser_master',progress:0},payload.width,payload.height,payload.duration_ms]);
     await client.query("update video_studio_projects set status='rendering',updated_at=now() where id=$1",[req.params.id]);
     await client.query('commit');
     await pool.query('select pg_notify($1,$2)',['tgg_jobs',JSON.stringify({id:job.rows[0].id,queue:'video-render',job_type:'master_transcode'})]).catch(()=>{});
-    res.status(201).json({export:exp.rows[0],job:job.rows[0],existing:false});
+    res.status(201).json({export:exp.rows[0],job:job.rows[0],existing:false,source_mode:source.direct_source?'direct_upload':'browser_master'});
   }catch(e){await client.query('rollback').catch(()=>{});next(e);}finally{client.release();}
 });
 

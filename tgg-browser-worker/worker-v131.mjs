@@ -33,12 +33,11 @@ const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 
 async function verifyOwnerSession(accessToken) {
   try {
-    const core=String(process.env.TGG_CORE_URL||'').replace(/\/$/,'');
-    if(!core)return {ok:false,error:'tgg_core_not_configured'};
-    const r=await fetch(core+'/v1/me',{headers:{Authorization:`Bearer ${accessToken}`},signal:AbortSignal.timeout(10000)});
-    if(!r.ok)return {ok:false,error:'owner_auth_failed'};
-    const body=await r.json();
-    return body?.user?.id?{ok:true,user:body.user}:{ok:false,error:'owner_auth_empty'};
+    if (!SUPABASE_URL || !SUPABASE_KEY) return {ok:false,error:'supabase_auth_not_configured'};
+    const authClient = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data, error } = await authClient.auth.getUser(accessToken);
+    if (error || !data?.user?.id) return {ok:false,error:'owner_auth_failed'};
+    return {ok:true,user:data.user};
   } catch(e){return {ok:false,error:e?.message||'owner_auth_exception'};}
 }
 

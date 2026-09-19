@@ -268,7 +268,7 @@ app.get('/v1/video-studio/readiness', auth, async (req,res,next)=>{
       pool.query("select worker_id,provider,status,progress,last_seen_at from video_studio_render_workers where status='online' and last_seen_at>now()-interval '15 minutes' order by last_seen_at desc limit 1")
     ]);
     res.json({
-      editor_version:'2.1',
+      editor_version:'2.4.1',
       cloud_save:true,
       private_media:true,
       browser_render_registration:true,

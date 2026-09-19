@@ -16,3 +16,9 @@ export async function tggWorkerBootstrap(id){if(!CORE_URL)throw new Error('TGG_C
 export async function tggWorkerRecoverCertification(){return call('/v1/workers/jobs/recover-certification',{})}
 
 export async function tggWorkerCertificationStatus(){return call('/v1/workers/certification-status',{})}
+
+
+export async function tggViewerEvent(browserSessionId,eventType,payload={}) {
+  if(!CORE_URL || !browserSessionId) return {ok:false,skipped:true};
+  return call('/v1/browser/sessions/'+encodeURIComponent(browserSessionId)+'/viewer-events',{event_type:eventType,payload});
+}

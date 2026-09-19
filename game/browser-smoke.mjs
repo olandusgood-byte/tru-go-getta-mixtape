@@ -123,6 +123,22 @@ try{
     throw new Error('V5.61 world visual realism failed '+JSON.stringify(visualWorld));
   }
 
+  await page.waitForFunction(()=>!!window.TGGGraphicsMega&&document.documentElement.dataset.tggGraphicsMega==='v562-v566',{timeout:15000});
+  const graphicsMega=await page.evaluate(()=>window.TGGGraphicsMega.getStatus());
+  if(graphicsMega?.ok!==true||
+     graphicsMega.versions?.length!==5||
+     graphicsMega.playerDetailParts<10||
+     graphicsMega.npcDetailParts<10||
+     graphicsMega.storefronts!==8||
+     graphicsMega.storefrontSigns!==8||
+     graphicsMega.streetProps<20||
+     graphicsMega.trees!==16||
+     graphicsMega.vegetationObjects<64||
+     graphicsMega.shadowLights<1||
+     graphicsMega.atmosphereParticles!==220){
+    throw new Error('V5.62-V5.66 graphics mega failed '+JSON.stringify(graphicsMega));
+  }
+
   await clickRuntimeControl('#newGame','CREATE PLAYER');
   await page.waitForFunction(()=>document.getElementById('creator')?.classList.contains('active')&&!!document.getElementById('startGame'),{timeout:10000});
   await page.locator('#stageName').fill('TGG Smoke');

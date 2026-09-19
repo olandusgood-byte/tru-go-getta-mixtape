@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "7.03",
-  "module": "GAME-V7.03-MEGA",
-  "name": "Mega V6.55-V7.03 Release Browser Live Viewer Audits Gates",
+  "version": "7.52",
+  "module": "GAME-V7.52-MEGA",
+  "name": "Mega V7.04-V7.52 Release Browser Live Viewer Audits Gates",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -174,7 +174,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V7.04",
+  "next": "V7.53",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

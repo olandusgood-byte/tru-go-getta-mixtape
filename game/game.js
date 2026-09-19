@@ -5,16 +5,16 @@
   let activeScreen='menu';
   const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false};
   const driveAnalog={steer:0,throttle:0,handbrake:0};
-  const driveRuntime={speed:0,steer:0,yawRate:0,lastTime:performance.now(),braking:false,handbrake:false};
-  const DRIVE={maxForward:10,maxReverse:-4.5,accel:7.5,reverseAccel:5.5,brake:12,coast:3.4,turnRate:108,steerIn:4.2,steerOut:7.4,lowSpeedSteer:1,highSpeedSteer:.58,yawResponse:180,yawCenter:235};
+  const driveRuntime={speed:0,steer:0,lastTime:performance.now(),braking:false,handbrake:false};
+  const DRIVE={maxForward:10,maxReverse:-4.5,accel:6.4,reverseAccel:4.7,brake:11.5,coast:2.8,turnRate:102,steerIn:3.25,steerOut:5.9,lowSpeedSteer:.92,highSpeedSteer:.5};
 
   const walkKeys={up:false,down:false,left:false,right:false,sprint:false};
   const walkAnalog={x:0,y:0,sprint:0};
   const walkReleaseTimers={up:null,down:null,left:null,right:null,sprint:null};
   const walkRuntime={vx:0,vy:0,inputX:0,inputY:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false};
-  const WALK={walkSpeed:6.8,sprintSpeed:10.5,accel:24,decel:30,turnResponse:11,inputResponse:8.5,stopEpsilon:.025};
+  const WALK={walkSpeed:6.4,sprintSpeed:9.8,accel:18,decel:24,turnResponse:8.5,inputResponse:6.2,stopEpsilon:.025};
   function setDriveTuning(next={}){
-    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate','steerIn','steerOut','lowSpeedSteer','highSpeedSteer','yawResponse','yawCenter'].forEach(k=>{
+    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate','steerIn','steerOut','lowSpeedSteer','highSpeedSteer'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))DRIVE[k]=Number(next[k]);
     });
     return {...DRIVE};
@@ -244,7 +244,6 @@
     if(activeScreen!=='game'||!state.inVehicle){
       driveRuntime.speed=approach(driveRuntime.speed,0,DRIVE.brake*elapsed);
       driveRuntime.steer=approach(driveRuntime.steer,0,6*elapsed);
-      driveRuntime.yawRate=approach(driveRuntime.yawRate,0,DRIVE.yawCenter*elapsed);
       driveRuntime.braking=false;
       driveRuntime.handbrake=false;
       window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:false,handbrake:false});
@@ -293,14 +292,7 @@
         const reverseSign=driveRuntime.speed<0?-1:1;
         const turnFactor=.9-speedRatio*.34;
         const driftBoost=driveRuntime.handbrake?1.55:1;
-        const targetYaw=driveRuntime.steer*DRIVE.turnRate*turnFactor*reverseSign*driftBoost;
-        const yawAccel=DRIVE.yawResponse*(driveRuntime.handbrake?1.35:1);
-        driveRuntime.yawRate=approach(driveRuntime.yawRate,targetYaw,yawAccel*dt);
-      }else{
-        driveRuntime.yawRate=approach(driveRuntime.yawRate,0,DRIVE.yawCenter*dt);
-      }
-      if(Math.abs(driveRuntime.yawRate)>.01&&Math.abs(driveRuntime.speed)>.05){
-        state.heading=(Number(state.heading||0)+driveRuntime.yawRate*dt+360)%360;
+        state.heading=(Number(state.heading||0)+driveRuntime.steer*DRIVE.turnRate*turnFactor*reverseSign*driftBoost*dt+360)%360;
       }
 
       if(Math.abs(driveRuntime.speed)>.02){
@@ -309,7 +301,6 @@
         const ny=Math.max(8,Math.min(88,state.y+Math.sin(rad)*driveRuntime.speed*dt));
         if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny,true)){
           driveRuntime.speed*=.18;
-          driveRuntime.yawRate*=.35;
         }else{
           state.x=nx;
           state.y=ny;
@@ -444,7 +435,6 @@
     if(state.inVehicle){
       state.inVehicle=false;
       driveRuntime.speed=0;
-      driveRuntime.yawRate=0;
       Object.keys(driveKeys).forEach(k=>driveKeys[k]=false);
       driveAnalog.steer=0;driveAnalog.throttle=0;driveAnalog.handbrake=0;
       walkAnalog.x=0;walkAnalog.y=0;walkAnalog.sprint=0;
@@ -468,7 +458,6 @@
     state.inVehicle=true;
     driveRuntime.speed=0;
     driveRuntime.steer=0;
-    driveRuntime.yawRate=0;
     driveRuntime.lastTime=performance.now();
     window.TGG3D?.setCameraMode?.('chase',true);
     window.TGG3D?.setVehicleDynamics?.({speed:0,steer:0,braking:false,handbrake:false});

@@ -1,10 +1,10 @@
 {
   "name": "tgg-repo-render-entrypoint",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "private": true,
   "type": "module",
   "scripts": {
-    "postinstall": "node -e \"if(process.env.TGG_SKIP_PLAYWRIGHT_INSTALL===\\\"1\\\"){console.log(\\\"Skipping Playwright browser install\\\")}else{require(\\\"child_process\\\").execFileSync(process.platform===\\\"win32\\\"?\\\"npx.cmd\\\":\\\"npx\\\",[\\\"playwright\\\",\\\"install\\\",\\\"chromium\\\"],{stdio:\\\"inherit\\\"})}\"",
+    "postinstall": "node -e \"if(process.env.TGG_SKIP_PLAYWRIGHT_INSTALL===\\\"1\\\"){console.log(\\\"Skipping Playwright browser install\\\")}else{require(\\\"child_process\\\").execFileSync(process.platform===\\\"win32\\\"?\\\"npx.cmd\\\":\\\"npx\\\",[\\\"playwright\\\",\\\"install\\\",\\\"--with-deps\\\",\\\"chromium\\\"],{stdio:\\\"inherit\\\"})}\"",
     "start": "node tgg-core/server.mjs",
     "start:worker": "node worker.mjs"
   },

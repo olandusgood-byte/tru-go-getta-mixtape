@@ -1,0 +1,5 @@
+#v410Lifestyle{position:fixed;right:18px;top:78px;z-index:66;width:min(300px,calc(100vw - 36px));padding:12px 14px;border-radius:14px;border:1px solid rgba(88,200,255,.18);background:linear-gradient(180deg,rgba(7,11,16,.9),rgba(7,11,16,.72));backdrop-filter:blur(18px);box-shadow:0 18px 50px rgba(0,0,0,.34)}
+#v410Lifestyle>small{font-size:9px;letter-spacing:.17em;color:#83d8ff;opacity:.74}.v410-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:7px}.v410-stats b{font-size:8px;padding:6px 7px;border-radius:8px;background:rgba(255,255,255,.04)}#v410Lifestyle>button{margin-top:8px;width:100%;padding:9px;border-radius:9px;font-weight:900}
+#v410Relations{display:grid;gap:5px;margin-top:8px}#v410Relations span{display:flex;justify-content:space-between;gap:8px;font-size:8px;padding:6px 7px;border-radius:8px;background:rgba(255,255,255,.035)}#v410Relations i{font-style:normal;opacity:.58}
+@media(max-width:820px){#v410Lifestyle{right:10px;top:250px;width:calc(100vw - 20px)}}
+@media(prefers-reduced-motion:reduce){#v410Lifestyle{backdrop-filter:none}}

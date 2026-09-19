@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "3.16",
-  "module": "GAME-V3.16-BULK",
+  "version": "3.31",
+  "module": "GAME-V3.31-BULK",
   "name": "Bulk Release + Browser + Live Viewer + Audits + Gates + Final Certification",
   "workflow": [
     "BUILD_ALL",
@@ -171,7 +171,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V3.17",
+  "next": "V3.32",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

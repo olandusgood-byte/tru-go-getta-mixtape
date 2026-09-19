@@ -77,7 +77,7 @@
     state.history.push({type:'cancel',...old});
     state.history=state.history.slice(-40);
     state.active=null;save();render();
-    return {accepted:true===false?true:false,status:'cancelled',meetup:old};
+    return {accepted:!!old,status:'cancelled',meetup:old};
   }
   function ensureHud(){
     let root=document.getElementById('v504MeetupHud');

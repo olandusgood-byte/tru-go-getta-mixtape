@@ -57,9 +57,10 @@
     if(!list)return;
     list.innerHTML=CONTACTS.map(name=>{
       const d=contactData(name);
-      return '<article class="v501-contact" data-v501-contact="'+name.replaceAll('"','&quot;')+'"><div><b>'+name+' • '+d.state.toUpperCase()+'</b><span>AFFINITY '+Math.round(d.affinity)+' • RESPECT '+d.respect+' • DEBT '+d.debt+' • MEETINGS '+d.meetings+'</span><span>LAST '+String(d.lastChoice||'NONE').toUpperCase()+' • FAVORS '+d.completedFavors+' COMPLETE / '+d.missedFavors+' MISSED</span></div><div class="v501-actions"><button type="button" data-v501-talk="'+name.replaceAll('"','&quot;')+'">TALK</button><button type="button" data-v501-favor="'+name.replaceAll('"','&quot;')+'" data-ready="'+d.favorReady+'" '+(d.favorReady?'':'disabled')+'>'+d.favorLabel+'</button></div></article>';
+      return '<article class="v501-contact" data-v501-contact="'+name.replaceAll('"','&quot;')+'"><div><b>'+name+' • '+d.state.toUpperCase()+'</b><span>AFFINITY '+Math.round(d.affinity)+' • RESPECT '+d.respect+' • DEBT '+d.debt+' • MEETINGS '+d.meetings+'</span><span>LAST '+String(d.lastChoice||'NONE').toUpperCase()+' • FAVORS '+d.completedFavors+' COMPLETE / '+d.missedFavors+' MISSED</span></div><div class="v501-actions"><button type="button" data-v501-talk="'+name.replaceAll('"','&quot;')+'">TALK</button><button type="button" data-v501-message="'+name.replaceAll('"','&quot;')+'">MESSAGE</button><button type="button" data-v501-favor="'+name.replaceAll('"','&quot;')+'" data-ready="'+d.favorReady+'" '+(d.favorReady?'':'disabled')+'>'+d.favorLabel+'</button></div></article>';
     }).join('');
     list.querySelectorAll('[data-v501-talk]').forEach(btn=>btn.onclick=()=>callContact(btn.dataset.v501Talk));
+    list.querySelectorAll('[data-v501-message]').forEach(btn=>btn.onclick=()=>{closePhone();window.TGGMessages?.openThread?.(btn.dataset.v501Message)});
     list.querySelectorAll('[data-v501-favor]').forEach(btn=>btn.onclick=()=>callFavor(btn.dataset.v501Favor));
   }
   function openPhone(){ensure();openState=true;document.getElementById('v501Phone').hidden=false;render();return snapshot()}
@@ -94,6 +95,7 @@
     window.addEventListener('tgg:npc-favor-outcome',render);
     window.addEventListener('tgg:career-contract-start',render);
     window.addEventListener('tgg:career-contract-outcome',render);
+    window.addEventListener('tgg:v503-ready',render);
     window.TGGPhone={version:VERSION,mutationPolicy:POLICY,openPhone,closePhone,callContact,callFavor,contactData,snapshot,run};
     window.TGGV501={version:VERSION,mutationPolicy:POLICY,run,snapshot};
     document.documentElement.dataset.tggV501='on';

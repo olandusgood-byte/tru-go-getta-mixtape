@@ -13,7 +13,7 @@ app.use((req,res,next)=>{
   if(origin && CORS_ORIGINS.has(origin)){
     res.set('Access-Control-Allow-Origin',origin);
     res.set('Vary','Origin');
-    res.set('Access-Control-Allow-Headers','Authorization, Content-Type, X-File-Name, X-Mime-Type, X-Project-Media-Kind, X-TGG-Worker-ID, X-TGG-Worker-Token, X-TGG-Bootstrap-Secret');
+    res.set('Access-Control-Allow-Headers','Authorization, Content-Type, X-File-Name, X-Mime-Type, X-Project-Media-Kind, X-TGG-GitHub-OIDC, X-TGG-Render-Lease, X-TGG-Worker-ID, X-TGG-Worker-Token, X-TGG-Bootstrap-Secret');
     res.set('Access-Control-Allow-Methods','GET,POST,PATCH,PUT,OPTIONS');
   }
   if(req.method==='OPTIONS') return res.sendStatus(204);
@@ -263,11 +263,24 @@ function videoStudioSignedUrl(storageKey,expiresIn=900) {
 
 app.get('/v1/video-studio/readiness', auth, async (req,res,next)=>{
   try{
-    const [projects,media]=await Promise.all([
+    const [projects,media,worker]=await Promise.all([
       pool.query('select count(*)::int as n from video_studio_projects where user_id=$1',[req.user.id]),
-      pool.query("select count(*)::int as n,coalesce(sum(size_bytes),0)::bigint as bytes from media_objects where owner_user_id=$1 and storage_key like 'creator-media/%'",[req.user.id])
+      pool.query("select count(*)::int as n,coalesce(sum(size_bytes),0)::bigint as bytes from media_objects where owner_user_id=$1 and storage_key like 'creator-media/%'",[req.user.id]),
+      pool.query("select worker_id,provider,status,progress,last_seen_at from video_studio_render_workers where status='online' and last_seen_at>now()-interval '15 minutes' order by last_seen_at desc limit 1")
     ]);
-    res.json({editor_version:'2.0',cloud_save:true,private_media:true,browser_render_registration:true,server_render_contract:'github_ffmpeg_worker',server_render_bridge:'existing_production_pipeline',projects:Number(projects.rows[0]?.n||0),media_objects:Number(media.rows[0]?.n||0),media_bytes:Number(media.rows[0]?.bytes||0)});
+    res.json({
+      editor_version:'2.1',
+      cloud_save:true,
+      private_media:true,
+      browser_render_registration:true,
+      server_render_contract:'github_oidc_ffmpeg',
+      server_render_bridge:'tgg_core_native',
+      server_render_online:Boolean(worker.rowCount),
+      render_worker:worker.rows[0]||null,
+      projects:Number(projects.rows[0]?.n||0),
+      media_objects:Number(media.rows[0]?.n||0),
+      media_bytes:Number(media.rows[0]?.bytes||0)
+    });
   }catch(e){next(e);}
 });
 
@@ -407,6 +420,282 @@ app.post('/v1/video-studio/projects/:id/browser-render', auth, async (req,res,ne
     await pool.query("update video_studio_projects set status='ready',updated_at=now() where id=$1",[req.params.id]);
     res.status(201).json({export:r.rows[0]});
   }catch(e){next(e);}
+});
+
+
+// TGG_VIDEO_STUDIO_V2_RENDER_BRIDGE_API
+const TGG_PUBLIC_BASE_URL=String(process.env.TGG_PUBLIC_BASE_URL||'https://tgg-core.onrender.com').replace(/\/$/,'');
+const TGG_VIDEO_RENDER_AUDIENCE='tgg-core-video-render-worker';
+const TGG_VIDEO_RENDER_REPOSITORY=String(process.env.TGG_GITHUB_REPOSITORY||'olandusgood-byte/tru-go-getta-mixtape');
+const TGG_VIDEO_RENDER_REPOSITORY_ID=String(process.env.TGG_GITHUB_REPOSITORY_ID||'1361630814');
+const TGG_VIDEO_RENDER_OWNER_ID=String(process.env.TGG_GITHUB_OWNER_ID||'326575362');
+const TGG_VIDEO_RENDER_WORKFLOW=TGG_VIDEO_RENDER_REPOSITORY+'/.github/workflows/tgg-core-video-render-worker.yml@refs/heads/main';
+let githubOidcConfigCache=null;
+let githubOidcKeysCache={expiresAt:0,keys:[]};
+
+function parseJwtPart(part){
+  try{return JSON.parse(Buffer.from(String(part||''),'base64url').toString('utf8'));}catch{return null;}
+}
+async function githubOidcKeys(){
+  const now=Date.now();
+  if(githubOidcKeysCache.keys.length&&githubOidcKeysCache.expiresAt>now)return githubOidcKeysCache.keys;
+  if(!githubOidcConfigCache){
+    const r=await fetch('https://token.actions.githubusercontent.com/.well-known/openid-configuration',{signal:AbortSignal.timeout(10000)});
+    if(!r.ok)throw new Error('github_oidc_discovery_failed');
+    githubOidcConfigCache=await r.json();
+  }
+  const r=await fetch(githubOidcConfigCache.jwks_uri,{signal:AbortSignal.timeout(10000)});
+  if(!r.ok)throw new Error('github_oidc_jwks_failed');
+  const body=await r.json();
+  githubOidcKeysCache={expiresAt:now+60*60*1000,keys:Array.isArray(body.keys)?body.keys:[]};
+  return githubOidcKeysCache.keys;
+}
+async function verifyGitHubVideoRenderOidc(token){
+  const parts=String(token||'').split('.');
+  if(parts.length!==3)throw Object.assign(new Error('github_oidc_missing_or_invalid'),{statusCode:401});
+  const header=parseJwtPart(parts[0]),claims=parseJwtPart(parts[1]);
+  if(!header||!claims||header.alg!=='RS256'||!header.kid)throw Object.assign(new Error('github_oidc_header_invalid'),{statusCode:401});
+  const keys=await githubOidcKeys();
+  const jwk=keys.find(k=>k.kid===header.kid);
+  if(!jwk)throw Object.assign(new Error('github_oidc_key_not_found'),{statusCode:401});
+  const key=crypto.createPublicKey({key:jwk,format:'jwk'});
+  const valid=crypto.verify('RSA-SHA256',Buffer.from(parts[0]+'.'+parts[1]),key,Buffer.from(parts[2],'base64url'));
+  if(!valid)throw Object.assign(new Error('github_oidc_signature_invalid'),{statusCode:401});
+  const now=Math.floor(Date.now()/1000),aud=Array.isArray(claims.aud)?claims.aud:[claims.aud];
+  if(claims.iss!=='https://token.actions.githubusercontent.com')throw Object.assign(new Error('github_oidc_issuer_invalid'),{statusCode:401});
+  if(!aud.includes(TGG_VIDEO_RENDER_AUDIENCE))throw Object.assign(new Error('github_oidc_audience_invalid'),{statusCode:401});
+  if(Number(claims.exp||0)<now-30||Number(claims.nbf||0)>now+30)throw Object.assign(new Error('github_oidc_time_invalid'),{statusCode:401});
+  if(String(claims.repository_id||'')!==TGG_VIDEO_RENDER_REPOSITORY_ID)throw Object.assign(new Error('github_oidc_repository_invalid'),{statusCode:403});
+  if(String(claims.repository_owner_id||'')!==TGG_VIDEO_RENDER_OWNER_ID)throw Object.assign(new Error('github_oidc_owner_invalid'),{statusCode:403});
+  if(String(claims.repository||'')!==TGG_VIDEO_RENDER_REPOSITORY)throw Object.assign(new Error('github_oidc_repository_name_invalid'),{statusCode:403});
+  if(String(claims.ref||'')!=='refs/heads/main')throw Object.assign(new Error('github_oidc_ref_invalid'),{statusCode:403});
+  const workflowRef=String(claims.job_workflow_ref||claims.workflow_ref||'');
+  if(workflowRef!==TGG_VIDEO_RENDER_WORKFLOW)throw Object.assign(new Error('github_oidc_workflow_invalid'),{statusCode:403});
+  if(claims.runner_environment&&String(claims.runner_environment)!=='github-hosted')throw Object.assign(new Error('github_oidc_runner_invalid'),{statusCode:403});
+  return claims;
+}
+function githubRenderWorkerId(claims){
+  return 'github:'+String(claims.run_id||claims.jti||'run')+':'+String(claims.run_attempt||'1');
+}
+function renderLeaseHash(value){return crypto.createHash('sha256').update(String(value||'')).digest('hex');}
+async function validateRenderLease(jobId,workerId,leaseToken){
+  const r=await pool.query(
+    "select * from tgg_jobs where id=$1 and queue='video-render' and job_type='master_transcode' and status='running' and worker_id=$2 and lease_token_hash=$3 and lease_expires_at>now()",
+    [jobId,workerId,renderLeaseHash(leaseToken)]
+  );
+  return r.rows[0]||null;
+}
+async function touchVideoRenderWorker(workerId,{status='online',jobId=null,progress=0,metadata={}}={}){
+  await pool.query(
+    `insert into video_studio_render_workers(worker_id,status,current_job_id,progress,metadata,last_seen_at,updated_at)
+     values($1,$2,$3,$4,$5,now(),now())
+     on conflict(worker_id) do update set status=excluded.status,current_job_id=excluded.current_job_id,
+     progress=excluded.progress,metadata=video_studio_render_workers.metadata||excluded.metadata,last_seen_at=now(),updated_at=now()`,
+    [workerId,status,jobId,Math.max(0,Math.min(100,Math.round(Number(progress)||0))),metadata||{}]
+  );
+}
+async function reapExpiredVideoRenderLeases(){
+  const expired=await pool.query(
+    `select id,attempts,max_attempts,payload from tgg_jobs
+     where queue='video-render' and job_type='master_transcode' and status='running'
+       and lease_expires_at is not null and lease_expires_at<=now()`
+  );
+  for(const job of expired.rows){
+    const retry=Number(job.attempts)<Number(job.max_attempts);
+    await pool.query(
+      `update tgg_jobs set status=$2,worker_id=null,lease_token_hash=null,lease_expires_at=null,
+       error='render_worker_lease_expired',available_at=case when $2='queued' then now()+interval '30 seconds' else available_at end,
+       finished_at=case when $2='failed' then now() else null end where id=$1`,
+      [job.id,retry?'queued':'failed']
+    );
+    await pool.query("update video_studio_exports set status=$2,metadata=metadata||$3::jsonb where job_id=$1",[job.id,retry?'queued':'failed',JSON.stringify({last_error:'render_worker_lease_expired'})]);
+  }
+}
+
+app.post('/v1/video-studio/projects/:id/server-render',auth,async(req,res,next)=>{
+  const client=await pool.connect();
+  try{
+    const preset=String(req.body?.preset||'1080p').toLowerCase();
+    if(!['720p','1080p','2160p','source'].includes(preset))return res.status(400).json({error:'invalid_render_preset'});
+    const p=await client.query('select * from video_studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!p.rowCount)return res.status(404).json({error:'video_project_not_found'});
+    const sourceId=req.body?.source_export_id||null;
+    const source=sourceId
+      ? await client.query("select e.*,m.storage_key,m.mime_type as source_mime_type,m.size_bytes as source_size_bytes from video_studio_exports e join media_objects m on m.id=e.output_media_object_id where e.id=$1 and e.project_id=$2 and e.user_id=$3 and e.provider='browser' and e.status='ready'",[sourceId,req.params.id,req.user.id])
+      : await client.query("select e.*,m.storage_key,m.mime_type as source_mime_type,m.size_bytes as source_size_bytes from video_studio_exports e join media_objects m on m.id=e.output_media_object_id where e.project_id=$1 and e.user_id=$2 and e.provider='browser' and e.status='ready' order by e.finished_at desc nulls last,e.created_at desc limit 1",[req.params.id,req.user.id]);
+    if(!source.rowCount)return res.status(409).json({error:'browser_master_required',detail:'Create a Quick Browser Render first.'});
+    const s=source.rows[0];
+    const existing=await client.query(
+      "select * from video_studio_exports where project_id=$1 and user_id=$2 and provider='server' and preset=$3 and status in ('queued','processing','ready') and metadata->>'source_export_id'=$4 order by created_at desc limit 1",
+      [req.params.id,req.user.id,preset,String(s.id)]
+    );
+    if(existing.rowCount)return res.json({export:existing.rows[0],existing:true});
+    await client.query('begin');
+    const payload={
+      user_id:req.user.id,project_id:req.params.id,preset,source_export_id:s.id,
+      source_media_object_id:s.output_media_object_id,source_storage_key:s.storage_key,
+      source_mime_type:s.source_mime_type,source_size_bytes:Number(s.source_size_bytes||0),
+      source_revision:String(s.finished_at||s.created_at||new Date().toISOString()),
+      width:Number(s.width||p.rows[0].width),height:Number(s.height||p.rows[0].height),
+      duration_ms:Number(s.duration_ms||p.rows[0].duration_ms)
+    };
+    const job=await client.query(
+      "insert into tgg_jobs(queue,job_type,payload,priority,max_attempts) values('video-render','master_transcode',$1,10,3) returning *",
+      [payload]
+    );
+    const exp=await client.query(
+      "insert into video_studio_exports(project_id,user_id,provider,preset,status,job_id,metadata,width,height,duration_ms) values($1,$2,'server',$3,'queued',$4,$5,$6,$7,$8) returning *",
+      [req.params.id,req.user.id,preset,job.rows[0].id,{source_export_id:String(s.id),source_media_object_id:String(s.output_media_object_id),source_revision:payload.source_revision,progress:0},payload.width,payload.height,payload.duration_ms]
+    );
+    await client.query("update video_studio_projects set status='rendering',updated_at=now() where id=$1",[req.params.id]);
+    await client.query('commit');
+    await pool.query('select pg_notify($1,$2)',['tgg_jobs',JSON.stringify({id:job.rows[0].id,queue:'video-render',job_type:'master_transcode'})]).catch(()=>{});
+    res.status(201).json({export:exp.rows[0],job:job.rows[0],existing:false});
+  }catch(e){await client.query('rollback').catch(()=>{});next(e);}finally{client.release();}
+});
+
+app.get('/v1/video-studio/projects/:id/server-renders',auth,async(req,res,next)=>{
+  try{
+    const p=await pool.query('select id from video_studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!p.rowCount)return res.status(404).json({error:'video_project_not_found'});
+    const r=await pool.query("select e.*,j.attempts,j.max_attempts,j.error,j.result,j.started_at,j.finished_at from video_studio_exports e left join tgg_jobs j on j.id=e.job_id where e.project_id=$1 and e.user_id=$2 and e.provider='server' order by e.created_at desc limit 50",[req.params.id,req.user.id]);
+    res.json({renders:r.rows});
+  }catch(e){next(e);}
+});
+
+app.post('/v1/video-studio/render-worker',async(req,res,next)=>{
+  try{
+    await init();
+    const claims=await verifyGitHubVideoRenderOidc(req.get('x-tgg-github-oidc'));
+    const workerId=githubRenderWorkerId(claims);
+    const operation=String(req.body?.operation||'');
+    await reapExpiredVideoRenderLeases();
+
+    if(operation==='register'){
+      await touchVideoRenderWorker(workerId,{status:'online',jobId:req.body?.job_id||null,progress:req.body?.progress||0,metadata:{workflow_ref:claims.workflow_ref||claims.job_workflow_ref,run_id:claims.run_id,sha:claims.sha}});
+      return res.json({ok:true,data:{worker_id:workerId}});
+    }
+    if(operation==='claim'){
+      const client=await pool.connect();
+      try{
+        await client.query('begin');
+        const q=await client.query(
+          `select * from tgg_jobs where queue='video-render' and job_type='master_transcode'
+           and status='queued' and available_at<=now()
+           order by priority desc,created_at asc for update skip locked limit 1`
+        );
+        if(!q.rowCount){await client.query('commit');await touchVideoRenderWorker(workerId,{status:'online',progress:0});return res.json({ok:true,data:{manifest:null}});}
+        const leaseToken=crypto.randomBytes(32).toString('base64url'),job=q.rows[0];
+        const updated=await client.query(
+          `update tgg_jobs set status='running',attempts=attempts+1,started_at=coalesce(started_at,now()),
+           worker_id=$2,lease_token_hash=$3,lease_expires_at=now()+interval '12 minutes',
+           result=coalesce(result,'{}'::jsonb)||'{"progress":1}'::jsonb,error=null
+           where id=$1 returning *`,
+          [job.id,workerId,renderLeaseHash(leaseToken)]
+        );
+        await client.query("update video_studio_exports set status='processing',metadata=metadata||'{\"progress\":1}'::jsonb where job_id=$1",[job.id]);
+        await client.query('commit');
+        await touchVideoRenderWorker(workerId,{status:'online',jobId:job.id,progress:1});
+        return res.json({ok:true,data:{manifest:{job:{id:job.id,preset:String(job.payload?.preset||'1080p'),payload:job.payload,attempts:updated.rows[0].attempts},lease_token:leaseToken}}});
+      }catch(e){await client.query('rollback').catch(()=>{});throw e;}finally{client.release();}
+    }
+
+    const jobId=String(req.body?.job_id||''),leaseToken=String(req.body?.lease_token||'');
+    if(!jobId||!leaseToken)return res.status(400).json({error:'render_job_and_lease_required'});
+    const job=await validateRenderLease(jobId,workerId,leaseToken);
+    if(!job)return res.status(409).json({error:'render_lease_invalid_or_expired'});
+
+    if(operation==='heartbeat'){
+      const progress=Math.max(1,Math.min(98,Math.round(Number(req.body?.progress)||1)));
+      await pool.query("update tgg_jobs set lease_expires_at=now()+interval '12 minutes',result=coalesce(result,'{}'::jsonb)||$2::jsonb where id=$1",[jobId,JSON.stringify({progress})]);
+      await pool.query("update video_studio_exports set status='processing',metadata=metadata||$2::jsonb where job_id=$1",[jobId,JSON.stringify({progress})]);
+      await touchVideoRenderWorker(workerId,{status:'online',jobId,progress});
+      return res.json({ok:true,data:{lease_valid:true,progress}});
+    }
+    if(operation==='download_url'){
+      const sourceKey=String(job.payload?.source_storage_key||'');
+      if(!sourceKey)return res.status(409).json({error:'render_source_missing'});
+      return res.json({ok:true,data:{signed_url:TGG_PUBLIC_BASE_URL+videoStudioSignedUrl(sourceKey,900),mime_type:job.payload?.source_mime_type||null}});
+    }
+    if(operation==='complete'){
+      const result=job.result||{},mediaId=String(result.output_media_object_id||req.body?.media_object_id||'');
+      const media=await pool.query("select * from media_objects where id=$1 and owner_user_id=$2 and media_type='video'",[mediaId,job.payload?.user_id]);
+      if(!media.rowCount)return res.status(409).json({error:'render_output_media_missing'});
+      const detail={
+        progress:100,output_media_object_id:media.rows[0].id,output_storage_key:media.rows[0].storage_key,
+        width:Number(req.body?.width)||null,height:Number(req.body?.height)||null,
+        duration_ms:Number(req.body?.duration_ms)||null,size_bytes:Number(media.rows[0].size_bytes)||null,
+        codec_video:req.body?.codec_video||'h264',codec_audio:req.body?.codec_audio||'aac',
+        completed_at:new Date().toISOString(),worker_id:workerId
+      };
+      await pool.query("update tgg_jobs set status='succeeded',result=coalesce(result,'{}'::jsonb)||$2::jsonb,error=null,finished_at=now(),lease_token_hash=null,lease_expires_at=null where id=$1",[jobId,JSON.stringify(detail)]);
+      await pool.query("update video_studio_exports set status='ready',output_media_object_id=$2,mime_type='video/mp4',width=coalesce($3,width),height=coalesce($4,height),duration_ms=coalesce($5,duration_ms),size_bytes=$6,metadata=metadata||$7::jsonb,finished_at=now() where job_id=$1",[jobId,media.rows[0].id,detail.width,detail.height,detail.duration_ms,detail.size_bytes,JSON.stringify({progress:100,codec_video:detail.codec_video,codec_audio:detail.codec_audio,worker_id:workerId})]);
+      await pool.query("update video_studio_projects set status='ready',updated_at=now() where id=$1",[job.payload?.project_id]);
+      await touchVideoRenderWorker(workerId,{status:'online',progress:100,metadata:{last_completed_job_id:jobId}});
+      return res.json({ok:true,data:{completed:true,media_id:media.rows[0].id}});
+    }
+    if(operation==='fail'){
+      const message=String(req.body?.error||'render_failed').slice(0,1900),retryable=req.body?.retryable!==false,retry=retryable&&Number(job.attempts)<Number(job.max_attempts);
+      await pool.query(
+        `update tgg_jobs set status=$2,error=$3,worker_id=null,lease_token_hash=null,lease_expires_at=null,
+         available_at=case when $2='queued' then now()+interval '30 seconds' else available_at end,
+         finished_at=case when $2='failed' then now() else null end where id=$1`,
+        [jobId,retry?'queued':'failed',message]
+      );
+      await pool.query("update video_studio_exports set status=$2,metadata=metadata||$3::jsonb where job_id=$1",[jobId,retry?'queued':'failed',JSON.stringify({last_error:message,progress:0})]);
+      await pool.query("update video_studio_projects set status='ready',updated_at=now() where id=$1",[job.payload?.project_id]);
+      await touchVideoRenderWorker(workerId,{status:'online',progress:0,metadata:{last_error:message}});
+      return res.json({ok:true,data:{retrying:retry}});
+    }
+    return res.status(400).json({error:'render_worker_operation_unknown'});
+  }catch(e){
+    if(e?.statusCode)return res.status(e.statusCode).json({error:e.message});
+    next(e);
+  }
+});
+
+app.put('/v1/video-studio/render-worker/jobs/:id/output',async(req,res,next)=>{
+  let handle=null,target=null;
+  try{
+    await init();
+    const claims=await verifyGitHubVideoRenderOidc(req.get('x-tgg-github-oidc'));
+    const workerId=githubRenderWorkerId(claims),leaseToken=String(req.get('x-tgg-render-lease')||'');
+    const job=await validateRenderLease(req.params.id,workerId,leaseToken);
+    if(!job)return res.status(409).json({error:'render_lease_invalid_or_expired'});
+    const maxBytes=10737418240,declared=Number(req.get('content-length')||0);
+    if(declared>maxBytes)return res.status(413).json({error:'render_output_too_large',max_bytes:maxBytes});
+    const objectKey=String(job.payload.user_id)+'/'+String(job.payload.project_id)+'/renders/'+String(job.id)+'.mp4';
+    const storageKey=path.posix.join('creator-media',objectKey),root=path.resolve(STORAGE_ROOT);
+    target=path.resolve(STORAGE_ROOT,storageKey);
+    if(!target.startsWith(root+path.sep))return res.status(400).json({error:'invalid_object_key'});
+    await fs.mkdir(path.dirname(target),{recursive:true});
+    handle=await fs.open(target,'w');
+    let written=0;const hash=crypto.createHash('sha256');
+    for await(const chunk of req){
+      written+=chunk.length;
+      if(written>maxBytes)throw Object.assign(new Error('render_output_too_large'),{statusCode:413});
+      hash.update(chunk);await handle.write(chunk);
+    }
+    await handle.close();handle=null;
+    if(!written){await fs.unlink(target).catch(()=>{});return res.status(400).json({error:'empty_render_output'});}
+    const checksum=hash.digest('hex');
+    const media=await pool.query(
+      "insert into media_objects(owner_user_id,media_type,storage_key,public_url,size_bytes,mime_type) values($1,'video',$2,null,$3,'video/mp4') on conflict(storage_key) do update set size_bytes=excluded.size_bytes,mime_type=excluded.mime_type returning *",
+      [job.payload.user_id,storageKey,written]
+    );
+    await pool.query(
+      "insert into tgg_media_uploads(media_object_id,owner_user_id,bucket_key,object_key,status,checksum_sha256,metadata) values($1,$2,'creator-media',$3,'ready',$4,$5) on conflict(object_key) do update set media_object_id=excluded.media_object_id,status='ready',checksum_sha256=excluded.checksum_sha256,metadata=excluded.metadata,updated_at=now()",
+      [media.rows[0].id,job.payload.user_id,objectKey,checksum,{project_id:job.payload.project_id,render_job_id:job.id,preset:job.payload.preset,provider:'github.oidc.ffmpeg.v2'}]
+    );
+    await pool.query("update tgg_jobs set result=coalesce(result,'{}'::jsonb)||$2::jsonb,lease_expires_at=now()+interval '12 minutes' where id=$1",[job.id,JSON.stringify({output_media_object_id:media.rows[0].id,output_storage_key:storageKey,size_bytes:written,checksum_sha256:checksum,progress:99})]);
+    await touchVideoRenderWorker(workerId,{status:'online',jobId:job.id,progress:99});
+    res.status(201).json({ok:true,media:media.rows[0]});
+  }catch(e){
+    if(handle)await handle.close().catch(()=>{});
+    if(target)await fs.unlink(target).catch(()=>{});
+    if(e?.statusCode)return res.status(e.statusCode).json({error:e.message});
+    next(e);
+  }
 });
 
 app.get('/v1/missions', auth, async (_req, res, next) => {

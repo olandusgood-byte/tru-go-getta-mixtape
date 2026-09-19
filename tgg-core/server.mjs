@@ -957,10 +957,26 @@ app.post('/v1/workers/jobs/complete', async (req,res,next)=>{
     const finished=r.rows[0];
     const certId=finished.payload?.certification_id;
     if(certId){
-      await pool.query(
-        "update tgg_certifications set status=$2,evidence=coalesce(evidence,'{}'::jsonb)||jsonb_build_object('browser_job_id',$3,'browser_result',$4::jsonb),completed_at=case when $2 in ('passed','failed','expired') then now() else completed_at end where id=$1",
+      const cr=await pool.query(
+        "update tgg_certifications set status=$2,evidence=coalesce(evidence,'{}'::jsonb)||jsonb_build_object('browser_job_id',$3,'browser_result',$4::jsonb),completed_at=case when $2 in ('passed','failed','expired') then now() else completed_at end where id=$1 returning *",
         [certId,verdict,finished.id,JSON.stringify(req.body?.result||{})]
       );
+      const browserSessionId=finished.payload?.browser_session_id;
+      if(browserSessionId){
+        await pool.query(
+          'insert into tgg_browser_viewer_events(browser_session_id,event_type,payload) values($1,$2,$3)',
+          [browserSessionId,'job_completed',{job_id:finished.id,flow_key:finished.flow_key,status:verdict,certification_id:certId||null,result:req.body?.result||{},evidence:req.body?.evidence||[]}]);
+        if(cr.rowCount) await pool.query(
+          'insert into tgg_browser_viewer_events(browser_session_id,event_type,payload) values($1,$2,$3)',
+          [browserSessionId,'certification_updated',{certification_id:cr.rows[0].id,status:cr.rows[0].status,evidence:cr.rows[0].evidence}]);
+        await pool.query('select pg_notify($1,$2)',['tgg_browser_viewer',JSON.stringify({browser_session_id:browserSessionId,event_type:'job_completed'})]);
+      }
+    } else if(finished.payload?.browser_session_id){
+      const browserSessionId=finished.payload.browser_session_id;
+      await pool.query(
+        'insert into tgg_browser_viewer_events(browser_session_id,event_type,payload) values($1,$2,$3)',
+        [browserSessionId,'job_completed',{job_id:finished.id,flow_key:finished.flow_key,status:verdict,result:req.body?.result||{},evidence:req.body?.evidence||[]}]);
+      await pool.query('select pg_notify($1,$2)',['tgg_browser_viewer',JSON.stringify({browser_session_id:browserSessionId,event_type:'job_completed'})]);
     }
     res.json({job:finished});
   }catch(e){next(e);}

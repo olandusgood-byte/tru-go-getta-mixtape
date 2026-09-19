@@ -36,7 +36,10 @@ jobs:
               && echo "$studio_body" | grep -q 'TGG Video Studio' \
               && echo "$studio_body" | grep -q 'previewCanvas' \
               && echo "$studio_body" | grep -q 'timelineViewport' \
-              && echo "$studio_body" | grep -q 'Server FFmpeg Render'; then
+              && echo "$studio_body" | grep -q 'Server FFmpeg Render' \
+              && echo "$studio_body" | grep -q 'PRO WORKSTATION · V2.5.0' \
+              && echo "$studio_body" | grep -q 'pro-ai.js?v=2.5.0' \
+              && echo "$studio_body" | grep -q 'gpu-fx.js?v=2.5.0'; then
               ok=1
               break
             fi
@@ -52,8 +55,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          app_body="$(curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/app.js?v=2.4.1')"
+          app_body="$(curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/app.js?v=2.5.0')"
           css_body="$(curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/styles.css?v=2.4.1')"
+          ai_body="$(curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/pro-ai.js?v=2.5.0')"
+          gpu_body="$(curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/gpu-fx.js?v=2.5.0')"
+          ai_css_body="$(curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/pro-ai.css?v=2.5.0')"
           grep -q 'queueServerRender' <<<"$app_body"
+          grep -q "version:'2.5.0'" <<<"$app_body"
           grep -q 'monitor-bezel' <<<"$css_body"
-          echo "Video Studio production assets verified."
+          grep -q 'function autoEdit' <<<"$ai_body"
+          grep -q 'tgg-block-match-v1' <<<"$ai_body"
+          grep -q 'VideoEncoder.isConfigSupported' <<<"$ai_body"
+          grep -q 'TGGVideoGPU' <<<"$gpu_body"
+          grep -q 'ai-director-view' <<<"$ai_css_body"
+          echo "Video Studio V2.5 production assets verified."

@@ -1,0 +1,21 @@
+{
+  "project": "TRU GO GETTA WORLD",
+  "runtime": "V3.60 LIVING CITY REACTIVE WORLD MEGA",
+  "status": "CERTIFIED",
+  "public_alias": "https://tgg-world-play.vercel.app",
+  "checks": {
+    "static_gate": true,
+    "mega_regression": true,
+    "browser_smoke": true,
+    "production_deploy": true,
+    "live_browser_interaction": true,
+    "runtime_errors_last_hour": 0
+  },
+  "browser_certification": {
+    "run_id": 35441849417,
+    "artifact_id": 10584062941,
+    "artifact_name": "tgg-v360-live-browser-certificate",
+    "digest": "sha256:19b1d42a03fc64d93113d4ae9ec1d182dde12f3999656e430e4be5be8286f68b",
+    "conclusion": "success"
+  }
+}

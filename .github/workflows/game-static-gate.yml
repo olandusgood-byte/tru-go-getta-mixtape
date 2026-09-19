@@ -17,6 +17,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: game-static-gate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   static-gate:
     runs-on: ubuntu-latest

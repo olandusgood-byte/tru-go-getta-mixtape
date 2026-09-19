@@ -485,14 +485,17 @@ async function queueServerRender(){
   if(!await verifyCloud()){toast('Sign in to TGG Cloud first','warn');$('#cloudDialog').showModal();return;}
   var project=await saveCloud();if(!project)return;
   try{
-    var r=await api('/v1/video-studio/projects/'+state.cloudProjectId+'/server-render',{method:'POST',body:JSON.stringify({preset:state.serverPreset})});
+    var payload={preset:state.serverPreset};
+    var videoAsset=state.project.assets.find(function(a){return a.type==='video'&&(state.cloudMediaByAsset[a.id]||a.mediaObjectId);});
+    if(videoAsset&&videoAsset.mediaObjectId)payload.source_media_object_id=videoAsset.mediaObjectId;
+    var r=await api('/v1/video-studio/projects/'+state.cloudProjectId+'/server-render',{method:'POST',body:JSON.stringify(payload)});
     var label=r.existing?'Render already exists':'Server render queued';
-    toast(label+' · '+state.serverPreset.toUpperCase());
+    toast(label+' · '+state.serverPreset.toUpperCase()+(r.source_mode==='direct_upload'?' · DIRECT SOURCE':''));
     $('#renderProgress').querySelector('i').style.width='2%';
     $('#renderProgress').querySelector('span').textContent=(r.export.status||'queued')+' · '+state.serverPreset.toUpperCase();
     pollServerRenders(true);
   }catch(e){
-    if(String(e.message).indexOf('browser_master_required')>=0)toast('Create a Quick Browser Render first, then queue the server render.','warn');
+    if(String(e.message).indexOf('video_source_required')>=0)toast('Upload a video asset to this project first.','warn');
     else toast('Server render queue failed: '+e.message,'error');
   }
 }

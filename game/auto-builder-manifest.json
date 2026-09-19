@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.30",
-  "module": "GAME-V1.30",
-  "name": "Autonomous World Tick + Adaptive Opportunities + Persistent World State",
+  "version": "1.33",
+  "module": "GAME-V1.33",
+  "name": "Cross-System Memory + World Consequence Chains + Adaptive Director",
   "workflow": [
     "BUILD",
     "TEST",
@@ -70,9 +70,13 @@
     "v1_28_world_tick": true,
     "v1_29_adaptive_opportunities": true,
     "v1_30_persistent_world_state": true,
-    "v1_30_local_state": true
+    "v1_30_local_state": true,
+    "v1_31_cross_system_memory": true,
+    "v1_32_world_consequence_chains": true,
+    "v1_33_adaptive_world_director": true,
+    "v1_33_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.31 CROSS-SYSTEM MEMORY + WORLD CONSEQUENCE CHAINS"
+  "next": "V1.34 WORLD SIMULATION BUS + SCHEDULED REACTIONS"
 }

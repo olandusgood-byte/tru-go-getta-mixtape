@@ -36,7 +36,7 @@ for(const src of [
 for(const token of ['window.TGGGame','setDriveKey','getDrivingState']) assert.ok(game.includes(token),'game runtime missing '+token);
 for(const token of ['window.TGG3D','isReady','getVehicleDynamics']) assert.ok(game3d.includes(token),'3D runtime missing '+token);
 for(const token of ['window.TGGStreetPresence','getStatus','setDensity','citizens','socialPeople','activityNodes']) assert.ok(street.includes(token),'street presence missing '+token);
-for(const token of ['window.TGGGarage','paint','tune']) assert.ok(garage.includes(token),'garage runtime missing '+token);
+for(const token of ['window.TGGGarage','getState','getPresets','apply','load']) assert.ok(garage.includes(token),'garage runtime missing '+token);
 assert.ok(garage3d.includes('THREE'),'garage 3D runtime missing Three.js integration');
 assert.ok(nav.includes('window.TGGNavigation'),'navigation runtime missing');
 assert.ok(gamepad.includes('gamepad')||gamepad.includes('Gamepad'),'gamepad runtime missing');

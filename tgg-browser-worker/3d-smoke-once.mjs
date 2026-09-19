@@ -43,6 +43,7 @@ const V227_CONSEQUENCES_ONLY=String(process.env.TGG_3D_V227_CONSEQUENCES_ONLY||'
 const V242_DIRECTOR_ONLY=String(process.env.TGG_3D_V242_DIRECTOR_ONLY||'0')==='1';
 const V243_REPLAY_ONLY=String(process.env.TGG_3D_V243_REPLAY_ONLY||'0')==='1';
 const V244_STORY_ONLY=String(process.env.TGG_3D_V244_STORY_ONLY||'0')==='1';
+const V245_DIALOGUE_ONLY=String(process.env.TGG_3D_V245_DIALOGUE_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function startV218SnapshotServer(){
@@ -79,6 +80,190 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(V245_DIALOGUE_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const paths=[
+        'index.html','v244-story-core.js','v244-story-forge.js',
+        'v245-dialogue-core.js','v245-dialogue-forge.js','v245-dialogue-forge.css',
+        'v235-npc-core.js','navigation.js','vendor/three-r152.min.js'
+      ];
+      const cacheKey='qa='+Date.now();
+      const responses=await Promise.all(paths.map(p=>fetch(base+'/'+p+'?'+cacheKey,{cache:'no-store',headers:{'cache-control':'no-cache'}})));
+      const http=Object.fromEntries(paths.map((p,i)=>[p,responses[i].status]));
+      if(responses.some(r=>!r.ok))throw new Error('V2.45 live-source fetch failed '+JSON.stringify(http));
+      const [indexHtml,v244Core,v244Forge,v245Core,v245Forge,v245Css,npcCore,navSource,threeSource]=await Promise.all(responses.map(r=>r.text()));
+
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      const errors=[];const consoleErrors=[];
+      mp.on('pageerror',e=>errors.push(e.message||String(e)));
+      mp.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
+
+      await mp.setContent('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>'+v245Css+'</style></head><body><header class="topbar"><span class="v201-badge">V2.45</span></header><section id="game" class="screen active"><div class="city" style="position:relative;width:100%;height:610px"><div id="navHud"><span id="navArrow">➤</span><b id="navLabel">CITY NAV</b><small id="navDistance">READY</small></div><div id="npcDialogue"></div></div><button id="interact3dBtn" disabled>INTERACT</button></section><section id="studio" class="screen"><button data-studio="record">RECORD TRACK</button></section><section id="media" class="screen"><button data-media="video">SHOOT MUSIC VIDEO</button></section></body></html>',{waitUntil:'domcontentloaded'});
+
+      await mp.addScriptTag({content:threeSource});
+      await mp.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>Object.keys(store).forEach(k=>delete store[k])
+        }});
+        window.__qaGame={x:50,y:55,cash:0,xp:0,level:4,inVehicle:false,heading:0};
+        window.__qaCareer={reputation:0,recordings:0};
+        window.__qaScreen='game';
+        window.__qaCalls={director:[],replay:[],fx:[],audio:[],animation:[],crowd:[],camera:[],toast:[]};
+        window.__tggToast=t=>window.__qaCalls.toast.push(String(t));
+        window.TGGGame={
+          getState:()=>window.__qaGame,getActiveScreen:()=>window.__qaScreen,
+          show:id=>{window.__qaScreen=id;document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));document.getElementById(id)?.classList.add('active');return true},
+          reward:(cash,xp)=>{window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return true}
+        };
+        window.TGGCareer={career:window.__qaCareer,addRep:n=>{window.__qaCareer.reputation+=Number(n)||0;return true}};
+        window.TGG3D={scene:new THREE.Scene(),isReady:()=>true,destinations:[]};
+        window.TGGV242={start:(...a)=>{window.__qaCalls.director.push(a);return true}};
+        window.TGGV243={mark:(...a)=>{window.__qaCalls.replay.push(a);return {type:a[0]}}};
+        window.TGGV238={emit:(...a)=>{window.__qaCalls.fx.push(a);return true}};
+        window.TGGV240={applyProfile:(...a)=>{window.__qaCalls.audio.push(['profile',...a]);return true},play:(...a)=>{window.__qaCalls.audio.push(['play',...a]);return true}};
+        window.TGGV232={play:(...a)=>{window.__qaCalls.animation.push(a);return true}};
+        window.TGGV235={pulseCrowd:(...a)=>{window.__qaCalls.crowd.push(a);return true}};
+        window.TGGV234={applyPreset:(...a)=>{window.__qaCalls.camera.push(['preset',...a]);return true},pulse:(...a)=>{window.__qaCalls.camera.push(['pulse',...a]);return true}};
+      });
+
+      for(const code of [npcCore,v244Core,navSource,v244Forge,v245Core,v245Forge]){
+        const init=await mp.evaluate(source=>{
+          try{(0,eval)(source);return {ok:true,error:null}}
+          catch(error){return {ok:false,error:String(error?.stack||error?.message||error)}}
+        },code);
+        if(!init.ok)throw new Error('V2.45 source init failed '+init.error);
+      }
+      await mp.waitForTimeout(180);
+
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
+      let snap=await mp.evaluate(()=>({
+        v245:window.TGGV245?.status?.(),
+        v244:window.TGGV244?.status?.(),
+        ui:{button:!!document.getElementById('v245DialogueBtn'),panel:!!document.getElementById('v245DialoguePanel')},
+        coreContacts:window.TGGV245Core?.contacts
+      }));
+      add('v245-live-index',indexHtml.includes('V2.45 TGG DIALOGUE + CHOICE FORGE 100')&&indexHtml.includes('v245-dialogue-forge.js'),JSON.stringify(http));
+      add('v245-api',snap.v245?.version==='V2.45 TGG DIALOGUE + CHOICE FORGE 100'&&snap.v245?.mode==='branching-cinematic-dialogue',JSON.stringify(snap.v245));
+      add('v245-100-layers',snap.v245?.layerCount===100,String(snap.v245?.layerCount));
+      add('v245-three-contacts',Array.isArray(snap.coreContacts)&&snap.coreContacts.join(',')==='manager,kane,director',JSON.stringify(snap.coreContacts));
+      add('v245-ui-hosts',snap.ui.button&&snap.ui.panel,JSON.stringify(snap.ui));
+
+      await mp.evaluate(()=>window.TGGV244.start('city-buzz'));
+      await mp.waitForTimeout(100);
+      await mp.evaluate(()=>{window.__qaGame.x=72;window.__qaGame.y=36});
+      await mp.waitForTimeout(130);
+      await mp.evaluate(()=>window.TGGV244.interact());
+      await mp.waitForTimeout(80);
+      snap=await mp.evaluate(()=>({
+        v244:window.TGGV244.status(),v245:window.TGGV245.status(),
+        panel:document.getElementById('v245DialoguePanel')?.classList.contains('active'),
+        choices:document.querySelectorAll('[data-v245-choice]').length
+      }));
+      add('v245-manager-intercept',snap.v244.step===0&&snap.v245.active==='manager'&&snap.panel&&snap.choices===3,JSON.stringify(snap));
+      add('v245-choice-blocks-story',snap.v244.current?.id==='manager-talk',JSON.stringify(snap.v244));
+
+      await mp.evaluate(()=>window.TGGV245.choose('smart'));
+      await mp.waitForTimeout(100);
+      snap=await mp.evaluate(()=>({v244:window.TGGV244.status(),v245:window.TGGV245.status(),calls:window.__qaCalls}));
+      add('v245-manager-choice-advances',snap.v244.step===1&&snap.v244.current?.id==='studio-arrival',JSON.stringify(snap.v244));
+      add('v245-manager-relationship',snap.v245.relationships?.manager?.score===60&&snap.v245.choices.manager==='smart',JSON.stringify(snap.v245.relationships));
+      add('v245-manager-presentation-hooks',snap.calls.replay.some(x=>x[0]==='dialogue')&&snap.calls.camera.length>0&&snap.calls.audio.length>0&&snap.calls.animation.length>0&&snap.calls.fx.length>0,JSON.stringify(snap.calls));
+
+      await mp.evaluate(()=>{window.__qaGame.x=24;window.__qaGame.y=37});
+      await mp.waitForTimeout(180);
+      await mp.evaluate(()=>window.TGGV244.interact());
+      await mp.waitForTimeout(80);
+      snap=await mp.evaluate(()=>({
+        v244:window.TGGV244.status(),v245:window.TGGV245.status(),
+        context:document.getElementById('v245Context')?.textContent||''
+      }));
+      add('v245-kane-intercept',snap.v244.step===2&&snap.v245.active==='kane',JSON.stringify(snap));
+      add('v245-kane-remembers-manager',/plan|precise|calculated/i.test(snap.context),snap.context);
+
+      await mp.evaluate(()=>window.TGGV245.choose('melodic'));
+      await mp.waitForTimeout(90);
+      snap=await mp.evaluate(()=>({v244:window.TGGV244.status(),v245:window.TGGV245.status()}));
+      add('v245-kane-choice-advances',snap.v244.step===3&&snap.v244.current?.id==='record',JSON.stringify(snap.v244));
+      add('v245-sound-identity',snap.v245.identity?.sound==='MELODIC'&&snap.v245.relationships?.kane?.score===60,JSON.stringify(snap.v245));
+
+      await mp.evaluate(()=>window.TGGV244.handleAction('record'));
+      await mp.waitForTimeout(70);
+      await mp.evaluate(()=>{window.__qaGame.x=50;window.__qaGame.y=50});
+      await mp.waitForTimeout(180);
+      await mp.evaluate(()=>window.TGGV244.handleEvent('tgg:rap-battle-complete',{passed:true,rank:'S'}));
+      await mp.waitForTimeout(70);
+      await mp.evaluate(()=>{window.__qaGame.x=76;window.__qaGame.y=63});
+      await mp.waitForTimeout(180);
+      await mp.evaluate(()=>window.TGGV244.handleEvent('tgg:concert-complete',{rank:'A'}));
+      await mp.waitForTimeout(70);
+      await mp.evaluate(()=>{window.__qaGame.x=50;window.__qaGame.y=89});
+      await mp.waitForTimeout(130);
+      await mp.evaluate(()=>window.TGGV244.interact());
+      await mp.waitForTimeout(70);
+      snap=await mp.evaluate(()=>({
+        v244:window.TGGV244.status(),v245:window.TGGV245.status(),
+        context:document.getElementById('v245Context')?.textContent||''
+      }));
+      add('v245-director-intercept',snap.v244.step===8&&snap.v245.active==='director',JSON.stringify(snap));
+      add('v245-director-remembers-kane',/big record|scale|emotion/i.test(snap.context),snap.context);
+
+      await mp.evaluate(()=>window.TGGV245.choose('story'));
+      await mp.waitForTimeout(90);
+      snap=await mp.evaluate(()=>({v244:window.TGGV244.status(),v245:window.TGGV245.status()}));
+      add('v245-director-choice-advances',snap.v244.step===9&&snap.v244.current?.id==='video',JSON.stringify(snap.v244));
+      add('v245-complete-identity',snap.v245.identity?.career==='CALCULATED'&&snap.v245.identity?.sound==='MELODIC'&&snap.v245.identity?.visual==='STORY',JSON.stringify(snap.v245.identity));
+      add('v245-director-relationship',snap.v245.relationships?.director?.score===60,JSON.stringify(snap.v245.relationships));
+
+      const before=await mp.evaluate(()=>({cash:window.__qaGame.cash,xp:window.__qaGame.xp,rep:window.__qaCareer.reputation}));
+      await mp.evaluate(()=>window.TGGV244.handleAction('video'));
+      await mp.waitForTimeout(120);
+      snap=await mp.evaluate(()=>({
+        v244:window.TGGV244.status(),v245:window.TGGV245.status(),
+        game:{...window.__qaGame},career:{...window.__qaCareer},
+        stored:JSON.parse(localStorage.getItem('tgg-v245-dialogue-choice')||'null'),
+        calls:window.__qaCalls,
+        panel:document.getElementById('v245DialoguePanel')?.classList.contains('active')
+      }));
+      add('v245-story-completes',snap.v244.completed.includes('city-buzz')&&snap.v245.epilogue===true&&snap.panel===true,JSON.stringify({v244:snap.v244,v245:snap.v245}));
+      add('v245-base-reward-preserved',snap.game.cash-before.cash===1800&&snap.game.xp-before.xp===450&&snap.career.reputation-before.rep===175,JSON.stringify({before,game:snap.game,career:snap.career}));
+      add('v245-persistence',snap.stored?.choices?.manager==='smart'&&snap.stored?.choices?.kane==='melodic'&&snap.stored?.choices?.director==='story',JSON.stringify(snap.stored));
+      add('v245-epilogue-replay',snap.calls.replay.some(x=>x[0]==='dialogue-epilogue'),JSON.stringify(snap.calls.replay));
+
+      await mp.evaluate(()=>{
+        window.TGGV244.reset('city-buzz');
+        window.TGGV245.beginRun({story:'city-buzz'});
+      });
+      const replayRel=await mp.evaluate(()=>window.TGGV245.status().relationships);
+      add('v245-no-relationship-stacking',replayRel.manager.score===60&&replayRel.kane.score===60&&replayRel.director.score===60,JSON.stringify(replayRel));
+
+      await mp.evaluate(()=>{
+        window.TGGV245.open('manager',{id:'manager-talk'});
+      });
+      await mp.waitForTimeout(80);
+      const layout=await mp.evaluate(()=>{
+        const p=document.getElementById('v245DialoguePanel')?.getBoundingClientRect();
+        const choices=[...document.querySelectorAll('.v245-choice')].map(x=>x.getBoundingClientRect());
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          panel:p?{left:p.left,right:p.right,width:p.width}:null,
+          choiceCount:choices.length,
+          minChoiceHeight:choices.length?Math.min(...choices.map(x=>x.height)):0
+        };
+      });
+      add('v245-mobile-no-overflow',layout.scrollWidth<=391,JSON.stringify(layout));
+      add('v245-mobile-panel-contained',!!layout.panel&&layout.panel.left>=0&&layout.panel.right<=layout.width+1,JSON.stringify(layout.panel));
+      add('v245-mobile-choice-readable',layout.choiceCount===3&&layout.minChoiceHeight>=66,JSON.stringify(layout));
+
+      result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'v245_dialogue_choice_live_source_harness',target:TARGET,http_status:http['index.html'],checks,console_errors:consoleErrors,page_errors:errors,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
 
     if(V244_STORY_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');

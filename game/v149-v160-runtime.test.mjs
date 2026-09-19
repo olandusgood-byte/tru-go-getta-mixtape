@@ -23,7 +23,8 @@ const layers=[
   'v167-production-load-test.js','v168-browser-runtime-audit.js','v169-live-viewer-audit.js',
   'v170-production-release-readiness.js','v171-cross-system-compatibility.js','v172-final-runtime-integrity.js',
   'v173-production-finalization.js','v174-tgg-browser-viewer-reconciliation.js','v175-final-verification-gate.js',
-  'v176-post-finalization-monitoring.js','v177-autonomous-regression-watch.js','v178-browser-viewer-health.js'
+  'v176-post-finalization-monitoring.js','v177-autonomous-regression-watch.js','v178-browser-viewer-health.js',
+  'v179-continuous-production-watch.js','v180-browser-viewer-recovery-monitor.js','v181-autonomous-runtime-controller.js'
 ];
 for(const file of layers){
   vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
@@ -59,11 +60,14 @@ assert(w.TGGV75.run().ok===true,'V1.75 final verification failed');
 assert(w.TGGV76.run({runtimePresent:true,pageErrorCount:0}).ok===true,'V1.76 monitoring failed');
 assert(w.TGGV77.run().ok===true,'V1.77 regression watch failed');
 assert(w.TGGV78.run().ok===true,'V1.78 browser viewer health failed');
-for(let n=49;n<=78;n++){
+assert(w.TGGV79.run({runtime:true,pageErrorCount:0}).ok===true,'V1.79 production watch failed');
+assert(w.TGGV80.run().ok===true,'V1.80 recovery monitor failed');
+assert(w.TGGV81.run().ok===true,'V1.81 runtime controller failed');
+for(let n=49;n<=81;n++){
   const api=w['TGGV'+n];
   assert(api&&typeof api.snapshot==='function','Missing runtime TGGV'+n);
   const snap=api.snapshot();
   assert(String(snap.version).startsWith('1.'+n+'.'),'Version mismatch TGGV'+n);
   assert(String(snap.mutationPolicy||'').startsWith('local_'),'Non-local mutation policy TGGV'+n);
 }
-console.log(JSON.stringify({ok:true,layers:layers.length,from:'V1.49',through:'V1.78'}));
+console.log(JSON.stringify({ok:true,layers:layers.length,from:'V1.49',through:'V1.81'}));

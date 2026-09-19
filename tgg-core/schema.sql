@@ -337,3 +337,62 @@ create table if not exists studio_versions (
   created_at timestamptz not null default now()
 );
 create index if not exists studio_versions_project_idx on studio_versions(project_id,created_at desc);
+
+
+-- TGG_VIDEO_STUDIO_V2_SCHEMA
+-- Additive project model for the professional Video Studio workstation.
+create table if not exists video_studio_projects (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references users(id) on delete cascade,
+  title text not null,
+  status text not null default 'editing' check (status in ('draft','editing','rendering','ready','archived')),
+  width integer not null default 1920 check (width between 240 and 7680),
+  height integer not null default 1080 check (height between 240 and 7680),
+  fps numeric not null default 30 check (fps > 0 and fps <= 120),
+  duration_ms bigint not null default 60000 check (duration_ms >= 0 and duration_ms <= 86400000),
+  project_json jsonb not null default '{"version":2,"tracks":[],"assets":[],"settings":{}}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists video_studio_projects_user_updated_idx on video_studio_projects(user_id,updated_at desc);
+
+create table if not exists video_studio_versions (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references video_studio_projects(id) on delete cascade,
+  user_id uuid not null references users(id) on delete cascade,
+  label text not null,
+  project_json jsonb not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists video_studio_versions_project_created_idx on video_studio_versions(project_id,created_at desc);
+
+create table if not exists video_studio_exports (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references video_studio_projects(id) on delete cascade,
+  user_id uuid not null references users(id) on delete cascade,
+  provider text not null check (provider in ('browser','server')),
+  preset text not null,
+  status text not null default 'queued' check (status in ('queued','processing','ready','failed')),
+  output_media_object_id uuid references media_objects(id) on delete set null,
+  mime_type text,
+  width integer,
+  height integer,
+  duration_ms bigint,
+  size_bytes bigint,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  finished_at timestamptz
+);
+create index if not exists video_studio_exports_project_created_idx on video_studio_exports(project_id,created_at desc);
+create index if not exists video_studio_exports_user_status_idx on video_studio_exports(user_id,status,created_at desc);
+
+insert into tgg_storage_buckets(bucket_key,visibility,max_bytes,allowed_mime_types)
+values (
+  'creator-media','private',2147483648,
+  array[
+    'video/mp4','video/webm','video/quicktime',
+    'audio/mpeg','audio/mp4','audio/wav','audio/ogg','audio/webm',
+    'image/jpeg','image/png','image/webp','image/gif'
+  ]::text[]
+)
+on conflict(bucket_key) do nothing;

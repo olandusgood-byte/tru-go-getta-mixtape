@@ -13,12 +13,28 @@ app.use((req,res,next)=>{
   if(origin && CORS_ORIGINS.has(origin)){
     res.set('Access-Control-Allow-Origin',origin);
     res.set('Vary','Origin');
-    res.set('Access-Control-Allow-Headers','Authorization, Content-Type, X-TGG-Worker-ID, X-TGG-Worker-Token, X-TGG-Bootstrap-Secret');
-    res.set('Access-Control-Allow-Methods','GET,POST,PATCH,OPTIONS');
+    res.set('Access-Control-Allow-Headers','Authorization, Content-Type, X-File-Name, X-Mime-Type, X-Project-Media-Kind, X-TGG-Worker-ID, X-TGG-Worker-Token, X-TGG-Bootstrap-Secret');
+    res.set('Access-Control-Allow-Methods','GET,POST,PATCH,PUT,OPTIONS');
   }
   if(req.method==='OPTIONS') return res.sendStatus(204);
   next();
 });
+
+// TGG_VIDEO_STUDIO_V2_STATIC
+const VIDEO_STUDIO_PUBLIC_ROOT = path.resolve(process.cwd(), 'tgg-core/public/video-studio');
+app.get('/video-studio', (_req,res)=>res.redirect(301,'/video-studio/'));
+app.use('/video-studio', express.static(VIDEO_STUDIO_PUBLIC_ROOT, {
+  etag: true,
+  maxAge: '5m',
+  index: 'index.html',
+  setHeaders(res,filePath) {
+    if (/\.(?:css|js|webmanifest|svg)$/i.test(filePath)) {
+      res.set('Cache-Control','public, max-age=300, stale-while-revalidate=86400');
+    } else if (/index\.html$/i.test(filePath)) {
+      res.set('Cache-Control','no-cache');
+    }
+  }
+}));
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -223,6 +239,175 @@ app.post('/v1/studio/projects/:id/recordings', auth, async (req,res,next)=>{try{
 app.patch('/v1/studio/recordings/:id', auth, async (req,res,next)=>{try{const status=req.body?.status;if(status&&!['open','paused','completed'].includes(status))return res.status(400).json({error:'invalid_recording_status'});const r=await pool.query("update recording_sessions set status=coalesce($1,status),completed_at=case when $1='completed' then now() else completed_at end where id=$2 and user_id=$3 returning *",[status||null,req.params.id,req.user.id]);if(!r.rowCount)return res.status(404).json({error:'recording_session_not_found'});if(status==='completed')await pool.query("update studio_projects set status='completed',updated_at=now() where id=$1",[r.rows[0].project_id]);else if(status)await pool.query("update studio_projects set status=case when $1='paused' then 'paused' else 'recording' end,updated_at=now() where id=$2",[status,r.rows[0].project_id]);res.json({session:r.rows[0]});}catch(e){next(e);}});
 
 app.post('/v1/studio/projects/:id/versions', auth, async (req,res,next)=>{try{const label=String(req.body?.label||'').trim();if(!label)return res.status(400).json({error:'version_label_required'});const p=await pool.query('select id from studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);if(!p.rowCount)return res.status(404).json({error:'project_not_found'});const r=await pool.query('insert into studio_versions(project_id,user_id,label) values($1,$2,$3) returning *',[req.params.id,req.user.id,label]);res.status(201).json({version:r.rows[0]});}catch(e){next(e);}});
+
+
+// TGG_VIDEO_STUDIO_V2_API
+function normalizeVideoProjectJson(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return { version: 2, tracks: [], assets: [], settings: {} };
+  return value;
+}
+function clampVideoStudioNumber(value,min,max,fallback) {
+  const n=Number(value);
+  return Number.isFinite(n) ? Math.min(max,Math.max(min,n)) : fallback;
+}
+function videoStudioSignedUrl(storageKey,expiresIn=900) {
+  const normalized=String(storageKey||'').replace(/^\/+/, '');
+  const slash=normalized.indexOf('/');
+  if(slash<1) return null;
+  const bucket=normalized.slice(0,slash),key=normalized.slice(slash+1);
+  const seconds=Math.min(3600,Math.max(30,Number(expiresIn)||900));
+  const expires=Math.floor(Date.now()/1000)+seconds;
+  const sig=crypto.createHmac('sha256',TOKEN_SECRET).update(bucket+'/'+key+':'+expires).digest('hex');
+  return '/v1/storage/signed/'+encodeURIComponent(bucket)+'/'+key.split('/').map(encodeURIComponent).join('/')+'?expires='+expires+'&sig='+sig;
+}
+
+app.get('/v1/video-studio/readiness', auth, async (req,res,next)=>{
+  try{
+    const [projects,media]=await Promise.all([
+      pool.query('select count(*)::int as n from video_studio_projects where user_id=$1',[req.user.id]),
+      pool.query("select count(*)::int as n,coalesce(sum(size_bytes),0)::bigint as bytes from media_objects where owner_user_id=$1 and storage_key like 'creator-media/%'",[req.user.id])
+    ]);
+    res.json({editor_version:'2.0',cloud_save:true,private_media:true,browser_render_registration:true,server_render_contract:'github_ffmpeg_worker',server_render_bridge:'existing_production_pipeline',projects:Number(projects.rows[0]?.n||0),media_objects:Number(media.rows[0]?.n||0),media_bytes:Number(media.rows[0]?.bytes||0)});
+  }catch(e){next(e);}
+});
+
+app.get('/v1/video-studio/dashboard', auth, async (req,res,next)=>{
+  try{
+    const [summary,projects,exports,media]=await Promise.all([
+      pool.query("select count(*)::int as projects,count(*) filter(where status='ready')::int as ready,count(*) filter(where updated_at>now()-interval '7 days')::int as active_7d from video_studio_projects where user_id=$1",[req.user.id]),
+      pool.query('select id,title,status,width,height,fps,duration_ms,created_at,updated_at from video_studio_projects where user_id=$1 order by updated_at desc limit 8',[req.user.id]),
+      pool.query('select id,project_id,provider,preset,status,mime_type,width,height,duration_ms,size_bytes,created_at,finished_at from video_studio_exports where user_id=$1 order by created_at desc limit 8',[req.user.id]),
+      pool.query("select count(*)::int as objects,coalesce(sum(size_bytes),0)::bigint as bytes from media_objects where owner_user_id=$1 and storage_key like 'creator-media/%'",[req.user.id])
+    ]);
+    res.json({summary:summary.rows[0],projects:projects.rows,exports:exports.rows,media:media.rows[0]});
+  }catch(e){next(e);}
+});
+
+app.get('/v1/video-studio/projects', auth, async (req,res,next)=>{
+  try{
+    const r=await pool.query('select id,title,status,width,height,fps,duration_ms,project_json,created_at,updated_at from video_studio_projects where user_id=$1 order by updated_at desc limit 100',[req.user.id]);
+    res.json({projects:r.rows});
+  }catch(e){next(e);}
+});
+
+app.post('/v1/video-studio/projects', auth, async (req,res,next)=>{
+  try{
+    const title=String(req.body?.title||'Untitled Video').trim().slice(0,180)||'Untitled Video';
+    const width=Math.round(clampVideoStudioNumber(req.body?.width,240,7680,1920));
+    const height=Math.round(clampVideoStudioNumber(req.body?.height,240,7680,1080));
+    const fps=clampVideoStudioNumber(req.body?.fps,1,120,30);
+    const duration_ms=Math.round(clampVideoStudioNumber(req.body?.duration_ms,0,86400000,60000));
+    const project_json=normalizeVideoProjectJson(req.body?.project_json);
+    const r=await pool.query('insert into video_studio_projects(user_id,title,width,height,fps,duration_ms,project_json) values($1,$2,$3,$4,$5,$6,$7) returning *',[req.user.id,title,width,height,fps,duration_ms,project_json]);
+    res.status(201).json({project:r.rows[0]});
+  }catch(e){next(e);}
+});
+
+app.get('/v1/video-studio/projects/:id', auth, async (req,res,next)=>{
+  try{
+    const p=await pool.query('select * from video_studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!p.rowCount)return res.status(404).json({error:'video_project_not_found'});
+    const [versions,exports,media]=await Promise.all([
+      pool.query('select id,label,created_at from video_studio_versions where project_id=$1 and user_id=$2 order by created_at desc limit 50',[req.params.id,req.user.id]),
+      pool.query('select * from video_studio_exports where project_id=$1 and user_id=$2 order by created_at desc limit 50',[req.params.id,req.user.id]),
+      pool.query("select id,media_type,storage_key,size_bytes,mime_type,created_at from media_objects where owner_user_id=$1 and storage_key like $2 order by created_at desc",[req.user.id,'creator-media/'+req.user.id+'/'+req.params.id+'/%'])
+    ]);
+    res.json({project:p.rows[0],versions:versions.rows,exports:exports.rows,media:media.rows.map(x=>({...x,url:videoStudioSignedUrl(x.storage_key,900)}))});
+  }catch(e){next(e);}
+});
+
+app.patch('/v1/video-studio/projects/:id', auth, async (req,res,next)=>{
+  try{
+    const existing=await pool.query('select * from video_studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!existing.rowCount)return res.status(404).json({error:'video_project_not_found'});
+    const prev=existing.rows[0],allowedStatuses=new Set(['draft','editing','rendering','ready','archived']);
+    const status=req.body?.status&&allowedStatuses.has(req.body.status)?req.body.status:prev.status;
+    const title=req.body?.title===undefined?prev.title:(String(req.body.title||'Untitled Video').trim().slice(0,180)||'Untitled Video');
+    const width=req.body?.width===undefined?prev.width:Math.round(clampVideoStudioNumber(req.body.width,240,7680,prev.width));
+    const height=req.body?.height===undefined?prev.height:Math.round(clampVideoStudioNumber(req.body.height,240,7680,prev.height));
+    const fps=req.body?.fps===undefined?prev.fps:clampVideoStudioNumber(req.body.fps,1,120,prev.fps);
+    const duration_ms=req.body?.duration_ms===undefined?prev.duration_ms:Math.round(clampVideoStudioNumber(req.body.duration_ms,0,86400000,prev.duration_ms));
+    const project_json=req.body?.project_json===undefined?prev.project_json:normalizeVideoProjectJson(req.body.project_json);
+    const r=await pool.query('update video_studio_projects set title=$3,status=$4,width=$5,height=$6,fps=$7,duration_ms=$8,project_json=$9,updated_at=now() where id=$1 and user_id=$2 returning *',[req.params.id,req.user.id,title,status,width,height,fps,duration_ms,project_json]);
+    res.json({project:r.rows[0]});
+  }catch(e){next(e);}
+});
+
+app.post('/v1/video-studio/projects/:id/versions', auth, async (req,res,next)=>{
+  try{
+    const p=await pool.query('select * from video_studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!p.rowCount)return res.status(404).json({error:'video_project_not_found'});
+    const label=String(req.body?.label||('Version '+new Date().toISOString())).trim().slice(0,180);
+    const snapshot=req.body?.project_json===undefined?p.rows[0].project_json:normalizeVideoProjectJson(req.body.project_json);
+    const r=await pool.query('insert into video_studio_versions(project_id,user_id,label,project_json) values($1,$2,$3,$4) returning id,label,created_at',[req.params.id,req.user.id,label,snapshot]);
+    res.status(201).json({version:r.rows[0]});
+  }catch(e){next(e);}
+});
+
+app.get('/v1/video-studio/projects/:id/versions/:versionId', auth, async (req,res,next)=>{
+  try{
+    const r=await pool.query('select * from video_studio_versions where id=$1 and project_id=$2 and user_id=$3',[req.params.versionId,req.params.id,req.user.id]);
+    if(!r.rowCount)return res.status(404).json({error:'video_project_version_not_found'});
+    res.json({version:r.rows[0]});
+  }catch(e){next(e);}
+});
+
+app.put('/v1/video-studio/projects/:id/media', auth, async (req,res,next)=>{
+  let handle=null,target=null;
+  try{
+    const p=await pool.query('select id from video_studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!p.rowCount)return res.status(404).json({error:'video_project_not_found'});
+    const rawName=decodeURIComponent(String(req.get('x-file-name')||'media.bin')).replace(/[\r\n]/g,'').slice(0,200);
+    const safeName=(rawName||'media.bin').replace(/[^a-zA-Z0-9._ -]/g,'_').replace(/\s+/g,'-');
+    const mime=String(req.get('x-mime-type')||req.get('content-type')||'application/octet-stream').split(';')[0].trim().toLowerCase();
+    if(!/^(video|audio|image)\//.test(mime))return res.status(415).json({error:'video_studio_media_type_not_allowed'});
+    const declared=Number(req.get('content-length')||0),maxBytes=2147483648;
+    if(declared>maxBytes)return res.status(413).json({error:'video_studio_media_too_large',max_bytes:maxBytes});
+    const objectKey=req.user.id+'/'+req.params.id+'/'+Date.now()+'-'+crypto.randomUUID()+'-'+safeName;
+    const storageKey=path.posix.join('creator-media',objectKey);
+    target=path.resolve(STORAGE_ROOT,storageKey);
+    const root=path.resolve(STORAGE_ROOT);
+    if(!target.startsWith(root+path.sep))return res.status(400).json({error:'invalid_object_key'});
+    await fs.mkdir(path.dirname(target),{recursive:true});
+    handle=await fs.open(target,'w');
+    let written=0;const hash=crypto.createHash('sha256');
+    for await(const chunk of req){written+=chunk.length;if(written>maxBytes)throw Object.assign(new Error('video_studio_media_too_large'),{statusCode:413});hash.update(chunk);await handle.write(chunk);}
+    await handle.close();handle=null;
+    if(!written){await fs.unlink(target).catch(()=>{});return res.status(400).json({error:'empty_upload'});}
+    const mediaType=mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'image';
+    const media=await pool.query('insert into media_objects(owner_user_id,media_type,storage_key,public_url,size_bytes,mime_type) values($1,$2,$3,$4,$5,$6) on conflict(storage_key) do update set size_bytes=excluded.size_bytes,mime_type=excluded.mime_type returning *',[req.user.id,mediaType,storageKey,null,written,mime]);
+    const upload=await pool.query("insert into tgg_media_uploads(media_object_id,owner_user_id,bucket_key,object_key,status,checksum_sha256,metadata) values($1,$2,'creator-media',$3,'ready',$4,$5) on conflict(object_key) do update set media_object_id=excluded.media_object_id,status='ready',checksum_sha256=excluded.checksum_sha256,metadata=excluded.metadata,updated_at=now() returning *",[media.rows[0].id,req.user.id,objectKey,hash.digest('hex'),{project_id:req.params.id,original_name:rawName,mime_type:mime,size_bytes:written}]);
+    res.status(201).json({media:media.rows[0],upload:upload.rows[0],url:videoStudioSignedUrl(storageKey,900)});
+  }catch(e){
+    if(handle)await handle.close().catch(()=>{});
+    if(target)await fs.unlink(target).catch(()=>{});
+    if(e?.statusCode)return res.status(e.statusCode).json({error:e.message});
+    next(e);
+  }
+});
+
+app.post('/v1/video-studio/projects/:id/media/:mediaId/sign', auth, async (req,res,next)=>{
+  try{
+    const p=await pool.query('select id from video_studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!p.rowCount)return res.status(404).json({error:'video_project_not_found'});
+    const m=await pool.query("select * from media_objects where id=$1 and owner_user_id=$2 and storage_key like $3",[req.params.mediaId,req.user.id,'creator-media/'+req.user.id+'/'+req.params.id+'/%']);
+    if(!m.rowCount)return res.status(404).json({error:'video_project_media_not_found'});
+    res.json({url:videoStudioSignedUrl(m.rows[0].storage_key,Math.min(3600,Math.max(60,Number(req.body?.expires_in)||900))),media:m.rows[0]});
+  }catch(e){next(e);}
+});
+
+app.post('/v1/video-studio/projects/:id/browser-render', auth, async (req,res,next)=>{
+  try{
+    const p=await pool.query('select * from video_studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!p.rowCount)return res.status(404).json({error:'video_project_not_found'});
+    const m=await pool.query("select * from media_objects where id=$1 and owner_user_id=$2 and media_type='video'",[req.body?.media_object_id,req.user.id]);
+    if(!m.rowCount)return res.status(404).json({error:'browser_render_media_not_found'});
+    const preset=String(req.body?.preset||'browser-master').slice(0,64);
+    const r=await pool.query("insert into video_studio_exports(project_id,user_id,provider,preset,status,output_media_object_id,mime_type,width,height,duration_ms,size_bytes,metadata,finished_at) values($1,$2,'browser',$3,'ready',$4,$5,$6,$7,$8,$9,$10,now()) returning *",[req.params.id,req.user.id,preset,m.rows[0].id,req.body?.mime_type||m.rows[0].mime_type,req.body?.width||p.rows[0].width,req.body?.height||p.rows[0].height,req.body?.duration_ms||p.rows[0].duration_ms,req.body?.size_bytes||m.rows[0].size_bytes,req.body?.metadata||{}]);
+    await pool.query("update video_studio_projects set status='ready',updated_at=now() where id=$1",[req.params.id]);
+    res.status(201).json({export:r.rows[0]});
+  }catch(e){next(e);}
+});
 
 app.get('/v1/missions', auth, async (_req, res, next) => {
   try { const r=await pool.query('select * from world_missions where active=true order by created_at'); res.json({ missions:r.rows }); }

@@ -89,7 +89,7 @@
     const near=nearestHotspot();
     state.room.near=near&&near.distance<=1.6?near.id:null;
     save();
-    return {ok:true,x:state.room.x,z:state.room.z,near:near?{id:near.id,label:near.label,distance:near.distance}:null};
+    return {ok:Number.isFinite(state.room.x)&&Number.isFinite(state.room.z),x:state.room.x,z:state.room.z,near:near?{id:near.id,label:near.label,distance:near.distance}:null};
   }
   function teleportNear(id){
     const h=HOTSPOTS.find(x=>x.id===id);if(!h)return {ok:false,status:'unknown_hotspot'};
@@ -153,7 +153,7 @@
       p.userData.v541CrowdMode=mode;
     });
     state.crowd.mode=mode;state.crowd.syncs=(Number(state.crowd.syncs)||0)+1;state.crowd.lastAnchor=anchor;save();
-    return {ok:true,mode,count:list.length,anchor};
+    return {ok:list.length>0,mode,count:list.length,anchor};
   }
   function snapshot(){
     return {

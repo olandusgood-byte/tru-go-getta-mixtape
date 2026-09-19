@@ -79,20 +79,23 @@ jobs:
             const achievementCatalog = (window.TGGProgression?.achievements?.length || 0) >= 7;
 
             window.TGGGame?.show?.('game');
+            window.TGGRealism?.setQuality?.('performance');
+            window.TGGRealityMaster?.setQuality?.('performance');
+            await new Promise(r=>setTimeout(r,250));
             const movementApi = ['setWalkKey','setWalkAnalog','getWalkingState','setWalkTuning','getWalkTuning','setDriveKey','setDriveAnalog','getDrivingState','setDriveTuning','getDriveTuning']
               .every(name => typeof window.TGGGame?.[name] === 'function');
             const startPos = {...window.TGGGame.getState()};
             window.TGGGame.setWalkKey('right',true);
-            await new Promise(r=>setTimeout(r,320));
+            await new Promise(r=>setTimeout(r,700));
             window.TGGGame.setWalkKey('right',false);
-            await new Promise(r=>setTimeout(r,180));
+            await new Promise(r=>setTimeout(r,260));
             const endPos = {...window.TGGGame.getState()};
             const smoothWalkMoved = endPos.x > startPos.x + 0.05;
             const analogStart = {...window.TGGGame.getState()};
             window.TGGGame.setWalkAnalog({x:-0.72,y:0,sprint:0.4});
-            await new Promise(r=>setTimeout(r,320));
+            await new Promise(r=>setTimeout(r,700));
             window.TGGGame.setWalkAnalog({x:0,y:0,sprint:0});
-            await new Promise(r=>setTimeout(r,180));
+            await new Promise(r=>setTimeout(r,260));
             const analogEnd = {...window.TGGGame.getState()};
             const analogWalkMoved = Math.hypot((analogEnd.x||0)-(analogStart.x||0),(analogEnd.y||0)-(analogStart.y||0)) > 0.03;
             const analogState = window.TGGGame.getWalkingState();

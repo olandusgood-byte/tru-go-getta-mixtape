@@ -10,6 +10,8 @@
     kane:0x7b86ff,
     director:0xc56cff,
     dj:0x48d7ff,
+    friend:0xc7ff00,
+    family:0xffc857,
     objective:0xc7ff00
   };
 
@@ -109,7 +111,9 @@
     makeContact({id:'manager',name:'M',role:'MANAGER',x:72,y:36,color:COLORS.manager,skin:0x8d5b3f}),
     makeContact({id:'kane',name:'KANE',role:'PRODUCER',x:24,y:37,color:COLORS.kane,skin:0xa16f4f}),
     makeContact({id:'dj',name:'DJ V',role:'CITY DJ',x:76,y:63,color:COLORS.dj,skin:0x8f6045}),
-    makeContact({id:'director',name:'DIRECTOR K',role:'MEDIA',x:50,y:89,color:COLORS.director,skin:0x7f513a})
+    makeContact({id:'director',name:'DIRECTOR K',role:'MEDIA',x:50,y:89,color:COLORS.director,skin:0x7f513a}),
+    makeContact({id:'friend',name:'DAY ONE',role:'FRIEND',x:72,y:67,color:COLORS.friend,skin:0x9a6648}),
+    makeContact({id:'family',name:'MAMA G',role:'FAMILY',x:63,y:24,color:COLORS.family,skin:0x87573f})
   ];
 
   const beacon=new THREE.Group();
@@ -222,6 +226,8 @@
     const button=document.getElementById('interact3dBtn');
     const dialogue=document.getElementById('npcDialogue');
     const talk=(Number(st?.chapter)||0)>=2&&st?.active&&step?.kind==='talk';
+    const appointment=window.TGGSocialSchedule?.activeInvite?.()||null;
+    const appointmentNear=!!appointment&&!!currentTarget?.schedule&&isNearTarget(currentTarget);
     nearTarget=!!currentTarget&&isNearTarget(currentTarget);
 
     if(talk&&nearTarget){
@@ -240,8 +246,18 @@
               :'Director K: Camera’s ready. Let’s turn the record into a visual.';
         dialogue.classList.add('show');
       }
+    }else if(appointmentNear){
+      if(button){
+        button.disabled=false;
+        button.textContent='CHECK IN • '+String(appointment.name||'APPOINTMENT').toUpperCase();
+        button.classList.add('nearby','story-contact-near','appointment-contact-near');
+      }
+      if(dialogue){
+        dialogue.textContent=appointment.name+': '+appointment.message;
+        dialogue.classList.add('show');
+      }
     }else if(button){
-      button.classList.remove('story-contact-near');
+      button.classList.remove('story-contact-near','appointment-contact-near');
     }
   }
 
@@ -252,6 +268,14 @@
       e.preventDefault();
       e.stopImmediatePropagation();
       story.doCurrent?.();
+      return;
+    }
+    const appointment=window.TGGSocialSchedule?.activeInvite?.();
+    const target=window.TGGSocialSchedule?.navigationTarget?.();
+    if(appointment&&target&&isNearTarget(target)){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      window.TGGSocialSchedule?.checkIn?.(appointment.id);
     }
   },true);
 

@@ -372,6 +372,55 @@ app.get('/v1/video-studio/projects/:id/versions/:versionId', auth, async (req,re
   }catch(e){next(e);}
 });
 
+app.post('/v1/video-studio/projects/:id/import-supabase-asset', auth, async (req,res,next)=>{
+  let handle=null,target=null;
+  try{
+    const p=await pool.query('select id from video_studio_projects where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!p.rowCount)return res.status(404).json({error:'video_project_not_found'});
+    const supabaseUrl=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');
+    const supabaseProjectId=String(req.body?.supabase_project_id||'');
+    const assetId=String(req.body?.supabase_asset_id||'');
+    const supabaseToken=String(req.body?.supabase_access_token||'');
+    if(!/^https:\/\/[^\s/]+/.test(supabaseUrl))return res.status(503).json({error:'supabase_bridge_not_configured'});
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(supabaseProjectId)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assetId)||!supabaseToken)return res.status(400).json({error:'supabase_asset_credentials_required'});
+    const access=await fetch(supabaseUrl+'/functions/v1/tgg-video-access',{method:'POST',headers:{authorization:'Bearer '+supabaseToken,apikey:supabaseToken,'content-type':'application/json'},body:JSON.stringify({operation:'access',project_id:supabaseProjectId,asset_id:assetId}),signal:AbortSignal.timeout(15000)});
+    const accessBody=await access.json().catch(()=>({}));
+    if(!access.ok||!accessBody?.ok||!accessBody?.signed_url)return res.status(access.status===401||access.status===403?access.status:502).json({error:'supabase_asset_access_failed',detail:accessBody?.error||'signed_source_unavailable'});
+    const asset=accessBody.asset||{};
+    if(String(asset.asset_type||'').toLowerCase()!=='video'||!String(asset.mime_type||'').toLowerCase().startsWith('video/'))return res.status(415).json({error:'supabase_asset_not_video'});
+    const maxBytes=524288000;
+    if(Number(asset.file_size_bytes||0)>maxBytes)return res.status(413).json({error:'supabase_asset_too_large',max_bytes:maxBytes});
+    const rawName=String(req.body?.file_name||asset.title||('supabase-'+assetId+'.mp4')).replace(/[\r\n]/g,'').slice(0,200);
+    const safeName=(rawName||'video.mp4').replace(/[^a-zA-Z0-9._ -]/g,'_').replace(/\s+/g,'-');
+    const mime=String(asset.mime_type||'video/mp4').split(';')[0].trim().toLowerCase();
+    const objectKey=req.user.id+'/'+req.params.id+'/'+Date.now()+'-'+crypto.randomUUID()+'-'+safeName;
+    const storageKey=path.posix.join('creator-media',objectKey);
+    target=path.resolve(STORAGE_ROOT,storageKey);
+    const root=path.resolve(STORAGE_ROOT);
+    if(!target.startsWith(root+path.sep))return res.status(400).json({error:'invalid_object_key'});
+    await fs.mkdir(path.dirname(target),{recursive:true});
+    handle=await fs.open(target,'w');
+    const source=await fetch(accessBody.signed_url,{signal:AbortSignal.timeout(10*60*1000)});
+    if(!source.ok||!source.body)throw Object.assign(new Error('supabase_source_download_failed'),{statusCode:502});
+    let written=0;const hash=crypto.createHash('sha256');
+    for await(const chunk of source.body){
+      written+=chunk.length;
+      if(written>maxBytes)throw Object.assign(new Error('supabase_asset_too_large'),{statusCode:413});
+      hash.update(chunk);await handle.write(chunk);
+    }
+    await handle.close();handle=null;
+    if(!written){await fs.unlink(target).catch(()=>{});return res.status(400).json({error:'empty_supabase_asset'});}
+    const media=await pool.query('insert into media_objects(owner_user_id,media_type,storage_key,public_url,size_bytes,mime_type) values($1,$2,$3,$4,$5,$6) on conflict(storage_key) do update set size_bytes=excluded.size_bytes,mime_type=excluded.mime_type returning *',[req.user.id,'video',storageKey,null,written,mime]);
+    const upload=await pool.query("insert into tgg_media_uploads(media_object_id,owner_user_id,bucket_key,object_key,status,checksum_sha256,metadata) values($1,$2,'creator-media',$3,'ready',$4,$5) on conflict(object_key) do update set media_object_id=excluded.media_object_id,status='ready',checksum_sha256=excluded.checksum_sha256,metadata=excluded.metadata,updated_at=now() returning *",[media.rows[0].id,req.user.id,objectKey,hash.digest('hex'),{project_id:req.params.id,original_name:rawName,mime_type:mime,size_bytes:written,source:'supabase',supabase_project_id:supabaseProjectId,supabase_asset_id:assetId}]);
+    res.status(201).json({ok:true,source:'supabase',media:media.rows[0],upload:upload.rows[0],url:videoStudioSignedUrl(storageKey,900)});
+  }catch(e){
+    if(handle)await handle.close().catch(()=>{});
+    if(target)await fs.unlink(target).catch(()=>{});
+    if(e?.statusCode)return res.status(e.statusCode).json({error:e.message});
+    next(e);
+  }
+});
+
 app.put('/v1/video-studio/projects/:id/media', auth, async (req,res,next)=>{
   let handle=null,target=null;
   try{

@@ -54,10 +54,14 @@
     if(choice===rival)return 0;
     return -1;
   }
+  function emitFocus(focus){
+    try{window.dispatchEvent(new CustomEvent('tgg:worldlife:focus',{detail:{focus}}))}catch(e){}
+  }
   function startBattle(){
     state.show.active=false;
+    state.tab='battle';
     state.battle={active:true,round:0,player:0,rival:0,last:'ROUND 1 — set the tone.'};
-    save();render();notify('RAP BATTLE STARTED');
+    save();render();emitFocus('downtown');notify('RAP BATTLE STARTED');
   }
   function battleChoice(choice){
     if(!state.battle.active)startBattle();
@@ -93,8 +97,9 @@
 
   function startShow(){
     state.battle.active=false;
+    state.tab='show';
     state.show={active:true,move:0,energy:clamp(62+state.attributes.stamina*6,0,100),crowd:35,score:0,last:'LIGHTS UP — build the crowd.'};
-    save();render();notify('LIVE SHOW STARTED');
+    save();render();emitFocus('stage');notify('LIVE SHOW STARTED');
   }
   function showMove(move){
     if(!state.show.active)startShow();

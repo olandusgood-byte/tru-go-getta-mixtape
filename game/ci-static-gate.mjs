@@ -19,7 +19,7 @@ const contract=spawnSync(process.execPath,[path.join(root,'static-contract.test.
 assert(contract.status===0,'V1.13 static contract failed:\n'+(contract.stderr||contract.stdout||''));
 
 const continuity=spawnSync(process.execPath,[path.join(root,'v149-v160-runtime.test.mjs')],{encoding:'utf8'});
-assert(continuity.status===0,'V1.49-V1.87 runtime continuity failed:\n'+(continuity.stderr||continuity.stdout||''));
+assert(continuity.status===0,'V1.49-V1.99 dynamic runtime continuity failed:\n'+(continuity.stderr||continuity.stdout||''));
 
 const html=read('index.html');
 const v114=read('v114-live-city.js');

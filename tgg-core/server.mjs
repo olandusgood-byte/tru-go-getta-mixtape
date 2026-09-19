@@ -60,6 +60,7 @@ async function init() {
     initPromise = (async () => {
       const schema = await fs.readFile(schemaPath, 'utf8');
       await pool.query(schema);
+      await pool.query(`alter table users add column if not exists supabase_user_id text unique; create index if not exists users_supabase_user_idx on users(supabase_user_id);`);
       await pool.query(`alter table tgg_browser_sessions add column if not exists credential_hash text unique; alter table tgg_browser_sessions add column if not exists credential_encrypted text; alter table tgg_browser_sessions add column if not exists credential_expires_at timestamptz; alter table tgg_browser_sessions add column if not exists revoked_at timestamptz; alter table tgg_browser_sessions add column if not exists last_seen_at timestamptz; create index if not exists tgg_browser_sessions_credential_idx on tgg_browser_sessions(credential_hash,credential_expires_at);`);
       await pool.query(`create table if not exists tgg_worker_registry (id uuid primary key default gen_random_uuid(), worker_id text not null unique, worker_token_hash text not null, status text not null default 'active', metadata jsonb not null default '{}'::jsonb, last_seen_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now()); create table if not exists tgg_browser_jobs (id uuid primary key default gen_random_uuid(), worker_id uuid references tgg_worker_registry(id) on delete set null, flow_key text not null, status text not null default 'queued', payload jsonb not null default '{}'::jsonb, result jsonb, evidence jsonb not null default '[]'::jsonb, lease_token text, lease_expires_at timestamptz, attempts integer not null default 0, max_attempts integer not null default 3, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), finished_at timestamptz); create index if not exists tgg_browser_jobs_claim_idx on tgg_browser_jobs(status,lease_expires_at,created_at); create table if not exists tgg_browser_viewer_events (id bigserial primary key, browser_session_id uuid not null references tgg_browser_sessions(id) on delete cascade, event_type text not null, payload jsonb not null default '{}'::jsonb, created_at timestamptz not null default now()); create index if not exists tgg_browser_viewer_events_session_idx on tgg_browser_viewer_events(browser_session_id,id);`);
     })();
@@ -69,6 +70,31 @@ async function init() {
 
 const SESSION_DAYS = 30;
 const TOKEN_SECRET = process.env.TGG_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+const TGG_SUPABASE_URL = String(process.env.TGG_SUPABASE_URL || '').replace(/\\/$/,'');
+const TGG_SUPABASE_PUBLISHABLE_KEY = String(process.env.TGG_SUPABASE_PUBLISHABLE_KEY || '');
+
+async function getSupabaseUser(accessToken) {
+  if (!TGG_SUPABASE_URL || !TGG_SUPABASE_PUBLISHABLE_KEY) {
+    const err = new Error('supabase_identity_bridge_not_configured');
+    err.statusCode = 503;
+    throw err;
+  }
+  const response = await fetch(TGG_SUPABASE_URL + '/auth/v1/user', {
+    headers: { apikey: TGG_SUPABASE_PUBLISHABLE_KEY, authorization: 'Bearer ' + accessToken }
+  });
+  if (!response.ok) {
+    const err = new Error('invalid_supabase_session');
+    err.statusCode = 401;
+    throw err;
+  }
+  const body = await response.json();
+  if (!body?.id || !body?.email) {
+    const err = new Error('supabase_identity_incomplete');
+    err.statusCode = 401;
+    throw err;
+  }
+  return body;
+}
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -161,6 +187,45 @@ app.post('/v1/auth/login', async (req, res, next) => {
     const { password_hash, ...user } = result.rows[0];
     res.json({ access_token: token, token_type: 'Bearer', expires_at: expires.toISOString(), user });
   } catch (e) { next(e); }
+});
+
+app.post('/v1/auth/exchange-supabase', async (req,res,next)=>{
+  try {
+    await init();
+    const accessToken=String(req.get('x-supabase-access-token')||'').trim();
+    if(!accessToken) return res.status(401).json({error:'missing_supabase_access_token'});
+    const identity=await getSupabaseUser(accessToken);
+    const email=String(identity.email).toLowerCase().trim();
+    const supabaseUserId=String(identity.id);
+    let result=await pool.query('select * from users where supabase_user_id=$1',[supabaseUserId]);
+    let user=result.rows[0]||null;
+    if(!user){
+      result=await pool.query('select * from users where email=$1',[email]);
+      if(result.rowCount){
+        user=result.rows[0];
+        if(user.supabase_user_id && user.supabase_user_id!==supabaseUserId)
+          return res.status(409).json({error:'tgg_identity_link_required'});
+        await pool.query('update users set supabase_user_id=$1,updated_at=now() where id=$2',[supabaseUserId,user.id]);
+        user=(await pool.query('select * from users where id=$1',[user.id])).rows[0];
+      } else {
+        const displayName=identity.user_metadata?.display_name || identity.user_metadata?.full_name || email.split('@')[0];
+        const generatedPassword=crypto.randomBytes(32).toString('base64url');
+        user=(await pool.query(
+          'insert into users(email,password_hash,display_name,supabase_user_id) values($1,$2,$3,$4) returning *',
+          [email,passwordHash(generatedPassword),displayName,supabaseUserId]
+        )).rows[0];
+      }
+    }
+    const token=newToken();
+    const expires=new Date(Date.now()+SESSION_DAYS*86400000);
+    await pool.query('insert into sessions(user_id,token_hash,expires_at) values($1,$2,$3)',[user.id,hashToken(token),expires]);
+    const {password_hash,...safeUser}=user;
+    res.json({access_token:token,token_type:'Bearer',expires_at:expires.toISOString(),user:safeUser});
+  } catch(e) {
+    if(e?.statusCode) return res.status(e.statusCode).json({error:e.message});
+    if(e?.code==='23505') return res.status(409).json({error:'tgg_identity_link_conflict'});
+    next(e);
+  }
 });
 
 app.post('/v1/auth/logout', auth, async (req, res, next) => {

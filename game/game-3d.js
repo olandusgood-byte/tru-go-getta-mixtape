@@ -503,12 +503,14 @@
     return best&&bestDist<=radius*.92?{name:best.userData.name,state:best.userData.state||'around',distance:bestDist,human:best}:null;
   }
   function interactNamedNpc(name){
-    const result=window.TGGWorldDepth?.interactNPC?.(name);
+    const relationship=window.TGGNPCRelations?.interact?.(name);
+    const result=relationship?.ok?relationship:window.TGGWorldDepth?.interactNPC?.(name);
     if(result?.ok){
       const dialogue=String(result.dialogue||name+' is ready to talk.');
       const box=document.getElementById('npcDialogue');
       if(box)box.textContent=dialogue;
-      window.__tggToast?.(name+' • '+String(result.approach||'talk').toUpperCase());
+      const mode=result.status==='choice_required'?'CHOOSE YOUR APPROACH':String(result.approach||'talk').toUpperCase();
+      window.__tggToast?.(name+' • '+mode);
       return true;
     }
     return false;

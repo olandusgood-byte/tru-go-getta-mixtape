@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.35 TGG NPC + CROWD FORGE 100';
+  const VERSION='V2.36 TGG VFX FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

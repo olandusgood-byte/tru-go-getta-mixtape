@@ -14,3 +14,5 @@ export async function tggRestoreOwnerRefreshToken(){return call('/v1/browser/wor
 export async function tggWorkerGetBrowserCredential(browserSessionId){if(!browserSessionId)throw new Error('BROWSER_SESSION_ID_REQUIRED');return call('/v1/browser/sessions/'+encodeURIComponent(browserSessionId)+'/credential',{})}
 
 export async function tggWorkerBootstrap(id){if(!CORE_URL)throw new Error('TGG_CORE_URL_NOT_CONFIGURED');const secret=String(process.env.TGG_WORKER_BOOTSTRAP_SECRET||'');const r=await fetch(CORE_URL+'/v1/workers/bootstrap',{method:'POST',headers:{'content-type':'application/json','x-tgg-bootstrap-secret':secret},body:JSON.stringify({worker_id:id}),signal:AbortSignal.timeout(15000)});const text=await r.text();let data={};try{data=JSON.parse(text)}catch{}if(!r.ok)throw new Error(data.error||'TGG_CORE_WORKER_BOOTSTRAP_FAILED');return data}
+
+export async function tggEnsureCertification(email,certificationType='protected_audio_runtime'){return call('/v1/workers/jobs/ensure-certification',{email,certification_type:certificationType})}

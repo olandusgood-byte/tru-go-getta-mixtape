@@ -1,0 +1,21 @@
+{
+  "project": "TRU GO GETTA WORLD",
+  "runtime": "V4.00 WORLD SYSTEMS",
+  "status": "CERTIFIED",
+  "public_alias": "https://tgg-world-play.vercel.app",
+  "checks": {
+    "static_gate": true,
+    "mega_regression": true,
+    "browser_smoke": true,
+    "production_deploy": true,
+    "live_browser_interaction": true,
+    "runtime_errors_last_hour": 0
+  },
+  "browser_certification": {
+    "run_id": 35442958518,
+    "artifact_id": 10584521061,
+    "artifact_name": "tgg-v400-live-browser-certificate",
+    "digest": "sha256:c6e8147ef762437113d6f6d259f07d0bc8df8a6a6c0d8db6fdb5c3c17db82698",
+    "conclusion": "success"
+  }
+}

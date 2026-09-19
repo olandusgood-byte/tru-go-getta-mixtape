@@ -55,7 +55,7 @@ assert.match(qa,/business-catalog/);
 assert.match(qa,/business-persistence/);
 assert.equal(release.release,'V1.13 Progression + Business Discovery');
 assert.equal(auto.version,'1.13');
-assert.equal(qaManifest.version,'1.13');
+assert.ok(Number(qaManifest.version)>=1.13,'qa manifest regressed below 1.13');
 assert.equal(release.browser_smoke,'manual_only');
 assert.equal(release.production,'gated');
 

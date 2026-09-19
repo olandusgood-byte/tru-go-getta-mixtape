@@ -6,10 +6,12 @@ on:
     paths:
       - 'game/**'
       - '.github/workflows/game-static-gate.yml'
+      - '.github/workflows/game-browser-smoke.yml'
   pull_request:
     paths:
       - 'game/**'
       - '.github/workflows/game-static-gate.yml'
+      - '.github/workflows/game-browser-smoke.yml'
   workflow_dispatch:
 
 permissions:

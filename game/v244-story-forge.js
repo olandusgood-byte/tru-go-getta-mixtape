@@ -170,12 +170,12 @@
     if(step.kind==='event'){
       if(!near(step.target)){toast('GET TO '+step.target.label+' FIRST');return false}
       if(step.id==='battle'){
-        const event=window.TGGWorldEvents?.events?.find?.(x=>String(x?.id||'').includes('battle'))||window.TGGEvents?.events?.find?.(x=>String(x?.id||'').includes('battle'));
+        const event=Array.isArray(window.TGGEvents?.events)?window.TGGEvents.events.find(x=>x?.id==='street-cypher'):null;
         if(event&&window.TGGV221?.openBattle){window.TGGV221.openBattle(event);return true}
         window.dispatchEvent(new CustomEvent('tgg:story-battle-request',{detail:{source:'v244'}}));toast('START THE DOWNTOWN RAP BATTLE');return true;
       }
       if(step.id==='concert'){
-        if(window.TGGV222?.startShow){window.TGGV222.startShow();return true}
+        if(window.TGGV222?.openShow){return window.TGGV222.openShow()===true}
         window.dispatchEvent(new CustomEvent('tgg:story-concert-request',{detail:{source:'v244'}}));toast('START THE LIVE SHOW');return true;
       }
     }

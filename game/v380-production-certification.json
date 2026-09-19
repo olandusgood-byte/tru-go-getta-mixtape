@@ -1,0 +1,22 @@
+{
+  "project": "TRU GO GETTA WORLD",
+  "runtime": "V3.80 LIFE SIM PROPERTY SOCIAL WORLD MEGA",
+  "status": "CERTIFIED",
+  "public_alias": "https://tgg-world-play.vercel.app",
+  "checks": {
+    "static_gate": true,
+    "mega_regression": true,
+    "browser_smoke": true,
+    "production_deploy": true,
+    "live_browser_interaction": true,
+    "runtime_errors_last_hour": 0
+  },
+  "browser_certification": {
+    "run_id": 35442240277,
+    "run_attempt": 2,
+    "artifact_id": 10584290716,
+    "artifact_name": "tgg-v380-live-browser-certificate",
+    "digest": "sha256:d814683c37ae40a691345d2c4dff2a1c8d4817c114a2c9d501c17d5bf54a3e78",
+    "conclusion": "success"
+  }
+}

@@ -3,7 +3,7 @@
   "canonical_runtime": "V4.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v400_production_deployed_browser_certified",
+  "verification": "v410_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V4.00 WORLD SYSTEMS",
   "features": [
@@ -140,7 +140,7 @@
     "lifestyle_score",
     "momentum_income_bonus"
   ],
-  "release_gate": "v410_validation_pending",
+  "release_gate": "closed_certified",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -148,10 +148,10 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PENDING_V410_REVALIDATION",
+    "browser_gate": "PASS",
     "public_alias": "https://tgg-world-play.vercel.app",
-    "browser_cert_run_id": 35442958518,
-    "browser_cert_artifact_id": 10584521061,
-    "browser_cert_artifact_digest": "sha256:c6e8147ef762437113d6f6d259f07d0bc8df8a6a6c0d8db6fdb5c3c17db82698"
+    "browser_cert_run_id": 35443168213,
+    "browser_cert_artifact_id": 10584940175,
+    "browser_cert_artifact_digest": "sha256:fce846e532f4190095218b97801affdee2e6670d61cf0ae72c21fdab85d16a1e"
   }
 }

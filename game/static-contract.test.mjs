@@ -16,6 +16,9 @@ const story3d=read('story-world-3d.js');
 const vertical=read('vertical-slice-director.js');
 const mega=read('mega-qa.js');
 const style=read('style.css');
+const runtime=JSON.parse(read('runtime-version.json'));
+const photoreal=read('photoreal-core.js');
+const reality=read('reality-master.js');
 
 assert.match(html,/Game V2\.18 STREET PRESENCE/);
 assert.match(html,/GAME V2\.18 • STREET PRESENCE/);
@@ -30,7 +33,7 @@ for(const src of [
   'vendor/three-r152.min.js','game.js','game-3d.js','garage.js','garage-3d.js',
   'studio-3d.js','interiors-3d.js','navigation.js','gamepad.js','final-build.js',
   'story-missions.js','story-cinematics.js','story-world-3d.js','street-presence.js',
-  'vertical-slice-director.js','mega-qa.js'
+  'vertical-slice-director.js','mega-qa.js','photoreal-core.js','reality-master.js'
 ]) assert.ok(html.includes('<script src="'+src+'"></script>'),'missing V2.18 script: '+src);
 
 for(const token of ['window.TGGGame','setDriveKey','getDrivingState']) assert.ok(game.includes(token),'game runtime missing '+token);
@@ -45,7 +48,9 @@ assert.ok(story.includes('window.TGGStoryMissions'),'story mission runtime missi
 assert.ok(story3d.includes('THREE')||story3d.includes('TGG3D'),'story 3D integration missing');
 assert.ok(vertical.includes('window.TGGVerticalSlice'),'adaptive vertical slice runtime missing');
 assert.ok(mega.includes('window.TGGMegaQA'),'mega QA runtime missing');
-assert.ok(style.includes('.city3d')&&style.includes('.vehicle-hud')&&style.includes('.player-move-hud'),'V2.18 presentation styles missing');
+assert.ok(style.includes('.city3d')&&style.includes('.vehicle-hud')&&style.includes('.player-move-hud'),'baseline presentation styles missing');
+for(const token of ['ACESFilmicToneMapping','MeshPhysicalMaterial','adaptive-pixel-ratio']) assert.ok(photoreal.includes(token),'photoreal core missing '+token);
+for(const token of ['V2.50 REALITY MASTER CONSOLIDATION','human-anatomy-detail','vehicle-clearcoat-glass-trim','adaptive-fps-quality']) assert.ok(reality.includes(token),'reality master missing '+token);
 
 for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   for(const [name,source] of Object.entries({game,game3d,street,garage,nav,finalBuild,story,story3d,vertical})){
@@ -53,4 +58,4 @@ for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   }
 }
 
-console.log('GAME_V2_18_STATIC_CONTRACT_PASS');
+console.log('GAME_V2_50_REALITY_MASTER_STATIC_CONTRACT_PASS');

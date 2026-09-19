@@ -1040,6 +1040,19 @@ app.patch('/v1/browser/sessions/:id', auth, async (req,res,next)=>{
   } catch(e){next(e);}
 });
 
+app.get('/v1/live-viewer/overview', auth, async (req,res,next)=>{
+  try {
+    const [sessions,certs,jobs]=await Promise.all([
+      pool.query(`select s.id,s.status,s.metadata,s.created_at,s.updated_at,
+        (select row_to_json(e) from tgg_browser_viewer_events e where e.browser_session_id=s.id order by e.id desc limit 1) latest_event
+        from tgg_browser_sessions s where s.user_id=$1 order by s.updated_at desc limit 100`,[req.user.id]),
+      pool.query(`select id,status,certification_type,browser_session_id,evidence,created_at,completed_at from tgg_certifications where user_id=$1 order by created_at desc limit 50`,[req.user.id]),
+      pool.query(`select id,flow_key,status,payload,result,evidence,attempts,created_at,updated_at,finished_at from tgg_browser_jobs where payload->>'user_id'=$1 or payload->>'user_id'=$2 order by created_at desc limit 100`,[String(req.user.id),req.user.id])
+    ]);
+    res.json({sessions:sessions.rows,certifications:certs.rows,jobs:jobs.rows,at:new Date().toISOString()});
+  } catch(e){next(e);}
+});
+
 app.get('/v1/browser/sessions', auth, async (req,res,next)=>{
   try {
     const limit=Math.min(100,Math.max(1,Number(req.query.limit)||50));

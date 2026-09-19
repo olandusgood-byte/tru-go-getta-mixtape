@@ -44,6 +44,18 @@
           arrived:!!meetup.arrived
         };
       }
+      const encounter=window.TGGStreetEncounters?.navigationTarget?.();
+      if(encounter){
+        const p=toWorld(encounter);
+        return {
+          label:'STREET • '+(encounter.name||encounter.label||'CONTACT'),
+          x:p.x,z:p.z,
+          color:encounter.color||'#65d6ff',
+          radius:Number(encounter.radius)||7,
+          encounter:true,
+          arrived:!!encounter.arrived
+        };
+      }
       if(s?.accepted)return {label:'MISSION',x:(72-50)*.92,z:(36-50)*.92,color:'#ff466d'};
       const p=toWorld(s);
       const ds=window.TGG3D?.destinations||[];
@@ -76,9 +88,10 @@
       distance.textContent=(t.arrived||t.meters<4)?'ARRIVED':t.meters+' m';
       arrow.style.transform='rotate('+relative+'deg)';
       root.style.setProperty('--nav-color',t.color);
-      root.classList.toggle('story-active',!!t.story||!!t.worldBeat||!!t.meetup);
+      root.classList.toggle('story-active',!!t.story||!!t.worldBeat||!!t.meetup||!!t.encounter);
       root.classList.toggle('world-beat-active',!!t.worldBeat);
       root.classList.toggle('meetup-active',!!t.meetup);
+      root.classList.toggle('encounter-active',!!t.encounter);
       root.classList.add('active');
       requestAnimationFrame(update);
     }

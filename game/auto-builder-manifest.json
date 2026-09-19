@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.19",
-  "module": "GAME-V1.19",
-  "name": "Dynamic City Reactions + Chained Opportunities",
+  "version": "1.20",
+  "module": "GAME-V1.20",
+  "name": "City Relationships + Contact Memory",
   "workflow": [
     "BUILD",
     "TEST",
@@ -48,9 +48,13 @@
     "v1_19_dynamic_reactions": true,
     "v1_19_chained_opportunities": true,
     "v1_19_local_reaction_state": true,
-    "v1_19_no_external_mutation": true
+    "v1_19_no_external_mutation": true,
+    "v1_20_relationships": true,
+    "v1_20_contact_memory": true,
+    "v1_20_local_memory_state": true,
+    "v1_20_no_external_mutation": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.20 CITY RELATIONSHIPS + CONTACT MEMORY"
+  "next": "V1.21 CREW SOCIAL GRAPH + CONTACT SYNERGY"
 }

@@ -1126,6 +1126,38 @@ try{
     throw new Error('V5.10 property/consequence world failed '+JSON.stringify(propertyWorld));
   }
 
+  await page.waitForFunction(()=>!!window.TGGV525&&!!window.TGGContactWorld&&document.documentElement.dataset.tggV525==='on',{timeout:15000});
+  const contactWorld=await page.evaluate(()=>{
+    const run=window.TGGV525.run();
+    const before=window.TGGV525.snapshot();
+    const callback=before.activeCallback?window.TGGV525.acceptCallback():null;
+    let fallback=null;
+    if(!callback?.accepted){
+      fallback=window.TGGMeetups.createMeetup('Kane',{source:'v525-cert',target:{x:62,y:44,radius:6},label:'V5.25 PHYSICAL CONTACT'});
+      window.TGGV525.syncPresence();
+    }
+    const routed=window.TGGV525.snapshot();
+    const activeMeetup=window.TGGMeetups.snapshot().active;
+    const actorName=activeMeetup?.name||routed.presence?.name||'Kane';
+    const actor=(window.TGG3D.getNamedNpcPresence?.()||[]).find(x=>x.name===actorName)||null;
+    const cancelled=window.TGGMeetups.cancelMeetup('v525-cert-cleanup');
+    window.TGGV525.syncPresence();
+    const after=window.TGGV525.snapshot();
+    return {run,before,callback,fallback,routed,activeMeetup,actor,cancelled,after,hud:!!document.getElementById('v525ContactWorldHud')};
+  });
+  if(contactWorld.run?.ok!==true||
+     contactWorld.hud!==true||
+     contactWorld.before?.callOutcomes<1||
+     contactWorld.before?.missionOutcomes<1||
+     contactWorld.before?.contractOutcomes<1||
+     !contactWorld.routed?.presence?.name||
+     contactWorld.actor?.override?.source?.startsWith('v525:')!==true||
+     contactWorld.after?.features?.includes('physical-contact-route-presence')!==true||
+     contactWorld.after?.features?.includes('call-to-callback-branching')!==true||
+     contactWorld.after?.features?.includes('city-reaction-cinematic-hooks')!==true){
+    throw new Error('V5.25 contact world failed '+JSON.stringify(contactWorld));
+  }
+
   await clearIncomingCallOverlay('pre keyboard movement');
   await page.evaluate(()=>{
     window.TGGNPCRelations?.closeChoice?.();

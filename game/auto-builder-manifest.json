@@ -171,7 +171,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V5.25",
+  "next": "V5.26",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,
@@ -193,5 +193,6 @@
     "autoAdvance": true,
     "failClosed": true,
     "noOneByOneUnlessDependencyRequires": true
-  }
+  },
+  "v5_25_contact_world_mega": true
 }

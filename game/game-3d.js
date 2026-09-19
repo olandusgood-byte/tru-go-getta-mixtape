@@ -568,12 +568,50 @@
     scene.add(human);
     return human;
   });
+  const namedNpcOverrides=new Map();
+  function setNamedNpcOverride(name,target={},meta={}){
+    const human=namedNpcs.find(h=>h.userData.name===name);
+    const x=Number(target?.x),y=Number(target?.y);
+    if(!human||!Number.isFinite(x)||!Number.isFinite(y))return {ok:false,status:'invalid_target',name};
+    const override={
+      name,x,y,source:String(meta.source||'external-route'),label:String(meta.label||name),
+      updatedAt:Date.now(),snap:meta.snap!==false
+    };
+    namedNpcOverrides.set(name,override);
+    human.userData.presenceOverride={...override};
+    if(override.snap){
+      const p=toWorld({x,y});
+      human.position.set(p.x,0,p.z);
+    }
+    return {ok:true,status:'routed',override:{...override}};
+  }
+  function clearNamedNpcOverride(name,source=null){
+    const current=namedNpcOverrides.get(name);
+    if(!current)return {ok:false,status:'not_overridden',name};
+    if(source&&current.source!==source)return {ok:false,status:'source_mismatch',name,source:current.source};
+    namedNpcOverrides.delete(name);
+    const human=namedNpcs.find(h=>h.userData.name===name);
+    if(human)delete human.userData.presenceOverride;
+    return {ok:true,status:'cleared',name};
+  }
+  function getNamedNpcPresence(){
+    return namedNpcs.map(h=>({
+      name:h.userData.name,
+      state:h.userData.state||'around',
+      override:namedNpcOverrides.get(h.userData.name)?{...namedNpcOverrides.get(h.userData.name)}:null,
+      position:{
+        x:50+(Number(h.position.x)||0)/.92,
+        y:50+(Number(h.position.z)||0)/.92
+      }
+    }));
+  }
   function syncNamedNpcs(dt){
     const status=window.TGGWorldDepth?.getStatus?.()||{};
     const states=status.npcStates||{};
     namedNpcs.forEach(h=>{
       const npcState=states[h.userData.name]||'around';
-      const targetPct=h.userData.schedule?.[npcState]||h.userData.home;
+      const override=namedNpcOverrides.get(h.userData.name)||null;
+      const targetPct=override?{x:override.x,y:override.y}:(h.userData.schedule?.[npcState]||h.userData.home);
       const target=toWorld(targetPct);
       const dx=target.x-h.position.x,dz=target.z-h.position.z;
       const dist=Math.hypot(dx,dz);
@@ -590,7 +628,7 @@
           p.leftLeg.rotation.x=-swing*.75;p.rightLeg.rotation.x=swing*.75;
         }
       }
-      h.userData.state=npcState;
+      h.userData.state=override?('routed:'+override.source):npcState;
     });
   }
   function nearbyNamedNpc(s,radius=8.5){
@@ -870,6 +908,9 @@
     nearbyNamedNpc,
     interactNamedNpc,
     namedNpcs,
+    setNamedNpcOverride,
+    clearNamedNpcOverride,
+    getNamedNpcPresence,
     pedestrians,
     traffic,
     cycleCamera,

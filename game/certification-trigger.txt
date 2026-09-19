@@ -1,6 +1,7 @@
 TGG WORLD CERTIFICATION TRIGGER
 Runtime: V4.50 FAMILY HOUSEHOLD LEGACY WORLD MEGA
 Additive checkpoint: V2.53
-Purpose: exact-SHA Static Gate + Browser Smoke + V2.18 Mega Regression certification through V2.53.
+Purpose: post-hardening exact-SHA Static Gate + Browser Smoke + V2.18 Mega Regression certification through V2.53.
 Browser workflow integrity validation: enabled
 Production exact-SHA triple gate: enabled
+Final V2.53 hardening replay: enabled

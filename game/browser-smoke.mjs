@@ -592,6 +592,57 @@ try{
     throw new Error('V5.04 meetup completion failed '+JSON.stringify(meetupResolved));
   }
 
+  await page.waitForFunction(()=>!!window.TGGCallSessions&&!!window.TGGV505,{timeout:15000});
+  const callSessionQueued=await page.evaluate(()=>{
+    let guard=0;
+    while(window.TGGIncomingCalls.snapshot().current&&guard++<10)window.TGGIncomingCalls.declineCurrent();
+    window.TGGIncomingCalls.clearMissed();
+    const run=window.TGGV505.run();
+    const queued=window.TGGIncomingCalls.queueCall('M','manager check-in','relationship',{});
+    return {run,queued,calls:window.TGGIncomingCalls.snapshot()};
+  });
+  if(callSessionQueued.run?.ok!==true||
+     callSessionQueued.queued?.status!=='ringing'||
+     callSessionQueued.calls?.current?.name!=='M'){
+    throw new Error('V5.05 call session queue failed '+JSON.stringify(callSessionQueued));
+  }
+  await page.locator('#v502Accept').click();
+  await page.waitForTimeout(100);
+  const callSessionActive=await page.evaluate(()=>({
+    session:window.TGGCallSessions.snapshot(),
+    hudHidden:document.getElementById('v505CallSession')?.hidden,
+    pending:window.TGGNPCRelations.snapshot()?.pending||null
+  }));
+  if(callSessionActive.session?.active?.name!=='M'||
+     callSessionActive.hudHidden!==false||
+     callSessionActive.pending?.name!=='M'){
+    throw new Error('V5.05 active call HUD failed '+JSON.stringify(callSessionActive));
+  }
+  await page.locator('#v505Mute').click();
+  await page.locator('#v505Speaker').click();
+  const callControls=await page.evaluate(()=>window.TGGCallSessions.snapshot());
+  if(callControls.active?.muted!==true||callControls.active?.speaker!==true){
+    throw new Error('V5.05 call controls failed '+JSON.stringify(callControls));
+  }
+  await page.locator('#v497NpcChoice [data-v497-choice="professional"]').click();
+  await page.waitForTimeout(80);
+  await page.locator('#v505End').click();
+  await page.waitForTimeout(80);
+  const callSessionEnded=await page.evaluate(()=>{
+    const session=window.TGGCallSessions.snapshot();
+    const messages=window.TGGMessages.snapshot();
+    const thread=messages.threads?.M||[];
+    const follow=[...thread].reverse().find(x=>x?.kind==='call-follow-up')||null;
+    return {session,follow,hudHidden:document.getElementById('v505CallSession')?.hidden};
+  });
+  if(callSessionEnded.session?.active||
+     callSessionEnded.session?.lastEnded?.name!=='M'||
+     callSessionEnded.session?.completed<1||
+     callSessionEnded.hudHidden!==true||
+     callSessionEnded.follow?.direction!=='in'){
+    throw new Error('V5.05 call end/follow-up failed '+JSON.stringify(callSessionEnded));
+  }
+
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
@@ -730,7 +781,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards,incomingCall:incomingAccepted.calls.lastResult.call.name,messageThread:messageReply.last.name,messageReply:messageReply.last.text,meetupContact:meetupResolved.meetup.lastCompleted.name}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards,incomingCall:incomingAccepted.calls.lastResult.call.name,messageThread:messageReply.last.name,messageReply:messageReply.last.text,meetupContact:meetupResolved.meetup.lastCompleted.name,callSession:callSessionEnded.session.lastEnded.name}));
 }finally{
   await browser.close();
 }

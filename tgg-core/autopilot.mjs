@@ -141,7 +141,16 @@ if (!DATABASE_URL) {
     );
     try {
       let summary = {};
-      if (task.task_key === 'source_truth_audit') { const snapshot = await sourceTruthAudit(); summary = {...snapshot, ...(await generateIdeas(snapshot))}; }
+      if (task.task_key === 'source_truth_audit') {
+        const snapshot = await sourceTruthAudit();
+        summary = {...snapshot, ...(await generateIdeas(snapshot))};
+        await pool.query(
+          `insert into public.tgg_autonomic_events(event_key,event_type,payload,status)
+           values($1,'autopilot_source_audit',$2,'processed')
+           on conflict do nothing`,
+          [`autopilot_source_audit:${new Date().toISOString().slice(0,16)}`, snapshot]
+        ).catch(()=>{});
+      }
       if (task.task_key === 'job_queue_maintenance') summary = await recoverExpiredJobs();
       if (task.task_key === 'runtime_heartbeat') summary = await heartbeat();
 

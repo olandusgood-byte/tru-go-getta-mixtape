@@ -38,7 +38,7 @@ const futureFiles=fs.readdirSync(root)
     const versionEligible=bulk?Number(bulk[2])>=188:(single?Number(single[1])*100+Number(single[2])>=188:false);
     if(!versionEligible)return false;
     const source=fs.readFileSync(path.join(root,file),'utf8');
-    return /window\.TGGV\d{2,3}\b/.test(source);
+    return /window\.TGGV\d{2,3}\b/.test(source)&&!/\bdocument\./.test(source);
   })
   .sort((a,b)=>{
     const na=Number((/^v(\d{3})/.exec(a)||[])[1]||0);

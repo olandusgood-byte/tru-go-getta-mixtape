@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const root=new URL('.',import.meta.url);
+const html=fs.readFileSync(new URL('index.html',root),'utf8');
+const js=fs.readFileSync(new URL('v350-gamefeel-cinematic.js',root),'utf8');
+const css=fs.readFileSync(new URL('v350-gamefeel-cinematic.css',root),'utf8');
+assert.match(html,/v350-gamefeel-cinematic\.css/);
+assert.match(html,/v350-gamefeel-cinematic\.js/);
+assert.match(js,/V3\.50 GAME FEEL CINEMATIC MEGA/);
+for(const token of ['cinematic-letterbox','objective-callouts','impact-pulse','camera-micro-shake','ui-audio-hooks','story-cinematic-sync'])assert.match(js,new RegExp(token));
+assert.match(css,/v350Fx/);
+console.log(JSON.stringify({ok:true,version:'V3.50 GAME FEEL CINEMATIC MEGA',checks:10}));

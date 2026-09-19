@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07090d">
+  <meta name="color-scheme" content="dark">
+  <title>TGG Video Studio</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div id="app" class="app-shell">
+  <header class="topbar">
+    <div class="brand-lockup">
+      <div class="brand-mark">TGG</div>
+      <div><strong>VIDEO STUDIO</strong><span>PRO WORKSTATION · V2</span></div>
+    </div>
+    <nav class="workspace-tabs" aria-label="Workspaces">
+      <button data-workspace="dashboard">Dashboard</button>
+      <button class="active" data-workspace="edit">Edit</button>
+      <button data-workspace="color">Color</button>
+      <button data-workspace="audio">Audio</button>
+      <button data-workspace="captions">Captions</button>
+      <button data-workspace="deliver">Deliver</button>
+    </nav>
+    <div class="top-actions">
+      <div id="saveState" class="save-state"><i></i><span>Local saved</span></div>
+      <button id="cloudBtn" class="ghost-btn">Cloud</button>
+      <button id="saveBtn" class="ghost-btn">Save</button>
+      <button id="exportBtn" class="primary-btn">Export</button>
+    </div>
+  </header>
+
+  <aside class="toolrail" aria-label="Editing tools">
+    <button class="active" data-tool="select" title="Select">↖<span>Select</span></button>
+    <button data-tool="blade" title="Blade">✂<span>Blade</span></button>
+    <button data-tool="trim" title="Trim">↔<span>Trim</span></button>
+    <button data-tool="text" title="Text">T<span>Text</span></button>
+    <button data-tool="hand" title="Hand">✋<span>Hand</span></button>
+    <button data-tool="zoom" title="Zoom">⌕<span>Zoom</span></button>
+  </aside>
+
+  <main class="workspace">
+    <section id="dashboardView" class="dashboard-view view-hidden">
+      <div class="dashboard-hero">
+        <div><span class="eyebrow">CREATOR CONTROL ROOM</span><h1>Video Studio Dashboard</h1><p>Projects, render history, private media and performance in one place.</p></div>
+        <button id="newProjectBtn" class="primary-btn big">+ New Project</button>
+      </div>
+      <div id="dashStats" class="stat-grid">
+        <article><span>Projects</span><strong>—</strong><small>cloud + local</small></article>
+        <article><span>Ready Renders</span><strong>—</strong><small>browser / server</small></article>
+        <article><span>Private Media</span><strong>—</strong><small>creator-media vault</small></article>
+        <article><span>Editor Engine</span><strong>V2</strong><small>GPU-friendly canvas</small></article>
+      </div>
+      <div class="dashboard-grid">
+        <section class="dash-panel"><div class="panel-title"><span>Recent Projects</span><button id="refreshDash">Refresh</button></div><div id="recentProjects" class="project-list"></div></section>
+        <section class="dash-panel"><div class="panel-title"><span>Render Pipeline</span><b class="status-dot live">READY</b></div><div class="pipeline-steps"><div><i>1</i><span>Browser composition</span></div><div><i>2</i><span>Private master staging</span></div><div><i>3</i><span>FFmpeg transcode</span></div><div><i>4</i><span>Media Vault + publish</span></div></section>
+        <section class="dash-panel wide"><div class="panel-title"><span>Recent Exports</span><small>Newest first</small></div><div id="renderHistory" class="render-history"></div></section>
+      </div>
+    </section>
+
+    <section id="editorView" class="editor-grid">
+      <aside class="browser-panel surface">
+        <div class="panel-tabs">
+          <button class="active" data-panel="media">Media</button>
+          <button data-panel="effects">Effects</button>
+          <button data-panel="titles">Titles</button>
+          <button data-panel="transitions">Transitions</button>
+          <button data-panel="audiofx">Audio FX</button>
+        </div>
+        <div class="browser-search"><input id="librarySearch" placeholder="Search assets + effects"><button id="importBtn">+ Import</button><input id="fileInput" type="file" multiple accept="video/*,audio/*,image/*" hidden></div>
+        <div id="libraryContent" class="library-content"></div>
+      </aside>
+
+      <section class="viewer-stack">
+        <div class="viewer-toolbar">
+          <div class="sequence-meta"><input id="projectTitle" value="Untitled Music Video" aria-label="Project title"><span id="sequenceMeta">1920×1080 · 30 FPS</span></div>
+          <div class="viewer-options">
+            <button id="gridBtn">Grid</button><button id="safeBtn">Safe</button>
+            <select id="qualitySelect"><option value="1">Full</option><option value=".75">¾</option><option value=".5" selected>½</option><option value=".25">¼</option></select>
+            <button id="fullscreenBtn">⛶</button>
+          </div>
+        </div>
+        <div class="monitor-bezel">
+          <div class="monitor-glow"></div>
+          <div id="dropZone" class="monitor-screen">
+            <canvas id="previewCanvas" width="960" height="540"></canvas>
+            <div id="safeGuides" class="safe-guides hidden"><i></i><b></b></div>
+            <div id="gridGuides" class="grid-guides hidden"></div>
+            <div id="dropHint" class="drop-hint"><strong>DROP MEDIA</strong><span>or click Import</span></div>
+          </div>
+          <div class="monitor-status"><span><i class="led green"></i> Preview Engine</span><span id="fpsMeter">30 fps</span><span id="resolutionMeter">1920 × 1080</span></div>
+        </div>
+        <div class="transport">
+          <button id="jumpStart">|◀</button><button id="frameBack">◀|</button><button id="playBtn" class="play">▶</button><button id="frameForward">|▶</button><button id="jumpEnd">▶|</button>
+          <div id="timecode" class="timecode">00:00:00:00</div>
+          <div class="transport-spacer"></div>
+          <button id="markIn">I</button><button id="markOut">O</button><button id="loopBtn">↻</button><label class="zoom-label">Timeline <input id="timelineZoom" type="range" min="40" max="240" value="100"></label>
+        </div>
+      </section>
+
+      <aside class="inspector-panel surface">
+        <div class="inspector-tabs"><button class="active" data-inspector="video">Inspector</button><button data-inspector="scopes">Scopes</button><button data-inspector="render">Render</button></div>
+        <div id="inspectorContent" class="inspector-content"></div>
+      </aside>
+
+      <section class="timeline-panel surface">
+        <div class="timeline-topline">
+          <div class="timeline-tools"><button id="undoBtn">↶</button><button id="redoBtn">↷</button><button id="splitBtn">Split</button><button id="deleteBtn">Delete</button><button id="duplicateBtn">Duplicate</button><button id="snapBtn" class="active">⌁ Snap</button></div>
+          <div class="timeline-info"><span id="selectionInfo">No clip selected</span><span id="durationInfo">00:01:00:00</span></div>
+        </div>
+        <div class="timeline-shell">
+          <div id="trackHeaders" class="track-headers"></div>
+          <div id="timelineViewport" class="timeline-viewport">
+            <div id="ruler" class="ruler"></div>
+            <div id="tracks" class="tracks"></div>
+            <div id="playhead" class="playhead"><i></i></div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div id="toastHost" class="toast-host"></div>
+
+  <dialog id="cloudDialog" class="modal">
+    <form method="dialog" id="loginForm">
+      <div class="modal-head"><div><span class="eyebrow">TGG CLOUD</span><h2>Creator Sync</h2></div><button value="cancel" class="close-btn">×</button></div>
+      <p>The editor works locally first. Sign in to save projects, versions and private media to TGG Core.</p>
+      <label>Email<input id="loginEmail" type="email" autocomplete="email"></label>
+      <label>Password<input id="loginPassword" type="password" autocomplete="current-password"></label>
+      <div class="modal-actions"><button type="button" id="logoutBtn" class="ghost-btn">Sign out</button><button type="submit" class="primary-btn">Sign in</button></div>
+      <div id="loginMessage" class="login-message"></div>
+    </form>
+  </dialog>
+
+  <dialog id="exportDialog" class="modal export-modal">
+    <form method="dialog">
+      <div class="modal-head"><div><span class="eyebrow">DELIVER</span><h2>Export Studio</h2></div><button value="cancel" class="close-btn">×</button></div>
+      <div class="export-grid">
+        <button type="button" data-export="quick"><strong>Quick Browser Render</strong><span>Real-time master from your current timeline</span></button>
+        <button type="button" data-export="frame"><strong>Current Frame PNG</strong><span>Export the viewer frame at project resolution</span></button>
+        <button type="button" data-export="json"><strong>Project Package</strong><span>Portable timeline + effects JSON</span></button>
+        <button type="button" data-export="version"><strong>Save Cloud Version</strong><span>Create a restore point before delivery</span></button>
+      </div>
+      <div class="render-presets"><span>Server preset</span><button type="button">720p</button><button type="button" class="active">1080p</button><button type="button">2160p</button><button type="button">Source</button></div>
+      <div id="renderProgress" class="render-progress"><i></i><span>Ready</span></div>
+    </form>
+  </dialog>
+</div>
+<script src="./app.js" defer></script>
+</body>
+</html>

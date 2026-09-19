@@ -38,7 +38,7 @@
     const status=availability(name);
     if(!status.ready)return {ok:status.ready,status:'blocked',...status};
     const def=FAVORS[name],beatId=beatFor(name);
-    const beat=window.TGGWorldDepth?.spawnBeatFor?.(beatId,{source:'npc-favor'});
+    const beat=window.TGGWorldDepth?.spawnBeatFor?.(beatId,{source:'npc-favor',npcName:name});
     const accepted=!!beat&&beat.id===beatId;
     if(!accepted)return {ok:accepted,status:'spawn_failed',name,beat:beatId};
     state.uses[name]=(Number(state.uses[name])||0)+1;

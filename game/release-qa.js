@@ -189,6 +189,13 @@
     test('v234 native camera mode',cameraForge.mode==='native-camera-forge'&&cameraForge.enabled===true);
     test('v234 camera HUD',!!document.getElementById('v234ForgeHud')&&!!document.getElementById('v234ForgePanel'));
     test('v234 camera forge css',!!document.querySelector('link[href*="v234-camera-forge.css"]'));
+    const npcForge=window.TGGV235?.status?.()||{};
+    test('v235 npc core api',!!window.TGGV235Core&&typeof window.TGGV235Core.profile==='function'&&typeof window.TGGV235Core.spawnPlan==='function');
+    test('v235 npc forge api',!!window.TGGV235&&typeof window.TGGV235.rebuild==='function'&&typeof window.TGGV235.pulseCrowd==='function');
+    test('v235 100 layers',Array.isArray(window.TGGV235?.layers)&&window.TGGV235.layers.length===100);
+    test('v235 native npc mode',npcForge.mode==='native-npc-crowd-forge'&&npcForge.enabled===true);
+    test('v235 crowd HUD',!!document.getElementById('v235ForgeHud')&&!!document.getElementById('v235ForgePanel'));
+    test('v235 crowd css',!!document.querySelector('link[href*="v235-npc-forge.css"]'));
     const crowdForge=window.TGGV235?.status?.()||{};
     test('v235 npc core api',!!window.TGGV235Core&&typeof window.TGGV235Core.profile==='function'&&typeof window.TGGV235Core.spawnPlan==='function');
     test('v235 crowd forge api',!!window.TGGV235&&typeof window.TGGV235.rebuild==='function'&&typeof window.TGGV235.spawnAudience==='function');

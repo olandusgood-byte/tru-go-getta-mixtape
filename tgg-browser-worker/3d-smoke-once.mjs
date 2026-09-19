@@ -131,11 +131,36 @@ async function run(){
         window.TGGCrowdPresentation={getStatus:()=>({...window.__qaCrowd})};
         window.__tggToast=()=>{};
       });
+      const sourceDiagnostics={
+        storyBytes:storySource.length,
+        cineBytes:cineSource.length,
+        storyHasApi:storySource.includes('window.TGGStoryMissions'),
+        cineHasApi:cineSource.includes('window.TGGStoryCinematics')
+      };
       await tp.addScriptTag({content:storySource});
       await tp.addScriptTag({content:cineSource});
+      await tp.waitForFunction(()=>typeof window.TGGStoryMissions?.start==='function'&&typeof window.TGGStoryCinematics?.getState==='function',undefined,{timeout:3000}).catch(()=>{});
       await tp.waitForTimeout(80);
 
       const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
+      const loaded=await tp.evaluate(()=>({
+        story:typeof window.TGGStoryMissions?.start==='function',
+        cine:typeof window.TGGStoryCinematics?.getState==='function',
+        globals:Object.keys(window).filter(k=>/^TGGStory/.test(k)).sort()
+      }));
+      add('v220-source-story-api',sourceDiagnostics.storyHasApi,JSON.stringify(sourceDiagnostics));
+      add('v220-source-cine-api',sourceDiagnostics.cineHasApi,JSON.stringify(sourceDiagnostics));
+      add('v220-runtime-story-loaded',loaded.story,JSON.stringify(loaded));
+      add('v220-runtime-cine-loaded',loaded.cine,JSON.stringify(loaded));
+      if(!loaded.story||!loaded.cine){
+        result={
+          ok:false,status:'done',mode:'v220_cinematic_story_harness',target:TARGET,
+          checks,console_errors:consoleErrors,page_errors:pageErrors,
+          diagnostics:{sourceDiagnostics,loaded},updated_at:new Date().toISOString()
+        };
+        console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+        await testCtx.close();await ctx.close();return;
+      }
       let snap=await tp.evaluate(()=>({
         title:document.title,
         version:window.TGGStoryCinematics?.getState?.().version,
@@ -247,8 +272,7 @@ async function run(){
       add('v220-mobile-objective-contained',!!mobileObjective.frame&&mobileObjective.frame.left>=0&&mobileObjective.frame.right<=mobileObjective.width+1,JSON.stringify(mobileObjective.frame));
 
       await tp.evaluate(()=>window.TGGStoryCinematics.show({
-        type:'chapter-start',chapter:3,title:'CITY TAKEOVER',detail:'TURN CITY BUZZ INTO REAL MOMENTUM.'
-      }));
+        type:'chapter-start',chapter:3,title:'CITY TAKEOVER',detail:'TURN CITY BUZZ INTO REAL MOMENTUM.'      }));
       await tp.waitForTimeout(50);
       const mobileChapter=await tp.evaluate(()=>{
         const frame=document.querySelector('#storyCinematic .story-cine-frame')?.getBoundingClientRect();
@@ -497,8 +521,7 @@ async function run(){
       snap=await page.evaluate(()=>{
         window.TGGStreetPresence.setDensity('LOW');
         const status=window.TGGStreetPresence.getStatus();
-        return {
-          density:status.density,
+        return {          density:status.density,
           citizens:window.TGGStreetPresence.citizens.filter(x=>x.visible).length,
           social:window.TGGStreetPresence.socialPeople.filter(x=>x.visible).length,
           total:status.totalStreetPopulation
@@ -747,8 +770,7 @@ async function run(){
             baselines:null,flags:{dj:false,premiere:false,manager:false},lastSync:0
           }
         }));
-      });
-      await mp.addScriptTag({content:storySource});
+      });      await mp.addScriptTag({content:storySource});
       await mp.addScriptTag({content:cineSource});
       await mp.waitForTimeout(80);
       const checks=[]; const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
@@ -997,8 +1019,7 @@ async function run(){
       await mp.setContent(html,{waitUntil:'domcontentloaded'});
       await mp.evaluate(()=>{
         const store={};
-        Object.defineProperty(window,'localStorage',{configurable:true,value:{
-          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
           setItem:(k,v)=>{store[k]=String(v)},
           removeItem:k=>{delete store[k]},          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
         }});
@@ -1247,8 +1268,7 @@ async function run(){
       let html=await htmlResponse.text();
       const [css,lifeSource,gameSource]=await Promise.all([cssResponse.text(),lifeResponse.text(),gameResponse.text()]);      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
                .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
-      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
-      const mp=await mobile.newPage();
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});      const mp=await mobile.newPage();
       const errors=[];
       mp.on('pageerror',e=>errors.push(e.message||String(e)));
       await mp.setContent(html,{waitUntil:'domcontentloaded'});
@@ -1497,8 +1517,7 @@ async function run(){
         window.TGGGame?.toggleVehicle?.();
       });
       const checks=[]; const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
-      let snap=await page.evaluate(()=>({state:window.TGGGame?.getState?.(),drive:window.TGGGame?.getDrivingState?.(),tune:window.TGGGame?.getDriveTuning?.()}));
-      record('vehicle-enter',snap.state?.inVehicle===true,JSON.stringify(snap));
+      let snap=await page.evaluate(()=>({state:window.TGGGame?.getState?.(),drive:window.TGGGame?.getDrivingState?.(),tune:window.TGGGame?.getDriveTuning?.()}));      record('vehicle-enter',snap.state?.inVehicle===true,JSON.stringify(snap));
       record('vehicle-tuning',Number(snap.tune?.maxForward)>8&&Number(snap.tune?.maxReverse)<0,JSON.stringify(snap.tune));
 
       await page.evaluate(()=>window.TGGGame?.setDriveKey?.('forward',true));
@@ -1747,8 +1766,7 @@ async function run(){
       await page.waitForTimeout(750);
       const sprint=await page.evaluate(()=>({walk:window.TGGGame?.getWalkingState?.(),tune:window.TGGGame?.getWalkTuning?.(),mode:document.getElementById('walkModeValue')?.textContent}));
       await page.keyboard.up('ArrowUp');await page.keyboard.up('Shift');
-      record('sprint-speed',Number(sprint.walk?.speed)>Number(sprint.tune?.walkSpeed)*1.1,JSON.stringify(sprint));
-      record('sprint-state',sprint.walk?.sprinting===true&&sprint.mode==='SPRINT',JSON.stringify(sprint));
+      record('sprint-speed',Number(sprint.walk?.speed)>Number(sprint.tune?.walkSpeed)*1.1,JSON.stringify(sprint));      record('sprint-state',sprint.walk?.sprinting===true&&sprint.mode==='SPRINT',JSON.stringify(sprint));
 
       await page.waitForTimeout(350);
       const stopped=await page.evaluate(()=>window.TGGGame?.getWalkingState?.());
@@ -1997,8 +2015,7 @@ async function run(){
     }
     if(REQUIRE_PLAYER_SMOOTH){      record('walking-api',initial.walkingApi);
       record('walking-tuning',Number(initial.walkingTuning?.walkSpeed)>0&&Number(initial.walkingTuning?.sprintSpeed)>Number(initial.walkingTuning?.walkSpeed),JSON.stringify(initial.walkingTuning));
-      record('player-dynamics-api',initial.playerDynamicsApi);
-      record('sprint-control',initial.sprintButton);
+      record('player-dynamics-api',initial.playerDynamicsApi);      record('sprint-control',initial.sprintButton);
       record('player-move-hud',initial.playerMoveHud);
       record('final-build-runtime',String(initial.finalBuildVersion).includes('V2.00'),String(initial.finalBuildVersion));
       record('gamepad-api',initial.gamepadApi);

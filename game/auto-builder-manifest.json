@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.21",
-  "module": "GAME-V1.21",
-  "name": "Crew Social Graph + Contact Synergy",
+  "version": "1.24",
+  "module": "GAME-V1.24",
+  "name": "Crew Missions + Dynamic Economy + Live Events",
   "workflow": [
     "BUILD",
     "TEST",
@@ -56,9 +56,15 @@
     "v1_21_crew_graph": true,
     "v1_21_contact_synergy": true,
     "v1_21_local_social_state": true,
-    "v1_21_no_external_mutation": true
+    "v1_21_no_external_mutation": true,
+    "v1_22_crew_missions": true,
+    "v1_22_cooperative_chains": true,
+    "v1_23_dynamic_economy": true,
+    "v1_23_local_economy": true,
+    "v1_24_live_events": true,
+    "v1_24_local_event_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.22 CREW MISSIONS + COOPERATIVE ACTIVITY CHAINS"
+  "next": "V1.25 WORLD STATE ORCHESTRATOR + MULTI-SYSTEM CHAINS"
 }

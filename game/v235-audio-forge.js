@@ -9,7 +9,7 @@
     'club bass bed','street ambience','traffic hum','pedestrian chatter bed','car engine synth','engine pitch bridge','engine gain bridge','engine boost layer','engine braking layer','engine idle layer',
     'spatial studio source','spatial club source','spatial business source','spatial park source','spatial shop source','spatial media source','destination proximity mix','room acoustic mix','world acoustic mix','vehicle acoustic mix',
     'noise buffer','tone oscillator','bass oscillator','filter node','lowpass filter','highpass filter','gain envelope','attack envelope','decay envelope','sustain envelope','release envelope',
-    'event bridge mission','event bridge vehicle','event bridge weather','event bridge crew','event bridge rival','event bridge rap','event bridge concert','event bridge reward','gesture unlock','visibility suspend guard',
+    'event bridge mission','event bridge vehicle','event bridge weather','event bridge crew','event bridge rival','event bridge rap','event bridge concert','event bridge reward','gesture unlock',
     'audio HUD','audio panel','profile buttons','enabled toggle','volume meter','mobile panel','landscape panel','rollback isolation','100-layer manifest','release QA hooks'
   ];
   const core=()=>globalThis.TGGV235Core||globalThis.window?.TGGV235Core;

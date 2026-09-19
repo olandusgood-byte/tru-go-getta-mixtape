@@ -370,19 +370,24 @@
     const beatHere=!!worldBeat?.arrived;
     const meetup=window.TGGMeetups?.navigationTarget?.();
     const meetupHere=!!meetup?.arrived;
+    const encounter=window.TGGStreetEncounters?.navigationTarget?.();
+    const encounterHere=!!encounter?.arrived;
     const storyStatus=storyHere?window.TGGStoryMissions?.status?.():null;
-    interactButton.disabled=!near&&!person&&!storyHere&&!beatHere&&!meetupHere;
+    interactButton.disabled=!near&&!person&&!storyHere&&!beatHere&&!meetupHere&&!encounterHere;
     interactButton.textContent=storyHere
       ?'DO '+String(storyStatus?.current?.title||storyTarget?.label||'STORY OBJECTIVE').toUpperCase()
       :beatHere
         ?'DO '+String(worldBeat?.label||'WORLD BEAT').toUpperCase()
         :meetupHere
           ?'MEET '+String(meetup?.name||'CONTACT').toUpperCase()
-          :person?'TALK TO '+person.name.toUpperCase():near?'ENTER '+near.label:'INTERACT';
-    interactButton.classList.toggle('nearby',!!near||!!person||storyHere||beatHere||meetupHere);
+          :encounterHere
+            ?'TALK TO '+String(encounter?.name||'CONTACT').toUpperCase()+' • STREET'
+            :person?'TALK TO '+person.name.toUpperCase():near?'ENTER '+near.label:'INTERACT';
+    interactButton.classList.toggle('nearby',!!near||!!person||storyHere||beatHere||meetupHere||encounterHere);
     interactButton.classList.toggle('story-ready',storyHere);
     interactButton.classList.toggle('world-beat-ready',beatHere);
     interactButton.classList.toggle('meetup-ready',meetupHere);
+    interactButton.classList.toggle('encounter-ready',encounterHere);
     return {
       ready:!interactButton.disabled,
       near:near?.id||null,
@@ -390,6 +395,7 @@
       storyHere,
       beatHere,
       meetupHere,
+      encounterHere,
       text:String(interactButton.textContent||'').trim()
     };
   }
@@ -447,6 +453,14 @@
       const result=window.TGGMeetups?.completeMeetup?.();
       if(result?.status==='complete'){
         window.__tggToast?.('MEETUP — '+(meetup.name||'COMPLETE'));
+        return true;
+      }
+    }
+    const encounter=window.TGGStreetEncounters?.navigationTarget?.();
+    if(encounter?.arrived){
+      const result=window.TGGStreetEncounters?.beginConversation?.();
+      if(result?.status==='choice_required'){
+        window.__tggToast?.('STREET ENCOUNTER — '+(encounter.name||'CONTACT'));
         return true;
       }
     }

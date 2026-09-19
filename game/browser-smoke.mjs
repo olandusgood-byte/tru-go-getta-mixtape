@@ -56,6 +56,7 @@ async function inspectInteractControl(){
       worldBeatReady:!!el?.classList?.contains('world-beat-ready'),
       meetupReady:!!el?.classList?.contains('meetup-ready'),
       encounterReady:!!el?.classList?.contains('encounter-ready'),
+      streetMissionReady:!!el?.classList?.contains('street-mission-ready'),
       storyReady:!!el?.classList?.contains('story-ready'),
       refresh,
       runtime
@@ -803,7 +804,7 @@ try{
     const messages=window.TGGMessages.snapshot();
     const thread=messages.threads?.['Rico Flame']||[];
     const handoffMessage=[...thread].reverse().find(x=>x?.kind==='street-handoff')||null;
-    const cleanup=window.TGGMeetups.cancelMeetup('browser-smoke-cleanup');
+    const cleanup=null;
     const stepAxis=(axis,target)=>{
       let guard=0;
       while(guard++<220){
@@ -831,6 +832,148 @@ try{
      !encounterResolved.restored||
      Math.hypot(encounterResolved.current.x-encounterRoute.start.x,encounterResolved.current.y-encounterRoute.start.y)>.05){
     throw new Error('V5.06 street encounter handoff failed '+JSON.stringify(encounterResolved));
+  }
+
+  await page.waitForFunction(()=>!!window.TGGStreetMissions&&!!window.TGGV507,{timeout:15000});
+  const streetMissionPrep=await page.evaluate(()=>{
+    const run=window.TGGV507.run();
+    const start={...window.TGGGame.getState()};
+    const beforeRelation=window.TGGNPCRelations.relationship('Rico Flame');
+    const beforeGame={...window.TGGGame.getState()};
+    const meetup=window.TGGMeetups.snapshot();
+    const nav=window.TGGMeetups.navigationTarget();
+    return {run,start,beforeRelation,beforeGame,meetup,nav};
+  });
+  if(streetMissionPrep.run?.ok!==true||
+     streetMissionPrep.meetup?.active?.name!=='Rico Flame'||
+     streetMissionPrep.meetup?.active?.source!=='street-encounter-handoff'||
+     !streetMissionPrep.nav){
+    throw new Error('V5.07 mission launch meetup missing '+JSON.stringify(streetMissionPrep));
+  }
+
+  const streetMeetupRoute=await page.evaluate(()=>{
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    const nav=window.TGGMeetups.navigationTarget();
+    const routed=!!nav&&stepAxis('y',50)&&stepAxis('x',nav.x)&&stepAxis('y',nav.y);
+    return {routed,nav:window.TGGMeetups.navigationTarget(),state:{...window.TGGGame.getState()}};
+  });
+  if(!streetMeetupRoute.routed||streetMeetupRoute.nav?.arrived!==true){
+    throw new Error('V5.07 follow-up meetup route failed '+JSON.stringify(streetMeetupRoute));
+  }
+  await page.waitForTimeout(140);
+  const streetMeetupInteract=await inspectInteractControl();
+  if(!streetMeetupInteract.exists||streetMeetupInteract.disabled||!streetMeetupInteract.meetupReady||!/^MEET\s+RICO FLAME/i.test(streetMeetupInteract.text)){
+    throw new Error('V5.07 follow-up meetup INTERACT unavailable '+JSON.stringify(streetMeetupInteract));
+  }
+  await clickRuntimeControl('#interact3dBtn','V5.07 follow-up meetup interact');
+  await page.waitForTimeout(120);
+
+  const streetMissionStarted=await page.evaluate(()=>({
+    mission:window.TGGStreetMissions.snapshot(),
+    nav:window.TGGNavigation?.getTarget?.()||null,
+    relation:window.TGGNPCRelations.relationship('Rico Flame'),
+    meetup:window.TGGMeetups.snapshot(),
+    messages:window.TGGMessages.snapshot()
+  }));
+  if(streetMissionStarted.meetup?.active||
+     streetMissionStarted.mission?.active?.name!=='Rico Flame'||
+     streetMissionStarted.mission?.active?.title!=='RICO STREET PUSH'||
+     streetMissionStarted.mission?.active?.stageIndex!==0||
+     streetMissionStarted.nav?.streetMission!==true||
+     !/MISSION/i.test(String(streetMissionStarted.nav?.label||''))||
+     !(streetMissionStarted.relation?.relation?.affinity>streetMissionPrep.beforeRelation?.relation?.affinity)){
+    throw new Error('V5.07 mission auto-start failed '+JSON.stringify(streetMissionStarted));
+  }
+
+  const routeStreetMissionStage=async(label)=>{
+    const routed=await page.evaluate(()=>{
+      const stepAxis=(axis,target)=>{
+        let guard=0;
+        while(guard++<220){
+          const s=window.TGGGame.getState();
+          const current=Number(s[axis])||0;
+          const delta=Number(target)-current;
+          if(Math.abs(delta)<=0.01)return true;
+          const step=Math.max(-1,Math.min(1,delta));
+          if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+        }
+        return false;
+      };
+      const nav=window.TGGStreetMissions.navigationTarget();
+      const ok=!!nav&&stepAxis('y',50)&&stepAxis('x',nav.x)&&stepAxis('y',nav.y);
+      return {ok,nav:window.TGGStreetMissions.navigationTarget(),state:{...window.TGGGame.getState()}};
+    });
+    if(!routed.ok||routed.nav?.arrived!==true)throw new Error(label+' physical route failed '+JSON.stringify(routed));
+    await page.waitForTimeout(140);
+    const interact=await inspectInteractControl();
+    if(!interact.exists||interact.disabled||!interact.streetMissionReady||!/^DO\s+/i.test(interact.text)){
+      throw new Error(label+' INTERACT unavailable '+JSON.stringify(interact));
+    }
+    await clickRuntimeControl('#interact3dBtn',label+' interact');
+    await page.waitForTimeout(120);
+    return routed;
+  };
+
+  const streetStageOneRoute=await routeStreetMissionStage('V5.07 stage 1');
+  const streetStageOne=await page.evaluate(()=>({
+    mission:window.TGGStreetMissions.snapshot(),
+    nav:window.TGGNavigation?.getTarget?.()||null
+  }));
+  if(streetStageOne.mission?.active?.stageIndex!==1||
+     streetStageOne.mission?.navigation?.stageIndex!==1||
+     streetStageOne.nav?.streetMission!==true){
+    throw new Error('V5.07 stage 1 advancement failed '+JSON.stringify(streetStageOne));
+  }
+
+  const streetStageTwoRoute=await routeStreetMissionStage('V5.07 stage 2');
+  const streetMissionResolved=await page.evaluate(start=>{
+    const mission=window.TGGStreetMissions.snapshot();
+    const relation=window.TGGNPCRelations.relationship('Rico Flame');
+    const messages=window.TGGMessages.snapshot();
+    const thread=messages.threads?.['Rico Flame']||[];
+    const completionMessage=[...thread].reverse().find(x=>x?.kind==='street-mission-complete')||null;
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    const restored=stepAxis('y',50)&&stepAxis('x',start.x)&&stepAxis('y',start.y);
+    return {
+      mission,relation,completionMessage,restored,current:{...window.TGGGame.getState()},
+      meetup:window.TGGMeetups.snapshot(),encounter:window.TGGStreetEncounters.snapshot()
+    };
+  },streetMissionPrep.start);
+  if(streetMissionResolved.mission?.active||
+     streetMissionResolved.mission?.lastCompleted?.name!=='Rico Flame'||
+     streetMissionResolved.mission?.lastCompleted?.title!=='RICO STREET PUSH'||
+     streetMissionResolved.mission?.lastCompleted?.reward?.cash!==210||
+     streetMissionResolved.mission?.lastCompleted?.reward?.xp!==54||
+     streetMissionResolved.mission?.completed<1||
+     streetMissionResolved.completionMessage?.direction!=='in'||
+     !(streetMissionResolved.relation?.relation?.affinity>streetMissionStarted.relation?.relation?.affinity)||
+     streetMissionResolved.meetup?.active||
+     streetMissionResolved.encounter?.active||
+     !streetMissionResolved.restored||
+     Math.hypot(streetMissionResolved.current.x-streetMissionPrep.start.x,streetMissionResolved.current.y-streetMissionPrep.start.y)>.05){
+    throw new Error('V5.07 mission completion failed '+JSON.stringify(streetMissionResolved));
   }
 
   await clearIncomingCallOverlay('pre keyboard movement');

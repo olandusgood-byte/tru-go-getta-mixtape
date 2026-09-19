@@ -201,7 +201,7 @@
     test('v236 crowd forge api',!!window.TGGV236&&typeof window.TGGV236.applyProfile==='function'&&typeof window.TGGV236.rebuild==='function');
     test('v236 100 layers',Array.isArray(window.TGGV236?.layers)&&window.TGGV236.layers.length===100);
     test('v236 native crowd mode',crowdForge.mode==='native-crowd-forge'&&crowdForge.enabled===true);
-    test('v236 crowd HUD',!!document.getElementById('v236CrowdHud')&&!!document.getElementById('v236CrowdPanel'));
+    test('v236 crowd HUD',!!document.getElementById('v236ForgeHud')&&!!document.getElementById('v236ForgePanel'));
     test('v236 crowd css',!!document.querySelector('link[href*="v236-crowd-forge.css"]'));
     const cameraForgeV234=window.TGGV234?.status?.()||{};
     test('v234 camera core api',!!window.TGGV234Core&&typeof window.TGGV234Core.preset==='function'&&typeof window.TGGV234Core.blend==='function');

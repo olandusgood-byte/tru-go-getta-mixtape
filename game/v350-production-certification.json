@@ -14,8 +14,20 @@
     "production_deployment_ready": true,
     "production_commit_matches_release": true,
     "runtime_errors_last_hour": 0,
-    "browser_interaction_verified": false
+    "browser_interaction_verified": true,
+    "static_gate": true,
+    "mega_regression": true,
+    "browser_smoke": true
   },
-  "browser_blocker": "Vercel Authentication redirects automated access to SSO; no browser interaction certificate issued yet.",
-  "status": "DEPLOYED_READY_BROWSER_CERT_PENDING"
+  "browser_blocker": null,
+  "status": "CERTIFIED",
+  "browser_certification": {
+    "run_id": 35441341802,
+    "conclusion": "success",
+    "artifact_id": 10583164514,
+    "artifact_name": "tgg-v350-live-browser-certificate",
+    "digest": "sha256:3b769b7c9bd60bbc064b5aad1e211b285c43c92e82fb9683b77dae38343b721b",
+    "head_sha": "1277a320aa3ece6af2c9aeba83726ddda7528ea1",
+    "target": "https://tgg-world-play.vercel.app"
+  }
 }

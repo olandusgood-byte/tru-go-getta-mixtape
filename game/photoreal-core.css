@@ -1,0 +1,9 @@
+#v245CinematicOverlay{position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden}
+#v245CinematicOverlay>i{position:absolute;inset:0;display:block}
+.v245-vignette{background:radial-gradient(circle at 50% 46%,transparent 42%,rgba(0,0,0,.08) 72%,rgba(0,0,0,.28) 100%)}
+.v245-grain{opacity:.035;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");mix-blend-mode:soft-light;animation:v245grain .28s steps(2) infinite}
+.v245-bloom{background:linear-gradient(180deg,rgba(170,205,255,.025),transparent 24%,transparent 74%,rgba(255,174,107,.018));mix-blend-mode:screen}
+html[data-tgg-realism="v245"] #city3d canvas,html[data-tgg-realism="v245"] #garage3d canvas,html[data-tgg-realism="v245"] .interior3d canvas,html[data-tgg-realism="v245"] .studio3d canvas{filter:contrast(1.035) saturate(.92) brightness(.985)}
+html[data-tgg-realism="v245"] .city-title,html[data-tgg-realism="v245"] .vehicle-hud,html[data-tgg-realism="v245"] .player-move-hud,html[data-tgg-realism="v245"] .nav-hud{backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2)}
+@keyframes v245grain{0%{transform:translate3d(0,0,0) scale(1.05)}25%{transform:translate3d(-1.2%,-.7%,0) scale(1.05)}50%{transform:translate3d(.8%,1.1%,0) scale(1.05)}75%{transform:translate3d(-.4%,.5%,0) scale(1.05)}100%{transform:translate3d(0,0,0) scale(1.05)}}
+@media(max-width:720px){.v245-grain{opacity:.018}.v245-vignette{background:radial-gradient(circle at 50% 48%,transparent 54%,rgba(0,0,0,.2) 100%)}}

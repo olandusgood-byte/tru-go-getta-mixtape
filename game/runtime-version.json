@@ -3,7 +3,7 @@
   "canonical_runtime": "V4.20 SOCIAL NETWORK CITY STATUS MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v410_production_deployed_browser_certified",
+  "verification": "v420_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V4.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA",
   "features": [
@@ -149,7 +149,7 @@
     "city_reaction_text",
     "social_history"
   ],
-  "release_gate": "v420_validation_pending",
+  "release_gate": "closed_certified",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -157,10 +157,10 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PENDING_V420_REVALIDATION",
+    "browser_gate": "PASS",
     "public_alias": "https://tgg-world-play.vercel.app",
-    "browser_cert_run_id": 35443168213,
-    "browser_cert_artifact_id": 10584940175,
-    "browser_cert_artifact_digest": "sha256:fce846e532f4190095218b97801affdee2e6670d61cf0ae72c21fdab85d16a1e"
+    "browser_cert_run_id": 35443380948,
+    "browser_cert_artifact_id": 10585135256,
+    "browser_cert_artifact_digest": "sha256:65f99750ff4502f70bd5098e66a264ec1c8474f48fc9f114fe18781478cee627"
   }
 }

@@ -153,10 +153,10 @@
   function wrapRenderer(){
     if(!hasDOM()||state.wrapped)return true;
     const r=window.TGG3D?.renderer;if(!r?.render)return false;
-    state.renderer=r;state.originalRender=r.render.bind(r);
+    state.renderer=r;state.originalRender=r.render;
     r.render=function(sceneArg,cameraArg){
       const snap=beforeRender(cameraArg,performance.now());
-      try{return state.originalRender(sceneArg,cameraArg)}
+      try{return state.originalRender.call(r,sceneArg,cameraArg)}
       finally{if(snap)restoreCamera(cameraArg,snap)}
     };
     state.wrapped=true;state.ready=true;return true;

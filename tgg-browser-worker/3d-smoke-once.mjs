@@ -139,7 +139,17 @@ async function run(){
       await mp.addScriptTag({content:npcCoreSource});
       await mp.addScriptTag({content:coreSource});
       await mp.addScriptTag({content:navSource});
-      await mp.addScriptTag({content:forgeSource});
+      const forgeInit=await mp.evaluate(source=>{
+        try{
+          (0,eval)(source);
+          return {ok:!!window.TGGV244,core:!!window.TGGV244Core,error:null};
+        }catch(error){
+          return {ok:false,core:!!window.TGGV244Core,error:String(error?.stack||error?.message||error)};
+        }
+      },forgeSource);
+      if(!forgeInit.ok){
+        throw new Error('V2.44 forge init failed '+JSON.stringify({forgeInit,pageErrors:errors,consoleErrors}));
+      }
       await mp.waitForTimeout(220);
 
       const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.66",
-  "module": "GAME-V1.66",
-  "name": "Production Telemetry + Incident Journal + Automated Recovery Evidence",
+  "version": "1.69",
+  "module": "GAME-V1.69",
+  "name": "Production Load Test + Browser Runtime Audit + Live Viewer Audit",
   "workflow": [
     "BUILD",
     "TEST",
@@ -118,9 +118,13 @@
     "v1_64_production_telemetry": true,
     "v1_65_incident_journal": true,
     "v1_66_recovery_evidence": true,
-    "v1_66_local_state": true
+    "v1_66_local_state": true,
+    "v1_67_load_test": true,
+    "v1_68_browser_runtime_audit": true,
+    "v1_69_live_viewer_audit": true,
+    "v1_69_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.67 PRODUCTION LOAD TEST + BROWSER RUNTIME AUDIT"
+  "next": "V1.70 PRODUCTION RELEASE READINESS"
 }

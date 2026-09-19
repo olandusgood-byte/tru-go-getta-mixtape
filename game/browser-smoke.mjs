@@ -55,6 +55,7 @@ async function inspectInteractControl(){
       text:el?String(el.textContent||'').trim():'',
       worldBeatReady:!!el?.classList?.contains('world-beat-ready'),
       meetupReady:!!el?.classList?.contains('meetup-ready'),
+      encounterReady:!!el?.classList?.contains('encounter-ready'),
       storyReady:!!el?.classList?.contains('story-ready'),
       refresh,
       runtime
@@ -703,6 +704,133 @@ try{
      callSessionEnded.hudHidden!==true||
      callSessionEnded.follow?.direction!=='in'){
     throw new Error('V5.05 call end/follow-up failed '+JSON.stringify(callSessionEnded));
+  }
+
+  await page.waitForFunction(()=>!!window.TGGStreetEncounters&&!!window.TGGV506,{timeout:15000});
+  const encounterPrep=await page.evaluate(()=>{
+    let guard=0;
+    while(window.TGGIncomingCalls?.snapshot?.().current&&guard++<10)window.TGGIncomingCalls.declineCurrent();
+    window.TGGIncomingCalls?.clearMissed?.();
+    window.TGGMeetups?.cancelMeetup?.('browser-smoke-prep');
+    window.TGGNPCRelations?.closeChoice?.();
+    const stepAxis=(axis,target)=>{
+      let n=0;
+      while(n++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    let beatCleanup=null;
+    const beatNav=window.TGGWorldDepth?.beatNavigation?.();
+    if(beatNav){
+      const routed=stepAxis('y',50)&&stepAxis('x',beatNav.x)&&stepAxis('y',beatNav.y);
+      const completed=routed?window.TGGWorldDepth?.completeBeat?.():null;
+      beatCleanup={routed,completed,remaining:window.TGGWorldDepth?.getStatus?.().activeBeat||null};
+    }
+    const run=window.TGGV506.run();
+    const before=window.TGGNPCRelations.relationship('Rico Flame');
+    const spawned=window.TGGStreetEncounters.spawnEncounter('Rico Flame',{source:'browser-smoke',force:true});
+    const nav=window.TGGStreetEncounters.navigationTarget();
+    const cityNav=window.TGGNavigation?.getTarget?.()||null;
+    return {run,before,spawned,nav,cityNav,beatCleanup};
+  });
+  if(encounterPrep.run?.ok!==true||
+     encounterPrep.spawned?.status!=='routed'||
+     encounterPrep.nav?.name!=='Rico Flame'||
+     !(encounterPrep.nav?.meters>=0)||
+     encounterPrep.cityNav?.encounter!==true||
+     !/STREET/i.test(String(encounterPrep.cityNav?.label||''))||
+     encounterPrep.beatCleanup?.remaining){
+    throw new Error('V5.06 street encounter spawn/navigation failed '+JSON.stringify(encounterPrep));
+  }
+
+  const encounterRoute=await page.evaluate(()=>{
+    const start={...window.TGGGame.getState()};
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    let routed=true,nav=null;
+    for(let pass=0;pass<8;pass++){
+      nav=window.TGGStreetEncounters.navigationTarget();
+      if(!nav||nav.arrived)break;
+      routed=routed&&stepAxis('y',50)&&stepAxis('x',nav.x)&&stepAxis('y',nav.y);
+      if(!routed)break;
+    }
+    nav=window.TGGStreetEncounters.navigationTarget();
+    return {start,routed,arrived:nav,state:{...window.TGGGame.getState()}};
+  });
+  if(!encounterRoute.routed||encounterRoute.arrived?.arrived!==true){
+    throw new Error('V5.06 physical street encounter route failed '+JSON.stringify(encounterRoute));
+  }
+  await page.waitForTimeout(160);
+  const encounterInteract=await inspectInteractControl();
+  if(!encounterInteract.exists||encounterInteract.disabled||!encounterInteract.encounterReady||
+     !/^TALK TO RICO FLAME\s+•\s+STREET/i.test(encounterInteract.text)){
+    throw new Error('V5.06 street encounter INTERACT unavailable '+JSON.stringify(encounterInteract));
+  }
+  await clickRuntimeControl('#interact3dBtn','V5.06 street encounter interact');
+  await page.waitForTimeout(100);
+  const encounterConversation=await page.evaluate(()=>({
+    encounter:window.TGGStreetEncounters.snapshot(),
+    pending:window.TGGNPCRelations.snapshot()?.pending||null,
+    choiceHidden:document.getElementById('v497NpcChoice')?.hidden
+  }));
+  if(encounterConversation.encounter?.active?.status!=='conversation'||
+     encounterConversation.pending?.name!=='Rico Flame'||
+     encounterConversation.choiceHidden!==false){
+    throw new Error('V5.06 street encounter conversation failed '+JSON.stringify(encounterConversation));
+  }
+  await clickRuntimeControl('#v497NpcChoice [data-v497-choice="street"]','V5.06 Rico street choice');
+  await page.waitForTimeout(120);
+  const encounterResolved=await page.evaluate(start=>{
+    const snap=window.TGGStreetEncounters.snapshot();
+    const relation=window.TGGNPCRelations.relationship('Rico Flame');
+    const meetup=window.TGGMeetups.snapshot();
+    const messages=window.TGGMessages.snapshot();
+    const thread=messages.threads?.['Rico Flame']||[];
+    const handoffMessage=[...thread].reverse().find(x=>x?.kind==='street-handoff')||null;
+    const cleanup=window.TGGMeetups.cancelMeetup('browser-smoke-cleanup');
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    const restored=stepAxis('y',50)&&stepAxis('x',start.x)&&stepAxis('y',start.y);
+    return {snap,relation,meetup,handoffMessage,cleanup,restored,current:{...window.TGGGame.getState()}};
+  },encounterRoute.start);
+  if(encounterResolved.snap?.active||
+     encounterResolved.snap?.lastCompleted?.name!=='Rico Flame'||
+     encounterResolved.snap?.lastCompleted?.choice!=='street'||
+     encounterResolved.snap?.lastCompleted?.handoff?.kind!=='meetup'||
+     encounterResolved.snap?.lastCompleted?.handoff?.success!==true||
+     encounterResolved.meetup?.active?.name!=='Rico Flame'||
+     encounterResolved.meetup?.active?.source!=='street-encounter-handoff'||
+     encounterResolved.handoffMessage?.direction!=='out'||
+     !(encounterResolved.relation?.relation?.affinity>encounterPrep.before?.relation?.affinity)||
+     !encounterResolved.restored||
+     Math.hypot(encounterResolved.current.x-encounterRoute.start.x,encounterResolved.current.y-encounterRoute.start.y)>.05){
+    throw new Error('V5.06 street encounter handoff failed '+JSON.stringify(encounterResolved));
   }
 
   let moved=0;

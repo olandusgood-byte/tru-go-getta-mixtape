@@ -396,3 +396,32 @@ values (
   ]::text[]
 )
 on conflict(bucket_key) do nothing;
+
+
+-- TGG_VIDEO_STUDIO_V2_RENDER_BRIDGE_SCHEMA
+-- TGG Core-native GitHub OIDC server-render queue. Additive and rollback-safe.
+alter table tgg_jobs add column if not exists worker_id text;
+alter table tgg_jobs add column if not exists lease_token_hash text;
+alter table tgg_jobs add column if not exists lease_expires_at timestamptz;
+create index if not exists tgg_jobs_video_render_claim_idx
+  on tgg_jobs(queue,status,lease_expires_at,priority desc,created_at)
+  where queue='video-render';
+
+alter table video_studio_exports add column if not exists job_id uuid references tgg_jobs(id) on delete set null;
+create unique index if not exists video_studio_exports_job_uidx
+  on video_studio_exports(job_id) where job_id is not null;
+
+create table if not exists video_studio_render_workers (
+  id uuid primary key default gen_random_uuid(),
+  worker_id text not null unique,
+  provider text not null default 'github.oidc.ffmpeg.v2',
+  status text not null default 'online' check (status in ('online','offline','error')),
+  current_job_id uuid references tgg_jobs(id) on delete set null,
+  progress integer not null default 0 check (progress between 0 and 100),
+  metadata jsonb not null default '{}'::jsonb,
+  last_seen_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists video_studio_render_workers_seen_idx
+  on video_studio_render_workers(status,last_seen_at desc);

@@ -143,8 +143,9 @@
         <button type="button" data-export="frame"><strong>Current Frame PNG</strong><span>Export the viewer frame at project resolution</span></button>
         <button type="button" data-export="json"><strong>Project Package</strong><span>Portable timeline + effects JSON</span></button>
         <button type="button" data-export="version"><strong>Save Cloud Version</strong><span>Create a restore point before delivery</span></button>
+        <button type="button" data-export="server" class="server-render-choice"><strong>Server FFmpeg Render</strong><span>Private GitHub OIDC render to H.264/AAC</span></button>
       </div>
-      <div class="render-presets"><span>Server preset</span><button type="button">720p</button><button type="button" class="active">1080p</button><button type="button">2160p</button><button type="button">Source</button></div>
+      <div class="render-presets"><span>Server preset</span><button type="button" data-preset="720p">720p</button><button type="button" data-preset="1080p" class="active">1080p</button><button type="button" data-preset="2160p">2160p</button><button type="button" data-preset="source">Source</button></div>
       <div id="renderProgress" class="render-progress"><i></i><span>Ready</span></div>
     </form>
   </dialog>

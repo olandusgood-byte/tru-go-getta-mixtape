@@ -331,12 +331,17 @@
     const p=toWorld(s);
     return Math.hypot(p.x-car.position.x,p.z-car.position.z);
   }
-  function syncCarFromState(s){
+  function dampAlpha(rate,dt){return 1-Math.exp(-Math.max(0,rate)*Math.max(0,dt));}
+  function angleDeltaDegrees(from,to){return ((to-from+540)%360)-180;}
+  function syncCarFromState(s,dt=.016){
     if(s?.inVehicle){
       const p=toWorld(s);
-      car.position.x=THREE.MathUtils.lerp(car.position.x,p.x,.2);
-      car.position.z=THREE.MathUtils.lerp(car.position.z,p.z,.2);
-      car.userData.headingDeg=(Number(s.heading)||0);
+      const follow=dampAlpha(15,dt);
+      car.position.x=THREE.MathUtils.lerp(car.position.x,p.x,follow);
+      car.position.z=THREE.MathUtils.lerp(car.position.z,p.z,follow);
+      const desired=(Number(s.heading)||0);
+      const current=Number(car.userData.headingDeg)||0;
+      car.userData.headingDeg=(current+angleDeltaDegrees(current,desired)*dampAlpha(22,dt)+360)%360;
       car.rotation.y=-(car.userData.headingDeg*Math.PI/180);
     }
   }
@@ -459,10 +464,10 @@
 
     if(s.inVehicle){
       player.visible=false;
-      syncCarFromState(s);
+      syncCarFromState(s,dt);
     }else{
       player.visible=true;
-      const followRate=playerDynamics.sprinting ? .26 : .21;
+      const followRate=dampAlpha(playerDynamics.sprinting?18:14,dt);
       player.position.x=THREE.MathUtils.lerp(player.position.x,p.x,followRate);
       player.position.z=THREE.MathUtils.lerp(player.position.z,p.z,followRate);
       const desiredRot=-((Number(s.heading)||0)*Math.PI/180)+Math.PI/2;
@@ -479,10 +484,11 @@
       if(speed>.025&&!s.inVehicle)walkPhase+=dt*((playerDynamics.sprinting?11:7)+speed*(playerDynamics.sprinting?10:8));
       const stride=playerDynamics.sprinting?1.08:.72;
       const swing=!s.inVehicle?Math.sin(walkPhase)*stride*speed:0;
-      parts.leftArm.rotation.x=THREE.MathUtils.lerp(parts.leftArm.rotation.x,swing,.24);
-      parts.rightArm.rotation.x=THREE.MathUtils.lerp(parts.rightArm.rotation.x,-swing,.24);
-      parts.leftLeg.rotation.x=THREE.MathUtils.lerp(parts.leftLeg.rotation.x,-swing*(playerDynamics.sprinting ? .95 : .85),.24);
-      parts.rightLeg.rotation.x=THREE.MathUtils.lerp(parts.rightLeg.rotation.x,swing*(playerDynamics.sprinting ? .95 : .85),.24);
+      const limbFollow=dampAlpha(17,dt);
+      parts.leftArm.rotation.x=THREE.MathUtils.lerp(parts.leftArm.rotation.x,swing,limbFollow);
+      parts.rightArm.rotation.x=THREE.MathUtils.lerp(parts.rightArm.rotation.x,-swing,limbFollow);
+      parts.leftLeg.rotation.x=THREE.MathUtils.lerp(parts.leftLeg.rotation.x,-swing*(playerDynamics.sprinting ? .95 : .85),limbFollow);
+      parts.rightLeg.rotation.x=THREE.MathUtils.lerp(parts.rightLeg.rotation.x,swing*(playerDynamics.sprinting ? .95 : .85),limbFollow);
       const sideLean=!s.inVehicle?Math.max(-.08,Math.min(.08,-playerDynamics.vy*.004+playerDynamics.vx*.0025)):0;
       parts.body.rotation.z=THREE.MathUtils.lerp(parts.body.rotation.z,sideLean+Math.sin(walkPhase*2)*.025*speed,.2);
       parts.body.position.y=THREE.MathUtils.lerp(parts.body.position.y,2.05+(speed>.04?Math.abs(Math.sin(walkPhase))*0.07*(playerDynamics.sprinting?1.45:1):0),.22);
@@ -493,12 +499,12 @@
     car.userData.wheels?.forEach(w=>{
       if(s.inVehicle)w.rotation.z-=visualSpeed*dt*1.9;
       const targetSteer=w.userData.front?vehicleDynamics.steer*.42:0;
-      w.rotation.y=THREE.MathUtils.lerp(w.rotation.y,targetSteer,.22);
+      w.rotation.y=THREE.MathUtils.lerp(w.rotation.y,targetSteer,dampAlpha(16,dt));
     });
     const speedRatio=Math.min(1,Math.abs(vehicleDynamics.speed)/10);
     const leanScale=vehicleDynamics.handbrake?1.8:1;
     const targetLean=s.inVehicle?(-vehicleDynamics.steer*speedRatio*.075*leanScale):0;
-    car.rotation.z=THREE.MathUtils.lerp(car.rotation.z,targetLean,.12);
+    car.rotation.z=THREE.MathUtils.lerp(car.rotation.z,targetLean,dampAlpha(8,dt));
     const driftOn=s.inVehicle&&vehicleDynamics.handbrake&&Math.abs(vehicleDynamics.speed)>2;
     car.userData.skidMarks?.forEach(mark=>{mark.material.opacity=THREE.MathUtils.lerp(mark.material.opacity,driftOn ? .72 : 0,.22)});
     const brakeGlow=vehicleDynamics.braking||vehicleDynamics.handbrake||vehicleDynamics.speed<-.2;

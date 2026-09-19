@@ -30,7 +30,7 @@
   function status(){
     return {
       version:VERSION,ready:state.ready||!hasDOM(),mode:'native-camera-forge',layerCount:LAYERS.length,
-      enabled:state.enabled,preset:state.preset,wrapped:state.wrapped,photo:!!state.photoLock,
+      enabled:state.enabled,preset:state.preset,wrapped:state.wrapped,photo:!!state.photoLock,blackBars:false,
       impulse:Number(state.impulse.toFixed(3)),frames:state.frames
     };
   }
@@ -43,7 +43,7 @@
     if(!hasDOM())return;
     ensureOverlay();
     const motionScale=reducedMotion()?.35:1;
-    const letterbox=clamp(Number(cfg.letterbox)||0,0,.18);
+    const letterbox=0;
     const vignette=clamp((Number(cfg.vignette)||0)+speedFactor*.08+impact*.14+(boost?.08:0),0,.72);
     overlay.style.setProperty('--v234-bars',(letterbox*100).toFixed(2)+'vh');
     overlay.style.setProperty('--v234-vignette',String(vignette*motionScale));

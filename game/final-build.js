@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.42 TGG SHOW DIRECTOR FORGE 100';
+  const VERSION='V2.43 TGG REPLAY + HIGHLIGHT FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

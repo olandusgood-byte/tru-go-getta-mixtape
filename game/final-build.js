@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.38 TGG EFFECTS + IMPACT FORGE 100';
+  const VERSION='V2.39 TGG PERFORMANCE + LOD FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

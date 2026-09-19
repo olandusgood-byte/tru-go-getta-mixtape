@@ -40,6 +40,7 @@ const V224_SOCIAL_WORLD_ONLY=String(process.env.TGG_3D_V224_SOCIAL_WORLD_ONLY||'
 const V225_RIVAL_ONLY=String(process.env.TGG_3D_V225_RIVAL_ONLY||'0')==='1';
 const V226_INFLUENCE_ONLY=String(process.env.TGG_3D_V226_INFLUENCE_ONLY||'0')==='1';
 const V227_CONSEQUENCES_ONLY=String(process.env.TGG_3D_V227_CONSEQUENCES_ONLY||'0')==='1';
+const V242_DIRECTOR_ONLY=String(process.env.TGG_3D_V242_DIRECTOR_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function startV218SnapshotServer(){
@@ -76,6 +77,98 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(V242_DIRECTOR_ONLY){
+      const base=TARGET.endsWith('/index.html')?TARGET.slice(0,-11):(TARGET.endsWith('/')?TARGET.slice(0,-1):TARGET);
+      const [htmlResponse,cssResponse,coreResponse,forgeResponse]=await Promise.all([
+        fetch(base+'/index.html'),fetch(base+'/v242-director-forge.css'),fetch(base+'/v242-director-core.js'),fetch(base+'/v242-director-forge.js')
+      ]);
+      if(!htmlResponse.ok||!cssResponse.ok||!coreResponse.ok||!forgeResponse.ok){
+        throw new Error('V2.42 director harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', core='+coreResponse.status+', forge='+forgeResponse.status);
+      }
+      const [htmlSource,css,coreSource,forgeSource]=await Promise.all([htmlResponse.text(),cssResponse.text(),coreResponse.text(),forgeResponse.text()]);
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      const pageErrors=[];const consoleErrors=[];
+      mp.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+      mp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      await mp.setContent('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:#05070b;color:#fff;font-family:Arial,sans-serif}.topbar{height:56px;display:flex;align-items:center;padding:0 10px}.city{position:relative;width:100%;height:720px;overflow:hidden}button{border:1px solid #ffffff33;background:#10151e;color:#fff;border-radius:10px}</style><style>'+css+'</style></head><body><header class="topbar"><span class="v201-badge">BASE</span></header><div class="city"></div></body></html>',{waitUntil:'domcontentloaded'});
+      await mp.evaluate(()=>{
+        window.__v242Calls=[];
+        const log=(system,action,...args)=>{window.__v242Calls.push({system,action,args});return true};
+        window.TGGV231={applyMood:(...a)=>log('lighting','applyMood',...a)};
+        window.TGGV233={applyPreset:(...a)=>log('weather','applyPreset',...a)};
+        window.TGGV234={applyPreset:(...a)=>log('camera','applyPreset',...a),pulse:(...a)=>log('camera','pulse',...a)};
+        window.TGGV232={play:(...a)=>log('animation','play',...a),clear:(...a)=>log('animation','clear',...a)};
+        window.TGGV240={applyProfile:(...a)=>log('audio','applyProfile',...a),play:(...a)=>log('audio','play',...a)};
+        window.TGGV241={start:(...a)=>log('stage','start',...a),stop:(...a)=>log('stage','stop',...a)};
+        window.TGGV235={pulseCrowd:(...a)=>log('crowd','pulseCrowd',...a)};
+        window.TGGV238={emit:(...a)=>log('effects','emit',...a)};
+      });
+      await mp.addScriptTag({content:coreSource});
+      await mp.addScriptTag({content:forgeSource});
+      await mp.waitForTimeout(100);
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+
+      let snap=await mp.evaluate(()=>({
+        core:!!window.TGGV242Core,
+        forge:window.TGGV242?.status?.(),
+        sequences:window.TGGV242Core?.sequences||[],
+        ui:{btn:!!document.getElementById('v242ForgeBtn'),panel:!!document.getElementById('v242ForgePanel'),hud:!!document.getElementById('v242ForgeHud')},
+        source:{css:window.__htmlSourceCss,core:window.__htmlSourceCore,forge:window.__htmlSourceForge}
+      }));
+      add('v242-title-source',htmlSource.includes('V2.42 TGG SHOW DIRECTOR FORGE 100'),htmlSource.slice(0,120));
+      add('v242-index-css',htmlSource.includes('v242-director-forge.css'));
+      add('v242-index-core-script',htmlSource.includes('v242-director-core.js'));
+      add('v242-index-forge-script',htmlSource.includes('v242-director-forge.js'));
+      add('v242-core-api',snap.core&&snap.sequences.length===5,JSON.stringify(snap.sequences));
+      add('v242-forge-api',snap.forge?.version==='V2.42 TGG SHOW DIRECTOR FORGE 100'&&snap.forge?.mode==='native-show-director-forge',JSON.stringify(snap.forge));
+      add('v242-100-layers',window?true:true);
+      const layerCount=await mp.evaluate(()=>window.TGGV242?.layers?.length||0);
+      checks[checks.length-1].pass=layerCount===100;checks[checks.length-1].detail=String(layerCount);
+      add('v242-ui-hosts',snap.ui.btn&&snap.ui.panel&&snap.ui.hud,JSON.stringify(snap.ui));
+
+      await mp.evaluate(()=>{window.__v242Calls=[];window.TGGV242.start('battle',{auto:false})});
+      await mp.waitForTimeout(70);
+      snap=await mp.evaluate(()=>({status:window.TGGV242.status(),calls:window.__v242Calls.slice()}));
+      const systems=new Set(snap.calls.map(x=>x.system));
+      add('v242-battle-start',snap.status.running===true&&snap.status.sequence==='battle'&&snap.status.cue==='face-off',JSON.stringify(snap.status));
+      add('v242-orchestrates-eight-systems',['lighting','weather','camera','animation','audio','stage','crowd','effects'].every(x=>systems.has(x)),JSON.stringify(snap.calls));
+      add('v242-camera-cinematic',snap.calls.some(x=>x.system==='camera'&&x.action==='applyPreset'&&x.args[0]==='cinematic'));
+      add('v242-animation-rap',snap.calls.some(x=>x.system==='animation'&&x.action==='play'&&x.args[0]==='rap'));
+      add('v242-stage-battle',snap.calls.some(x=>x.system==='stage'&&x.action==='start'&&x.args[0]==='battle'));
+      add('v242-audio-rival',snap.calls.some(x=>x.system==='audio'&&x.action==='play'&&x.args[0]==='rival'));
+
+      await mp.evaluate(()=>{window.__v242Calls=[];window.TGGV242.advance()});
+      snap=await mp.evaluate(()=>({status:window.TGGV242.status(),calls:window.__v242Calls.slice()}));
+      add('v242-advance-cue',snap.status.cueIndex===1&&snap.status.cue==='bars',JSON.stringify(snap.status));
+      add('v242-action-camera',snap.calls.some(x=>x.system==='camera'&&x.action==='applyPreset'&&x.args[0]==='action'));
+      add('v242-rap-audio',snap.calls.some(x=>x.system==='audio'&&x.action==='play'&&x.args[0]==='rap'));
+
+      await mp.evaluate(()=>window.TGGV242.stop());
+      snap=await mp.evaluate(()=>({status:window.TGGV242.status(),calls:window.__v242Calls.slice()}));
+      add('v242-stop-restores',snap.status.running===false&&snap.calls.some(x=>x.system==='camera'&&x.action==='applyPreset'&&x.args[0]==='street'),JSON.stringify(snap.calls));
+
+      await mp.evaluate(()=>{window.__v242Calls=[];window.dispatchEvent(new CustomEvent('tgg:concert-start'))});
+      await mp.waitForTimeout(40);
+      snap=await mp.evaluate(()=>window.TGGV242.status());
+      add('v242-event-bridge',snap.running===true&&snap.sequence==='concert'&&snap.cue==='lights-up',JSON.stringify(snap));
+      await mp.evaluate(()=>window.TGGV242.stop());
+
+      const layout=await mp.evaluate(()=>{
+        document.getElementById('v242ForgePanel')?.classList.add('active');
+        const p=document.getElementById('v242ForgePanel')?.getBoundingClientRect();
+        const buttons=[...document.querySelectorAll('#v242ForgePanel button')].map(x=>x.getBoundingClientRect());
+        return {width:innerWidth,scrollWidth:document.documentElement.scrollWidth,panel:p?{left:p.left,right:p.right,width:p.width}:null,minButton:buttons.length?Math.min(...buttons.map(x=>x.height)):0};
+      });
+      add('v242-mobile-no-overflow',layout.scrollWidth<=layout.width+1,JSON.stringify(layout));
+      add('v242-mobile-panel-contained',!!layout.panel&&layout.panel.left>=0&&layout.panel.right<=layout.width+1,JSON.stringify(layout.panel));
+      add('v242-mobile-buttons-readable',layout.minButton>=44,String(layout.minButton));
+
+      result={ok:checks.every(x=>x.pass)&&pageErrors.length===0,status:'done',mode:'v242_show_director_harness',target:TARGET,checks,console_errors:consoleErrors,page_errors:pageErrors,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
 
     if(V227_CONSEQUENCES_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');

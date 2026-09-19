@@ -21,7 +21,7 @@ assert(contract.status===0,'V1.13 static contract failed:\n'+(contract.stderr||c
 const html=read('index.html');
 const scripts=[...html.matchAll(/<script[^>]+src=["']([^"']+)["']/g)].map(m=>m[1]);
 for(const src of scripts){
-  assert(fs.isFileSync(path.join(root,src)),'Missing script referenced by index.html: '+src);
+  const scriptPath=path.join(root,src);assert(fs.existsSync(scriptPath)&&fs.statSync(scriptPath).isFile(),'Missing script referenced by index.html: '+src);
 }
 
 const ids=[...html.matchAll(/id=["']([^"']+)["']/g)].map(m=>m[1]);

@@ -1,5 +1,11 @@
 import http from 'node:http';
 import { chromium } from 'playwright';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const execFileAsync=promisify(execFile);
 
 const PORT=Number(process.env.PORT||10000);
 const TARGET=String(process.env.TGG_3D_SMOKE_TARGET||'').trim();
@@ -34,85 +40,101 @@ async function run(){
     if(MEGA_QA_ONLY){
       const megaSha=String(process.env.TGG_3D_MEGA_QA_SHA||'').trim();
       if(!/^[0-9a-f]{40}$/i.test(megaSha))throw new Error('TGG_3D_MEGA_QA_SHA must be an exact 40-char game commit SHA');
-      const mimeFor=p=>p.endsWith('.html')?'text/html; charset=utf-8':p.endsWith('.css')?'text/css; charset=utf-8':p.endsWith('.js')?'application/javascript; charset=utf-8':p.endsWith('.json')?'application/json; charset=utf-8':p.endsWith('.png')?'image/png':p.endsWith('.jpg')||p.endsWith('.jpeg')?'image/jpeg':p.endsWith('.webp')?'image/webp':'application/octet-stream';
-      const proxy=http.createServer(async(req,res)=>{
-        try{
-          let pathname=new URL(req.url||'/','http://127.0.0.1').pathname;
-          if(pathname==='/')pathname='/index.html';
-          pathname=decodeURIComponent(pathname);
-          if(pathname.includes('..')){res.statusCode=400;res.end('bad path');return;}
-          const raw='https://raw.githubusercontent.com/olandusgood-byte/tru-go-getta-mixtape/'+megaSha+'/game'+pathname;
-          const upstream=await fetch(raw,{redirect:'follow'});
-          res.statusCode=upstream.status;
-          res.setHeader('content-type',mimeFor(pathname));
-          res.setHeader('cache-control','no-store');
-          if(!upstream.ok){res.end('upstream '+upstream.status+' '+pathname);return;}
-          res.end(Buffer.from(await upstream.arrayBuffer()));
-        }catch(error){res.statusCode=502;res.end(error?.message||String(error));}
-      });
-      await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve)});
-      const proxyAddress=proxy.address();
-      const qaTarget='http://127.0.0.1:'+proxyAddress.port+'/';
+      const mimeFor=p=>p.endsWith('.html')?'text/html; charset=utf-8':p.endsWith('.css')?'text/css; charset=utf-8':p.endsWith('.js')?'application/javascript; charset=utf-8':p.endsWith('.json')?'application/json; charset=utf-8':p.endsWith('.png')?'image/png':p.endsWith('.jpg')||p.endsWith('.jpeg')?'image/jpeg':p.endsWith('.webp')?'image/webp':p.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
+      const localRoot=await fs.mkdtemp(path.join(os.tmpdir(),'tgg-mega-'));
+      const archivePath=path.join(localRoot,'game.tar');
+      const serveRoot=path.join(localRoot,'site');
+      await fs.mkdir(serveRoot,{recursive:true});
       try{
-        const consoleErrors=[]; const pageErrors=[]; const failedResources=[];
-        page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
-        page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
-        page.on('requestfailed',req=>failedResources.push(req.url()));
-        const response=await page.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:60000});
-        await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:60000});
-        await page.waitForTimeout(900);
-        const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
-
-        const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
-        const mp=await mobile.newPage();
-        const mobileErrors=[];
-        mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
-        await mp.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:60000});
-        await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:60000});
-        await mp.waitForTimeout(650);
-        const mobileResult=await mp.evaluate(()=>{
-          const qa=window.TGGMegaQA.run();
-          const body=document.documentElement;
-          const director=document.getElementById('sliceDirector')?.getBoundingClientRect();
-          const actionButtons=[...document.querySelectorAll('#game .actions button')].map(x=>x.getBoundingClientRect());
-          return {
-            qa,
-            width:innerWidth,
-            scrollWidth:body.scrollWidth,
-            overflowX:body.scrollWidth>innerWidth+1,
-            director:director?{left:director.left,right:director.right,width:director.width}:null,
-            actionCount:actionButtons.length,
-            minActionHeight:actionButtons.length?Math.min(...actionButtons.map(x=>x.height)):0
-          };
+        await execFileAsync('git',['fetch','origin',megaSha,'--depth=1'],{cwd:process.cwd(),timeout:90000,maxBuffer:4*1024*1024});
+        await execFileAsync('git',['archive','--format=tar','--output',archivePath,megaSha,'game'],{cwd:process.cwd(),timeout:30000,maxBuffer:4*1024*1024});
+        await execFileAsync('tar',['-xf',archivePath,'-C',serveRoot,'--strip-components=1'],{timeout:30000,maxBuffer:4*1024*1024});
+        const proxy=http.createServer(async(req,res)=>{
+          try{
+            let pathname=new URL(req.url||'/','http://127.0.0.1').pathname;
+            if(pathname==='/')pathname='/index.html';
+            pathname=decodeURIComponent(pathname);
+            const relative=pathname.replace(/^\/+/, '');
+            const filePath=path.resolve(serveRoot,relative);
+            if(!filePath.startsWith(path.resolve(serveRoot)+path.sep)&&filePath!==path.resolve(serveRoot)){
+              res.statusCode=400;res.end('bad path');return;
+            }
+            const bytes=await fs.readFile(filePath);
+            res.statusCode=200;
+            res.setHeader('content-type',mimeFor(filePath));
+            res.setHeader('cache-control','no-store');
+            res.end(bytes);
+          }catch(error){
+            res.statusCode=error?.code==='ENOENT'?404:500;
+            res.end(error?.message||String(error));
+          }
         });
-        const checks=[
-          {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
-          {name:'mega-check-volume',pass:desktop.total>=250&&desktop.total<=650,detail:String(desktop.total)},
-          {name:'mega-mobile-core-ok',pass:mobileResult.qa.ok,detail:'passed='+mobileResult.qa.passed+'/'+mobileResult.qa.total},
-          {name:'mega-mobile-no-overflow',pass:!mobileResult.overflowX&&mobileResult.scrollWidth<=391,detail:JSON.stringify({width:mobileResult.width,scrollWidth:mobileResult.scrollWidth})},
-          {name:'mega-mobile-director-contained',pass:!!mobileResult.director&&mobileResult.director.left>=0&&mobileResult.director.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.director)},
-          {name:'mega-mobile-actions-readable',pass:mobileResult.actionCount>=20&&mobileResult.minActionHeight>=50,detail:JSON.stringify({count:mobileResult.actionCount,minHeight:mobileResult.minActionHeight})}
-        ];
-        result={
-          ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&mobileErrors.length===0,
-          status:'done',
-          mode:'mega_vertical_slice_qa',
-          target:'github:'+megaSha,
-          served_via:'local-branch-proxy',
-          http_status:response?.status?.()||0,
-          checks,
-          desktop_summary:{total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass).slice(0,30)},
-          mobile_summary:{total:mobileResult.qa.total,passed:mobileResult.qa.passed,failed:mobileResult.qa.failed,failed_checks:mobileResult.qa.checks.filter(x=>!x.pass).slice(0,30)},
-          console_errors:consoleErrors,
-          page_errors:pageErrors,
-          mobile_page_errors:mobileErrors,
-          failed_resources:failedResources,
-          updated_at:new Date().toISOString()
-        };
-        console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-        await mobile.close();await ctx.close();return;
+        await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve)});
+        const proxyAddress=proxy.address();
+        const qaTarget='http://127.0.0.1:'+proxyAddress.port+'/';
+        try{
+          const consoleErrors=[]; const pageErrors=[]; const failedResources=[];
+          page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+          page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+          page.on('requestfailed',req=>failedResources.push(req.url()));
+          const response=await page.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
+          await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:30000});
+          await page.waitForTimeout(700);
+          const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
+
+          const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+          const mp=await mobile.newPage();
+          const mobileErrors=[];
+          mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
+          await mp.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
+          await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:30000});
+          await mp.waitForTimeout(500);
+          const mobileResult=await mp.evaluate(()=>{
+            const qa=window.TGGMegaQA.run();
+            const body=document.documentElement;
+            const director=document.getElementById('sliceDirector')?.getBoundingClientRect();
+            const actionButtons=[...document.querySelectorAll('#game .actions button')].map(x=>x.getBoundingClientRect());
+            return {
+              qa,
+              width:innerWidth,
+              scrollWidth:body.scrollWidth,
+              overflowX:body.scrollWidth>innerWidth+1,
+              director:director?{left:director.left,right:director.right,width:director.width}:null,
+              actionCount:actionButtons.length,
+              minActionHeight:actionButtons.length?Math.min(...actionButtons.map(x=>x.height)):0
+            };
+          });
+          const checks=[
+            {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
+            {name:'mega-check-volume',pass:desktop.total>=250&&desktop.total<=650,detail:String(desktop.total)},
+            {name:'mega-mobile-core-ok',pass:mobileResult.qa.ok,detail:'passed='+mobileResult.qa.passed+'/'+mobileResult.qa.total},
+            {name:'mega-mobile-no-overflow',pass:!mobileResult.overflowX&&mobileResult.scrollWidth<=391,detail:JSON.stringify({width:mobileResult.width,scrollWidth:mobileResult.scrollWidth})},
+            {name:'mega-mobile-director-contained',pass:!!mobileResult.director&&mobileResult.director.left>=0&&mobileResult.director.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.director)},
+            {name:'mega-mobile-actions-readable',pass:mobileResult.actionCount>=20&&mobileResult.minActionHeight>=50,detail:JSON.stringify({count:mobileResult.actionCount,minHeight:mobileResult.minActionHeight})}
+          ];
+          result={
+            ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&mobileErrors.length===0,
+            status:'done',
+            mode:'mega_vertical_slice_qa',
+            target:'github:'+megaSha,
+            served_via:'local-git-archive',
+            http_status:response?.status?.()||0,
+            checks,
+            desktop_summary:{total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass).slice(0,30)},
+            mobile_summary:{total:mobileResult.qa.total,passed:mobileResult.qa.passed,failed:mobileResult.qa.failed,failed_checks:mobileResult.qa.checks.filter(x=>!x.pass).slice(0,30)},
+            console_errors:consoleErrors,
+            page_errors:pageErrors,
+            mobile_page_errors:mobileErrors,
+            failed_resources:failedResources,
+            updated_at:new Date().toISOString()
+          };
+          console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+          await mobile.close();await ctx.close();return;
+        } finally {
+          await new Promise(resolve=>proxy.close(()=>resolve()));
+        }
       } finally {
-        await new Promise(resolve=>proxy.close(()=>resolve()));
+        await fs.rm(localRoot,{recursive:true,force:true}).catch(()=>{});
       }
     }
 
@@ -247,8 +269,7 @@ async function run(){
       }));
       record('chapter3-completes',snap.status?.completed===true&&snap.status?.step===8,JSON.stringify(snap.status));
       record('chapter3-final-reward',snap.game.cash===3500&&snap.game.xp===700&&snap.career.reputation===300,JSON.stringify({game:snap.game,career:snap.career}));
-      record('chapter3-persistence',snap.stored?.chapter3?.completed===true&&snap.stored?.chapter3?.step===8,JSON.stringify(snap.stored?.chapter3));
-      record('chapter3-passed-cinematic',snap.cinematic?.lastEvent?.type==='chapter-complete'&&snap.cinematic?.lastEvent?.chapter===3,JSON.stringify(snap.cinematic));
+      record('chapter3-persistence',snap.stored?.chapter3?.completed===true&&snap.stored?.chapter3?.step===8,JSON.stringify(snap.stored?.chapter3));      record('chapter3-passed-cinematic',snap.cinematic?.lastEvent?.type==='chapter-complete'&&snap.cinematic?.lastEvent?.chapter===3,JSON.stringify(snap.cinematic));
       record('chapter3-story-arc-lock',snap.action.text==='STORY ARC COMPLETE'&&snap.action.disabled===true,JSON.stringify(snap.action));
 
       const layout=await mp.evaluate(async()=>{
@@ -498,7 +519,6 @@ async function run(){
       await mp.evaluate(()=>{window.__qaCareer.recordings=4;window.TGGStoryMissions.sync();});
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter2-recording',snap.step===4,JSON.stringify(snap));
-
       await mp.evaluate(()=>{window.__qaGame.x=50;window.__qaGame.y=50;window.TGGStoryMissions.sync();});
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter2-downtown-arrival',snap.step===5,JSON.stringify(snap));
@@ -747,7 +767,6 @@ async function run(){
       let snap=await mp.evaluate(()=>({life:window.TGGWorldLife.getState(),game:{...window.__qaGame},rep:window.__qaRep}));
       record('rap-battle-three-rounds',snap.life.battle.active===false&&snap.life.battle.round===3,JSON.stringify(snap.life.battle));
       record('rap-battle-recorded',(snap.life.battleWins+snap.life.battleLosses)===1,JSON.stringify({wins:snap.life.battleWins,losses:snap.life.battleLosses}));
-
       await mp.evaluate(()=>{
         window.TGGWorldLife.startShow();
         window.TGGWorldLife.showMove('hype');
@@ -997,8 +1016,7 @@ async function run(){
       const exited=await page.evaluate(()=>window.TGGGame?.getState?.());
       record('vehicle-exit',exited?.inVehicle===false,JSON.stringify(exited));
 
-      result={ok:checks.every(x=>x.pass)&&harnessErrors.length===0,status:'done',mode:'vehicle_logic_harness',target:TARGET,checks,page_errors:harnessErrors,updated_at:new Date().toISOString()};
-      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      result={ok:checks.every(x=>x.pass)&&harnessErrors.length===0,status:'done',mode:'vehicle_logic_harness',target:TARGET,checks,page_errors:harnessErrors,updated_at:new Date().toISOString()};      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await ctx.close();return;
     }
 
@@ -1247,8 +1265,7 @@ async function run(){
       document.getElementById('startGame')?.click();
     });
     let webglReady=false;
-    try{
-      const readyDeadline=Date.now()+30000;
+    try{      const readyDeadline=Date.now()+30000;
       while(Date.now()<readyDeadline){
         webglReady=await page.evaluate(()=>window.TGG3D?.isReady?.()===true).catch(()=>false);
         if(webglReady)break;
@@ -1497,7 +1514,6 @@ async function run(){
     await page.waitForTimeout(150);
     const entered=await page.evaluate(()=>window.TGGGame?.getState?.());
     record('enter-car',entered?.inVehicle===true);
-
     console.log(JSON.stringify({tgg_3d_smoke_step:'entered-car'}));
     const driveStart=await page.evaluate(()=>window.TGGGame?.getState?.());
     const startHeading=Number(driveStart?.heading)||0;

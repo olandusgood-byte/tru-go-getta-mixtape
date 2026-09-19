@@ -1,0 +1,112 @@
+name: TGG Production Migration Replay Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/production-history/**'
+      - 'supabase/tests/production_schema_fingerprint.sql'
+      - '.github/workflows/tgg-production-migration-replay.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgg-production-migration-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clean-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SUPABASE_TELEMETRY_DISABLED: '1'
+      DO_NOT_TRACK: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Verify archive and replay target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f supabase/production-history/manifest.json
+          test -f supabase/production-history/schema-target.json
+          test -f supabase/tests/production_schema_fingerprint.sql
+          test "$(find supabase/production-history -maxdepth 1 -name '20*.sql' | wc -l)" -eq 12
+          node -e "const m=require('./supabase/production-history/manifest.json'); if(m.migration_count < 1000 || !m.safety?.high_risk_literal_scan_passed) process.exit(1)"
+
+      - name: Start fresh local Supabase database
+        shell: bash
+        run: |
+          set -euo pipefail
+          replay_root="${RUNNER_TEMP}/tgg-production-replay"
+          mkdir -p "$replay_root"
+          cd "$replay_root"
+          supabase init
+          supabase start
+          db_container="$(docker ps --filter 'name=supabase_db_' --format '{{.ID}}' | head -n 1)"
+          test -n "$db_container"
+          echo "DB_CONTAINER=$db_container" >> "$GITHUB_ENV"
+
+      - name: Isolate database container from external egress
+        shell: bash
+        run: |
+          set -euo pipefail
+          db="$DB_CONTAINER"
+          db_ip="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$db")"
+          network="$(docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' "$db")"
+          subnet="$(docker network inspect -f '{{(index .IPAM.Config 0).Subnet}}' "$network")"
+          test -n "$db_ip"
+          test -n "$subnet"
+          sudo iptables -I DOCKER-USER 1 -s "$db_ip" -d "$subnet" -j ACCEPT
+          sudo iptables -I DOCKER-USER 2 -s "$db_ip" -j REJECT
+          echo "Blocked external egress for local replay database $db_ip; Docker-local $subnet remains reachable."
+
+      - name: Replay authoritative production migration history
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in $(find supabase/production-history -maxdepth 1 -name '20*.sql' | sort); do
+            echo "Replaying $file"
+            docker exec -i "$DB_CONTAINER" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres < "$file"
+          done
+
+      - name: Compare clean replay schema to production fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="${RUNNER_TEMP}/actual-schema-fingerprint.json"
+          expected="supabase/production-history/schema-target.json"
+          docker exec -i "$DB_CONTAINER" psql -X -q -U postgres -d postgres < supabase/tests/production_schema_fingerprint.sql | sed '/^[[:space:]]*$/d' > "$actual"
+          node - "$expected" "$actual" <<'NODE'
+          const fs = require('fs');
+          const [expectedPath, actualPath] = process.argv.slice(2);
+          const expected = JSON.parse(fs.readFileSync(expectedPath, 'utf8'));
+          const actual = JSON.parse(fs.readFileSync(actualPath, 'utf8'));
+          const keys = ['columns','constraints','indexes','functions','policies','triggers'];
+          let ok = true;
+          for (const key of keys) {
+            const e = expected[key];
+            const a = actual[key];
+            const pass = e?.count === a?.count && e?.sha256 === a?.sha256;
+            console.log(`${pass ? 'PASS' : 'FAIL'} ${key}: expected ${e?.count}/${e?.sha256}, actual ${a?.count}/${a?.sha256}`);
+            if (!pass) ok = false;
+          }
+          if (!ok) process.exit(1);
+          console.log('PASS clean replay: all six production schema fingerprints match exactly.');
+          NODE
+
+      - name: Stop disposable stack
+        if: always()
+        shell: bash
+        run: |
+          replay_root="${RUNNER_TEMP}/tgg-production-replay"
+          if [ -d "$replay_root" ]; then
+            cd "$replay_root"
+            supabase stop --no-backup || true
+          fi

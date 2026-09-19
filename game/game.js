@@ -27,7 +27,7 @@
     });
     return {...WALK};
   }
-  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','worldLifeBoard','storyMissionsBoard','bridge','avatar','park','studio','shops','home','media','garage','businessBoard','roof'];
+  const screens=['menu','creator','game','pause','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','worldLifeBoard','storyMissionsBoard','bridge','avatar','park','studio','shops','home','media','garage','businessBoard','roof','commercial'];
 
   function show(id){
     if(id!=='game'){

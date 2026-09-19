@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "7.54",
-  "module": "GAME-V7.54-REAL-WORLD-ACCESS",
-  "name": "V7.54 Real World Access — Parking Doors Interiors Rooftops",
+  "version": "7.55",
+  "module": "GAME-V7.55-COMMERCIAL-CITY",
+  "name": "V7.55 Commercial City — Malls Shops Gas Warehouses Business Income",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -178,11 +178,15 @@
     "v7_54_parking_exit": true,
     "v7_54_walk_to_door": true,
     "v7_54_rooftop_access": true,
-    "v7_54_no_destination_teleport": true
+    "v7_54_no_destination_teleport": true,
+    "v7_55_commercial_city": true,
+    "v7_55_physical_business_routes": true,
+    "v7_55_business_ownership": true,
+    "v7_55_passive_income": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V7.55",
+  "next": "V7.56",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

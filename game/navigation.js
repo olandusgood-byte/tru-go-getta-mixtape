@@ -9,6 +9,11 @@
     function worldScale(){return Number(window.TGG3D?.WORLD_SCALE)||2.75;}
     function toWorld(s){const scale=worldScale();return {x:((Number(s?.x)||50)-50)*scale,z:((Number(s?.y)||50)-50)*scale};}
     function targetFor(s){
+      const commercial=window.TGGCommercialCity?.navigationTarget?.();
+      if(commercial){
+        const p=toWorld(commercial);
+        return {label:commercial.label||'COMMERCIAL DISTRICT',x:p.x,z:p.z,color:commercial.color||'#ffd45c',radius:Number(commercial.radius)||7,commercial:true,arrived:!!commercial.arrived};
+      }
       const physical=window.TGGPhysicalAccess?.navigationTarget?.();
       if(physical){
         const p=toWorld(physical);

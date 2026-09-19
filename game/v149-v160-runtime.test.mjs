@@ -71,7 +71,8 @@ for(let n=49;n<=84;n++){
   const api=w['TGGV'+n];
   assert(api&&typeof api.snapshot==='function','Missing runtime TGGV'+n);
   const snap=api.snapshot();
-  assert(String(snap.version).startsWith('1.'+n+'.'),'Version mismatch TGGV'+n);
+  const expectedVersion=(n>=82?'1.1'+n+'.':'1.'+n+'.');
+  assert(String(snap.version).startsWith(expectedVersion),'Version mismatch TGGV'+n);
   assert(String(snap.mutationPolicy||'').startsWith('local_'),'Non-local mutation policy TGGV'+n);
 }
 console.log(JSON.stringify({ok:true,layers:layers.length,from:'V1.49',through:'V1.84'}));

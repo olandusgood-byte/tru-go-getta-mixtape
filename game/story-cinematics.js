@@ -86,14 +86,39 @@
   }
 
   function typeFor(payload){
-    const st=window.TGGStoryMissions?.status?.();
-    const current=st?.current;
     if(payload.type==='chapter-complete')return 'MISSION PASSED';
     if(payload.type==='chapter-start')return 'STORY CHAPTER';
-    if(current?.kind==='talk')return 'CONTACT';
-    if(current?.kind==='arrive')return 'TRAVEL';
-    if(current?.kind==='metric')return current?.go==='show'?'LIVE EVENT':current?.go==='battle'?'CYPHER':'CAREER';
-    if(current?.kind==='flag')return 'STORY ACTION';
+
+    const explicit=String(payload.objectiveType||payload.kind||'').toLowerCase();
+    const go=String(payload.go||'').toLowerCase();
+    if(explicit==='talk'||explicit==='contact')return 'CONTACT';
+    if(explicit==='arrive'||explicit==='travel')return 'TRAVEL';
+    if(explicit==='flag'||explicit==='story-action')return 'STORY ACTION';
+    if(explicit==='metric'){
+      if(go==='show')return 'LIVE EVENT';
+      if(go==='battle')return 'CYPHER';
+      return 'CAREER';
+    }
+
+    const st=window.TGGStoryMissions?.status?.();
+    const current=st?.current;
+    const payloadTitle=String(payload.title||'').trim().toUpperCase();
+    const currentTitle=String(current?.title||'').trim().toUpperCase();
+    const currentMatches=!payloadTitle||!currentTitle||payloadTitle===currentTitle;
+    if(currentMatches){
+      if(current?.kind==='talk')return 'CONTACT';
+      if(current?.kind==='arrive')return 'TRAVEL';
+      if(current?.kind==='metric')return current?.go==='show'?'LIVE EVENT':current?.go==='battle'?'CYPHER':'CAREER';
+      if(current?.kind==='flag')return 'STORY ACTION';
+    }
+
+    const text=(payloadTitle+' '+String(payload.detail||'').toUpperCase()).trim();
+    if(/\b(MEET|TALK TO|LINK|CALL)\b/.test(text))return 'CONTACT';
+    if(/\b(DRIVE TO|GET TO|GO TO|HEAD TO|ARRIVE|REACH|FOLLOW THE MARKER)\b/.test(text))return 'TRAVEL';
+    if(/\b(BATTLE|CYPHER|RAP BATTLE)\b/.test(text))return 'CYPHER';
+    if(/\b(SHOW|STAGE|PERFORM|CONCERT)\b/.test(text))return 'LIVE EVENT';
+    if(/\b(RECORD|STUDIO|TRACK|MIXTAPE|RELEASE|DROP)\b/.test(text))return 'CAREER';
+    if(/\b(VIDEO|VISUAL|PHOTO|PREMIERE|SHOOT)\b/.test(text))return 'STORY ACTION';
     return 'OBJECTIVE';
   }
 

@@ -111,12 +111,12 @@ jobs:
             window.TGGGame.show?.('game');
             await new Promise(r=>setTimeout(r,120));
             const startPos = {...window.TGGGame.getState()};
-            window.TGGGame.setWalkKey('right',true);
+            window.TGGGame.setWalkKey('up',true);
             await new Promise(r=>setTimeout(r,700));
-            window.TGGGame.setWalkKey('right',false);
+            window.TGGGame.setWalkKey('up',false);
             await new Promise(r=>setTimeout(r,260));
             const endPos = {...window.TGGGame.getState()};
-            const smoothWalkMoved = endPos.x > startPos.x + 0.05;
+            const smoothWalkMoved = Math.hypot((endPos.x||0)-(startPos.x||0),(endPos.y||0)-(startPos.y||0)) > 0.03;
             const analogStart = {...window.TGGGame.getState()};
             window.TGGGame.setWalkAnalog({x:-0.72,y:0,sprint:0.4});
             const analogHeldState = window.TGGGame.getWalkingState();

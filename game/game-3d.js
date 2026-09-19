@@ -311,6 +311,33 @@
     return best&&bestDist<=radius?{...best,distance:bestDist}:null;
   }
 
+  function refreshInteractionState(s=window.TGGGame?.getState?.()){
+    const interactButton=document.getElementById('interact3dBtn');
+    if(!interactButton)return {ready:false,reason:'missing-button'};
+    const near=nearbyDestination(s);
+    const storyTarget=window.TGGStoryMissions?.navigationTarget?.();
+    const storyHere=!!storyTarget?.arrived;
+    const worldBeat=window.TGGWorldDepth?.beatNavigation?.();
+    const beatHere=!!worldBeat?.arrived;
+    const storyStatus=storyHere?window.TGGStoryMissions?.status?.():null;
+    interactButton.disabled=!near&&!storyHere&&!beatHere;
+    interactButton.textContent=storyHere
+      ?'DO '+String(storyStatus?.current?.title||storyTarget?.label||'STORY OBJECTIVE').toUpperCase()
+      :beatHere
+        ?'DO '+String(worldBeat?.label||'WORLD BEAT').toUpperCase()
+        :near?'ENTER '+near.label:'INTERACT';
+    interactButton.classList.toggle('nearby',!!near||storyHere||beatHere);
+    interactButton.classList.toggle('story-ready',storyHere);
+    interactButton.classList.toggle('world-beat-ready',beatHere);
+    return {
+      ready:!interactButton.disabled,
+      near:near?.id||null,
+      storyHere,
+      beatHere,
+      text:String(interactButton.textContent||'').trim()
+    };
+  }
+
   function interactNearest(){
     const storyTarget=window.TGGStoryMissions?.navigationTarget?.();
     if(storyTarget?.arrived){
@@ -602,23 +629,7 @@
       d.marker.position.y=2.25+Math.sin(t*2+i)*.18;
       d.labelSprite.material.opacity=hot?1:.78;
     });
-    const interactButton=document.getElementById('interact3dBtn');
-    if(interactButton){
-      const storyTarget=window.TGGStoryMissions?.navigationTarget?.();
-      const storyHere=!!storyTarget?.arrived;
-      const worldBeat=window.TGGWorldDepth?.beatNavigation?.();
-      const beatHere=!!worldBeat?.arrived;
-      const storyStatus=storyHere?window.TGGStoryMissions?.status?.():null;
-      interactButton.disabled=!near&&!storyHere&&!beatHere;
-      interactButton.textContent=storyHere
-        ?'DO '+String(storyStatus?.current?.title||storyTarget?.label||'STORY OBJECTIVE').toUpperCase()
-        :beatHere
-          ?'DO '+String(worldBeat?.label||'WORLD BEAT').toUpperCase()
-          :near?'ENTER '+near.label:'INTERACT';
-      interactButton.classList.toggle('nearby',!!near||storyHere||beatHere);
-      interactButton.classList.toggle('story-ready',storyHere);
-      interactButton.classList.toggle('world-beat-ready',beatHere);
-    }
+    refreshInteractionState(s);
 
     renderer.render(scene,camera);
   }
@@ -649,6 +660,7 @@
     setCarAppearance,
     destinations,
     nearbyDestination,
+    refreshInteractionState,
     interactNearest,
     pedestrians,
     traffic,

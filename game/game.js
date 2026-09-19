@@ -439,6 +439,7 @@
       blocked:walkRuntime.blocked
     });
     update();
+    window.TGG3D?.refreshInteractionState?.(state);
     requestAnimationFrame(updatePlayerPhysics);
   }
 
@@ -457,6 +458,7 @@
     }
     state.x=nx;state.y=ny;
     update();
+    window.TGG3D?.refreshInteractionState?.(state);
     return true;
   }
 

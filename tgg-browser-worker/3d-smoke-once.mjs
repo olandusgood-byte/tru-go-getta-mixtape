@@ -33,6 +33,34 @@ const STREET_PRESENCE_ONLY=String(process.env.TGG_3D_STREET_PRESENCE_ONLY||'0')=
 const V218_MEGA_ONLY=String(process.env.TGG_3D_V218_MEGA_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
+async function startV218SnapshotServer(){
+  const mimeFor=p=>p.endsWith('.html')?'text/html; charset=utf-8':p.endsWith('.css')?'text/css; charset=utf-8':p.endsWith('.js')?'application/javascript; charset=utf-8':p.endsWith('.json')?'application/json; charset=utf-8':p.endsWith('.png')?'image/png':p.endsWith('.jpg')||p.endsWith('.jpeg')?'image/jpeg':p.endsWith('.webp')?'image/webp':p.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
+  const serveRoot=path.resolve(process.cwd(),'tgg-browser-worker','mega-game-snapshot');
+  await fs.access(path.join(serveRoot,'index.html'));
+  await fs.access(path.join(serveRoot,'street-presence.js'));
+  const proxy=http.createServer(async(req,res)=>{
+    try{
+      let pathname=new URL(req.url||'/','http://127.0.0.1').pathname;
+      if(pathname==='/')pathname='/index.html';
+      pathname=decodeURIComponent(pathname);
+      const relative=pathname.replace(/^\/+/, '');
+      const filePath=path.resolve(serveRoot,relative);
+      if(!filePath.startsWith(serveRoot+path.sep)&&filePath!==serveRoot){res.statusCode=400;res.end('bad path');return;}
+      const bytes=await fs.readFile(filePath);
+      res.statusCode=200;
+      res.setHeader('content-type',mimeFor(filePath));
+      res.setHeader('cache-control','no-store');
+      res.end(bytes);
+    }catch(error){
+      res.statusCode=error?.code==='ENOENT'?404:500;
+      res.end(error?.message||String(error));
+    }
+  });
+  await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve)});
+  const address=proxy.address();
+  return {proxy,url:'http://127.0.0.1:'+address.port+'/'};
+}
+
 async function run(){
   const browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   try{
@@ -41,10 +69,13 @@ async function run(){
 
     if(V218_MEGA_ONLY){
       const consoleErrors=[];const pageErrors=[];const failedResources=[];
+      const local=await startV218SnapshotServer();
+      const qaTarget=local.url;
+      console.log(JSON.stringify({tgg_v218_mega_stage:'local-snapshot-ready',target:qaTarget,snapshot:'ad1d9b08d794247d269cb8a0667e057f945cfcc5'}));
       page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
       page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
       page.on('requestfailed',req=>failedResources.push(req.url()));
-      const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:30000});
+      const response=await page.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
       await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGGStreetPresence&&window.TGGStoryMissions&&window.TGGGame,undefined,{polling:100,timeout:30000});
       await page.waitForTimeout(700);
       const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
@@ -55,7 +86,7 @@ async function run(){
       const mobileErrors=[];const mobileFailed=[];
       mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
       mp.on('requestfailed',req=>mobileFailed.push(req.url()));
-      const mobileResponse=await mp.goto(TARGET,{waitUntil:'domcontentloaded',timeout:30000});
+      const mobileResponse=await mp.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
       await mp.waitForFunction(()=>window.TGGStreetPresence&&window.TGGVerticalSlice&&window.TGGGame,undefined,{polling:100,timeout:30000});
       await mp.evaluate(()=>window.TGGGame.show('game'));
       await mp.waitForTimeout(350);
@@ -95,7 +126,8 @@ async function run(){
         ok:desktop.ok===true&&checks.every(x=>x.pass)&&pageErrors.length===0&&mobileErrors.length===0,
         status:'done',
         mode:'v218_mega_regression_qa',
-        target:TARGET,
+        target:'github:ad1d9b08d794247d269cb8a0667e057f945cfcc5',
+        served_via:'attached-v218-snapshot',
         http_status:response?.status?.()||0,
         checks,
         desktop_summary:{total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass)},
@@ -108,7 +140,7 @@ async function run(){
         updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-      await mobile.close();await ctx.close();return;
+      await mobile.close();await new Promise(resolve=>local.proxy.close(resolve));await ctx.close();return;
     }
 
     if(STREET_PRESENCE_ONLY){
@@ -247,8 +279,7 @@ async function run(){
         page.on('requestfailed',req=>failedResources.push(req.url()));
         const response=await page.goto(qaTarget,{waitUntil:'commit',timeout:15000});
         console.log(JSON.stringify({tgg_mega_stage:'desktop-page-committed',status:response?.status?.()||0}));
-        await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGGGame&&window.TGGStoryMissions,undefined,{polling:100,timeout:90000});
-        console.log(JSON.stringify({tgg_mega_stage:'desktop-core-apis-ready'}));
+        await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGGGame&&window.TGGStoryMissions,undefined,{polling:100,timeout:90000});        console.log(JSON.stringify({tgg_mega_stage:'desktop-core-apis-ready'}));
         await page.waitForTimeout(700);
         const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
         const desktopFailed=desktop.checks.filter(x=>!x.pass);
@@ -497,8 +528,7 @@ async function run(){
       record('chapter3-cinematic-contained',layout.visible===true&&!!layout.copy&&layout.copy.left>=0&&layout.copy.right<=layout.width+1,JSON.stringify(layout));
 
       result={
-        ok:checks.every(x=>x.pass)&&errors.length===0&&consoleErrors.length===0,
-        status:'done',mode:'story_chapter3_harness',target:TARGET,checks,
+        ok:checks.every(x=>x.pass)&&errors.length===0&&consoleErrors.length===0,        status:'done',mode:'story_chapter3_harness',target:TARGET,checks,
         console_errors:consoleErrors,page_errors:errors,updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
@@ -747,8 +777,7 @@ async function run(){
       snap=await mp.evaluate(()=>({        status:window.TGGStoryMissions.status(),
         game:{...window.__qaGame},career:{...window.__qaCareer},        stored:JSON.parse(localStorage.getItem('tgg-story-missions-v1')||'null')
       }));
-      record('chapter2-completes',snap.status?.completed===true&&snap.status?.step===10,JSON.stringify(snap.status));
-      record('chapter2-final-reward',snap.game.cash===1800&&snap.game.xp===450&&snap.career.reputation===175,JSON.stringify({game:snap.game,career:snap.career}));
+      record('chapter2-completes',snap.status?.completed===true&&snap.status?.step===10,JSON.stringify(snap.status));      record('chapter2-final-reward',snap.game.cash===1800&&snap.game.xp===450&&snap.career.reputation===175,JSON.stringify({game:snap.game,career:snap.career}));
       record('chapter2-persistence',snap.stored?.chapter2?.completed===true&&snap.stored?.chapter2?.step===10,JSON.stringify(snap.stored?.chapter2));
 
       const layout=await mp.evaluate(()=>{
@@ -997,8 +1026,7 @@ async function run(){
     }
 
     if(CAREER_MOBILE_ONLY){
-      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
-      const [htmlResponse,cssResponse]=await Promise.all([fetch(base+'/index.html'),fetch(base+'/style.css')]);
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');      const [htmlResponse,cssResponse]=await Promise.all([fetch(base+'/index.html'),fetch(base+'/style.css')]);
       if(!htmlResponse.ok||!cssResponse.ok)throw new Error('Career mobile harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status);
       let html=await htmlResponse.text();
       const css=await cssResponse.text();      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
@@ -1248,7 +1276,6 @@ async function run(){
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await mobile.close();await ctx.close();return;
     }
-
     if(GAMEPAD_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
       const response=await fetch(base+'/gamepad.js');
@@ -1497,8 +1524,7 @@ async function run(){
       car:!!window.TGG3D?.car,
       collisionBlocked:window.TGG3D?.canMovePercent?.(58.7,58.7)===false,
       destinations:Array.isArray(window.TGG3D?.destinations)?window.TGG3D.destinations.length:0,
-      interactApi:typeof window.TGG3D?.interactNearest==='function',
-      interactButton:!!document.getElementById('interact3dBtn'),
+      interactApi:typeof window.TGG3D?.interactNearest==='function',      interactButton:!!document.getElementById('interact3dBtn'),
       pedestrians:Array.isArray(window.TGG3D?.pedestrians)?window.TGG3D.pedestrians.length:0,
       traffic:Array.isArray(window.TGG3D?.traffic)?window.TGG3D.traffic.length:0,
       cameraApi:typeof window.TGG3D?.cycleCamera==='function'&&typeof window.TGG3D?.getCameraMode==='function',
@@ -1747,8 +1773,7 @@ async function run(){
       gearText:document.getElementById('gearValue')?.textContent
     }));
     await page.keyboard.up('ArrowDown');
-    const brakeSpeed=Number(braking.driving?.speed)||0;
-    record('smooth-braking-reverse',Math.abs(brakeSpeed)<speedBeforeBrake||brakeSpeed<0,`before=${speedBeforeBrake},after=${brakeSpeed}`);
+    const brakeSpeed=Number(braking.driving?.speed)||0;    record('smooth-braking-reverse',Math.abs(brakeSpeed)<speedBeforeBrake||brakeSpeed<0,`before=${speedBeforeBrake},after=${brakeSpeed}`);
     record('brake-lights',braking.brakeGlow.some(v=>Number(v)>1.5),JSON.stringify(braking.brakeGlow));
     record('reverse-gear',Number(braking.driving?.speed)<-.2&&braking.gearText==='R',`speed=${braking.driving?.speed},gear=${braking.gearText}`);
 

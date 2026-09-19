@@ -30,11 +30,12 @@ const v380=read('v380-life-sim.js');
 const v390=read('v390-opportunity-loop.js');
 const v400=read('v400-world-systems.js');
 const v410=read('v410-lifestyle.js');
+const v420=read('v420-social-world.js');
 
-assert.match(html,/V4\.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA/i);
-assert.match(html,/GAME V4\.10 • PROPERTY \+ RELATIONSHIP \+ LIFESTYLE/);
-assert.equal(runtime.canonical_runtime,'V4.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA');
-assert.equal(runtime.base_runtime,'V4.00 WORLD SYSTEMS');
+assert.match(html,/V4\.20 SOCIAL NETWORK CITY STATUS MEGA/i);
+assert.match(html,/GAME V4\.20 • SOCIAL NETWORK \+ CITY STATUS/);
+assert.equal(runtime.canonical_runtime,'V4.20 SOCIAL NETWORK CITY STATUS MEGA');
+assert.equal(runtime.base_runtime,'V4.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA');
 assert.equal(runtime.consolidation,'all-compatible-layers-one-runtime');
 for(const id of [
   'city3d','radar3d','radarPlayer','radarCar','vehicleHud','speedValue','gearValue',
@@ -49,7 +50,7 @@ for(const src of [
   'story-missions.js','story-cinematics.js','story-world-3d.js','street-presence.js',
   'vertical-slice-director.js','mega-qa.js','photoreal-core.js','reality-master.js',
   'v310-aaa-visual-polish.js','v320-realism-mega.js','v330-motion-realism.js',
-  'v340-city-world-mega.js','v350-gamefeel-cinematic.js','v360-living-city.js','v370-world-interaction.js','v380-life-sim.js','v390-opportunity-loop.js','v400-world-systems.js','v410-lifestyle.js'
+  'v340-city-world-mega.js','v350-gamefeel-cinematic.js','v360-living-city.js','v370-world-interaction.js','v380-life-sim.js','v390-opportunity-loop.js','v400-world-systems.js','v410-lifestyle.js','v420-social-world.js'
 ]) assert.ok(html.includes('<script src="'+src+'"></script>'),'missing V2.18 script: '+src);
 
 for(const token of ['window.TGGGame','setDriveKey','getDrivingState']) assert.ok(game.includes(token),'game runtime missing '+token);
@@ -79,11 +80,12 @@ for(const token of ['V3.80 LIFE SIM PROPERTY SOCIAL WORLD MEGA','persistent-life
 for(const token of ['V3.90 CAREER MISSION ECONOMY WORLD LOOP MEGA','dynamic-world-opportunities','life-stat-gating','economy-reward-hooks','adaptive-opportunity-ranking']) assert.ok(v390.includes(token),'V3.90 layer missing '+token);
 for(const token of ['V4.00 WORLD SYSTEMS','property-ownership-upgrades','city-reputation-system','career-consequence-system','mission-chain-progression','relationship-gated-moves']) assert.ok(v400.includes(token),'V4.00 layer missing '+token);
 for(const token of ['V4.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA','property-passive-income','property-upkeep-loop','relationship-tiers','property-visit-effects']) assert.ok(v410.includes(token),'V4.10 layer missing '+token);
+for(const token of ['V4.20 SOCIAL NETWORK CITY STATUS MEGA','city-status-score','contact-favor-system','social-consequences','city-reaction-text']) assert.ok(v420.includes(token),'V4.20 layer missing '+token);
 for(const token of [
   'human_realism','vehicle_realism','world_detail','unified_quality_presets','unified_movement_tuning',
   'unified_vehicle_tuning','adaptive_crowd_density','integrated_readiness_matrix','integrated_mega_qa',
   'v310_aaa_visual_polish','v320_realism_mega_pass','v330_motion_vehicle_character',
-  'v340_city_world_mega_pass','v350_game_feel_cinematic_mega','v360_living_city_reactive_world','v370_npc_traffic_world_interaction','v380_life_sim_property_social_world','v390_career_mission_economy_world_loop','v400_world_systems','v410_property_relationship_lifestyle'
+  'v340_city_world_mega_pass','v350_game_feel_cinematic_mega','v360_living_city_reactive_world','v370_npc_traffic_world_interaction','v380_life_sim_property_social_world','v390_career_mission_economy_world_loop','v400_world_systems','v410_property_relationship_lifestyle','v420_social_network_city_status'
 ]) assert.ok(runtime.features.includes(token),'runtime feature missing '+token);
 
 for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
@@ -92,4 +94,4 @@ for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   }
 }
 
-console.log('GAME_V4_10_LIFESTYLE_STATIC_CONTRACT_PASS');
+console.log('GAME_V4_20_SOCIAL_WORLD_STATIC_CONTRACT_PASS');

@@ -37,7 +37,8 @@ let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOS
 
 async function startV218SnapshotServer(){
   const mimeFor=p=>p.endsWith('.html')?'text/html; charset=utf-8':p.endsWith('.css')?'text/css; charset=utf-8':p.endsWith('.js')?'application/javascript; charset=utf-8':p.endsWith('.json')?'application/json; charset=utf-8':p.endsWith('.png')?'image/png':p.endsWith('.jpg')||p.endsWith('.jpeg')?'image/jpeg':p.endsWith('.webp')?'image/webp':p.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
-  const serveRoot=path.resolve(process.cwd(),'tgg-browser-worker','mega-game-snapshot');
+  const requestedRoot=String(process.env.TGG_3D_V218_ROOT||'tgg-browser-worker/mega-game-snapshot').trim();
+  const serveRoot=path.resolve(process.cwd(),requestedRoot);
   await fs.access(path.join(serveRoot,'index.html'));
   await fs.access(path.join(serveRoot,'street-presence.js'));
   const proxy=http.createServer(async(req,res)=>{
@@ -60,7 +61,7 @@ async function startV218SnapshotServer(){
   });
   await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve)});
   const address=proxy.address();
-  return {proxy,url:'http://127.0.0.1:'+address.port+'/'};
+  return {proxy,url:'http://127.0.0.1:'+address.port+'/',serveRoot};
 }
 
 async function run(){
@@ -371,7 +372,7 @@ async function run(){
       const consoleErrors=[];const pageErrors=[];const failedResources=[];
       const local=await startV218SnapshotServer();
       const qaTarget=local.url;
-      console.log(JSON.stringify({tgg_v218_mega_stage:'local-snapshot-ready',target:qaTarget,snapshot:'ad1d9b08d794247d269cb8a0667e057f945cfcc5'}));
+      console.log(JSON.stringify({tgg_v218_mega_stage:'local-runtime-ready',target:qaTarget,source_root:path.relative(process.cwd(),local.serveRoot)}));
       page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
       page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
       page.on('requestfailed',req=>failedResources.push(req.url()));
@@ -382,9 +383,9 @@ async function run(){
       console.log(JSON.stringify({tgg_v218_mega_stage:'desktop-suite-done',total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass).slice(0,25)}));
 
       await page.close();
-      const verticalSliceSource=await fs.readFile(path.join(process.cwd(),'tgg-browser-worker','mega-game-snapshot','vertical-slice-director.js'),'utf8');
-      const mobileCss=await fs.readFile(path.join(process.cwd(),'tgg-browser-worker','mega-game-snapshot','style.css'),'utf8');
-      let mobileHtml=await fs.readFile(path.join(process.cwd(),'tgg-browser-worker','mega-game-snapshot','index.html'),'utf8');
+      const verticalSliceSource=await fs.readFile(path.join(local.serveRoot,'vertical-slice-director.js'),'utf8');
+      const mobileCss=await fs.readFile(path.join(local.serveRoot,'style.css'),'utf8');
+      let mobileHtml=await fs.readFile(path.join(local.serveRoot,'index.html'),'utf8');
       while(mobileHtml.includes('<script')){
         const scriptStart=mobileHtml.indexOf('<script');
         const scriptEnd=mobileHtml.indexOf('</script>',scriptStart);
@@ -445,7 +446,7 @@ async function run(){
       const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
       add('v218-mega-desktop-ok',desktop.ok===true,'passed='+desktop.passed+'/'+desktop.total);
       add('v218-mega-desktop-volume',desktop.total>=526,desktop.total);
-      add('v218-mega-mobile-source-loaded',mobileSourceOk,'exact V2.18 HTML+CSS local snapshot');
+      add('v218-mega-mobile-source-loaded',mobileSourceOk,'exact V2.18 HTML+CSS from '+path.relative(process.cwd(),local.serveRoot));
       add('v218-mega-mobile-no-overflow',mobileLayout.overflowX===false&&mobileLayout.scrollWidth<=391,JSON.stringify({width:mobileLayout.width,scrollWidth:mobileLayout.scrollWidth}));
       add('v218-mega-mobile-city-contained',!!mobileLayout.city&&mobileLayout.city.left>=0&&mobileLayout.city.right<=mobileLayout.width+1,JSON.stringify(mobileLayout.city));
       add('v218-mega-mobile-dpad-contained',!!mobileLayout.dpad&&mobileLayout.dpad.left>=0&&mobileLayout.dpad.right<=mobileLayout.width+1,JSON.stringify(mobileLayout.dpad));
@@ -458,8 +459,8 @@ async function run(){
         ok:desktop.ok===true&&checks.every(x=>x.pass)&&pageErrors.length===0&&mobileErrors.length===0,
         status:'done',
         mode:'v218_mega_regression_qa',
-        target:'github:ad1d9b08d794247d269cb8a0667e057f945cfcc5',
-        served_via:'attached-v218-snapshot',
+        target:'github:'+path.relative(process.cwd(),local.serveRoot),
+        served_via:path.relative(process.cwd(),local.serveRoot)==='game'?'canonical-game':'attached-v218-snapshot',
         http_status:response?.status?.()||0,
         checks,
         desktop_summary:{total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass)},

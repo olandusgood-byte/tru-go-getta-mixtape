@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
-      RAILWAY_PROJECT_ID: "49db9e70-3a4b-4737-ac74-716bebd5ad28"
-      RAILWAY_ENVIRONMENT: "454e3152-df86-4af5-9f3b-0aae6cf1469e"
-      RAILWAY_CORE_SERVICE: "cfa5c70c-9da2-49e6-bea4-21c4474ba8cb"
-      RAILWAY_WORKER_SERVICE: "4508d8f5-c887-4b02-bd04-fc2650ef1f65"
+      RAILWAY_PROJECT_ID: "521c80ba-7fc4-43eb-8f4c-116555193ead"
+      RAILWAY_ENVIRONMENT: "587f22ff-60bf-4769-8003-39166db52ab0"
+      RAILWAY_CORE_SERVICE: "62b107a7-0966-4a22-ba9a-112953b4fa4a"
+      RAILWAY_WORKER_SERVICE: "3e279630-8309-45aa-9ecf-8ff6b99616be"
     steps:
       - name: Checkout exact commit
         uses: actions/checkout@v4

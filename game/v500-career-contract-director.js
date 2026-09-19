@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION='5.00.0';
+  const VERSION='5.0.0';
   const POLICY='local-only';
   const KEY='tgg-v500-career-contracts';
   const CONTRACTS=[

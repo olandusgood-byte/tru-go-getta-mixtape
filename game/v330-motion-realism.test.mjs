@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const root=new URL('.',import.meta.url);
+const html=fs.readFileSync(new URL('index.html',root),'utf8');
+const js=fs.readFileSync(new URL('v330-motion-realism.js',root),'utf8');
+const css=fs.readFileSync(new URL('v330-motion-realism.css',root),'utf8');
+assert.match(html,/v330-motion-realism\.css/);
+assert.match(html,/v330-motion-realism\.js/);
+assert.match(js,/V3\.30 MOTION VEHICLE CHARACTER/);
+for(const token of ['body-weight-transfer','vehicle-pitch-roll','suspension-micro-motion','camera-roll-bob','crowd-idle-motion','traffic-micro-suspension'])assert.match(js,new RegExp(token));
+assert.match(css,/data-tgg-v330/);
+console.log(JSON.stringify({ok:true,version:'V3.30 MOTION VEHICLE CHARACTER',checks:10}));

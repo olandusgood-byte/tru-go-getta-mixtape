@@ -59,6 +59,6 @@ jobs:
           grep -q 'indexedDB' tgg-core/public/video-studio/app.js
           grep -q 'restoreLocalMedia' tgg-core/public/video-studio/app.js
           grep -q 'notePreviewCost' tgg-core/public/video-studio/app.js
-          grep -q 'tgg-video-studio-v2.3.0' tgg-core/public/video-studio/sw.js
+          grep -q 'tgg-video-studio-v2.4.0' tgg-core/public/video-studio/sw.js
           grep -q "OIDC_AUDIENCE='tgg-core-video-render-worker'" scripts/tgg-core-video-render-worker.mjs
           grep -q 'x-tgg-github-oidc' scripts/tgg-core-video-render-worker.mjs

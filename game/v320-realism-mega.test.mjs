@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const root=new URL('.',import.meta.url);
+const html=fs.readFileSync(new URL('index.html',root),'utf8');
+const js=fs.readFileSync(new URL('v320-realism-mega.js',root),'utf8');
+const css=fs.readFileSync(new URL('v320-realism-mega.css',root),'utf8');
+assert.match(html,/v320-realism-mega\.css/);
+assert.match(html,/v320-realism-mega\.js/);
+assert.match(js,/V3\.20 REALISM MEGA PASS/);
+for(const token of ['physical-lighting-balance','human-material-refinement','vehicle-clearcoat-refinement','street-light-fixtures','wet-surface-puddles','adaptive-detail-scaling'])assert.match(js,new RegExp(token));
+assert.match(css,/data-tgg-v320/);
+console.log(JSON.stringify({ok:true,version:'V3.20 REALISM MEGA PASS',checks:10}));

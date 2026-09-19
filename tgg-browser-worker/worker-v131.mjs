@@ -66,15 +66,24 @@ async function restoreOwnerSessionFromRefreshToken() {
   try {
     const stored = tggCoreEnabled() ? await tggRestoreOwnerRefreshToken() : await rpc.rpc('tgg_browser_cert_worker_session_restore', { p_worker_id: workerId, p_token: workerToken });
     const refreshToken = tggCoreEnabled() ? stored?.refresh_token : stored?.data?.refresh_token;
-    if ((tggCoreEnabled() && (!stored?.ok || !refreshToken)) || (!tggCoreEnabled() && (stored?.error || !stored?.data?.ok || !refreshToken))) return false;
+    if ((tggCoreEnabled() && (!stored?.ok || !refreshToken)) || (!tggCoreEnabled() && (stored?.error || !stored?.data?.ok || !refreshToken))) {
+      console.error(JSON.stringify({tgg_owner_session_restore:true,ok:false,stage:'stored_refresh_token',reason:tggCoreEnabled()?(stored?.error||'missing_refresh_token'):(stored?.error?.message||'missing_refresh_token')}));
+      return false;
+    }
+    console.log(JSON.stringify({tgg_owner_session_restore:true,ok:true,stage:'refresh_token_retrieved'}));
     const authClient = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
     const refreshed = await authClient.auth.refreshSession({ refresh_token: refreshToken });
-    if (refreshed.error || !refreshed.data?.session?.access_token) return false;
+    if (refreshed.error || !refreshed.data?.session?.access_token) {
+      console.error(JSON.stringify({tgg_owner_session_restore:true,ok:false,stage:'supabase_refresh',reason:refreshed.error?.message||'session_missing'}));
+      return false;
+    }
     ownerSession = { access_token: refreshed.data.session.access_token, refresh_token: refreshed.data.session.refresh_token || refreshToken };
     await persistOwnerRefreshToken(workerId, workerToken, ownerSession.refresh_token);
     last = { status: 'session_restored', worker_id: workerId, updated_at: new Date().toISOString() };
+    console.log(JSON.stringify({tgg_owner_session_restore:true,ok:true,stage:'session_ready'}));
     return true;
-  } catch (_error) {
+  } catch (error) {
+    console.error(JSON.stringify({tgg_owner_session_restore:true,ok:false,stage:'exception',reason:error?.message||String(error)}));
     return false;
   }
 }

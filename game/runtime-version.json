@@ -1,11 +1,11 @@
 {
   "project": "TRU GO GETTA WORLD",
-  "canonical_runtime": "V4.20 SOCIAL NETWORK CITY STATUS MEGA",
+  "canonical_runtime": "V4.30 DAILY ROUTINE WELLNESS SCHEDULE WORLD MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
   "verification": "v420_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
-  "base_runtime": "V4.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA",
+  "base_runtime": "V4.20 SOCIAL NETWORK CITY STATUS MEGA",
   "features": [
     "threejs_city",
     "smooth_player_locomotion",
@@ -147,9 +147,18 @@
     "relationship_costs",
     "social_consequences",
     "city_reaction_text",
-    "social_history"
+    "social_history",
+    "v430_daily_routine_wellness_schedule_world",
+    "daily_routine_tracker",
+    "wellness_score",
+    "fatigue_system",
+    "routine_streaks",
+    "recovery_gating",
+    "routine_buffs",
+    "opportunity_wellness_modifier",
+    "routine_consequence_loop"
   ],
-  "release_gate": "closed_certified",
+  "release_gate": "v430_validation_pending",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -157,7 +166,7 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PASS",
+    "browser_gate": "PENDING_V430_REVALIDATION",
     "public_alias": "https://tgg-world-play.vercel.app",
     "browser_cert_run_id": 35443380948,
     "browser_cert_artifact_id": 10585135256,

@@ -214,13 +214,15 @@
   const car=makeCar();
   car.position.set(4.5,0,0);car.rotation.y=0;car.userData.headingDeg=0;scene.add(car);
   const vehicleDynamics={speed:0,steer:0,braking:false,handbrake:false,blocked:false,boosting:false,boostEnergy:100};
-  const playerDynamics={speed:0,vx:0,vy:0,sprinting:false,blocked:false};
+  const playerDynamics={speed:0,vx:0,vy:0,sprinting:false,blocked:false,turnDelta:0,desiredHeading:0};
   function setPlayerDynamics(next={}){
     playerDynamics.speed=Math.max(0,Number(next.speed)||0);
     playerDynamics.vx=Number(next.vx)||0;
     playerDynamics.vy=Number(next.vy)||0;
     playerDynamics.sprinting=!!next.sprinting;
     playerDynamics.blocked=!!next.blocked;
+    playerDynamics.turnDelta=Number(next.turnDelta)||0;
+    playerDynamics.desiredHeading=Number(next.desiredHeading)||0;
     return {...playerDynamics};
   }
   function setVehicleDynamics(next={}){

@@ -1,0 +1,28 @@
+name: Blogger Video Studio Public Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/blogger-video-studio-probe.mjs'
+      - '.github/workflows/blogger-video-studio-public-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser runtime
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Probe public Blogger Video Studio
+        run: node scripts/blogger-video-studio-probe.mjs

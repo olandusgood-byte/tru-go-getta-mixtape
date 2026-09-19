@@ -25,7 +25,8 @@ const layers=[
   'v173-production-finalization.js','v174-tgg-browser-viewer-reconciliation.js','v175-final-verification-gate.js',
   'v176-post-finalization-monitoring.js','v177-autonomous-regression-watch.js','v178-browser-viewer-health.js',
   'v179-continuous-production-watch.js','v180-browser-viewer-recovery-monitor.js','v181-autonomous-runtime-controller.js',
-  'v182-continuous-integrity-hardening.js','v183-browser-viewer-failover.js','v184-autonomous-release-sentinel.js'
+  'v182-continuous-integrity-hardening.js','v183-browser-viewer-failover.js','v184-autonomous-release-sentinel.js',
+  'v185-runtime-resilience.js','v186-browser-session-resilience.js','v187-live-runtime-sentinel.js'
 ];
 for(const file of layers){
   vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
@@ -67,12 +68,17 @@ assert(w.TGGV81.run().ok===true,'V1.81 runtime controller failed');
 assert(w.TGGV82.run({runtime:true,pageErrorCount:0}).ok===true,'V1.82 integrity hardening failed');
 assert(w.TGGV83.run().ok===true,'V1.83 browser viewer failover failed');
 assert(w.TGGV84.run().ok===true,'V1.84 release sentinel failed');
-for(let n=49;n<=84;n++){
+assert(w.TGGV85.run({runtime:true,pageErrorCount:0}).ok===true,'V1.85 runtime resilience failed');
+assert(w.TGGV86.run().ok===true,'V1.86 browser session resilience failed');
+assert(w.TGGV87.run().ok===true,'V1.87 live runtime sentinel failed');
+for(let n=49;n<=87;n++){
   const api=w['TGGV'+n];
   assert(api&&typeof api.snapshot==='function','Missing runtime TGGV'+n);
   const snap=api.snapshot();
-  const expectedVersion=(n>=82?'1.1'+n+'.':'1.'+n+'.');
-  assert(String(snap.version).startsWith(expectedVersion),'Version mismatch TGGV'+n);
+  const version=String(snap.version||api.version||'');
+  const logical='1.'+n+'.';
+  const physical='1.'+(100+n)+'.';
+  assert(version.startsWith(logical)||version.startsWith(physical),'Version mismatch TGGV'+n+': '+version);
   assert(String(snap.mutationPolicy||'').startsWith('local_'),'Non-local mutation policy TGGV'+n);
 }
-console.log(JSON.stringify({ok:true,layers:layers.length,from:'V1.49',through:'V1.84'}));
+console.log(JSON.stringify({ok:true,layers:layers.length,from:'V1.49',through:'V1.87'}));

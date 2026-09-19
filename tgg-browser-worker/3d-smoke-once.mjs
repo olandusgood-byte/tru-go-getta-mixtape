@@ -32,62 +32,88 @@ async function run(){
     const page=await ctx.newPage();
 
     if(MEGA_QA_ONLY){
-      const consoleErrors=[]; const pageErrors=[]; const failedResources=[];
-      page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
-      page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
-      page.on('requestfailed',req=>failedResources.push(req.url()));
-      const response=await page.goto(TARGET,{waitUntil:'commit',timeout:90000});
-      await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:60000});
-      await page.waitForTimeout(900);
-      const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
-
-      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
-      const mp=await mobile.newPage();
-      const mobileErrors=[];
-      mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
-      await mp.goto(TARGET,{waitUntil:'commit',timeout:90000});
-      await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:60000});
-      await mp.waitForTimeout(650);
-      const mobileResult=await mp.evaluate(()=>{
-        const qa=window.TGGMegaQA.run();
-        const body=document.documentElement;
-        const director=document.getElementById('sliceDirector')?.getBoundingClientRect();
-        const actionButtons=[...document.querySelectorAll('#game .actions button')].map(x=>x.getBoundingClientRect());
-        return {
-          qa,
-          width:innerWidth,
-          scrollWidth:body.scrollWidth,
-          overflowX:body.scrollWidth>innerWidth+1,
-          director:director?{left:director.left,right:director.right,width:director.width}:null,
-          actionCount:actionButtons.length,
-          minActionHeight:actionButtons.length?Math.min(...actionButtons.map(x=>x.height)):0
-        };
+      const megaSha=String(process.env.TGG_3D_MEGA_QA_SHA||'').trim();
+      if(!/^[0-9a-f]{40}$/i.test(megaSha))throw new Error('TGG_3D_MEGA_QA_SHA must be an exact 40-char game commit SHA');
+      const mimeFor=p=>p.endsWith('.html')?'text/html; charset=utf-8':p.endsWith('.css')?'text/css; charset=utf-8':p.endsWith('.js')?'application/javascript; charset=utf-8':p.endsWith('.json')?'application/json; charset=utf-8':p.endsWith('.png')?'image/png':p.endsWith('.jpg')||p.endsWith('.jpeg')?'image/jpeg':p.endsWith('.webp')?'image/webp':'application/octet-stream';
+      const proxy=http.createServer(async(req,res)=>{
+        try{
+          let pathname=new URL(req.url||'/','http://127.0.0.1').pathname;
+          if(pathname==='/')pathname='/index.html';
+          pathname=decodeURIComponent(pathname);
+          if(pathname.includes('..')){res.statusCode=400;res.end('bad path');return;}
+          const raw='https://raw.githubusercontent.com/olandusgood-byte/tru-go-getta-mixtape/'+megaSha+'/game'+pathname;
+          const upstream=await fetch(raw,{redirect:'follow'});
+          res.statusCode=upstream.status;
+          res.setHeader('content-type',mimeFor(pathname));
+          res.setHeader('cache-control','no-store');
+          if(!upstream.ok){res.end('upstream '+upstream.status+' '+pathname);return;}
+          res.end(Buffer.from(await upstream.arrayBuffer()));
+        }catch(error){res.statusCode=502;res.end(error?.message||String(error));}
       });
-      const checks=[
-        {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
-        {name:'mega-check-volume',pass:desktop.total>=250&&desktop.total<=650,detail:String(desktop.total)},
-        {name:'mega-mobile-core-ok',pass:mobileResult.qa.ok,detail:'passed='+mobileResult.qa.passed+'/'+mobileResult.qa.total},
-        {name:'mega-mobile-no-overflow',pass:!mobileResult.overflowX&&mobileResult.scrollWidth<=391,detail:JSON.stringify({width:mobileResult.width,scrollWidth:mobileResult.scrollWidth})},
-        {name:'mega-mobile-director-contained',pass:!!mobileResult.director&&mobileResult.director.left>=0&&mobileResult.director.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.director)},
-        {name:'mega-mobile-actions-readable',pass:mobileResult.actionCount>=20&&mobileResult.minActionHeight>=50,detail:JSON.stringify({count:mobileResult.actionCount,minHeight:mobileResult.minActionHeight})}
-      ];
-      result={
-        ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&mobileErrors.length===0,
-        status:'done',
-        mode:'mega_vertical_slice_qa',
-        target:TARGET,
-        http_status:response?.status?.()||0,
-        checks,
-        desktop_summary:{total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass).slice(0,30)},
-        mobile_summary:{total:mobileResult.qa.total,passed:mobileResult.qa.passed,failed:mobileResult.qa.failed,failed_checks:mobileResult.qa.checks.filter(x=>!x.pass).slice(0,30)},
-        console_errors:consoleErrors,
-        page_errors:pageErrors,
-        mobile_page_errors:mobileErrors,
-        failed_resources:failedResources,
-        updated_at:new Date().toISOString()
-      };
-      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-      await mobile.close();await ctx.close();return;
+      await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve)});
+      const proxyAddress=proxy.address();
+      const qaTarget='http://127.0.0.1:'+proxyAddress.port+'/';
+      try{
+        const consoleErrors=[]; const pageErrors=[]; const failedResources=[];
+        page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+        page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+        page.on('requestfailed',req=>failedResources.push(req.url()));
+        const response=await page.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:60000});
+        await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:60000});
+        await page.waitForTimeout(900);
+        const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
+
+        const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+        const mp=await mobile.newPage();
+        const mobileErrors=[];
+        mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
+        await mp.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:60000});
+        await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:60000});
+        await mp.waitForTimeout(650);
+        const mobileResult=await mp.evaluate(()=>{
+          const qa=window.TGGMegaQA.run();
+          const body=document.documentElement;
+          const director=document.getElementById('sliceDirector')?.getBoundingClientRect();
+          const actionButtons=[...document.querySelectorAll('#game .actions button')].map(x=>x.getBoundingClientRect());
+          return {
+            qa,
+            width:innerWidth,
+            scrollWidth:body.scrollWidth,
+            overflowX:body.scrollWidth>innerWidth+1,
+            director:director?{left:director.left,right:director.right,width:director.width}:null,
+            actionCount:actionButtons.length,
+            minActionHeight:actionButtons.length?Math.min(...actionButtons.map(x=>x.height)):0
+          };
+        });
+        const checks=[
+          {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
+          {name:'mega-check-volume',pass:desktop.total>=250&&desktop.total<=650,detail:String(desktop.total)},
+          {name:'mega-mobile-core-ok',pass:mobileResult.qa.ok,detail:'passed='+mobileResult.qa.passed+'/'+mobileResult.qa.total},
+          {name:'mega-mobile-no-overflow',pass:!mobileResult.overflowX&&mobileResult.scrollWidth<=391,detail:JSON.stringify({width:mobileResult.width,scrollWidth:mobileResult.scrollWidth})},
+          {name:'mega-mobile-director-contained',pass:!!mobileResult.director&&mobileResult.director.left>=0&&mobileResult.director.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.director)},
+          {name:'mega-mobile-actions-readable',pass:mobileResult.actionCount>=20&&mobileResult.minActionHeight>=50,detail:JSON.stringify({count:mobileResult.actionCount,minHeight:mobileResult.minActionHeight})}
+        ];
+        result={
+          ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&mobileErrors.length===0,
+          status:'done',
+          mode:'mega_vertical_slice_qa',
+          target:'github:'+megaSha,
+          served_via:'local-branch-proxy',
+          http_status:response?.status?.()||0,
+          checks,
+          desktop_summary:{total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass).slice(0,30)},
+          mobile_summary:{total:mobileResult.qa.total,passed:mobileResult.qa.passed,failed:mobileResult.qa.failed,failed_checks:mobileResult.qa.checks.filter(x=>!x.pass).slice(0,30)},
+          console_errors:consoleErrors,
+          page_errors:pageErrors,
+          mobile_page_errors:mobileErrors,
+          failed_resources:failedResources,
+          updated_at:new Date().toISOString()
+        };
+        console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+        await mobile.close();await ctx.close();return;
+      } finally {
+        await new Promise(resolve=>proxy.close(()=>resolve()));
+      }
     }
 
     if(STORY_CHAPTER3_ONLY){
@@ -247,8 +273,7 @@ async function run(){
         console_errors:consoleErrors,page_errors:errors,updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-      await mobile.close();await ctx.close();return;    }
-    if(STORY_WORLD_3D_ONLY){
+      await mobile.close();await ctx.close();return;    }    if(STORY_WORLD_3D_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
       const [htmlResponse,threeResponse,storyResponse,worldResponse]=await Promise.all([
         fetch(base+'/index.html'),
@@ -497,8 +522,7 @@ async function run(){
       await mp.evaluate(()=>document.querySelector('[data-media="video"]')?.click());
       await mp.waitForTimeout(40);      await mp.evaluate(()=>window.TGGStoryMissions.sync());
       snap=await mp.evaluate(()=>({        status:window.TGGStoryMissions.status(),
-        game:{...window.__qaGame},career:{...window.__qaCareer},
-        stored:JSON.parse(localStorage.getItem('tgg-story-missions-v1')||'null')
+        game:{...window.__qaGame},career:{...window.__qaCareer},        stored:JSON.parse(localStorage.getItem('tgg-story-missions-v1')||'null')
       }));
       record('chapter2-completes',snap.status?.completed===true&&snap.status?.step===10,JSON.stringify(snap.status));
       record('chapter2-final-reward',snap.game.cash===1800&&snap.game.xp===450&&snap.career.reputation===175,JSON.stringify({game:snap.game,career:snap.career}));
@@ -747,8 +771,7 @@ async function run(){
         document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
         document.getElementById('worldLifeBoard')?.classList.add('active');        const shell=document.querySelector('.world-life-shell')?.getBoundingClientRect();
         const tabs=[...document.querySelectorAll('.life-tabs button')].map(x=>x.getBoundingClientRect());
-        return {width:innerWidth,scrollWidth:document.documentElement.scrollWidth,overflowX:document.documentElement.scrollWidth>innerWidth+1,shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,minTab:tabs.length?Math.min(...tabs.map(x=>x.height)):0};
-      });
+        return {width:innerWidth,scrollWidth:document.documentElement.scrollWidth,overflowX:document.documentElement.scrollWidth>innerWidth+1,shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,minTab:tabs.length?Math.min(...tabs.map(x=>x.height)):0};      });
       record('world-life-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
       record('world-life-mobile-tabs-readable',layout.minTab>=48,String(layout.minTab));
       result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'world_life_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
@@ -997,8 +1020,7 @@ async function run(){
         const buttons=[...document.querySelectorAll('.action-deck .actions button')].map(b=>b.getBoundingClientRect());        return {
           width:innerWidth,
           scrollWidth:document.documentElement.scrollWidth,
-          overflowX:document.documentElement.scrollWidth>innerWidth+1,
-          dpad:dpad?{w:dpad.width,h:dpad.height,left:dpad.left,right:dpad.right}:null,
+          overflowX:document.documentElement.scrollWidth>innerWidth+1,          dpad:dpad?{w:dpad.width,h:dpad.height,left:dpad.left,right:dpad.right}:null,
           move:move?{top:move.top,bottom:move.bottom,left:move.left,right:move.right}:null,
           deck:deck?{top:deck.top,bottom:deck.bottom,left:deck.left,right:deck.right}:null,
           actionCount:buttons.length,
@@ -1247,8 +1269,7 @@ async function run(){
       console.log(JSON.stringify({tgg_3d_smoke_step:'mobile-complete'}));
     result={
         ok:false,status:'webgl_not_ready',target:TARGET,
-        error:error?.message||String(error),        diagnostics,
-        console_errors:consoleErrors,
+        error:error?.message||String(error),        diagnostics,        console_errors:consoleErrors,
         page_errors:pageErrors,        failed_resources:failedResources,
         updated_at:new Date().toISOString()
       };
@@ -1497,8 +1518,7 @@ async function run(){
 
     console.log(JSON.stringify({tgg_3d_smoke_step:'acceleration-complete'}));
     const headingBeforeSteer=Number(accelerated.state?.heading)||0;
-    await page.keyboard.down('ArrowRight');    await page.waitForTimeout(500);
-    const steeringVisual=await page.evaluate(()=>({
+    await page.keyboard.down('ArrowRight');    await page.waitForTimeout(500);    const steeringVisual=await page.evaluate(()=>({
       state:window.TGGGame?.getState?.(),
       driving:window.TGGGame?.getDrivingState?.(),
       carRotation:window.TGG3D?.car?.rotation?.y,

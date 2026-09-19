@@ -20,6 +20,19 @@
           arrived:!!story.arrived
         };
       }
+      const appointment=window.TGGSocialSchedule?.navigationTarget?.();
+      if(appointment){
+        const p=toWorld(appointment);
+        return {
+          label:appointment.label||'APPOINTMENT',
+          x:p.x,z:p.z,
+          color:appointment.color||'#48d7ff',
+          radius:Number(appointment.radius)||8,
+          schedule:true,
+          arrived:!!appointment.arrived,
+          inviteId:appointment.inviteId||''
+        };
+      }
       if(s?.accepted)return {label:'MISSION',x:(72-50)*.92,z:(36-50)*.92,color:'#ff466d'};
       const p=toWorld(s);
       const ds=window.TGG3D?.destinations||[];
@@ -53,6 +66,7 @@
       arrow.style.transform='rotate('+relative+'deg)';
       root.style.setProperty('--nav-color',t.color);
       root.classList.toggle('story-active',!!t.story);
+      root.classList.toggle('schedule-active',!!t.schedule);
       root.classList.add('active');
       requestAnimationFrame(update);
     }

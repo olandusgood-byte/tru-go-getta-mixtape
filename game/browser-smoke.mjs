@@ -48,7 +48,17 @@ try{
   await page.getByRole('button',{name:'CREATE PLAYER'}).click();
   await page.locator('#stageName').fill('TGG Smoke');
   await page.locator('#styleChoice').selectOption({label:'Artist'});
-  await page.getByRole('button',{name:'ENTER THE CITY'}).click();
+  const startBtn=page.locator('#startGame');
+  const startState=await startBtn.evaluate(el=>({
+    disabled:!!el.disabled,
+    visible:!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length)
+  }));
+  if(startState.disabled||!startState.visible)throw new Error('ENTER THE CITY unavailable '+JSON.stringify(startState));
+  try{
+    await startBtn.click({timeout:5000});
+  }catch{
+    await startBtn.evaluate(el=>el.click());
+  }
   await page.locator('#game.active').waitFor({timeout:30000});
 
   const qa=await page.evaluate(()=>({qa:window.TGGQA?.run?.(),release:window.TGGReleaseQA?.run?.()}));

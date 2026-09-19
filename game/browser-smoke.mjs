@@ -314,6 +314,27 @@ try{
      contractReady.button?.text!=='START CONTRACT'){
     throw new Error('V5.00 career contract recommendation failed '+JSON.stringify(contractReady));
   }
+  const contractInterruption=await page.evaluate(()=>{
+    const calls=window.TGGIncomingCalls;
+    let cleared=0,guard=0;
+    while(calls?.snapshot?.().current&&guard++<10){
+      calls.declineCurrent();
+      cleared++;
+    }
+    calls?.clearMissed?.();
+    const overlay=document.getElementById('v502IncomingCall');
+    const button=document.getElementById('v500ContractStart');
+    return {
+      cleared,
+      overlayHidden:!overlay||overlay.hidden,
+      button:button?{disabled:!!button.disabled,text:String(button.textContent||'').trim()}:null
+    };
+  });
+  if(contractInterruption.overlayHidden!==true||
+     contractInterruption.button?.disabled||
+     contractInterruption.button?.text!=='START CONTRACT'){
+    throw new Error('V5.00 incoming-call interruption did not clear '+JSON.stringify(contractInterruption));
+  }
   await page.locator('#v500ContractStart').click();
   await page.waitForTimeout(120);
   const contractStarted=await page.evaluate(()=>({

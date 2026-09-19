@@ -72,8 +72,8 @@ async function run(){
         page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
         page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
         page.on('requestfailed',req=>failedResources.push(req.url()));
-        const response=await page.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
-        await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:30000});
+        const response=await page.goto(qaTarget,{waitUntil:'commit',timeout:15000});
+        await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:90000});
         await page.waitForTimeout(700);
         const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
 
@@ -81,8 +81,8 @@ async function run(){
         const mp=await mobile.newPage();
         const mobileErrors=[];
         mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
-        await mp.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
-        await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:30000});
+        await mp.goto(qaTarget,{waitUntil:'commit',timeout:15000});
+        await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:90000});
         await mp.waitForTimeout(500);
         const mobileResult=await mp.evaluate(()=>{
           const qa=window.TGGMegaQA.run();

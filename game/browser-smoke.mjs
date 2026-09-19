@@ -1158,6 +1158,34 @@ try{
     throw new Error('V5.25 contact world failed '+JSON.stringify(contactWorld));
   }
 
+  await page.waitForFunction(()=>!!window.TGGV541&&document.documentElement.dataset.tggV541==='on',{timeout:15000});
+  const physicalWorld=await page.evaluate(()=>{
+    window.TGGGame?.show?.('home');
+    window.TGGInteriors3D?.ensure?.();
+    const run=window.TGGV541.run();
+    const before=window.TGGV541.snapshot();
+    const positioned=window.TGGV541.teleportNear('reset');
+    const interacted=window.TGGV541.interactNearest();
+    const moved=window.TGGV541.moveRoom(-.6,0);
+    const crowd=window.TGGV541.syncCrowdBehavior();
+    const after=window.TGGV541.snapshot();
+    window.TGGGame?.show?.('game');
+    return {run,before,positioned,interacted,moved,crowd,after};
+  });
+  if(physicalWorld.run?.ok!==true||
+     physicalWorld.before?.hotspotCount!==3||
+     physicalWorld.positioned?.ok!==true||
+     physicalWorld.interacted?.ok!==true||
+     physicalWorld.interacted?.hotspot?.id!=='reset'||
+     !(physicalWorld.after?.room?.interactions>=1)||
+     physicalWorld.moved?.ok!==true||
+     physicalWorld.crowd?.ok!==true||
+     !(physicalWorld.after?.pedestrianModes?.length>=12)||
+     physicalWorld.after?.features?.includes('physical-interior-avatar')!==true||
+     physicalWorld.after?.features?.includes('crowd-route-clustering')!==true){
+    throw new Error('V5.41 physical interiors/crowd failed '+JSON.stringify(physicalWorld));
+  }
+
   await clearIncomingCallOverlay('pre keyboard movement');
   await page.evaluate(()=>{
     window.TGGNPCRelations?.closeChoice?.();

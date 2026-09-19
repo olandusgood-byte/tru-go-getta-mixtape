@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "7.53",
-  "module": "GAME-V7.53-OPEN-WORLD",
-  "name": "V7.53 Open World Expansion — Highways Woods Country Long-Distance Travel",
+  "version": "7.54",
+  "module": "GAME-V7.54-REAL-WORLD-ACCESS",
+  "name": "V7.54 Real World Access — Parking Doors Interiors Rooftops",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -173,11 +173,16 @@
     "v5_41_local_only": true,
     "v7_53_open_world_expansion": true,
     "v7_53_world_scale": true,
-    "v7_53_highways_woods_country": true
+    "v7_53_highways_woods_country": true,
+    "v7_54_real_world_access": true,
+    "v7_54_parking_exit": true,
+    "v7_54_walk_to_door": true,
+    "v7_54_rooftop_access": true,
+    "v7_54_no_destination_teleport": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V7.54",
+  "next": "V7.55",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

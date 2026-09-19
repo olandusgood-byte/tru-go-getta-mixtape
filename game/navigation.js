@@ -9,6 +9,11 @@
     function worldScale(){return Number(window.TGG3D?.WORLD_SCALE)||2.75;}
     function toWorld(s){const scale=worldScale();return {x:((Number(s?.x)||50)-50)*scale,z:((Number(s?.y)||50)-50)*scale};}
     function targetFor(s){
+      const physical=window.TGGPhysicalAccess?.navigationTarget?.();
+      if(physical){
+        const p=toWorld(physical);
+        return {label:physical.label||'PHYSICAL ACCESS',x:p.x,z:p.z,color:physical.color||'#c7ff00',radius:Number(physical.radius)||7,physical:true,arrived:!!physical.arrived};
+      }
       const story=window.TGGStoryMissions?.navigationTarget?.();
       if(story){
         const p=toWorld(story);

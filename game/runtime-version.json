@@ -3,7 +3,7 @@
   "canonical_runtime": "V4.00 WORLD SYSTEMS",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v390_production_deployed_browser_certified",
+  "verification": "v400_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V3.90 CAREER MISSION ECONOMY WORLD LOOP MEGA",
   "features": [
@@ -131,7 +131,7 @@
     "property_bonus_loop",
     "career_score_system"
   ],
-  "release_gate": "v400_validation_pending",
+  "release_gate": "closed_certified",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -139,10 +139,10 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PENDING_V400_REVALIDATION",
+    "browser_gate": "PASS",
     "public_alias": "https://tgg-world-play.vercel.app",
-    "browser_cert_run_id": 35442511088,
-    "browser_cert_artifact_id": 10583684259,
-    "browser_cert_artifact_digest": "sha256:4c90651f83eebeed8f7a629a701b00413cc5b996d5ebfe97039ff248ffb573c2"
+    "browser_cert_run_id": 35442958518,
+    "browser_cert_artifact_id": 10584521061,
+    "browser_cert_artifact_digest": "sha256:c6e8147ef762437113d6f6d259f07d0bc8df8a6a6c0d8db6fdb5c3c17db82698"
   }
 }

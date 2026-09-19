@@ -638,7 +638,7 @@
     getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,
     driveVehicle,setDriveKey,getDrivingState:()=>({...driveRuntime}),setDriveTuning,getDriveTuning,
     setWalkKey,getWalkingState:()=>({...walkRuntime}),setWalkTuning,getWalkTuning,
-    horn,mission,toggleVehicle,resetForNewGame
+    horn,mission,toggleVehicle,resetForNewGame,startBusinessActivity,activityReward
   };
 
   load();

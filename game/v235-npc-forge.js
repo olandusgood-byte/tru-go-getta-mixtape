@@ -67,7 +67,6 @@
     const pelvis=mesh(new THREE.BoxGeometry(.55,.28,.36),pants,[0,.91,0],'npc-pelvis');
     const leftArm=new THREE.Group(),rightArm=new THREE.Group(),leftLeg=new THREE.Group(),rightLeg=new THREE.Group();
     leftArm.position.set(-.44,1.66,0);rightArm.position.set(.44,1.66,0);leftLeg.position.set(-.18,.78,0);rightLeg.position.set(.18,.78,0);
-    mesh.call(null);
     const limb=(parent,geo,material,pos,name)=>{
       const m=new THREE.Mesh(geo,material);m.position.set(...pos);m.name=name;m.castShadow=quality()==='high';m.receiveShadow=true;parent.add(m);return m;
     };

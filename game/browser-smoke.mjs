@@ -6,6 +6,21 @@ const errors=[];
 page.on('pageerror',e=>errors.push('pageerror: '+e.message));
 page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});
 
+async function clickRuntimeControl(selector,label){
+  const result=await page.evaluate(({selector})=>{
+    const el=document.querySelector(selector);
+    if(!el)return {found:false,visible:false,disabled:false,clicked:false};
+    const style=getComputedStyle(el);
+    const visible=!el.hidden&&style.display!=='none'&&style.visibility!=='hidden'&&!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length);
+    const disabled=!!el.disabled;
+    if(visible&&!disabled)el.click();
+    return {found:true,visible,disabled,clicked:visible&&!disabled};
+  },{selector});
+  if(!result.found||!result.visible||result.disabled||!result.clicked){
+    throw new Error(label+' runtime control unavailable '+JSON.stringify(result));
+  }
+}
+
 try{
   const response=await page.goto('http://127.0.0.1:8765/index.html',{waitUntil:'networkidle',timeout:90000});
   if(!response||response.status()>=400)throw new Error('HTTP '+(response?.status()||'NO_RESPONSE'));
@@ -182,7 +197,7 @@ try{
      relationOpen.run?.ok!==true||relationOpen.before?.propertyLevel<1){
     throw new Error('V4.97 NPC relation choice open failed '+JSON.stringify(relationOpen));
   }
-  await page.locator('#v497NpcChoice [data-v497-choice="loyal"]').click();
+  await clickRuntimeControl('#v497NpcChoice [data-v497-choice="loyal"]','V4.97 loyal choice');
   await page.waitForTimeout(120);
   const relationResolved=await page.evaluate(before=>{
     const snap=window.TGGNPCRelations.snapshot();
@@ -474,7 +489,7 @@ try{
      incomingAccepted.pending?.name!=='Kane'){
     throw new Error('V5.02 incoming call accept routing failed '+JSON.stringify(incomingAccepted));
   }
-  await page.locator('#v497NpcChoice [data-v497-choice="professional"]').click();
+  await clickRuntimeControl('#v497NpcChoice [data-v497-choice="professional"]','V4.97 professional choice');
   await page.waitForTimeout(100);
   const incomingResolved=await page.evaluate(before=>({
     calls:window.TGGIncomingCalls.snapshot(),
@@ -645,7 +660,7 @@ try{
   if(callControls.active?.muted!==true||callControls.active?.speaker!==true){
     throw new Error('V5.05 call controls failed '+JSON.stringify(callControls));
   }
-  await page.locator('#v497NpcChoice [data-v497-choice="professional"]').click();
+  await clickRuntimeControl('#v497NpcChoice [data-v497-choice="professional"]','V4.97 professional choice');
   await page.waitForTimeout(80);
   await page.locator('#v505End').click();
   await page.waitForTimeout(80);

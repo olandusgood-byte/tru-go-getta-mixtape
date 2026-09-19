@@ -176,6 +176,12 @@ jobs:
               continuity.v70 = window.TGGV70?.run?.({releaseTag:'browser-smoke'});
               continuity.v71 = window.TGGV71?.run?.();
               continuity.v72 = window.TGGV72?.run?.();
+              continuity.v73 = window.TGGV73?.run?.();
+              continuity.v74 = window.TGGV74?.run?.();
+              continuity.v75 = window.TGGV75?.run?.();
+              continuity.v76 = window.TGGV76?.run?.({pageErrorCount});
+              continuity.v77 = window.TGGV77?.run?.();
+              continuity.v78 = window.TGGV78?.run?.();
             } catch (error) {
               continuity.error = String(error?.message || error);
             }
@@ -201,7 +207,13 @@ jobs:
               continuity.v69?.ok === true &&
               continuity.v70?.ok === true &&
               continuity.v71?.ok === true &&
-              continuity.v72?.ok === true;
+              continuity.v72?.ok === true &&
+              continuity.v73?.ok === true &&
+              continuity.v74?.ok === true &&
+              continuity.v75?.ok === true &&
+              continuity.v76?.ok === true &&
+              continuity.v77?.ok === true &&
+              continuity.v78?.ok === true;
 
             return {
               missing,

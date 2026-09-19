@@ -1,0 +1,5 @@
+body.tgg-v238 .v238-forge-btn{height:32px;margin-left:6px;padding:0 10px;border:1px solid #ff9d4d33;border-radius:999px;background:#180f08;color:#ffd6b4;font-size:8px;font-weight:900}
+.tgg-v238 .v238-forge-panel{position:fixed;right:16px;top:58px;z-index:280;display:none;gap:8px;width:min(340px,calc(100vw - 24px));padding:14px;border:1px solid #ff9d4d22;border-radius:18px;background:#130d08f5;color:#fff}.tgg-v238 .v238-forge-panel.active{display:grid}.tgg-v238 .v238-forge-panel div{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.tgg-v238 .v238-forge-panel button{min-height:38px;border:1px solid #ffffff14;border-radius:9px;background:#1c1510;color:#fff;font-size:7px;font-weight:900}.tgg-v238 .v238-forge-panel button.active{border-color:#ff9d4d;color:#ffe0c5}
+.tgg-v238 .v238-forge-hud{position:absolute;right:18px;top:608px;z-index:13;padding:7px 9px;border:1px solid #ff9d4d22;border-radius:10px;background:#070b12dd;color:#ffd6b4;font-size:7px;font-weight:900}
+@media(max-width:700px){.tgg-v238 .v238-forge-panel{right:8px;top:50px;width:calc(100vw - 16px)}.tgg-v238 .v238-forge-hud{right:10px;top:538px}}

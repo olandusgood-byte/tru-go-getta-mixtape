@@ -217,6 +217,13 @@
     test('v238 native damage mode',damageForge.mode==='native-vehicle-damage-interior-forge'&&damageForge.interior==='street');
     test('v238 damage HUD',!!document.getElementById('v238ForgeHud')&&!!document.getElementById('v238ForgePanel'));
     test('v238 damage forge css',!!document.querySelector('link[href*="v238-vehicle-damage-forge.css"]'));
+    const stageForge=window.TGGV239?.status?.()||{};
+    test('v239 stage core api',!!window.TGGV239Core&&typeof window.TGGV239Core.show==='function'&&typeof window.TGGV239Core.lightBudget==='function');
+    test('v239 stage forge api',!!window.TGGV239&&typeof window.TGGV239.start==='function'&&typeof window.TGGV239.stop==='function');
+    test('v239 100 layers',Array.isArray(window.TGGV239?.layers)&&window.TGGV239.layers.length===100);
+    test('v239 native stage mode',stageForge.mode==='native-stage-performance-forge'&&stageForge.enabled===true);
+    test('v239 stage HUD',!!document.getElementById('v239ForgeHud')&&!!document.getElementById('v239ForgePanel'));
+    test('v239 stage forge css',!!document.querySelector('link[href*="v239-stage-forge.css"]'));
     const cameraForgeCompat=window.TGGV234?.status?.()||{};
     test('v234 camera core api',!!window.TGGV234Core&&typeof window.TGGV234Core.preset==='function'&&typeof window.TGGV234Core.blend==='function');
     test('v234 camera forge api',!!window.TGGV234&&typeof window.TGGV234.applyPreset==='function'&&typeof window.TGGV234.pulse==='function'&&typeof window.TGGV234.togglePhoto==='function');
@@ -224,7 +231,7 @@
     test('v234 native camera mode',cameraForge.mode==='native-camera-forge'&&cameraForge.enabled===true);
     test('v234 camera HUD',!!document.getElementById('v234ForgeHud')&&!!document.getElementById('v234ForgePanel'));
     test('v234 camera forge css',!!document.querySelector('link[href*="v234-camera-forge.css"]'));
-    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.38 TGG VEHICLE DAMAGE + INTERIOR FORGE 100');
+    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.39 TGG STAGE + PERFORMANCE FORGE 100');
     test('v2 movement hud',!!document.getElementById('playerMoveHud')&&!!document.getElementById('walkModeValue')&&!!document.getElementById('walkSpeedValue'));
     test('v2 sprint control',!!document.getElementById('sprintBtn'));test('v202 world gameplay',!!window.TGGWorldGameplay&&typeof window.TGGWorldGameplay.getNavTarget==='function'&&typeof window.TGGWorldGameplay.performObjective==='function');test('v202 world objective hud',!!document.getElementById('worldObjective'));test('v203 street contacts',!!window.TGGStreetContacts&&Array.isArray(window.TGGStreetContacts.contacts)&&window.TGGStreetContacts.contacts.length>=3&&typeof window.TGGStreetContacts.startContact==='function');test('v203 contact hud',!!document.getElementById('streetContactCard'));test('career api',!!window.TGGCareer);test('content api',!!window.TGGContent);test('expansion api',!!window.TGGExpansion);test('progression api',!!window.TGGProgression);test('bridge api',!!window.TGGBridge);test('chain api',!!window.TGGChains);test('district api',!!window.TGGDistricts);test('save api',!!window.TGGSave);test('inventory api',!!window.TGGInventory);test('crew api',!!window.TGGCrew);test('events api',!!window.TGGEvents);test('economy api',!!window.TGGEconomy&&typeof window.TGGEconomy.apply==='function');test('avatar api',!!window.TGGAvatar&&typeof window.TGGAvatar.get==='function'&&typeof window.TGGAvatar.save==='function');test('world sync api',!!window.TGGWorldSync&&typeof window.TGGWorldSync.snapshot==='function'&&typeof window.TGGWorldSync.setTransport==='function'&&typeof window.TGGWorldSync.sync==='function');
     ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud'].forEach(id=>test('dom:'+id,!!document.getElementById(id)));

@@ -109,6 +109,7 @@
 
     if(i%4===0)add(body,new THREE.BoxGeometry(.06,.66,.035),accent,[0,.02,.34],[1,1,1],[0,0,0],'accent');
     g.userData.parts={body,head,leftArm,rightArm,leftLeg,rightLeg,eyes,pupils,brows,mouth};
+    g.userData.baseBodyY=1.95*h;
     g.userData.phase=seeded(300+i)*Math.PI*2;
     g.userData.blink=0;g.userData.blinkState=0;g.userData.nextBlink=1500+seeded(400+i)*2600;
     g.userData.idleUntil=0;g.userData.talkUntil=0;g.userData.reactUntil=0;g.userData.routeIndex=1;
@@ -250,7 +251,7 @@
     if(!talking)p.rightArm.rotation.x=lerp(p.rightArm.rotation.x,-swing,.2);
     p.leftLeg.rotation.x=lerp(p.leftLeg.rotation.x,-swing*.82,.22);
     p.rightLeg.rotation.x=lerp(p.rightLeg.rotation.x,swing*.82,.22);
-    p.body.position.y=lerp(p.body.position.y,1.95+(moving?Math.abs(Math.sin(u.phase))*.045:Math.sin(u.phase*.32)*.012),.18);
+    p.body.position.y=lerp(p.body.position.y,(Number(u.baseBodyY)||1.95)+(moving?Math.abs(Math.sin(u.phase))*.045:Math.sin(u.phase*.32)*.012),.18);
     p.body.rotation.z=lerp(p.body.rotation.z,moving?Math.sin(u.phase)*.025:0,.18);
     if(reacting){p.head.rotation.y=lerp(p.head.rotation.y,.2*Math.sin(u.phase),.25)}
     state.talking+=talking?1:0;
@@ -308,6 +309,7 @@
   function keyHandler(e){
     const t=e.target,typing=t instanceof HTMLInputElement||t instanceof HTMLTextAreaElement||t instanceof HTMLSelectElement||t?.isContentEditable;if(typing)return;
     if(e.key==='F11'){e.preventDefault();panel?.classList.toggle('active')}
+    if(e.key==='h'||e.key==='H'){window.__tggV236HornUntil=performance.now()+1100}
     if(e.key==='Escape'&&panel?.classList.contains('active'))panel.classList.remove('active');
   }
 

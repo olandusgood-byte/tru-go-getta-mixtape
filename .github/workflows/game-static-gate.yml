@@ -2,9 +2,30 @@ name: Game Static Gate
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'game/**'
+      - 'tgg-browser-worker/**'
+      - 'tgg-core/**'
+      - 'worker.mjs'
+      - 'package.json'
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'game/**'
+      - 'tgg-browser-worker/**'
+      - 'tgg-core/**'
+      - 'worker.mjs'
+      - 'package.json'
+      - '.github/workflows/**'
 
 permissions:
   contents: read
+
+concurrency:
+  group: game-static-gate-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   static-gate:

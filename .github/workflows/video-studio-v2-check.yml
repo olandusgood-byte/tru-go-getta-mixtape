@@ -34,6 +34,8 @@ jobs:
         run: |
           node --check tgg-core/server.mjs
           node --check tgg-core/public/video-studio/app.js
+          node --check tgg-core/public/video-studio/gpu-fx.js
+          node --check tgg-core/public/video-studio/pro-ai.js
           node --check tgg-core/public/video-studio/sw.js
           node --check scripts/tgg-core-video-render-worker.mjs
       - name: Verify Video Studio contract markers
@@ -41,7 +43,7 @@ jobs:
           grep -q 'TGG_VIDEO_STUDIO_V2_STATIC' tgg-core/server.mjs
           if grep -Fq "app.get('/video-studio'" tgg-core/server.mjs; then echo 'explicit /video-studio redirect must stay removed'; exit 1; fi
           grep -q 'TGG_VIDEO_STUDIO_V2_API' tgg-core/server.mjs
-          grep -q "editor_version:'2.4.1'" tgg-core/server.mjs
+          grep -q "editor_version:'2.5.0'" tgg-core/server.mjs
           grep -q 'TGG_VIDEO_STUDIO_V2_SCHEMA' tgg-core/schema.sql
           grep -q 'TGG_VIDEO_STUDIO_V2_RENDER_BRIDGE_API' tgg-core/server.mjs
           grep -q 'TGG_VIDEO_STUDIO_V2_RENDER_BRIDGE_SCHEMA' tgg-core/schema.sql
@@ -60,8 +62,14 @@ jobs:
           grep -q 'indexedDB' tgg-core/public/video-studio/app.js
           grep -q 'restoreLocalMedia' tgg-core/public/video-studio/app.js
           grep -q 'notePreviewCost' tgg-core/public/video-studio/app.js
-          grep -q 'tgg-video-studio-v2.4.1' tgg-core/public/video-studio/sw.js
-          grep -q 'app.js?v=2.4.1' tgg-core/public/video-studio/sw.js
+          grep -q 'tgg-video-studio-v2.5.0' tgg-core/public/video-studio/sw.js
+          grep -q 'app.js?v=2.5.0' tgg-core/public/video-studio/sw.js
+          grep -q 'pro-ai.js?v=2.5.0' tgg-core/public/video-studio/sw.js
+          grep -q 'gpu-fx.js?v=2.5.0' tgg-core/public/video-studio/sw.js
+          grep -q 'AUTO EDIT' tgg-core/public/video-studio/pro-ai.js
+          grep -q 'tgg-block-match-v1' tgg-core/public/video-studio/pro-ai.js
+          grep -q 'VideoEncoder.isConfigSupported' tgg-core/public/video-studio/pro-ai.js
+          grep -q 'TGGVideoGPU' tgg-core/public/video-studio/gpu-fx.js
           grep -q 'styles.css?v=2.4.1' tgg-core/public/video-studio/sw.js
           grep -q "OIDC_AUDIENCE='tgg-core-video-render-worker'" scripts/tgg-core-video-render-worker.mjs
           grep -q 'x-tgg-github-oidc' scripts/tgg-core-video-render-worker.mjs

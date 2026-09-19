@@ -3,7 +3,7 @@
   "canonical_runtime": "V4.50 FAMILY HOUSEHOLD LEGACY WORLD MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v440_production_deployed_browser_certified",
+  "verification": "v450_unified_bulk_v301_liveviewer_production_certified",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V4.40 HOME SOCIAL LIFE MEGA",
   "features": [
@@ -171,20 +171,37 @@
     "neglect_consequences",
     "legacy_progression",
     "home_life_care_hooks",
-    "story_legacy_rewards"
+    "story_legacy_rewards",
+    "v287_v301_bulk_release",
+    "v287_v301_bulk_browser",
+    "v287_v301_bulk_viewer",
+    "v287_v301_bulk_audits_gates",
+    "unified_liveviewer_certification",
+    "exact_sha_production_verification"
   ],
-  "release_gate": "v450_validation_pending",
+  "release_gate": "closed_certified",
   "production": {
-    "deployment_id": "dpl_41wLd7HQEEhmpnRaCnj7qunhqLaQ",
-    "deployment_url": "tgg-world-play-qjf973ogy-olandusgood-8594.vercel.app",
+    "deployment_id": "dpl_77rY7PxzEgwUc6DaK2csdx5Zowcp",
+    "deployment_url": "tgg-world-play-4iad0ww8b-olandusgood-8594.vercel.app",
     "target": "production",
     "state": "READY",
-    "commit": "c419abda3f4402eabd29fc3a57a3f80f2b1cc01e",
+    "commit": "20773a9f1fd8161dbc74076749f7fc75843a9db1",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PENDING_V450_REVALIDATION",
-    "public_alias": "https://tgg-world-play.vercel.app",
-    "browser_cert_run_id": 35444625579,
-    "browser_cert_artifact_id": 10585271875,
-    "browser_cert_artifact_digest": "sha256:4d0d6667627e6cc65333faf59af077c150777e9ff8fbca252c2b2f42166247c8"
+    "browser_gate": "PASS",
+    "liveviewer_gate": "PASS",
+    "unified_certification_run_id": 35450711817,
+    "unified_checks": {
+      "static_gate": true,
+      "mega_regression_526_of_526": true,
+      "browser_smoke": true,
+      "liveviewer_smoke": true,
+      "production_credential": true,
+      "vercel_cli": true,
+      "project_link": true,
+      "exact_sha_deploy": true,
+      "production_runtime_verify": true
+    },
+    "bulk_certified_through": "V301",
+    "public_alias": "https://tgg-world-play.vercel.app"
   }
 }

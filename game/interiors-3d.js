@@ -53,7 +53,34 @@
       box(scene,18,.25,14,0x11141b,0,-.12,0,{roughness:.82,metalness:.18});
       box(scene,18,7,.25,0x171b24,0,3.5,-7,{cast:false});
       box(scene,.25,7,14,0x0f1219,-9,3.5,0,{cast:false});
-      const animated=build({scene,camera,renderer,box,makeHuman,accent})||[];
+
+      // V5.58 interior realism foundation shared by every room.
+      const detailGroup=new THREE.Group();
+      detailGroup.name='TGG_INTERIOR_DETAIL_V558';
+      scene.add(detailGroup);
+      const trimMat=new THREE.MeshStandardMaterial({color:0x2b313d,roughness:.48,metalness:.62});
+      const floorLineMat=new THREE.MeshStandardMaterial({color:0x252b34,roughness:.86,metalness:.08});
+      const ceilingGlowMat=new THREE.MeshStandardMaterial({color:0xf4f7ff,emissive:0xb9ceff,emissiveIntensity:2.4,roughness:.28});
+      for(let x=-8;x<=8;x+=2){
+        const seam=new THREE.Mesh(new THREE.BoxGeometry(.025,.018,13.6),floorLineMat);
+        seam.position.set(x,.022,0);detailGroup.add(seam);
+      }
+      for(let z=-6;z<=6;z+=2){
+        const seam=new THREE.Mesh(new THREE.BoxGeometry(17.6,.018,.025),floorLineMat);
+        seam.position.set(0,.023,z);detailGroup.add(seam);
+      }
+      [-5.5,0,5.5].forEach(x=>{
+        const strip=new THREE.Mesh(new THREE.BoxGeometry(3.6,.08,.34),ceilingGlowMat.clone());
+        strip.position.set(x,6.45,-.6);detailGroup.add(strip);
+        const fill=new THREE.PointLight(0xd9e6ff,1.7,8,2);
+        fill.position.set(x,5.85,-.6);detailGroup.add(fill);
+      });
+      const baseboard1=new THREE.Mesh(new THREE.BoxGeometry(17.6,.18,.14),trimMat);
+      baseboard1.position.set(0,.14,-6.82);detailGroup.add(baseboard1);
+      const baseboard2=new THREE.Mesh(new THREE.BoxGeometry(.14,.18,13.5),trimMat);
+      baseboard2.position.set(-8.82,.14,0);detailGroup.add(baseboard2);
+
+      const animated=build({scene,camera,renderer,box,makeHuman,accent,detailGroup})||[];
 
       let targetYaw=.18,yaw=.18;
       host.addEventListener('pointermove',e=>{
@@ -82,7 +109,7 @@
       new MutationObserver(()=>{if(screen.classList.contains('active'))requestAnimationFrame(resize)})
         .observe(screen,{attributes:true,attributeFilter:['class']});
       resize();animate();
-      const rt={host,screen,scene,camera,renderer,resize};
+      const rt={host,screen,scene,camera,renderer,resize,detailVersion:'V5.58',detailObjects:detailGroup.children.length};
       runtimes.push(rt);
       return rt;
     }
@@ -137,7 +164,16 @@
       return [(t)=>{p1.position.x=-1+Math.sin(t*.65)*1.2;p2.rotation.y=t*.35;p3.position.z=2.1+Math.cos(t*.55)*.7}];
     });
 
-    window.TGGInteriors3D={isReady:()=>runtimes.length>=4,runtimes};
+    window.TGGInteriors3D={
+      isReady:()=>runtimes.length>=4,
+      runtimes,
+      getVisualDetailStatus:()=>({
+        version:'V5.58',
+        rooms:runtimes.length,
+        roomsDetailed:runtimes.filter(x=>x.detailVersion==='V5.58').length,
+        detailObjects:runtimes.reduce((n,x)=>n+(Number(x.detailObjects)||0),0)
+      })
+    };
   }
   function watch(){
     const ids=['home','media','shops','park'];

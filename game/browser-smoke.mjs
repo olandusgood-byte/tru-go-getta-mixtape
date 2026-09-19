@@ -1102,6 +1102,30 @@ try{
     throw new Error('V5.09 world immersion failed '+JSON.stringify(immersion));
   }
 
+  await page.waitForFunction(()=>!!window.TGGV510&&document.documentElement.dataset.tggV510==='on',{timeout:15000});
+  const propertyWorld=await page.evaluate(()=>{
+    const run=window.TGGV510.run();
+    const before=window.TGGV510.snapshot();
+    const entered=window.TGGV510.enterInterior('apartment',{show:false});
+    const used=window.TGGV510.performHotspot('apartment','reset');
+    const after=window.TGGV510.snapshot();
+    return {
+      run,before,entered,used,after,
+      hud:!!document.getElementById('v510PropertyHud'),
+      route:window.TGGV510.routePreview()
+    };
+  });
+  if(propertyWorld.run?.ok!==true||
+     propertyWorld.hud!==true||
+     propertyWorld.entered?.status!=='entered'||
+     propertyWorld.used?.ok!==true||
+     !(propertyWorld.used?.uses>=1)||
+     !(propertyWorld.after?.hotspotUses?.['apartment:reset']>=1)||
+     !propertyWorld.route?.beatId||
+     propertyWorld.after?.propertyLevels?.apartment<1){
+    throw new Error('V5.10 property/consequence world failed '+JSON.stringify(propertyWorld));
+  }
+
   await clearIncomingCallOverlay('pre keyboard movement');
   await page.evaluate(()=>{
     window.TGGNPCRelations?.closeChoice?.();

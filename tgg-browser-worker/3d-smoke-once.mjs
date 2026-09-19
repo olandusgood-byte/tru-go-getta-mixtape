@@ -34,6 +34,7 @@ const V218_MEGA_ONLY=String(process.env.TGG_3D_V218_MEGA_ONLY||'0')==='1';
 const V219_CROWD_ONLY=String(process.env.TGG_3D_V219_CROWD_ONLY||'0')==='1';
 const V220_CINEMATIC_ONLY=String(process.env.TGG_3D_V220_CINEMATIC_ONLY||'0')==='1';
 const LIFE_OS_ONLY=String(process.env.TGG_3D_LIFE_OS_ONLY||'0')==='1';
+const V222_RELATIONSHIP_ONLY=String(process.env.TGG_3D_V222_RELATIONSHIP_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function startV218SnapshotServer(){
@@ -70,6 +71,155 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(V222_RELATIONSHIP_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,cssResponse,lifeResponse,worldResponse,careerResponse,storyResponse]=await Promise.all([
+        fetch(base+'/index.html'),fetch(base+'/style.css'),fetch(base+'/life-os.js'),
+        fetch(base+'/world-life.js'),fetch(base+'/career.js'),fetch(base+'/story-missions.js')
+      ]);
+      if(!htmlResponse.ok||!cssResponse.ok||!lifeResponse.ok||!worldResponse.ok||!careerResponse.ok||!storyResponse.ok){
+        throw new Error('V2.22 relationship harness fetch failed');
+      }
+      let html=await htmlResponse.text();
+      const [css,lifeSource,worldSource,careerSource,storySource]=await Promise.all([
+        cssResponse.text(),lifeResponse.text(),worldResponse.text(),careerResponse.text(),storyResponse.text()
+      ]);
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<script\b[^>]*\/?>/gi,'')
+               .replace(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi,'<style>'+css+'</style>');
+      const testCtx=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const tp=await testCtx.newPage();
+      const pageErrors=[];const consoleErrors=[];
+      tp.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+      tp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      await tp.setContent(html,{waitUntil:'domcontentloaded'});
+      await tp.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
+        localStorage.setItem('tgg-life-os-v1',JSON.stringify({
+          version:'V2.22',day:1,minute:540,
+          needs:{energy:82,fuel:78,hygiene:76,mood:74,social:68,stress:22},
+          relationships:{manager:75,producer:75,dj:75,director:75,friend:75,family:85},
+          upgrades:[],
+          stats:{sleeps:0,meals:0,hangouts:0,calls:0,careerActions:0},
+          lastAction:'V2.22 relationship QA'
+        }));
+        window.__qaScreen='game';
+        window.__qaGame={x:50,y:55,cash:5000,xp:0,level:5,heading:0,inVehicle:false};
+        window.__qaRewards=[];
+        window.__qaToasts=[];
+        window.TGGGame={
+          getState:()=>window.__qaGame,
+          getActiveScreen:()=>window.__qaScreen,
+          show:id=>{window.__qaScreen=id;return true},
+          spend:n=>{n=Number(n)||0;if(window.__qaGame.cash<n)return false;window.__qaGame.cash-=n;return true},
+          reward:(cash,xp)=>{window.__qaRewards.push({cash:Number(cash)||0,xp:Number(xp)||0});window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return true}
+        };
+        window.TGGProgression={sync:()=>true};
+        window.__tggToast=t=>window.__qaToasts.push(String(t));
+      });
+      await tp.addScriptTag({content:lifeSource});
+      await tp.addScriptTag({content:careerSource});
+      await tp.addScriptTag({content:worldSource});
+      await tp.waitForTimeout(140);
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+
+      let snap=await tp.evaluate(()=>({
+        title:document.title,
+        version:window.TGGLifeOS?.version,
+        perks:window.TGGLifeOS?.relationshipPerks?.(),
+        battle:window.TGGLifeOS?.careerOutcome?.('battle'),
+        recording:window.TGGLifeOS?.careerOutcome?.('recording'),
+        show:window.TGGLifeOS?.careerOutcome?.('show'),
+        visual:window.TGGLifeOS?.careerOutcome?.('visual'),
+        training:window.TGGLifeOS?.careerOutcome?.('training'),
+        release:window.TGGLifeOS?.careerOutcome?.('release')
+      }));
+      add('v222-title',snap.title.includes('V2.22 RELATIONSHIP PERKS'),snap.title);
+      add('v222-life-version',snap.version==='V2.22',snap.version);
+      add('v222-six-active-perks',Array.isArray(snap.perks)&&snap.perks.length===6&&snap.perks.every(x=>x.active),JSON.stringify(snap.perks));
+      add('v222-manager-payout',snap.battle?.rewardMultiplier===1.15,JSON.stringify(snap.battle));
+      add('v222-kane-recording-rep',snap.recording?.repBonus===20,JSON.stringify(snap.recording));
+      add('v222-dj-show-crowd',snap.show?.startBonus===15,JSON.stringify(snap.show));
+      add('v222-director-video-rep',snap.visual?.repBonus===30,JSON.stringify(snap.visual));
+      add('v222-dayone-training-discount',snap.training?.trainingDiscount===0.25,JSON.stringify(snap.training));
+      add('v222-manager-release-rep',snap.release?.repBonus===20,JSON.stringify(snap.release));
+      add('v222-family-resilience',Number(snap.battle?.scoreMultiplier)>Number(snap.battle?.readiness),JSON.stringify(snap.battle));
+
+      await tp.evaluate(()=>window.TGGWorldLife.startShow());
+      snap=await tp.evaluate(()=>window.TGGWorldLife.getState());
+      add('v222-show-start-runtime',snap.show?.crowd===50,JSON.stringify(snap.show));
+
+      await tp.evaluate(()=>window.TGGWorldLife.render());
+      const trainLabel=await tp.evaluate(()=>document.querySelector('[data-train="stamina"]')?.textContent||'');
+      add('v222-training-price-runtime',trainLabel.includes('$49'),trainLabel);
+
+      await tp.evaluate(()=>{
+        window.TGGCareer.career.reputation=0;
+        window.TGGCareer.career.recordings=0;
+        window.TGGCareer.career.studioLevel=1;
+        window.TGGCareer.record();
+      });
+      snap=await tp.evaluate(()=>({career:{...window.TGGCareer.career},toast:window.__qaToasts.at(-1)||''}));
+      add('v222-recording-rep-runtime',snap.career.recordings===1&&snap.career.reputation===45,JSON.stringify(snap));
+
+      await tp.evaluate(()=>{
+        window.TGGCareer.career.reputation=0;
+        window.TGGCareer.career.recordings=3;
+        window.TGGCareer.career.mixtapes=0;
+        window.TGGCareer.career.studioLevel=1;
+        window.TGGCareer.mixtape();
+      });
+      snap=await tp.evaluate(()=>({career:{...window.TGGCareer.career},toast:window.__qaToasts.at(-1)||''}));
+      add('v222-release-rep-runtime',snap.career.mixtapes===1&&snap.career.reputation===95,JSON.stringify(snap));
+
+      await tp.evaluate(()=>{
+        window.__qaRewards.length=0;
+        window.TGGWorldLife.startShow();
+        ['hype','hype','hype','hype'].forEach(m=>window.TGGWorldLife.showMove(m));
+      });
+      snap=await tp.evaluate(()=>({
+        state:window.TGGWorldLife.getState(),
+        rewards:[...window.__qaRewards],
+        outcome:window.TGGLifeOS.careerOutcome('show')
+      }));
+      const lastReward=snap.rewards.at(-1);
+      const expectedCash=Math.round((180+snap.state.show.crowd*3+snap.state.show.score)*(snap.outcome.rewardMultiplier||1));
+      add('v222-show-payout-runtime',!!lastReward&&lastReward.cash===expectedCash,JSON.stringify({lastReward,expectedCash,state:snap.state.show,outcome:snap.outcome}));
+
+      add('v222-world-source-hook',worldSource.includes("careerOutcome?.('battle')")&&worldSource.includes("careerOutcome?.('show')")&&worldSource.includes("careerOutcome?.('training')"));
+      add('v222-career-source-hook',careerSource.includes("careerOutcome?.('recording')")&&careerSource.includes("careerOutcome?.('release')"));
+      add('v222-story-source-hook',storySource.includes("careerOutcome?.('visual')")&&storySource.includes("totalRep=175+visualBonus"));
+
+      await tp.evaluate(()=>{window.TGGLifeOS.render();window.TGGGame.show('lifeBoard')});
+      const layout=await tp.evaluate(()=>{
+        const shell=document.querySelector('.lifeos-shell')?.getBoundingClientRect();
+        const perks=[...document.querySelectorAll('.lifeos-contact .perk')].map(x=>x.textContent.trim());
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          overflowX:document.documentElement.scrollWidth>innerWidth+1,
+          shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,
+          perkCount:perks.length,perks
+        };
+      });
+      add('v222-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
+      add('v222-mobile-shell-contained',!!layout.shell&&layout.shell.left>=0&&layout.shell.right<=layout.width+1,JSON.stringify(layout.shell));
+      add('v222-perk-labels-rendered',layout.perkCount===6&&layout.perks.every(Boolean),JSON.stringify(layout.perks));
+
+      result={
+        ok:checks.every(x=>x.pass)&&pageErrors.length===0,
+        status:'done',mode:'v222_relationship_perks_harness',target:TARGET,
+        checks,console_errors:consoleErrors,page_errors:pageErrors,updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await testCtx.close();await ctx.close();return;
+    }
 
     if(LIFE_OS_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
@@ -298,7 +448,6 @@ async function run(){
       await tp.addScriptTag({content:cineSource});
       await tp.waitForFunction(()=>typeof window.TGGStoryMissions?.start==='function'&&typeof window.TGGStoryCinematics?.getState==='function',undefined,{timeout:3000}).catch(()=>{});
       await tp.waitForTimeout(80);
-
       const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
       const loaded=await tp.evaluate(()=>({
         story:typeof window.TGGStoryMissions?.start==='function',
@@ -597,8 +746,7 @@ async function run(){
           street
         };
       });
-      const checks=[];
-      const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
+      const checks=[];      const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
       add('v218-mega-desktop-ok',desktop.ok===true,'passed='+desktop.passed+'/'+desktop.total);
       add('v218-mega-desktop-volume',desktop.total>=526,desktop.total);
       add('v218-mega-mobile-source-loaded',mobileSourceOk,'exact V2.18 HTML+CSS from '+path.relative(process.cwd(),local.serveRoot));
@@ -897,8 +1045,7 @@ async function run(){
           setItem:(k,v)=>{store[k]=String(v)},
           removeItem:k=>{delete store[k]},
           clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
-        }});
-        window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:0,xp:0,level:7};
+        }});        window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:0,xp:0,level:7};
         window.__qaCareer={recordings:4,mixtapes:2,reputation:0,studioLevel:4};
         window.__qaContent={completed:['flyer-run','studio-session','mixtape-promo']};
         window.__qaLife={battleWins:2,shows:2,activeOpportunity:null,contacts:{}};
@@ -1197,8 +1344,7 @@ async function run(){
         };
         window.TGGCareer={career:window.__qaCareer,addRep:n=>{window.__qaCareer.reputation+=Number(n)||0;return true}};
         window.TGGContent={state:window.__qaContent};
-        window.TGGWorldLife={
-          getState:()=>JSON.parse(JSON.stringify(window.__qaLife)),
+        window.TGGWorldLife={          getState:()=>JSON.parse(JSON.stringify(window.__qaLife)),
           setTab:t=>{window.__qaTab=t;return true},
           callContact:id=>{window.__qaLife.activeOpportunity={contactId:id,createdAt:Date.now(),title:'QA',detail:'QA'};return true}
         };
@@ -1497,8 +1643,7 @@ async function run(){
         document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
         document.getElementById('worldLifeBoard')?.classList.add('active');        const shell=document.querySelector('.world-life-shell')?.getBoundingClientRect();
         const tabs=[...document.querySelectorAll('.life-tabs button')].map(x=>x.getBoundingClientRect());
-        return {width:innerWidth,scrollWidth:document.documentElement.scrollWidth,overflowX:document.documentElement.scrollWidth>innerWidth+1,shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,minTab:tabs.length?Math.min(...tabs.map(x=>x.height)):0};      });
-      record('world-life-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
+        return {width:innerWidth,scrollWidth:document.documentElement.scrollWidth,overflowX:document.documentElement.scrollWidth>innerWidth+1,shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,minTab:tabs.length?Math.min(...tabs.map(x=>x.height)):0};      });      record('world-life-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
       record('world-life-mobile-tabs-readable',layout.minTab>=48,String(layout.minTab));
       result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'world_life_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
@@ -1797,7 +1942,6 @@ async function run(){
       await page.waitForTimeout(100);
       snap=await page.evaluate(()=>({calls:[...window.__qaCalls]}));
       record('gamepad-sprint',snap.calls.some(x=>x[0]==='walk'&&x[1]==='sprint'&&x[2]===true),JSON.stringify(snap.calls));
-
       await page.evaluate(()=>{
         window.__qaCalls.length=0;
         window.__qaState.inVehicle=true;
@@ -2097,8 +2241,7 @@ async function run(){
     if(REQUIRE_DESTINATIONS){
       record('destination-count',initial.destinations>=6,String(initial.destinations));
       record('destination-interact-api',initial.interactApi);
-      record('destination-interact-button',initial.interactButton);
-    }
+      record('destination-interact-button',initial.interactButton);    }
     if(REQUIRE_LIVING_CITY){
       record('pedestrian-population',initial.pedestrians>=6,String(initial.pedestrians));
       record('traffic-population',initial.traffic>=6,String(initial.traffic));

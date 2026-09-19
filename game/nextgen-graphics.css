@@ -1,0 +1,16 @@
+/* TGG NEXT-GEN GRAPHICS 2026.1 */
+#tggNextgenFx{position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden;--ngfx-speed:0}
+#tggNextgenFx .ngfx-vignette{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,transparent 35%,rgba(0,0,0,.14) 68%,rgba(0,0,0,.5) 100%)}
+#tggNextgenFx .ngfx-bloom{position:absolute;inset:-10%;background:radial-gradient(circle at 50% 24%,rgba(255,218,176,.08),transparent 30%),radial-gradient(circle at 72% 48%,rgba(95,143,255,.05),transparent 24%);filter:blur(22px);mix-blend-mode:screen}
+#tggNextgenFx .ngfx-grain{position:absolute;inset:-40%;opacity:.035;background-image:repeating-radial-gradient(circle at 20% 30%,rgba(255,255,255,.3) 0 1px,transparent 1px 4px);animation:tggNgGrain .32s steps(2) infinite}
+#tggNextgenFx .ngfx-bars{position:absolute;left:0;right:0;height:0;background:#000;transition:height .35s ease}
+#tggNextgenFx .ngfx-bars.top{top:0}#tggNextgenFx .ngfx-bars.bottom{bottom:0}
+html[data-tgg-graphics="nextgen"] .city3d canvas{filter:saturate(1.08) contrast(1.035) brightness(.99)}
+html[data-tgg-graphics-quality="ultra"] .city3d canvas{filter:saturate(1.12) contrast(1.04) brightness(1.01)}
+html[data-tgg-weather="rain"] .city3d canvas{filter:saturate(.94) contrast(1.08) brightness(.92)}
+html[data-tgg-weather="clear"] .city3d canvas{filter:saturate(1.14) contrast(1.03) brightness(1.035)}
+.city3d{box-shadow:inset 0 0 90px rgba(0,0,0,.45),0 30px 80px rgba(0,0,0,.6)}
+.city-title,.vehicle-hud,.player-move-hud,.nav-hud{backdrop-filter:blur(14px) saturate(1.2)}
+@keyframes tggNgGrain{0%{transform:translate3d(-2%,-1%,0)}50%{transform:translate3d(1%,2%,0)}100%{transform:translate3d(-1%,0,0)}}
+@media (prefers-reduced-motion:reduce){#tggNextgenFx .ngfx-grain{animation:none}}
+@media (max-width:700px){#tggNextgenFx .ngfx-grain{display:none}#tggNextgenFx .ngfx-bloom{opacity:.65}}

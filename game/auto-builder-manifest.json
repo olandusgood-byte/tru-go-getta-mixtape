@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.18",
-  "module": "GAME-V1.18",
-  "name": "World Events + Crowd Momentum",
+  "version": "1.19",
+  "module": "GAME-V1.19",
+  "name": "Dynamic City Reactions + Chained Opportunities",
   "workflow": [
     "BUILD",
     "TEST",
@@ -44,9 +44,13 @@
     "v1_18_world_events": true,
     "v1_18_crowd_momentum": true,
     "v1_18_local_world_event_state": true,
-    "v1_18_no_external_mutation": true
+    "v1_18_no_external_mutation": true,
+    "v1_19_dynamic_reactions": true,
+    "v1_19_chained_opportunities": true,
+    "v1_19_local_reaction_state": true,
+    "v1_19_no_external_mutation": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.19 DYNAMIC CITY REACTIONS + CHAINED OPPORTUNITIES"
+  "next": "V1.20 CITY RELATIONSHIPS + CONTACT MEMORY"
 }

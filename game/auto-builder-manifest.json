@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "4.81",
-  "module": "GAME-V4.81-BULK",
-  "name": "Bulk V4.67-V4.81 Release Browser Live Viewer Audits Gates",
+  "version": "4.96",
+  "module": "GAME-V4.96-BULK",
+  "name": "Bulk V4.82-V4.96 Release Browser Live Viewer Audits Gates",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -171,7 +171,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V4.82",
+  "next": "V4.97",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

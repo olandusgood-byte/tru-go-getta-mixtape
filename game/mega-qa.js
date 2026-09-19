@@ -6,6 +6,8 @@
     ['TGG3D','isReady'],['TGG3D','nearbyDestination'],['TGG3D','interactNearest'],['TGG3D','cycleCamera'],['TGG3D','setCameraMode'],['TGG3D','getCameraMode'],['TGG3D','setVehicleDynamics'],['TGG3D','setPlayerDynamics'],['TGG3D','setCarAppearance'],
     ['TGGStoryMissions','status'],['TGGStoryMissions','sync'],['TGGStoryMissions','doCurrent'],['TGGStoryMissions','navigationTarget'],['TGGStoryMissions','start'],['TGGStoryMissions','startChapter2'],['TGGStoryMissions','startChapter3'],
     ['TGGStoryWorld3D','getStatus'],['TGGStoryWorld3D','isNearTarget'],
+    ['TGGStreetPresence','getStatus'],['TGGStreetPresence','setDensity'],['TGGStreetPresence','getDensity'],
+    ['TGGCrowdPresentation','getStatus'],['TGGCrowdPresentation','getFocus'],
     ['TGGVerticalSlice','checkpoint'],['TGGVerticalSlice','getState'],['TGGVerticalSlice','setQuality'],['TGGVerticalSlice','setInput']
   ];
 
@@ -80,8 +82,28 @@
       add('world:contact:'+i+':group',!!c?.group);
     });
 
+    const presence=window.TGGStreetPresence;
+    const presenceStatus=presence?.getStatus?.()||{};
+    add('street:runtime-ready',presenceStatus.ready===true,JSON.stringify(presenceStatus));
+    add('street:citizen-pool',Array.isArray(presence?.citizens)&&presence.citizens.length===14,presence?.citizens?.length);
+    add('street:social-pool',Array.isArray(presence?.socialPeople)&&presence.socialPeople.length===8,presence?.socialPeople?.length);
+    add('street:activity-nodes',Array.isArray(presence?.activityNodes)&&presence.activityNodes.length===4,presence?.activityNodes?.length);
+    add('street:density-valid',['LOW','MEDIUM','HIGH'].includes(presenceStatus.density),presenceStatus.density);
+    add('street:population-minimum',Number(presenceStatus.totalStreetPopulation)>=16,presenceStatus.totalStreetPopulation);
+    add('street:district-state',typeof presenceStatus.activeDistrict==='string'&&presenceStatus.activeDistrict.length>0,presenceStatus.activeDistrict);
+
+    const crowd=window.TGGCrowdPresentation;
+    const crowdStatus=crowd?.getStatus?.()||{};
+    add('crowd:runtime-ready',crowdStatus.ready===true,JSON.stringify(crowdStatus));
+    add('crowd:fan-pool',Array.isArray(crowd?.fans)&&crowd.fans.length===12,crowd?.fans?.length);
+    add('crowd:clusters',Array.isArray(crowd?.clusters)&&crowd.clusters.length===4,crowd?.clusters?.length);
+    add('crowd:visible-fans',Number(crowdStatus.visibleFans)>=4,crowdStatus.visibleFans);
+    add('crowd:accessories',Number(crowdStatus.accessories)>=20,crowdStatus.accessories);
+    add('crowd:street-phones',Number(crowdStatus.streetPhones)>=4,crowdStatus.streetPhones);
+    add('crowd:total-presented',Number(crowdStatus.totalPresented)>=20,crowdStatus.totalPresented);
+
     const scripts=[...document.scripts].map(s=>(s.getAttribute('src')||'').split('/').pop()).filter(Boolean);
-    ['game.js','game-3d.js','navigation.js','gamepad.js','final-build.js','career.js','career-director.js','world-life.js','story-missions.js','story-cinematics.js','story-world-3d.js','vertical-slice-director.js'].forEach(file=>{
+    ['game.js','game-3d.js','navigation.js','gamepad.js','final-build.js','career.js','career-director.js','world-life.js','story-missions.js','story-cinematics.js','story-world-3d.js','street-presence.js','crowd-presentation.js','vertical-slice-director.js'].forEach(file=>{
       add('script:'+file,scripts.includes(file),scripts.join(','));
     });
 

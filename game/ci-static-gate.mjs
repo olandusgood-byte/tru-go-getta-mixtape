@@ -42,6 +42,12 @@ assert(contract.status===0,'V1.13 static contract failed:\n'+(contract.stderr||c
 const continuity=spawnSync(process.execPath,[path.join(root,'v149-v160-runtime.test.mjs')],{encoding:'utf8'});
 assert(continuity.status===0,'V1.49-V2.xx dynamic runtime continuity failed:\n'+(continuity.stderr||continuity.stdout||''));
 
+const americaWorldgenTest=path.join(root,'v1901-v3000-america-worldgen.test.mjs');
+if(fs.existsSync(americaWorldgenTest)){
+  const americaWorldgen=spawnSync(process.execPath,[americaWorldgenTest],{encoding:'utf8'});
+  assert(americaWorldgen.status===0,'V19.01-V30.00 America worldgen static checks failed:\n'+(americaWorldgen.stderr||americaWorldgen.stdout||''));
+}
+
 const html=read('index.html');
 const v114=read('v114-live-city.js');
 const scripts=[...html.matchAll(/<script[^>]+src=["']([^"']+)["']/g)].map(m=>m[1]);

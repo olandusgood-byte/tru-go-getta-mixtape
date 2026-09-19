@@ -350,14 +350,26 @@ app.post('/enroll/session', async (req, res) => {
     }
     console.log(JSON.stringify({tgg_owner_enroll:true,stage:'worker_verify',ok:true}));
     ownerSession={access_token:access,refresh_token:refresh};
-    await persistOwnerRefreshToken(workerId,workerToken,refresh);
     last={status:'bootstrapped',worker_id:workerId,updated_at:new Date().toISOString()};
+    let sessionPersisted=false;
+    let persistError=null;
+    for(let attempt=1;attempt<=3&&!sessionPersisted;attempt++){
+      try{
+        await persistOwnerRefreshToken(workerId,workerToken,refresh);
+        sessionPersisted=true;
+      }catch(error){
+        persistError=error?.message||String(error);
+        console.error(JSON.stringify({tgg_owner_enroll:true,stage:'session_persist',ok:false,attempt,reason:persistError}));
+        if(attempt<3)await new Promise(r=>setTimeout(r,attempt*500));
+      }
+    }
     scheduleBootstrapLoop(loop);
-    console.log(JSON.stringify({tgg_owner_enroll:true,stage:'session_persisted',ok:true}));
-    return res.json({ok:true,worker_id:workerId,version:RUNTIME_VERSION,certification_started:true,session_persisted:true});
+    console.log(JSON.stringify({tgg_owner_enroll:true,stage:'session_ready',ok:true,session_persisted:sessionPersisted,persist_error:persistError||null}));
+    return res.status(sessionPersisted?200:202).json({ok:true,worker_id:workerId,version:RUNTIME_VERSION,certification_started:true,session_persisted:sessionPersisted,persistence_warning:sessionPersisted?null:'session_memory_only'});
   } catch(error) {
-    console.error(JSON.stringify({tgg_owner_enroll:true,ok:false,stage:'exception',error:error?.message||String(error)}));
-    return res.status(500).json({error:'owner_enrollment_failed',stage:'exception'});
+    const detail=String(error?.message||String(error)||'unknown_exception').slice(0,180);
+    console.error(JSON.stringify({tgg_owner_enroll:true,ok:false,stage:'exception',error:detail}));
+    return res.status(500).json({error:'owner_enrollment_failed',stage:'exception',detail});
   }
 });
 app.post('/bootstrap', async (req, res) => { const authz = await authorizeBootstrap(req.body, { verifyOwner: verifyOwnerSession, verifyWorker: verifyWorkerCredential }); if (!authz.ok) return res.status(authz.error === 'invalid_bootstrap' ? 400 : 403).json({ error: authz.error }); const { worker_id:id, worker_token:token, access_token:access, refresh_token:refresh }=authz.value; workerId=id; workerToken=token; ownerSession={access_token:access,refresh_token:refresh}; try { await persistOwnerRefreshToken(id,token,refresh); } catch (_error) { return res.status(500).json({ error:'owner_session_persist_failed' }); } last={status:'bootstrapped',worker_id:id,updated_at:new Date().toISOString()}; scheduleBootstrapLoop(loop); return res.json({ok:true,worker_id:id,version:RUNTIME_VERSION,certification_started:true,session_persisted:true}); });

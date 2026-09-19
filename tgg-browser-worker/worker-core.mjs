@@ -170,7 +170,7 @@ async function loop() {
     const job = extractClaimJob(claim.data);
     if (!job?.id) { last = { status:'idle', updated_at:new Date().toISOString() }; return; }
     last = { status:'running', flow_key:job.flow_key, job_id:job.id, updated_at:new Date().toISOString() };
-    if (job.flow_key !== 'protected_audio_runtime') { await complete(job,'blocked',{reason:'Unsupported flow_key for this worker.'},[]); return; }
+    if (!['protected_audio_runtime','certification_runtime'].includes(job.flow_key)) { await complete(job,'blocked',{reason:'Unsupported flow_key for this worker.'},[]); return; }
     try {
       const result = await runProtectedAudio(job);
       await complete(job,'passed',result,result.captures);

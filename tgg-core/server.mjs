@@ -60,6 +60,7 @@ async function init() {
     initPromise = (async () => {
       const schema = await fs.readFile(schemaPath, 'utf8');
       await pool.query(schema);
+      await pool.query(`alter table tgg_browser_sessions add column if not exists credential_hash text unique; alter table tgg_browser_sessions add column if not exists credential_encrypted text; alter table tgg_browser_sessions add column if not exists credential_expires_at timestamptz; alter table tgg_browser_sessions add column if not exists revoked_at timestamptz; alter table tgg_browser_sessions add column if not exists last_seen_at timestamptz; create index if not exists tgg_browser_sessions_credential_idx on tgg_browser_sessions(credential_hash,credential_expires_at);`);
       await pool.query(`create table if not exists tgg_worker_registry (id uuid primary key default gen_random_uuid(), worker_id text not null unique, worker_token_hash text not null, status text not null default 'active', metadata jsonb not null default '{}'::jsonb, last_seen_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now()); create table if not exists tgg_browser_jobs (id uuid primary key default gen_random_uuid(), worker_id uuid references tgg_worker_registry(id) on delete set null, flow_key text not null, status text not null default 'queued', payload jsonb not null default '{}'::jsonb, result jsonb, evidence jsonb not null default '[]'::jsonb, lease_token text, lease_expires_at timestamptz, attempts integer not null default 0, max_attempts integer not null default 3, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), finished_at timestamptz); create index if not exists tgg_browser_jobs_claim_idx on tgg_browser_jobs(status,lease_expires_at,created_at); create table if not exists tgg_browser_viewer_events (id bigserial primary key, browser_session_id uuid not null references tgg_browser_sessions(id) on delete cascade, event_type text not null, payload jsonb not null default '{}'::jsonb, created_at timestamptz not null default now()); create index if not exists tgg_browser_viewer_events_session_idx on tgg_browser_viewer_events(browser_session_id,id);`);
     })();
   }
@@ -1044,9 +1045,11 @@ app.post('/v1/browser/worker-session/restore', async (req,res,next)=>{
 });
 app.post('/v1/browser/sessions', auth, async (req,res,next)=>{
   try {
+    const credential=newToken();
+    const credentialExpires=new Date(Date.now()+SESSION_DAYS*86400000);
     const r=await pool.query(
-      'insert into tgg_browser_sessions(user_id,session_key,metadata) values($1,$2,$3) returning *',
-      [req.user.id,crypto.randomBytes(24).toString('hex'),req.body?.metadata||{}]
+      'insert into tgg_browser_sessions(user_id,session_key,credential_hash,credential_encrypted,credential_expires_at,metadata) values($1,$2,$3,$4,$5,$6) returning *',
+      [req.user.id,crypto.randomBytes(24).toString('hex'),hashToken(credential),encryptSecret(credential),credentialExpires,req.body?.metadata||{}]
     );
     await pool.query(
       'insert into tgg_browser_viewer_events(browser_session_id,event_type,payload) values($1,$2,$3)',
@@ -1055,6 +1058,23 @@ app.post('/v1/browser/sessions', auth, async (req,res,next)=>{
     await pool.query('select pg_notify($1,$2)',['tgg_browser_viewer',JSON.stringify({browser_session_id:r.rows[0].id,event_type:'session_created'})]);
     res.status(201).json({session:r.rows[0]});
   } catch(e){next(e);}
+});
+
+app.post('/v1/browser/sessions/:id/credential', async (req,res,next)=>{
+  try{
+    const w=workerAuthorized(req); if(!w)return res.status(401).json({error:'worker_credentials_required'});
+    const r=await pool.query(
+      `select s.id,s.user_id,s.status,s.credential_encrypted,s.credential_expires_at,s.revoked_at,j.id as job_id,j.status as job_status
+       from tgg_browser_sessions s join tgg_browser_jobs j on j.payload->>'browser_session_id'=s.id::text and j.worker_id=$2
+       where s.id=$1 and j.status='running' order by j.created_at desc limit 1`,[req.params.id,w.id]);
+    if(!r.rowCount)return res.status(404).json({error:'browser_session_worker_binding_not_found'});
+    const row=r.rows[0];
+    if(row.revoked_at || !row.credential_expires_at || new Date(row.credential_expires_at)<=new Date())return res.status(401).json({error:'browser_session_credential_expired'});
+    const credential=decryptSecret(row.credential_encrypted);
+    if(!credential)return res.status(500).json({error:'browser_session_credential_decrypt_failed'});
+    await pool.query('update tgg_browser_sessions set last_seen_at=now(),updated_at=now() where id=$1',[row.id]);
+    res.json({ok:true,access_token:credential,token_type:'Bearer',expires_at:new Date(row.credential_expires_at).toISOString(),user_id:row.user_id});
+  }catch(e){next(e);}
 });
 
 app.patch('/v1/browser/sessions/:id', auth, async (req,res,next)=>{

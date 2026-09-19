@@ -71,7 +71,8 @@
     const rival=rivalMoves[(round+state.battleWins)%rivalMoves.length];
     const attr=choice==='bars'?state.attributes.focus:choice==='crowd'?state.attributes.presence:Math.ceil((state.attributes.focus+state.attributes.presence)/2);
     const base={flow:4,bars:4.5,crowd:3.5}[choice]||3;
-    const lifeReadiness=window.TGGLifeOS?.performanceModifier?.()||1;
+    const lifeOutcome=window.TGGLifeOS?.careerOutcome?.('battle')||{scoreMultiplier:window.TGGLifeOS?.performanceModifier?.()||1,rewardMultiplier:1};
+    const lifeReadiness=lifeOutcome.scoreMultiplier||1;
     const playerScore=(base+attr*.7+battleModifier(choice,rival))*lifeReadiness;
     const rivalScore=3.8+round*.65+(game().level||1)*.12;
     state.battle.player+=playerScore;
@@ -83,7 +84,7 @@
       state.battle.active=false;
       if(won){
         state.battleWins++;
-        const cash=220+state.battleWins*20;
+        const cash=Math.round((220+state.battleWins*20)*(lifeOutcome.rewardMultiplier||1));
         reward(cash,55,30);
         state.battle.last=`BATTLE WON • +$${cash} • +55 XP • +30 REP`;
         notify('RAP BATTLE WON');
@@ -100,14 +101,16 @@
   function startShow(){
     state.battle.active=false;
     state.tab='show';
-    state.show={active:true,move:0,energy:clamp(62+state.attributes.stamina*6,0,100),crowd:35,score:0,last:'LIGHTS UP — build the crowd.'};
+    const lifeOutcome=window.TGGLifeOS?.careerOutcome?.('show')||{startBonus:0};
+    state.show={active:true,move:0,energy:clamp(62+state.attributes.stamina*6,0,100),crowd:clamp(35+(lifeOutcome.startBonus||0),0,100),score:0,last:'LIGHTS UP — build the crowd.'};
     window.TGGLifeOS?.applyCareerAction?.('show');
     save();render();emitFocus('stage');notify('LIVE SHOW STARTED');
   }
   function showMove(move){
     if(!state.show.active)startShow();
     const a=state.attributes;
-    const lifeReadiness=window.TGGLifeOS?.performanceModifier?.()||1;
+    const lifeOutcome=window.TGGLifeOS?.careerOutcome?.('show')||{scoreMultiplier:window.TGGLifeOS?.performanceModifier?.()||1,rewardMultiplier:1};
+    const lifeReadiness=lifeOutcome.scoreMultiplier||1;
     if(move==='perform'){
       state.show.energy-=18;
       state.show.crowd+=10+a.presence*2;
@@ -134,7 +137,7 @@
       state.show.active=false;
       if(success){
         state.shows++;
-        const cash=Math.round(180+state.show.crowd*3+state.show.score);
+        const cash=Math.round((180+state.show.crowd*3+state.show.score)*(lifeOutcome.rewardMultiplier||1));
         const xp=45+state.attributes.presence*4;
         reward(cash,xp,25);
         state.show.last=`SHOW COMPLETE • CROWD ${Math.round(state.show.crowd)} • +$${cash} • +${xp} XP`;
@@ -176,7 +179,7 @@
     notify(`${attr.toUpperCase()} +1 • TRAINING COST $${cost}`);
     return true;
   }
-  function trainingCost(attr){return 40+(Number(state.attributes[attr])||1)*25}
+  function trainingCost(attr){const base=40+(Number(state.attributes[attr])||1)*25;const discount=window.TGGLifeOS?.careerOutcome?.('training')?.trainingDiscount||0;return Math.max(10,Math.round(base*(1-discount)))}
 
   function setTab(tab){
     if(!['battle','show','phone','gym'].includes(tab))return;

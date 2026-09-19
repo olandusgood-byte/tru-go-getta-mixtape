@@ -12,6 +12,10 @@ on:
       - 'game/**'
       - '.github/workflows/game-browser-smoke.yml'
 
+concurrency:
+  group: game-browser-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   browser-smoke:
     runs-on: ubuntu-latest

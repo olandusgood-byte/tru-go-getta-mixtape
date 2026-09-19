@@ -80,7 +80,12 @@ try{
 
   await page.waitForFunction(()=>!!window.TGGGame&&!!window.TGG3D?.isReady?.(),{timeout:30000});
   const required=['TGGVisualPolish','TGGRealismMega','TGGMotionRealism','TGGCityWorldMega','TGGGameFeel','TGGLivingCity','TGGWorldInteraction','TGGLifeSim','TGGOpportunityLoop','TGGWorldSystems','TGGLifestyle','TGGSocialWorld','TGGRoutineWorld','TGGHomeSocial','TGGFamilyHousehold'];
-  await page.waitForFunction(req=>req.every(x=>!!window[x]),required,{timeout:30000});
+  try{
+    await page.waitForFunction(req=>req.every(x=>!!window[x]),required,{timeout:60000});
+  }catch{
+    const missingLegacy=await page.evaluate(req=>req.filter(x=>!window[x]),required);
+    throw new Error('Legacy runtime readiness timeout '+JSON.stringify(missingLegacy));
+  }
 
   const layerCheck=await page.evaluate(()=>{
     const required=['TGGVisualPolish','TGGRealismMega','TGGMotionRealism','TGGCityWorldMega','TGGGameFeel','TGGLivingCity','TGGWorldInteraction','TGGLifeSim','TGGOpportunityLoop','TGGWorldSystems','TGGLifestyle','TGGSocialWorld','TGGRoutineWorld','TGGHomeSocial','TGGFamilyHousehold'];

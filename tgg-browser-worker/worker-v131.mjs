@@ -71,13 +71,31 @@ async function restoreOwnerSessionFromRefreshToken() {
       return false;
     }
     console.log(JSON.stringify({tgg_owner_session_restore:true,ok:true,stage:'refresh_token_retrieved'}));
-    const authClient = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-    const refreshed = await authClient.auth.refreshSession({ refresh_token: refreshToken });
-    if (refreshed.error || !refreshed.data?.session?.access_token) {
-      console.error(JSON.stringify({tgg_owner_session_restore:true,ok:false,stage:'supabase_refresh',reason:refreshed.error?.message||'session_missing'}));
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 12000);
+    let refreshedBody={};
+    try {
+      const response = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method:'POST',
+        headers:{'content-type':'application/json','apikey':SUPABASE_KEY},
+        body:JSON.stringify({refresh_token:refreshToken}),
+        signal:ctl.signal
+      });
+      const raw=await response.text();
+      try{refreshedBody=JSON.parse(raw)}catch{}
+      if(!response.ok || !refreshedBody?.access_token){
+        const reason=refreshedBody?.msg||refreshedBody?.error_description||refreshedBody?.error||('HTTP '+response.status);
+        console.error(JSON.stringify({tgg_owner_session_restore:true,ok:false,stage:'supabase_refresh',reason:String(reason).slice(0,160)}));
+        return false;
+      }
+    } catch (error) {
+      const reason=error?.name==='AbortError'?'supabase_refresh_timeout':(error?.message||String(error));
+      console.error(JSON.stringify({tgg_owner_session_restore:true,ok:false,stage:'supabase_refresh',reason:String(reason).slice(0,160)}));
       return false;
+    } finally {
+      clearTimeout(timer);
     }
-    ownerSession = { access_token: refreshed.data.session.access_token, refresh_token: refreshed.data.session.refresh_token || refreshToken };
+    ownerSession = { access_token: refreshedBody.access_token, refresh_token: refreshedBody.refresh_token || refreshToken };
     await persistOwnerRefreshToken(workerId, workerToken, ownerSession.refresh_token);
     last = { status: 'session_restored', worker_id: workerId, updated_at: new Date().toISOString() };
     console.log(JSON.stringify({tgg_owner_session_restore:true,ok:true,stage:'session_ready'}));

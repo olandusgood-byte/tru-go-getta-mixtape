@@ -1114,7 +1114,7 @@ app.post('/v1/workers/jobs/ensure-certification', async (req,res,next)=>{
     const w=await requireWorker(req,res); if(!w)return;
     const email=String(req.body?.email||'').toLowerCase().trim();
     const certification_type=String(req.body?.certification_type||'protected_audio_runtime').trim();
-    if(!/^\\S+@\\S+\\.\\S+$/.test(email)) return res.status(400).json({error:'valid_email_required'});
+    if(!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({error:'valid_email_required'});
     let u=await pool.query('select id,email,display_name,role from users where email=$1',[email]);
     if(!u.rowCount){
       const password_hash=passwordHash(crypto.randomBytes(32).toString('hex'));

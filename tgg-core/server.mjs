@@ -1177,7 +1177,8 @@ app.post('/v1/workers/jobs/ensure-protected-audio-certification', async (req,res
     if(!cert) cert=(await pool.query("insert into tgg_certifications(user_id,certification_type,evidence) values($1,'protected_audio_runtime',$2) returning *",[user.id,{qa_fixture:true,storage_key:storageKey}])).rows[0];
     const existingJob=await pool.query("select * from tgg_browser_jobs where payload->>'certification_id'=$1 and status in ('queued','running') order by created_at desc limit 1",[String(cert.id)]);
     if(existingJob.rowCount) return res.json({certification:cert,job:existingJob.rows[0],created:true,existing:true});
-    const payload={certification_id:cert.id,user_id:user.id,certification_type:'protected_audio_runtime',object_key:storageKey,mime_type:'audio/wav',url:(String(process.env.TGG_PUBLIC_BASE_URL||'').replace(/\/$/,'')||'')+'/qa/protected-audio'};
+    const challenge=crypto.randomBytes(24).toString('base64url');
+    const payload={certification_id:cert.id,user_id:user.id,certification_type:'protected_audio_runtime',object_key:storageKey,mime_type:'audio/wav',url:(String(process.env.TGG_PUBLIC_BASE_URL||'').replace(/\/$/,'')||'')+'/qa/protected-audio',challenge};
     const job=(await pool.query("insert into tgg_browser_jobs(flow_key,payload) values('protected_audio_runtime',$1) returning *",[payload])).rows[0];
     await pool.query("update tgg_certifications set evidence=coalesce(evidence,'{}'::jsonb)||$2::jsonb where id=$1",[cert.id,JSON.stringify({browser_job_id:job.id,qa_fixture:true})]);
     res.status(201).json({certification:cert,job,created:true});

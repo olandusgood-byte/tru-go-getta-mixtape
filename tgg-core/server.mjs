@@ -66,8 +66,9 @@ const TOKEN_SECRET = process.env.TGG_TOKEN_SECRET || crypto.randomBytes(32).toSt
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
-function encryptSecret(value){ const iv=crypto.randomBytes(12); const key=crypto.createHash('sha256').update(TOKEN_SECRET).digest(); const cipher=crypto.createCipheriv('aes-256-gcm',key,iv); const encrypted=Buffer.concat([cipher.update(String(value),'utf8'),cipher.final()]); return iv.toString('base64url')+'.'+cipher.getAuthTag().toString('base64url')+'.'+encrypted.toString('base64url'); }
-function decryptSecret(value){ const [ivS,tagS,dataS]=String(value||'').split('.'); if(!ivS||!tagS||!dataS) return null; const key=crypto.createHash('sha256').update(TOKEN_SECRET).digest(); const decipher=crypto.createDecipheriv('aes-256-gcm',key,Buffer.from(ivS,'base64url')); decipher.setAuthTag(Buffer.from(tagS,'base64url')); return Buffer.concat([decipher.update(Buffer.from(dataS,'base64url')),decipher.final()]).toString('utf8'); }
+function secretKey(material=TOKEN_SECRET){ return crypto.createHash('sha256').update(String(material)).digest(); }
+function encryptSecret(value,material=TOKEN_SECRET){ const iv=crypto.randomBytes(12); const cipher=crypto.createCipheriv('aes-256-gcm',secretKey(material),iv); const encrypted=Buffer.concat([cipher.update(String(value),'utf8'),cipher.final()]); return iv.toString('base64url')+'.'+cipher.getAuthTag().toString('base64url')+'.'+encrypted.toString('base64url'); }
+function decryptSecret(value,material=TOKEN_SECRET){ try { const [ivS,tagS,dataS]=String(value||'').split('.'); if(!ivS||!tagS||!dataS) return null; const decipher=crypto.createDecipheriv('aes-256-gcm',secretKey(material),Buffer.from(ivS,'base64url')); decipher.setAuthTag(Buffer.from(tagS,'base64url')); return Buffer.concat([decipher.update(Buffer.from(dataS,'base64url')),decipher.final()]).toString('utf8'); } catch { return null; } }
 
 function passwordHash(password, salt = crypto.randomBytes(16).toString('hex')) {
   const derived = crypto.scryptSync(password, salt, 64).toString('hex');
@@ -926,7 +927,7 @@ app.post('/v1/browser/worker-session', async (req,res,next)=>{
     const refresh_token=String(req.body?.refresh_token||'');
     const worker_id=String(req.body?.worker_id||'');
     if(!refresh_token||!worker_id||worker_id!==w.worker_id)return res.status(400).json({error:'worker_session_fields_required'});
-    const encrypted=encryptSecret(refresh_token);
+    const encrypted=encryptSecret(refresh_token,w.hash);
     const r=await pool.query("update tgg_worker_registry set metadata=coalesce(metadata,'{}'::jsonb) || jsonb_build_object('owner_refresh_token_encrypted',$2::text),updated_at=now() where worker_id=$1 and worker_token_hash=$3 returning worker_id",[worker_id,encrypted,w.hash]);
     if(!r.rowCount)return res.status(404).json({error:'worker_not_found'});
     res.json({ok:true});
@@ -937,7 +938,7 @@ app.post('/v1/browser/worker-session/restore', async (req,res,next)=>{
     const w=workerAuthorized(req); if(!w)return res.status(401).json({error:'worker_credentials_required'});
     const r=await pool.query("select metadata->>'owner_refresh_token_encrypted' as refresh_token from tgg_worker_registry where worker_id=$1 and worker_token_hash=$2 and status='active'",[w.id,w.hash]);
     if(!r.rowCount||!r.rows[0].refresh_token)return res.status(404).json({error:'owner_session_not_found'});
-    const refresh_token=decryptSecret(r.rows[0].refresh_token); if(!refresh_token)return res.status(500).json({error:'owner_session_decrypt_failed'});
+    const refresh_token=decryptSecret(r.rows[0].refresh_token,w.hash); if(!refresh_token)return res.status(500).json({error:'owner_session_decrypt_failed'});
     res.json({ok:true,refresh_token});
   }catch(e){next(e);}
 });

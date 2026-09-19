@@ -204,7 +204,7 @@ async function run(){
       add('v227-night-shift-pressure',coreCheck.sum.rivalCount===2&&coreCheck.sum.pressure>=36,JSON.stringify(coreCheck.sum));
       add('v227-core-income',coreCheck.day.rewards.cash===130&&coreCheck.day.rewards.rep===4,JSON.stringify(coreCheck.day));
 
-      await mp.evaluate(()=>{window.TGGV227.render();window.TGGGame.show('cityConsequencesBoard')});
+      await mp.evaluate(()=>{window.TGGGame.show('cityConsequencesBoard');window.TGGV227.render();});
       await mp.waitForTimeout(100);
       const layout=await mp.evaluate(()=>{
         const shell=document.querySelector('.v227-shell')?.getBoundingClientRect();
@@ -347,8 +347,7 @@ async function run(){
       const studioBefore=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='studio').player);
       await mp.evaluate(()=>{window.__qaCareer.recordings+=1;window.TGGV226.sync();});
       await mp.waitForTimeout(100);
-      const studioAfter=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='studio').player);
-      add('v226-recording-affects-studio',studioAfter>=studioBefore+8,studioBefore+'->'+studioAfter);
+      const studioAfter=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='studio').player);      add('v226-recording-affects-studio',studioAfter>=studioBefore+8,studioBefore+'->'+studioAfter);
 
       const battleBefore=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='downtown').player);
       await mp.evaluate(()=>{window.__qaWorldLife.battleWins+=1;window.TGGV226.sync();});
@@ -697,8 +696,7 @@ async function run(){
         hud:{
           active:document.getElementById('appointmentHud')?.classList.contains('active'),
           title:document.getElementById('appointmentHudTitle')?.textContent||'',
-          checkDisabled:document.getElementById('appointmentHudCheck')?.disabled
-        }
+          checkDisabled:document.getElementById('appointmentHudCheck')?.disabled        }
       }));
       add('v223-accept-runtime',snap.schedule.active?.status==='accepted',JSON.stringify(snap.schedule.active));
       add('v223-city-target',snap.target?.x===72&&snap.target?.y===36&&snap.target?.schedule===true,JSON.stringify(snap.target));
@@ -1047,7 +1045,6 @@ async function run(){
       snap=await mp.evaluate(()=>({state:window.TGGLifeOS.getState(),cash:window.__qaCash}));
       record('lifeos-hangout-spends',snap.cash===cashBeforeHangout-20,JSON.stringify({before:cashBeforeHangout,after:snap.cash}));
       record('lifeos-hangout-stat',snap.state.stats.hangouts===1,JSON.stringify(snap.state.stats));
-
       const cashBeforeUpgrade=await mp.evaluate(()=>window.__qaCash);
       await mp.evaluate(()=>window.TGGLifeOS.upgrade('bed'));
       snap=await mp.evaluate(()=>({state:window.TGGLifeOS.getState(),cash:window.__qaCash}));
@@ -1397,8 +1394,7 @@ async function run(){
       const mobileCss=await fs.readFile(path.join(local.serveRoot,'style.css'),'utf8');
       let mobileHtml=await fs.readFile(path.join(local.serveRoot,'index.html'),'utf8');
       while(mobileHtml.includes('<script')){
-        const scriptStart=mobileHtml.indexOf('<script');
-        const scriptEnd=mobileHtml.indexOf('</script>',scriptStart);
+        const scriptStart=mobileHtml.indexOf('<script');        const scriptEnd=mobileHtml.indexOf('</script>',scriptStart);
         if(scriptEnd<0)break;
         mobileHtml=mobileHtml.slice(0,scriptStart)+mobileHtml.slice(scriptEnd+9);
       }
@@ -1747,8 +1743,7 @@ async function run(){
         }});        window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:0,xp:0,level:7};
         window.__qaCareer={recordings:4,mixtapes:2,reputation:0,studioLevel:4};
         window.__qaContent={completed:['flyer-run','studio-session','mixtape-promo']};
-        window.__qaLife={battleWins:2,shows:2,activeOpportunity:null,contacts:{}};
-        window.__qaShown='storyMissionsBoard';window.__qaTab=null;window.__qaToasts=[];
+        window.__qaLife={battleWins:2,shows:2,activeOpportunity:null,contacts:{}};        window.__qaShown='storyMissionsBoard';window.__qaTab=null;window.__qaToasts=[];
         window.TGGGame={
           getState:()=>window.__qaGame,
           getActiveScreen:()=>window.__qaShown,
@@ -2097,8 +2092,7 @@ async function run(){
 
       await mp.evaluate(()=>document.querySelector('[data-media="video"]')?.click());
       await mp.waitForTimeout(40);      await mp.evaluate(()=>window.TGGStoryMissions.sync());
-      snap=await mp.evaluate(()=>({        status:window.TGGStoryMissions.status(),
-        game:{...window.__qaGame},career:{...window.__qaCareer},        stored:JSON.parse(localStorage.getItem('tgg-story-missions-v1')||'null')
+      snap=await mp.evaluate(()=>({        status:window.TGGStoryMissions.status(),        game:{...window.__qaGame},career:{...window.__qaCareer},        stored:JSON.parse(localStorage.getItem('tgg-story-missions-v1')||'null')
       }));
       record('chapter2-completes',snap.status?.completed===true&&snap.status?.step===10,JSON.stringify(snap.status));      record('chapter2-final-reward',snap.game.cash===1800&&snap.game.xp===450&&snap.career.reputation===175,JSON.stringify({game:snap.game,career:snap.career}));
       record('chapter2-persistence',snap.stored?.chapter2?.completed===true&&snap.stored?.chapter2?.step===10,JSON.stringify(snap.stored?.chapter2));
@@ -2447,8 +2441,7 @@ async function run(){
         game:window.__qaGame,career:window.__qaCareer,
         stats:document.getElementById('careerDirectorStats')?.textContent||'',
         next:window.TGGCareerDirector?.recommendation?.(),
-        stored:JSON.parse(localStorage.getItem('tgg-career-director-v1')||'null')
-      }));
+        stored:JSON.parse(localStorage.getItem('tgg-career-director-v1')||'null')      }));
       record('career-rewards',final.director?.fans===650&&final.director?.buzz===72&&final.game.cash===1770&&final.game.xp===335&&final.career.reputation===118,JSON.stringify(final));
       record('career-rank',final.director?.rank==='LOCAL BUZZ',final.director?.rank);
       record('career-ui-rendered',/LOCAL BUZZ/.test(final.stats)&&/650/.test(final.stats),final.stats);
@@ -2797,8 +2790,7 @@ async function run(){
     result={
         ok:false,status:'webgl_not_ready',target:TARGET,
         error:error?.message||String(error),        diagnostics,        console_errors:consoleErrors,
-        page_errors:pageErrors,        failed_resources:failedResources,
-        updated_at:new Date().toISOString()
+        page_errors:pageErrors,        failed_resources:failedResources,        updated_at:new Date().toISOString()
       };
       console.error(JSON.stringify({tgg_3d_smoke_once:true,...result}));      await ctx.close();
       return;

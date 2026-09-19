@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.60",
-  "module": "GAME-V1.60",
-  "name": "Production Observability + Autonomous Fault Detection + Runtime Recovery Controller",
+  "version": "1.63",
+  "module": "GAME-V1.63",
+  "name": "Production Self-Test + Regression Matrix + Autonomous Release Gate",
   "workflow": [
     "BUILD",
     "TEST",
@@ -110,9 +110,13 @@
     "v1_58_observability": true,
     "v1_59_fault_detection": true,
     "v1_60_recovery_controller": true,
-    "v1_60_local_state": true
+    "v1_60_local_state": true,
+    "v1_61_production_self_test": true,
+    "v1_62_regression_matrix": true,
+    "v1_63_release_gate": true,
+    "v1_63_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.61 PRODUCTION SELF-TEST + REGRESSION MATRIX"
+  "next": "V1.64 PRODUCTION TELEMETRY + INCIDENT JOURNAL"
 }

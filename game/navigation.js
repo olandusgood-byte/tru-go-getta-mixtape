@@ -20,6 +20,18 @@
           arrived:!!story.arrived
         };
       }
+      const worldBeat=window.TGGWorldDepth?.beatNavigation?.();
+      if(worldBeat){
+        const p=toWorld(worldBeat);
+        return {
+          label:'WORLD • '+(worldBeat.targetLabel||worldBeat.label||'OPPORTUNITY'),
+          x:p.x,z:p.z,
+          color:worldBeat.color||'#c7ff00',
+          radius:Number(worldBeat.radius)||7,
+          worldBeat:true,
+          arrived:!!worldBeat.arrived
+        };
+      }
       if(s?.accepted)return {label:'MISSION',x:(72-50)*.92,z:(36-50)*.92,color:'#ff466d'};
       const p=toWorld(s);
       const ds=window.TGG3D?.destinations||[];
@@ -52,7 +64,8 @@
       distance.textContent=(t.arrived||t.meters<4)?'ARRIVED':t.meters+' m';
       arrow.style.transform='rotate('+relative+'deg)';
       root.style.setProperty('--nav-color',t.color);
-      root.classList.toggle('story-active',!!t.story);
+      root.classList.toggle('story-active',!!t.story||!!t.worldBeat);
+      root.classList.toggle('world-beat-active',!!t.worldBeat);
       root.classList.add('active');
       requestAnimationFrame(update);
     }

@@ -101,6 +101,67 @@ try{
     throw new Error('V4.60/Mission Ops gameplay contract failed '+JSON.stringify(gameplayMega));
   }
 
+  const worldInteractionRoute=await page.evaluate(()=>{
+    const start={...window.TGGGame.getState()};
+    const nav=window.TGGWorldDepth?.beatNavigation?.();
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        const ok=window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0);
+        if(!ok)return false;
+      }
+      return false;
+    };
+    const routed=!!nav&&stepAxis('y',50)&&stepAxis('x',nav.x)&&stepAxis('y',nav.y);
+    const arrived=window.TGGWorldDepth?.beatNavigation?.()||null;
+    return {start,routed,arrived,state:{...window.TGGGame.getState()}};
+  });
+  if(!worldInteractionRoute.routed||worldInteractionRoute.arrived?.arrived!==true){
+    throw new Error('World beat physical route failed '+JSON.stringify(worldInteractionRoute));
+  }
+  await page.waitForTimeout(180);
+  const interactState=await page.locator('#interact3dBtn').evaluate(el=>({
+    disabled:!!el.disabled,
+    text:String(el.textContent||'').trim(),
+    worldBeatReady:el.classList.contains('world-beat-ready')
+  }));
+  if(interactState.disabled||!interactState.worldBeatReady||!/^DO\s+/i.test(interactState.text)){
+    throw new Error('World beat contextual INTERACT unavailable '+JSON.stringify(interactState));
+  }
+  await page.locator('#interact3dBtn').click();
+  await page.waitForTimeout(180);
+  const worldInteractionResult=await page.evaluate(start=>{
+    const status=window.TGGWorldDepth?.getStatus?.()||{};
+    const history=Array.isArray(status.history)?status.history:[];
+    const completed=[...history].reverse().find(x=>x?.type==='complete')||null;
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    const restored=stepAxis('y',50)&&stepAxis('x',start.x)&&stepAxis('y',start.y);
+    const current={...window.TGGGame.getState()};
+    return {activeBeat:status.activeBeat,completed,restored,current};
+  },worldInteractionRoute.start);
+  if(worldInteractionResult.activeBeat||
+     !worldInteractionResult.completed||
+     !worldInteractionResult.restored||
+     Math.hypot(worldInteractionResult.current.x-worldInteractionRoute.start.x,worldInteractionResult.current.y-worldInteractionRoute.start.y)>.05){
+    throw new Error('World beat physical INTERACT completion failed '+JSON.stringify(worldInteractionResult));
+  }
+
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
@@ -239,7 +300,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true}));
 }finally{
   await browser.close();
 }

@@ -405,6 +405,19 @@ app.post('/v1/workers/register', async (req,res,next)=>{
   }catch(e){next(e);}
 });
 
+app.post('/v1/workers/register-existing', async (req,res,next)=>{
+  try{
+    const w=workerAuthorized(req);
+    if(!w) return res.status(401).json({error:'worker_credentials_required'});
+    const worker_id=w.id;
+    const worker_token=w.token;
+    const r=await pool.query(`insert into tgg_worker_registry(worker_id,worker_token_hash,metadata,last_seen_at)
+      values($1,$2,$3,now()) on conflict(worker_id) do update set worker_token_hash=excluded.worker_token_hash,metadata=excluded.metadata,status='active',updated_at=now(),last_seen_at=now() returning id,worker_id,status`,
+      [worker_id,hashWorkerToken(worker_token),req.body?.metadata||{}]);
+    res.status(201).json({worker:r.rows[0]});
+  }catch(e){next(e);}
+});
+
 app.post('/v1/workers/heartbeat', async (req,res,next)=>{
   try{ const w=await requireWorker(req,res); if(!w)return; res.json({ok:true,worker_id:w.worker_id,at:new Date().toISOString()}); }catch(e){next(e);}
 });

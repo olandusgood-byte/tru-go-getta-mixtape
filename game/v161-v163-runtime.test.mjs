@@ -1,0 +1,17 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+const root=path.resolve('game');
+const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
+const store=new Map();
+const localStorage={getItem:k=>store.has(k)?store.get(k):null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)};
+const context=vm.createContext({window:{},localStorage,console,Date,JSON,Math,Number,String,Array,Object,WeakSet,Set,Map,RegExp});
+const layers=['v149-snapshot-diff.js','v150-replay-engine.js','v151-reconciliation.js','v152-continuity-audit.js','v153-state-validation.js','v154-repair-orchestration.js','v155-world-integrity.js','v156-certification-gates.js','v157-runtime-health.js','v158-observability.js','v159-fault-detection.js','v160-recovery-controller.js','v161-production-self-test.js','v162-regression-matrix.js','v163-release-gate.js'];
+for(const file of layers)vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
+const w=context.window;
+for(let n=49;n<=60;n++)w['TGGV'+n].run({requireHistory:true,requireReplay:true,requireReconciliation:true,requireExecuted:true,schedulerReady:true,state:{world:{cash:1},player:{xp:1},crew:{},events:{}},before:{world:{cash:1}},after:{world:{cash:2}},expected:{world:{cash:1}},current:{world:{cash:1}},events:[{seq:1,type:'ci'}],issues:[],tag:'ci'});
+const self=w.TGGV61.run({source:'ci'});assert(self.ok===true,'V1.61 self-test must pass healthy stack');assert(self.checks.length===12,'V1.61 must inspect 12 runtimes');
+const matrix=w.TGGV62.run({source:'ci'});assert(matrix.ok===true,'V1.62 regression matrix must pass healthy stack');
+const gate=w.TGGV63.run({runtimeHealth:true,faultCount:0,recoveryReady:true});assert(gate.ok===true,'V1.63 release gate must pass healthy stack');
+const saved=w.TGGV57;delete w.TGGV57;const brokenSelf=w.TGGV61.run({source:'tamper'});assert(brokenSelf.ok===false,'V1.61 must fail when required runtime is missing');const brokenGate=w.TGGV63.run({runtimeHealth:true,faultCount:0,recoveryReady:true});assert(brokenGate.ok===false,'V1.63 must fail closed after continuity failure');w.TGGV57=saved;
+console.log(JSON.stringify({ok:true,healthyGate:gate.ok,tamperDetected:!brokenGate.ok,checked:'V1.49-V1.63'}));

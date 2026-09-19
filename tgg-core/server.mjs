@@ -896,6 +896,15 @@ app.post('/v1/workers/heartbeat', async (req,res,next)=>{
   try{ const w=await requireWorker(req,res); if(!w)return; res.json({ok:true,worker_id:w.worker_id,at:new Date().toISOString()}); }catch(e){next(e);}
 });
 
+app.post('/v1/workers/certification-status', async (req,res,next)=>{
+  try{
+    const w=await requireWorker(req,res); if(!w)return;
+    const counts=await pool.query("select status,count(*)::int as count from tgg_certifications group by status order by status");
+    const latest=await pool.query("select id,status,certification_type,browser_session_id,evidence from tgg_certifications order by id desc limit 5");
+    res.json({counts:counts.rows,latest:latest.rows.map(x=>({id:x.id,status:x.status,certification_type:x.certification_type,browser_session_id:x.browser_session_id,evidence:x.evidence}))});
+  }catch(e){next(e);}
+});
+
 app.post('/v1/workers/jobs/recover-certification', async (req,res,next)=>{
   try{
     const w=await requireWorker(req,res); if(!w)return;

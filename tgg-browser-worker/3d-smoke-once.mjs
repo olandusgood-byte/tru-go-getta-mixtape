@@ -8,6 +8,8 @@ import { promisify } from 'node:util';
 const execFileAsync=promisify(execFile);
 
 const PORT=Number(process.env.PORT||10000);
+const QA_SERVER=String(process.env.TGG_QA_SERVER||'0')==='1';
+const QA_CHILD=String(process.env.TGG_QA_CHILD||'0')==='1';
 const TARGET=String(process.env.TGG_3D_SMOKE_TARGET||'').trim();
 const EXPECT_VERSION=String(process.env.TGG_3D_EXPECT_VERSION||'V1.22 3D').trim();
 const REQUIRE_DESTINATIONS=String(process.env.TGG_3D_REQUIRE_DESTINATIONS||'0')==='1';
@@ -3607,22 +3609,106 @@ async function run(){
     await ctx.close();
   } finally {await browser.close();}
 }
-const statusServer=http.createServer((_req,res)=>{
-  res.setHeader('content-type','application/json; charset=utf-8');
-  res.end(JSON.stringify(result));
-});
-statusServer.listen(PORT,async()=>{
-  console.log(JSON.stringify({tgg_3d_smoke_server:true,port:PORT,target:TARGET}));
+const MODE_ENV={
+  player:'TGG_3D_PLAYER_SMOOTH_ONLY',
+  world:'TGG_3D_WORLD_ONLY',
+  gamepad:'TGG_3D_GAMEPAD_ONLY',
+  driving:'TGG_3D_DESKTOP_DRIVE_ONLY',
+  vehicle:'TGG_3D_VEHICLE_LOGIC_ONLY',
+  mobile:'TGG_3D_MOBILE_LAYOUT_ONLY',
+  world_life:'TGG_3D_WORLD_LIFE_ONLY',
+  career:'TGG_3D_CAREER_DIRECTOR_ONLY',
+  career_mobile:'TGG_3D_CAREER_MOBILE_ONLY',
+  story:'TGG_3D_STORY_MISSION_ONLY',
+  story_chapter2:'TGG_3D_STORY_CHAPTER2_ONLY',
+  story_world_3d:'TGG_3D_STORY_WORLD_3D_ONLY'
+};
+const ALL_MODE_ENV=[...new Set(Object.values(MODE_ENV))];
+
+async function runChildMode(mode,target,version){
+  if(!MODE_ENV[mode]) return {ok:false,status:'error',error:'unknown mode: '+mode,available:Object.keys(MODE_ENV)};
+  const env={...process.env,TGG_QA_SERVER:'0',TGG_QA_CHILD:'1',TGG_3D_SMOKE_TARGET:target||TARGET,TGG_3D_EXPECT_VERSION:version||EXPECT_VERSION};
+  ALL_MODE_ENV.forEach(k=>{env[k]='0'});
+  env[MODE_ENV[mode]]='1';
+  return await new Promise((resolve)=>{
+    const child=spawn(process.execPath,[fileURLToPath(import.meta.url)],{env,stdio:['ignore','pipe','pipe']});
+    let out='',err='';
+    child.stdout.on('data',d=>{out+=String(d)});
+    child.stderr.on('data',d=>{err+=String(d)});
+    const timer=setTimeout(()=>{child.kill('SIGKILL');resolve({ok:false,status:'error',mode,error:'qa timeout',stderr:err.slice(-4000)})},120000);
+    child.on('close',code=>{
+      clearTimeout(timer);
+      const lines=(out+'\n'+err).split(/\r?\n/).filter(Boolean);
+      let payload=null;
+      for(let i=lines.length-1;i>=0;i--){
+        try{
+          const x=JSON.parse(lines[i]);
+          if(x?.tgg_3d_smoke_once){payload=x;break}
+        }catch{}
+      }
+      resolve(payload||{ok:false,status:'error',mode,exit_code:code,error:'no QA result emitted',stdout:out.slice(-4000),stderr:err.slice(-4000)});
+    });
+  });
+}
+
+if(QA_CHILD){
   try{
     await run();
   }catch(error){
     result={ok:false,status:'error',target:TARGET,error:error?.message||String(error),updated_at:new Date().toISOString()};
     console.error(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-    process.exitCode=1;  }finally{
-    statusServer.closeAllConnections?.();
-    await Promise.race([
-      new Promise(resolve=>statusServer.close(()=>resolve())),
-      new Promise(resolve=>setTimeout(resolve,1000))
-    ]);
+    process.exitCode=1;
   }
-});
+}else if(QA_SERVER){
+  let last={ok:true,status:'ready',service:'tgg-persistent-qa',available_modes:Object.keys(MODE_ENV),updated_at:new Date().toISOString()};
+  let busy=false;
+  const server=http.createServer(async(req,res)=>{
+    res.setHeader('content-type','application/json; charset=utf-8');
+    const url=new URL(req.url||'/', 'http://localhost');
+    if(url.pathname==='/health'||url.pathname==='/'){
+      res.end(JSON.stringify({...last,busy,available_modes:Object.keys(MODE_ENV)}));
+      return;
+    }
+    if(url.pathname!=='/run'){
+      res.statusCode=404;res.end(JSON.stringify({ok:false,error:'use /health or /run?mode=...'}));return;
+    }
+    if(busy){
+      res.statusCode=409;res.end(JSON.stringify({ok:false,status:'busy',last}));return;
+    }
+    const mode=String(url.searchParams.get('mode')||'').trim();
+    const target=String(url.searchParams.get('target')||TARGET).trim();
+    const version=String(url.searchParams.get('version')||EXPECT_VERSION).trim();
+    busy=true;
+    try{
+      last=await runChildMode(mode,target,version);
+      last={...last,service:'tgg-persistent-qa',updated_at:new Date().toISOString()};
+      res.statusCode=last.ok?200:422;
+      res.end(JSON.stringify(last));
+    }catch(error){
+      last={ok:false,status:'error',mode,error:error?.message||String(error),service:'tgg-persistent-qa',updated_at:new Date().toISOString()};
+      res.statusCode=500;res.end(JSON.stringify(last));
+    }finally{busy=false}
+  });
+  server.listen(PORT,()=>console.log(JSON.stringify({tgg_persistent_qa_server:true,port:PORT,modes:Object.keys(MODE_ENV)})));
+}else{
+  const statusServer=http.createServer((_req,res)=>{
+    res.setHeader('content-type','application/json; charset=utf-8');
+    res.end(JSON.stringify(result));
+  });
+  statusServer.listen(PORT,async()=>{
+    console.log(JSON.stringify({tgg_3d_smoke_server:true,port:PORT,target:TARGET}));
+    try{
+      await run();
+    }catch(error){
+      result={ok:false,status:'error',target:TARGET,error:error?.message||String(error),updated_at:new Date().toISOString()};
+      console.error(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      process.exitCode=1;
+    }finally{
+      statusServer.closeAllConnections?.();
+      await Promise.race([
+        new Promise(resolve=>statusServer.close(()=>resolve())),
+        new Promise(resolve=>setTimeout(resolve,1000))
+      ]);
+    }
+  });
+}

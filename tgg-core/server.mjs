@@ -70,7 +70,7 @@ async function init() {
 
 const SESSION_DAYS = 30;
 const TOKEN_SECRET = process.env.TGG_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
-const TGG_SUPABASE_URL = String(process.env.TGG_SUPABASE_URL || '').replace(/\\/$/,'');
+const TGG_SUPABASE_URL = String(process.env.TGG_SUPABASE_URL || '').replace(/\/$/,'');
 const TGG_SUPABASE_PUBLISHABLE_KEY = String(process.env.TGG_SUPABASE_PUBLISHABLE_KEY || '');
 
 async function getSupabaseUser(accessToken) {

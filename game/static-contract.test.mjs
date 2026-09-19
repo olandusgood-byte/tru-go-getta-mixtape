@@ -31,7 +31,7 @@ const v390=read('v390-opportunity-loop.js');
 const v400=read('v400-world-systems.js');
 const v410=read('v410-lifestyle.js');
 const v420=read('v420-social-world.js');
-const v430=read('v430-routine-world.js','v440-home-social.js','v450-family-household.js');
+const v430=read('v430-routine-world.js');
 const v440=read('v440-home-social.js');
 const v450=read('v450-family-household.js');
 
@@ -40,6 +40,8 @@ assert.match(html,/GAME V4\.50 • FAMILY \+ HOUSEHOLD \+ LEGACY/);
 assert.equal(runtime.canonical_runtime,'V4.50 FAMILY HOUSEHOLD LEGACY WORLD MEGA');
 assert.equal(runtime.base_runtime,'V4.40 HOME SOCIAL LIFE MEGA');
 assert.equal(runtime.consolidation,'all-compatible-layers-one-runtime');
+assert.ok(html.includes('<link rel="stylesheet" href="v450-family-household.css">'),'missing V4.50 stylesheet');
+assert.ok(html.includes('<script src="v450-family-household.js"></script>'),'missing V4.50 runtime script');
 for(const id of [
   'city3d','radar3d','radarPlayer','radarCar','vehicleHud','speedValue','gearValue',
   'driveStateValue','playerMoveHud','walkModeValue','walkSpeedValue','navHud','navArrow',

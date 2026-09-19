@@ -37,6 +37,7 @@ const LIFE_OS_ONLY=String(process.env.TGG_3D_LIFE_OS_ONLY||'0')==='1';
 const V222_RELATIONSHIP_ONLY=String(process.env.TGG_3D_V222_RELATIONSHIP_ONLY||'0')==='1';
 const V223_SOCIAL_SCHEDULE_ONLY=String(process.env.TGG_3D_V223_SOCIAL_SCHEDULE_ONLY||'0')==='1';
 const V224_SOCIAL_WORLD_ONLY=String(process.env.TGG_3D_V224_SOCIAL_WORLD_ONLY||'0')==='1';
+const V225_RIVAL_ONLY=String(process.env.TGG_3D_V225_RIVAL_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function startV218SnapshotServer(){
@@ -73,6 +74,123 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(V225_RIVAL_ONLY){
+      const pageErrors=[];const consoleErrors=[];const failedResources=[];
+      page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+      page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      page.on('requestfailed',req=>failedResources.push(req.url()));
+      await page.addInitScript(()=>{
+        localStorage.clear();
+        localStorage.setItem('tgg-crew-v1',JSON.stringify({members:['dj-v','kane'],updatedAt:Date.now()}));
+      });
+      const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
+      await page.waitForFunction(()=>window.TGG3D?.isReady?.()&&window.TGGV225?.status?.().ready&&window.TGGV225Core,{timeout:30000});
+      await page.evaluate(()=>window.TGGGame?.show?.('game'));
+      await page.waitForTimeout(450);
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+
+      let snap=await page.evaluate(()=>{
+        const group=window.TGG3D.scene.children.find(x=>x.userData?.v225);
+        return {
+          title:document.title,
+          status:window.TGGV225.status(),
+          group:group?{children:group.children.length,visible:group.visible,x:group.position.x,z:group.position.z}:null,
+          button:!!document.getElementById('rivalCrewBtn')
+        };
+      });
+      add('v225-title',snap.title.includes('V2.25 RIVAL CREWS'),snap.title);
+      add('v225-api',snap.status?.version==='V2.25'&&snap.status?.ready===true,JSON.stringify(snap.status));
+      add('v225-rival-action-button',snap.button);
+      add('v225-three-rival-models',!!snap.group&&snap.group.visible&&snap.group.children>=8,JSON.stringify(snap.group));
+      add('v225-crew-strength-gate',snap.status?.crewStrength>=67,JSON.stringify(snap.status));
+
+      await page.click('#rivalCrewBtn');
+      await page.waitForTimeout(180);
+      snap=await page.evaluate(()=>({status:window.TGGV225.status(),nav:window.TGGNavigation?.getTarget?.()}));
+      add('v225-track-toggle',snap.status?.tracked===true,JSON.stringify(snap.status));
+      add('v225-navigation-target',snap.nav?.rival===true&&String(snap.nav?.label||'').includes('NIGHT SHIFT'),JSON.stringify(snap.nav));
+
+      await page.evaluate(()=>{const s=window.TGGGame.getState();s.x=50;s.y=76;s.inVehicle=false;});
+      await page.waitForTimeout(420);
+      snap=await page.evaluate(()=>({
+        status:window.TGGV225.status(),
+        interact:{text:document.getElementById('interact3dBtn')?.textContent||'',disabled:document.getElementById('interact3dBtn')?.disabled},
+        hud:document.getElementById('v225RivalHud')?.classList.contains('active')
+      }));
+      add('v225-rival-proximity',snap.status?.distance<=7.2,JSON.stringify(snap.status));
+      add('v225-face-night-shift-button',snap.interact.disabled===false&&snap.interact.text==='FACE NIGHT SHIFT',JSON.stringify(snap.interact));
+      add('v225-rival-hud-visible',snap.hud===true);
+
+      await page.click('#interact3dBtn');
+      await page.waitForTimeout(180);
+      snap=await page.evaluate(()=>({
+        status:window.TGGV225.status(),
+        panel:document.getElementById('v225RivalPanel')?.classList.contains('active'),
+        collabDisabled:document.querySelector('[data-v225-choice="collab"]')?.disabled,
+        life:window.TGGLifeOS?.getState?.(),
+        game:{...window.TGGGame.getState()},
+        rep:Number(window.TGGCareer?.career?.reputation)||0
+      }));
+      add('v225-encounter-opens',snap.panel===true&&snap.status?.panelOpen===true,JSON.stringify(snap.status));
+      add('v225-collab-unlocked-by-crew',snap.collabDisabled===false,JSON.stringify({crewStrength:snap.status?.crewStrength,disabled:snap.collabDisabled}));
+
+      const before={cash:snap.game.cash,xp:snap.game.xp,rep:snap.rep,minute:snap.life?.minute,manager:snap.life?.relationships?.manager};
+      await page.evaluate(()=>window.TGGV225.choose('collab'));
+      await page.waitForTimeout(180);
+      snap=await page.evaluate(()=>({
+        status:window.TGGV225.status(),
+        game:{...window.TGGGame.getState()},
+        rep:Number(window.TGGCareer?.career?.reputation)||0,
+        life:window.TGGLifeOS?.getState?.(),
+        stored:JSON.parse(localStorage.getItem('tgg-v225-rival-v1')||'null'),
+        panel:document.getElementById('v225RivalPanel')?.classList.contains('active')
+      }));
+      add('v225-collab-route',snap.status?.lastChoice==='collab'&&snap.status?.route==='COLLAB ROUTE'&&snap.status?.alliance===20,JSON.stringify(snap.status));
+      add('v225-collab-reward',snap.game.cash===before.cash+140&&snap.game.xp===before.xp+45&&snap.rep===before.rep+12,JSON.stringify({before,after:{cash:snap.game.cash,xp:snap.game.xp,rep:snap.rep}}));
+      add('v225-life-os-time-impact',snap.life?.minute===((before.minute+30)%1440),JSON.stringify({before:before.minute,after:snap.life?.minute}));
+      add('v225-life-os-manager-link',snap.life?.relationships?.manager===before.manager+2,JSON.stringify({before:before.manager,after:snap.life?.relationships?.manager}));
+      add('v225-persistence',snap.stored?.rival?.lastChoice==='collab'&&snap.stored?.rival?.route==='COLLAB ROUTE',JSON.stringify(snap.stored));
+      add('v225-panel-closes-after-choice',snap.panel===false);
+
+      const coreCheck=await page.evaluate(()=>{
+        const a=window.TGGV225Core.createState();
+        const respect=window.TGGV225Core.applyChoice(a,'respect',{crewStrength:0});
+        const compete=window.TGGV225Core.applyChoice(a,'compete',{crewStrength:0});
+        const locked=window.TGGV225Core.applyChoice(a,'collab',{crewStrength:0});
+        return {respect,compete,locked};
+      });
+      add('v225-respect-path',coreCheck.respect?.respect===24&&coreCheck.respect?.rivalry===16&&coreCheck.respect?.route==='RESPECT ROUTE',JSON.stringify(coreCheck.respect));
+      add('v225-compete-path',coreCheck.compete?.rivalry===41&&coreCheck.compete?.respect===16&&coreCheck.compete?.route==='RIVAL ROUTE',JSON.stringify(coreCheck.compete));
+      add('v225-collab-lock-without-strength',coreCheck.locked===null,JSON.stringify(coreCheck.locked));
+
+      await page.setViewportSize({width:390,height:844});
+      await page.evaluate(()=>{window.TGGV225.open();});
+      await page.waitForTimeout(180);
+      const layout=await page.evaluate(()=>{
+        const p=document.getElementById('v225RivalPanel')?.getBoundingClientRect();
+        const choices=[...document.querySelectorAll('.v225-choices button')].map(x=>x.getBoundingClientRect());
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          panel:p?{left:p.left,right:p.right,width:p.width,height:p.height}:null,
+          choices:choices.map(x=>({width:x.width,height:x.height,top:x.top,left:x.left})),
+          columns:getComputedStyle(document.querySelector('.v225-choices')).gridTemplateColumns
+        };
+      });
+      add('v225-mobile-no-overflow',layout.scrollWidth<=391,JSON.stringify(layout));
+      add('v225-mobile-panel-contained',!!layout.panel&&layout.panel.left>=0&&layout.panel.right<=layout.width+1,JSON.stringify(layout.panel));
+      add('v225-mobile-choice-buttons-readable',layout.choices.length===3&&layout.choices.every(x=>x.height>=56),JSON.stringify(layout.choices));
+      add('v225-mobile-one-column',!!layout.columns&&!layout.columns.includes(' '),layout.columns);
+
+      result={
+        ok:checks.every(x=>x.pass)&&pageErrors.length===0,
+        status:'done',mode:'v225_rival_crews_harness',target:TARGET,http_status:response?.status?.()||0,
+        checks,console_errors:consoleErrors,page_errors:pageErrors,failed_resources:failedResources,
+        updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();return;
+    }
 
     if(V224_SOCIAL_WORLD_ONLY){
       const pageErrors=[];const consoleErrors=[];const failedResources=[];

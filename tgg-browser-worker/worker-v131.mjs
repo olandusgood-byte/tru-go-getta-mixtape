@@ -35,7 +35,7 @@ const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 async function verifyOwnerSession(accessToken) {
   try {
     if (!SUPABASE_URL || !SUPABASE_KEY) return {ok:false,error:'supabase_auth_not_configured'};
-    const authClient = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+    const authClient = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: rpcFetch } });
     const { data, error } = await authClient.auth.getUser(accessToken);
     if (error || !data?.user?.id) return {ok:false,error:'owner_auth_failed'};
     return {ok:true,user:data.user};

@@ -29,6 +29,7 @@ const STORY_CHAPTER2_ONLY=String(process.env.TGG_3D_STORY_CHAPTER2_ONLY||'0')===
 const STORY_CHAPTER3_ONLY=String(process.env.TGG_3D_STORY_CHAPTER3_ONLY||'0')==='1';
 const STORY_WORLD_3D_ONLY=String(process.env.TGG_3D_STORY_WORLD_3D_ONLY||'0')==='1';
 const MEGA_QA_ONLY=String(process.env.TGG_3D_MEGA_QA_ONLY||'0')==='1';
+const STREET_PRESENCE_ONLY=String(process.env.TGG_3D_STREET_PRESENCE_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -36,6 +37,104 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(STREET_PRESENCE_ONLY){
+      const consoleErrors=[];const pageErrors=[];const failedResources=[];
+      page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+      page.on('requestfailed',req=>failedResources.push(req.url()));
+      const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:30000});
+      await page.waitForFunction(()=>window.TGG3D?.isReady?.()&&window.TGGStreetPresence?.getStatus?.(),undefined,{polling:100,timeout:30000});
+      await page.waitForTimeout(350);
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
+
+      let snap=await page.evaluate(()=>({
+        title:document.title,
+        canvas:!!document.querySelector('#city3d canvas'),
+        api:typeof window.TGGStreetPresence?.getStatus==='function'&&typeof window.TGGStreetPresence?.setDensity==='function',
+        status:window.TGGStreetPresence?.getStatus?.(),
+        citizens:window.TGGStreetPresence?.citizens?.length||0,
+        social:window.TGGStreetPresence?.socialPeople?.length||0,
+        nodes:window.TGGStreetPresence?.activityNodes?.length||0,
+        first:window.TGGStreetPresence?.citizens?.[0]?{
+          x:window.TGGStreetPresence.citizens[0].position.x,
+          z:window.TGGStreetPresence.citizens[0].position.z
+        }:null
+      }));
+      add('street-v218-title',snap.title.includes('V2.18'),snap.title);
+      add('street-webgl-canvas',snap.canvas);
+      add('street-api',snap.api);
+      add('street-citizen-pool',snap.citizens===14,snap.citizens);
+      add('street-social-pool',snap.social===8,snap.social);
+      add('street-activity-nodes',snap.nodes===4,snap.nodes);
+      add('street-population',Number(snap.status?.totalStreetPopulation)>=16,JSON.stringify(snap.status));
+      add('street-density-valid',['LOW','MEDIUM','HIGH'].includes(snap.status?.density),snap.status?.density);
+
+      const firstBefore=snap.first;
+      await page.waitForTimeout(900);
+      snap=await page.evaluate(()=>({
+        first:window.TGGStreetPresence?.citizens?.[0]?{
+          x:window.TGGStreetPresence.citizens[0].position.x,
+          z:window.TGGStreetPresence.citizens[0].position.z
+        }:null
+      }));
+      const moved=firstBefore&&snap.first?Math.hypot(snap.first.x-firstBefore.x,snap.first.z-firstBefore.z):0;
+      add('street-roaming-motion',moved>.08,'distance='+moved.toFixed(3));
+
+      snap=await page.evaluate(()=>{
+        window.TGGStreetPresence.setDensity('LOW');
+        const status=window.TGGStreetPresence.getStatus();
+        return {
+          density:status.density,
+          citizens:window.TGGStreetPresence.citizens.filter(x=>x.visible).length,
+          social:window.TGGStreetPresence.socialPeople.filter(x=>x.visible).length,
+          total:status.totalStreetPopulation
+        };
+      });
+      add('street-low-density',snap.density==='LOW'&&snap.citizens===6&&snap.social===4&&snap.total>=16,JSON.stringify(snap));
+
+      snap=await page.evaluate(()=>{
+        window.TGGStreetPresence.setDensity('HIGH');
+        const status=window.TGGStreetPresence.getStatus();
+        return {
+          density:status.density,
+          citizens:window.TGGStreetPresence.citizens.filter(x=>x.visible).length,
+          social:window.TGGStreetPresence.socialPeople.filter(x=>x.visible).length,
+          total:status.totalStreetPopulation
+        };
+      });
+      add('street-high-density',snap.density==='HIGH'&&snap.citizens===14&&snap.social===8&&snap.total>=28,JSON.stringify(snap));
+
+      await page.evaluate(()=>{
+        const p=window.TGGStreetPresence.citizens[0];
+        const s=window.TGGGame.getState();
+        s.x=50+p.position.x/.92;
+        s.y=50+p.position.z/.92;
+      });
+      await page.waitForTimeout(180);
+      snap=await page.evaluate(()=>window.TGGStreetPresence.getStatus());
+      add('street-proximity-awareness',Number(snap.nearbyPeople)>=1,JSON.stringify(snap));
+
+      await page.waitForTimeout(220);
+      snap=await page.evaluate(()=>window.TGGStreetPresence.getStatus());
+      add('street-proximity-reaction',Number(snap.reactions)>=1,JSON.stringify(snap));
+      add('street-district-state',typeof snap.activeDistrict==='string'&&snap.activeDistrict.length>0,snap.activeDistrict);
+
+      result={
+        ok:checks.every(x=>x.pass)&&pageErrors.length===0,
+        status:'done',
+        mode:'street_presence_v218_harness',
+        target:TARGET,
+        http_status:response?.status?.()||0,
+        checks,
+        console_errors:consoleErrors,
+        page_errors:pageErrors,
+        failed_resources:failedResources,
+        updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();return;
+    }
 
     if(MEGA_QA_ONLY){
       const megaSha=String(process.env.TGG_3D_MEGA_QA_SHA||'').trim();
@@ -247,8 +346,7 @@ async function run(){
 
       let snap=await mp.evaluate(()=>({
         api:typeof window.TGGStoryMissions?.startChapter3==='function'&&typeof window.TGGStoryCinematics?.show==='function',
-        status:window.TGGStoryMissions?.status?.()
-      }));
+        status:window.TGGStoryMissions?.status?.()      }));
       record('chapter3-api',snap.api);
       record('chapter2-preserved',snap.status?.chapter===2&&snap.status?.completed===true&&snap.status?.step===10,JSON.stringify(snap.status));
 
@@ -497,8 +595,7 @@ async function run(){
         Object.defineProperty(window,'localStorage',{configurable:true,value:{
           getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
           setItem:(k,v)=>{store[k]=String(v)},
-          removeItem:k=>{delete store[k]},
-          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+          removeItem:k=>{delete store[k]},          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
         }});
         window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:0,xp:0,level:5};
         window.__qaCareer={recordings:3,mixtapes:1,reputation:0,studioLevel:3};
@@ -747,8 +844,7 @@ async function run(){
         throw new Error('World Life harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', life='+lifeResponse.status+', game='+gameResponse.status);
       }
       let html=await htmlResponse.text();
-      const [css,lifeSource,gameSource]=await Promise.all([cssResponse.text(),lifeResponse.text(),gameResponse.text()]);
-      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+      const [css,lifeSource,gameSource]=await Promise.all([cssResponse.text(),lifeResponse.text(),gameResponse.text()]);      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
                .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
       const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
       const mp=await mobile.newPage();
@@ -997,8 +1093,7 @@ async function run(){
         };
       });
       await page.addScriptTag({content:source});
-      await page.waitForTimeout(120);
-      await page.evaluate(()=>{
+      await page.waitForTimeout(120);      await page.evaluate(()=>{
         document.getElementById('newGame')?.click();
         const stage=document.getElementById('stageName'); if(stage)stage.value='TGG VEHICLE QA';
         document.getElementById('startGame')?.click();
@@ -1247,8 +1342,7 @@ async function run(){
       record('player-dynamics-sync',Number(walking.dyn?.speed)>2,JSON.stringify(walking.dyn));
       record('smooth-walk-deceleration',Number(coasting?.speed)<Number(walking.walk?.speed),JSON.stringify({walking:walking.walk?.speed,coast:coasting?.speed}));
 
-      await page.keyboard.down('ArrowUp');
-      await page.keyboard.down('ArrowRight');
+      await page.keyboard.down('ArrowUp');      await page.keyboard.down('ArrowRight');
       await page.waitForTimeout(650);
       const diagonal=await page.evaluate(()=>({walk:window.TGGGame?.getWalkingState?.(),tune:window.TGGGame?.getWalkTuning?.()}));
       await page.keyboard.up('ArrowUp');await page.keyboard.up('ArrowRight');
@@ -1497,8 +1591,7 @@ async function run(){
     console.log(JSON.stringify({tgg_3d_smoke_step:'cinematic-complete'}));
     if(WORLD_ONLY){
       if(String(EXPECT_VERSION).includes('V2.00'))record('gamepad-api',initial.gamepadApi);
-      result={
-        ok:(res?.status()===200)&&checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&failedResources.length===0,
+      result={        ok:(res?.status()===200)&&checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&failedResources.length===0,
         status:'done',
         mode:'world_cinematic_only',
         target:TARGET,

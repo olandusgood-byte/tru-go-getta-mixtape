@@ -86,7 +86,8 @@ async function run(){
         'index.html','v244-story-core.js','v244-story-forge.js','v244-story-forge.css',
         'v235-npc-core.js','navigation.js','vendor/three-r152.min.js'
       ];
-      const responses=await Promise.all(paths.map(p=>fetch(base+'/'+p)));
+      const cacheKey='qa='+Date.now();
+      const responses=await Promise.all(paths.map(p=>fetch(base+'/'+p+'?'+cacheKey,{cache:'no-store',headers:{'cache-control':'no-cache'}})));
       const http=Object.fromEntries(paths.map((p,i)=>[p,responses[i].status]));
       if(responses.some(r=>!r.ok))throw new Error('V2.44 live-source fetch failed '+JSON.stringify(http));
       const [indexHtml,coreSource,forgeSource,storyCss,npcCoreSource,navSource,threeSource]=await Promise.all(responses.map(r=>r.text()));

@@ -86,7 +86,7 @@ async function run(){
       page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
       page.on('requestfailed',r=>failed.push(r.url()));
       const response=await page.goto(TARGET,{waitUntil:'commit',timeout:45000});
-      await page.waitForFunction(()=>window.TGGV244&&window.TGGV244Core&&window.TGG3D?.isReady?.()&&window.TGGNavigation?.getTarget,{timeout:90000,polling:250});
+      await page.waitForFunction(()=>window.TGGV244&&window.TGGV244Core&&window.TGG3D?.isReady?.()&&window.TGGNavigation?.getTarget,null,{timeout:120000,polling:250});
       await page.waitForTimeout(650);
       const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
 
@@ -297,8 +297,7 @@ async function run(){
       const base=TARGET.endsWith('/index.html')?TARGET.slice(0,-11):(TARGET.endsWith('/')?TARGET.slice(0,-1):TARGET);
       const [htmlResponse,cssResponse,coreResponse,forgeResponse]=await Promise.all([
         fetch(base+'/index.html'),fetch(base+'/v242-director-forge.css'),fetch(base+'/v242-director-core.js'),fetch(base+'/v242-director-forge.js')
-      ]);      if(!htmlResponse.ok||!cssResponse.ok||!coreResponse.ok||!forgeResponse.ok){
-        throw new Error('V2.42 director harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', core='+coreResponse.status+', forge='+forgeResponse.status);
+      ]);      if(!htmlResponse.ok||!cssResponse.ok||!coreResponse.ok||!forgeResponse.ok){        throw new Error('V2.42 director harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', core='+coreResponse.status+', forge='+forgeResponse.status);
       }
       const [htmlSource,css,coreSource,forgeSource]=await Promise.all([htmlResponse.text(),cssResponse.text(),coreResponse.text(),forgeResponse.text()]);
       const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
@@ -597,8 +596,7 @@ async function run(){
         window.TGGStoryWorld3D={getStatus:()=>({near:false,target:null})};
         window.TGGSocialSchedule={near:()=>false,navigationTarget:()=>null};
         window.TGG3D={interactNearest:()=>false,destinations:[]};        window.__tggToast=t=>window.__qaToasts.push(String(t));
-      });
-      await mp.addScriptTag({content:coreSource});
+      });      await mp.addScriptTag({content:coreSource});
       await mp.addScriptTag({content:runtimeSource});
       await mp.addScriptTag({content:navSource});
       await mp.waitForTimeout(250);
@@ -897,8 +895,7 @@ async function run(){
         schedule:window.TGGSocialSchedule.status(),
         relationship:window.TGGLifeOS.getState().relationships.manager,        world:window.TGGStoryWorld3D.getStatus()
       }));
-      const manager=snap.schedule.invites.find(x=>x.id===managerId);
-      add('v224-interact-completes-appointment',manager?.status==='completed',JSON.stringify(manager));
+      const manager=snap.schedule.invites.find(x=>x.id===managerId);      add('v224-interact-completes-appointment',manager?.status==='completed',JSON.stringify(manager));
       add('v224-interact-relationship-gain',snap.relationship===before+10,JSON.stringify({before,after:snap.relationship}));
       add('v224-beacon-clears-after-complete',snap.world.target===null||snap.world.target?.contact!=='manager',JSON.stringify(snap.world));
 
@@ -1197,8 +1194,7 @@ async function run(){
         window.__qaRewards.length=0;        window.TGGWorldLife.startShow();
         ['hype','hype','hype','hype'].forEach(m=>window.TGGWorldLife.showMove(m));
       });
-      snap=await tp.evaluate(()=>({
-        state:window.TGGWorldLife.getState(),
+      snap=await tp.evaluate(()=>({        state:window.TGGWorldLife.getState(),
         rewards:[...window.__qaRewards],
         outcome:window.TGGLifeOS.careerOutcome('show')
       }));
@@ -1497,8 +1493,7 @@ async function run(){
         kicker:document.getElementById('storyCineKicker')?.textContent||'',        title:document.getElementById('storyCineTitle')?.textContent||'',
         badge:document.getElementById('storyCineBadge')?.textContent||'',
         type:document.getElementById('storyCineType')?.textContent||'',
-        camera:window.TGG3D.getCameraMode()      }));
-      add('v220-story-event-integration',snap.cine?.lastEvent?.type==='chapter-start'&&snap.cine?.lastEvent?.chapter===1,JSON.stringify(snap.cine));
+        camera:window.TGG3D.getCameraMode()      }));      add('v220-story-event-integration',snap.cine?.lastEvent?.type==='chapter-start'&&snap.cine?.lastEvent?.chapter===1,JSON.stringify(snap.cine));
       add('v220-chapter-visible',snap.cine?.visible===true&&String(snap.cine?.className||'').includes('chapter'),snap.cine?.className);
       add('v220-chapter-copy',snap.kicker.includes('CHAPTER 1')&&snap.title==='FIRST CONTRACT',JSON.stringify(snap));
       add('v220-chapter-badge',snap.badge==='01',snap.badge);
@@ -1797,8 +1792,7 @@ async function run(){
         title:document.title,
         canvas:!!document.querySelector('#city3d canvas'),
         api:typeof window.TGGStreetPresence?.getStatus==='function'&&typeof window.TGGStreetPresence?.setDensity==='function',
-        status:window.TGGStreetPresence?.getStatus?.(),
-        citizens:window.TGGStreetPresence?.citizens?.length||0,
+        status:window.TGGStreetPresence?.getStatus?.(),        citizens:window.TGGStreetPresence?.citizens?.length||0,
         social:window.TGGStreetPresence?.socialPeople?.length||0,
         nodes:window.TGGStreetPresence?.activityNodes?.length||0,
         first:window.TGGStreetPresence?.citizens?.[0]?{
@@ -2097,8 +2091,7 @@ async function run(){
       record('chapter3-dj-talk',snap.status?.step===1&&snap.opportunity?.contactId==='dj',JSON.stringify(snap));
       record('chapter3-objective-cinematic',snap.cinematic?.lastEvent?.type==='objective'&&snap.cinematic?.lastEvent?.title==='PACK THE VENUE',JSON.stringify(snap.cinematic));
 
-      await mp.evaluate(()=>{window.__qaLife.shows=3;window.TGGStoryMissions.sync();});
-      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      await mp.evaluate(()=>{window.__qaLife.shows=3;window.TGGStoryMissions.sync();});      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter3-show',snap.step===2&&snap.current?.id==='business-arrival',JSON.stringify(snap));
 
       await mp.evaluate(()=>{window.__qaGame.x=11;window.__qaGame.y=50;window.TGGStoryMissions.sync();});
@@ -2397,8 +2390,7 @@ async function run(){
         document.getElementById('game')?.classList.add('active');
         window.TGGStoryMissions.render();
         const hud=document.getElementById('storyWorldHud')?.getBoundingClientRect();
-        const button=document.getElementById('storyWorldAction')?.getBoundingClientRect();
-        return {
+        const button=document.getElementById('storyWorldAction')?.getBoundingClientRect();        return {
           width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
           overflowX:document.documentElement.scrollWidth>innerWidth+1,
           hud:hud?{left:hud.left,right:hud.right,width:hud.width}:null,
@@ -2697,8 +2689,7 @@ async function run(){
         window.TGGWorldLife={
           getState:()=>JSON.parse(JSON.stringify(window.__qaLife)),
           clearOpportunity:()=>{window.__qaLife.activeOpportunity=null;return true},
-          setTab:t=>{window.__qaTab=t;return true}
-        };
+          setTab:t=>{window.__qaTab=t;return true}        };
         window.TGGProgression={sync:()=>{window.__qaSyncs++;return true}};
         window.TGGWorldSync={sync:()=>true};
         window.__tggToast=()=>{};
@@ -2997,8 +2988,7 @@ async function run(){
       const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
       const initial=await page.evaluate(()=>({        title:document.title,
         state:window.TGGGame?.getState?.(),
-        walkingApi:typeof window.TGGGame?.getWalkingState==='function'&&typeof window.TGGGame?.setWalkKey==='function',
-        tune:window.TGGGame?.getWalkTuning?.(),
+        walkingApi:typeof window.TGGGame?.getWalkingState==='function'&&typeof window.TGGGame?.setWalkKey==='function',        tune:window.TGGGame?.getWalkTuning?.(),
         finalBuildVersion:window.TGGFinalBuild?.version||null,
       gamepadApi:typeof window.TGGGamepad?.isConnected==='function'
       }));
@@ -3297,8 +3287,7 @@ async function run(){
 
     await page.keyboard.down('ArrowUp');
     await page.waitForTimeout(900);
-    const accelerated=await page.evaluate(()=>({
-      state:window.TGGGame?.getState?.(),
+    const accelerated=await page.evaluate(()=>({      state:window.TGGGame?.getState?.(),
       driving:window.TGGGame?.getDrivingState?.(),      speedText:document.getElementById('speedValue')?.textContent,
       gearText:document.getElementById('gearValue')?.textContent,
       hudActive:document.getElementById('vehicleHud')?.classList.contains('active')

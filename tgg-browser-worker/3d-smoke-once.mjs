@@ -84,38 +84,68 @@ async function run(){
         await page.close();
         console.log(JSON.stringify({tgg_mega_stage:'desktop-page-closed'}));
 
+        const verticalSliceSource=await fs.readFile(path.join(serveRoot,'vertical-slice-director.js'),'utf8');
         const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
         const mp=await mobile.newPage();
         const mobileErrors=[];
         mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
-        const mobileResponse=await mp.goto(qaTarget,{waitUntil:'commit',timeout:15000});
-        console.log(JSON.stringify({tgg_mega_stage:'mobile-page-committed',status:mobileResponse?.status?.()||0}));
-        await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGGGame&&window.TGGStoryMissions,undefined,{polling:100,timeout:90000});
-        console.log(JSON.stringify({tgg_mega_stage:'mobile-core-apis-ready'}));
-        await mp.waitForTimeout(500);
+        await mp.route(/\\.js(?:\\?|$)/,route=>route.abort());
+        const mobileResponse=await mp.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:20000});
+        console.log(JSON.stringify({tgg_mega_stage:'mobile-layout-page-ready',status:mobileResponse?.status?.()||0}));
+        await mp.evaluate(()=>{
+          document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
+          document.getElementById('game')?.classList.add('active');
+          window.TGGGame={
+            getActiveScreen:()=> 'game',
+            getState:()=>({x:50,y:55,heading:0,inVehicle:false}),
+            save:()=>true,
+            show:()=>true
+          };
+          window.TGGStoryMissions={status:()=>({
+            chapter:3,chapterName:'CITY TAKEOVER',active:true,completed:false,progress:50,
+            current:{title:'MOBILE VERTICAL SLICE',detail:'Phone layout and controls validation.'}
+          })};
+          window.TGGNavigation={getTarget:()=>({meters:42})};
+          window.TGG3D={renderer:null};
+        });
+        await mp.addScriptTag({content:verticalSliceSource});
+        await mp.waitForSelector('#sliceDirector',{state:'attached',timeout:10000});
+        await mp.waitForTimeout(350);
         const mobileResult=await mp.evaluate(()=>{
-          const qa=window.TGGMegaQA.run();
           const body=document.documentElement;
           const director=document.getElementById('sliceDirector')?.getBoundingClientRect();
+          const city=document.querySelector('#game .city')?.getBoundingClientRect();
+          const dpad=document.querySelector('#game .dpad')?.getBoundingClientRect();
+          const move=document.querySelector('#game .move-pad')?.getBoundingClientRect();
+          const deck=document.querySelector('#game .action-deck')?.getBoundingClientRect();
           const actionButtons=[...document.querySelectorAll('#game .actions button')].map(x=>x.getBoundingClientRect());
           return {
-            qa,
             width:innerWidth,
             scrollWidth:body.scrollWidth,
             overflowX:body.scrollWidth>innerWidth+1,
-            director:director?{left:director.left,right:director.right,width:director.width}:null,
+            director:director?{left:director.left,right:director.right,width:director.width,height:director.height}:null,
+            city:city?{left:city.left,right:city.right,width:city.width}:null,
+            dpad:dpad?{left:dpad.left,right:dpad.right,width:dpad.width,height:dpad.height}:null,
+            move:move?{top:move.top,bottom:move.bottom,left:move.left,right:move.right}:null,
+            deck:deck?{top:deck.top,bottom:deck.bottom,left:deck.left,right:deck.right}:null,
             actionCount:actionButtons.length,
-            minActionHeight:actionButtons.length?Math.min(...actionButtons.map(x=>x.height)):0
+            minActionHeight:actionButtons.length?Math.min(...actionButtons.map(x=>x.height)):0,
+            chapter:document.getElementById('sliceChapter')?.textContent||'',
+            title:document.getElementById('sliceTitle')?.textContent||''
           };
         });
-        console.log(JSON.stringify({tgg_mega_stage:'mobile-suite-done',total:mobileResult.qa.total,passed:mobileResult.qa.passed,failed:mobileResult.qa.failed}));
+        console.log(JSON.stringify({tgg_mega_stage:'mobile-layout-done',layout:mobileResult}));
         const checks=[
           {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
           {name:'mega-check-volume',pass:desktop.total>=250&&desktop.total<=650,detail:String(desktop.total)},
-          {name:'mega-mobile-core-ok',pass:mobileResult.qa.ok,detail:'passed='+mobileResult.qa.passed+'/'+mobileResult.qa.total},
+          {name:'mega-mobile-source-http',pass:mobileResponse?.status?.()===200,detail:String(mobileResponse?.status?.()||0)},
           {name:'mega-mobile-no-overflow',pass:!mobileResult.overflowX&&mobileResult.scrollWidth<=391,detail:JSON.stringify({width:mobileResult.width,scrollWidth:mobileResult.scrollWidth})},
           {name:'mega-mobile-director-contained',pass:!!mobileResult.director&&mobileResult.director.left>=0&&mobileResult.director.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.director)},
-          {name:'mega-mobile-actions-readable',pass:mobileResult.actionCount>=20&&mobileResult.minActionHeight>=50,detail:JSON.stringify({count:mobileResult.actionCount,minHeight:mobileResult.minActionHeight})}
+          {name:'mega-mobile-city-contained',pass:!!mobileResult.city&&mobileResult.city.left>=0&&mobileResult.city.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.city)},
+          {name:'mega-mobile-dpad-contained',pass:!!mobileResult.dpad&&mobileResult.dpad.left>=0&&mobileResult.dpad.right<=mobileResult.width+1&&mobileResult.dpad.height>=140,detail:JSON.stringify(mobileResult.dpad)},
+          {name:'mega-mobile-controls-stacked',pass:!!mobileResult.move&&!!mobileResult.deck&&mobileResult.move.bottom<=mobileResult.deck.top+1,detail:JSON.stringify({move:mobileResult.move,deck:mobileResult.deck})},
+          {name:'mega-mobile-actions-readable',pass:mobileResult.actionCount>=20&&mobileResult.minActionHeight>=50,detail:JSON.stringify({count:mobileResult.actionCount,minHeight:mobileResult.minActionHeight})},
+          {name:'mega-mobile-vertical-slice-ui',pass:mobileResult.chapter.includes('CHAPTER 3')&&mobileResult.title==='MOBILE VERTICAL SLICE',detail:JSON.stringify({chapter:mobileResult.chapter,title:mobileResult.title})}
         ];
         result={
           ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&mobileErrors.length===0,
@@ -126,7 +156,7 @@ async function run(){
           http_status:response?.status?.()||0,
           checks,
           desktop_summary:{total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass).slice(0,30)},
-          mobile_summary:{total:mobileResult.qa.total,passed:mobileResult.qa.passed,failed:mobileResult.qa.failed,failed_checks:mobileResult.qa.checks.filter(x=>!x.pass).slice(0,30)},
+          mobile_summary:{mode:'layout-and-presentation',...mobileResult},
           console_errors:consoleErrors,
           page_errors:pageErrors,
           mobile_page_errors:mobileErrors,

@@ -37,6 +37,7 @@
   function reasonLabel(call){
     if(call.action==='favor')return 'FAVOR READY • '+String(call.reason||'OPPORTUNITY').toUpperCase();
     if(call.action==='contract')return 'CAREER CONTRACT • '+String(call.reason||'OPPORTUNITY').toUpperCase();
+    if(call.action==='meetup')return 'LOCATION SHARED • '+String(call.reason||'MEETUP').toUpperCase();
     return String(call.reason||'CHECK-IN').toUpperCase();
   }
   function syncBadge(){
@@ -61,7 +62,7 @@
   }
   function normalizeCall(name,reason='check-in',action='relationship',payload={}){
     if(!CONTACTS.includes(name))return null;
-    const valid=['relationship','favor','contract'];
+    const valid=['relationship','favor','contract','meetup'];
     return {
       id:name+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
       name,reason:String(reason||'check-in'),
@@ -97,6 +98,10 @@
     if(call.action==='contract'){
       const result=window.TGGCareerContracts?.startContract?.(call.payload?.contractId||null)||{ok:false,status:'contracts_unavailable'};
       return {kind:'contract',success:!!result?.ok,result};
+    }
+    if(call.action==='meetup'){
+      const result=window.TGGMeetups?.createMeetup?.(call.name,{source:'call',target:call.payload?.target||null,label:call.reason})||{accepted:false,status:'meetups_unavailable'};
+      return {kind:'meetup',success:!!result?.accepted,result};
     }
     const result=window.TGGNPCRelations?.interact?.(call.name)||{ok:false,status:'relations_unavailable'};
     return {kind:'relationship',success:!!result?.ok,result};

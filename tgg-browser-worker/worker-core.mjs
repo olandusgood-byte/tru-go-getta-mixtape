@@ -20,6 +20,40 @@ app.use(express.json({ limit: '2mb' }));
 let workerId = process.env.TGG_WORKER_ID || '';
 let workerToken = process.env.TGG_WORKER_TOKEN || '';
 let ownerSession = null;
+let ownerSessionRestored = false;
+
+async function coreOwnerSessionRestore() {
+  const coreUrl = String(process.env.TGG_CORE_URL || '').replace(/\\/$/, '');
+  if (!coreUrl || !workerId || !workerToken) return false;
+  try {
+    const response = await fetch(coreUrl + '/v1/browser/worker-session/restore', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-tgg-worker-id': workerId, 'x-tgg-worker-token': workerToken },
+      body: JSON.stringify({}), signal: AbortSignal.timeout(10000)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data?.refresh_token) return false;
+    const refresh = String(data.refresh_token);
+    const { data: refreshed, error } = await rpc.auth.refreshSession({ refresh_token: refresh });
+    if (error || !refreshed?.session?.access_token) return false;
+    ownerSession = { access_token: refreshed.session.access_token, refresh_token: refreshed.session.refresh_token || refresh };
+    ownerSessionRestored = true;
+    return true;
+  } catch { return false; }
+}
+
+async function coreOwnerSessionStore(refreshToken) {
+  const coreUrl = String(process.env.TGG_CORE_URL || '').replace(/\\/$/, '');
+  if (!coreUrl || !workerId || !workerToken || !refreshToken) return false;
+  try {
+    const response = await fetch(coreUrl + '/v1/browser/worker-session', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-tgg-worker-id': workerId, 'x-tgg-worker-token': workerToken },
+      body: JSON.stringify({ worker_id: workerId, refresh_token: refreshToken }), signal: AbortSignal.timeout(10000)
+    });
+    return response.ok;
+  } catch { return false; }
+}
 let running = false;
 let last = { status: 'idle', updated_at: new Date().toISOString() };
 const rpc = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -46,7 +80,9 @@ app.post('/bootstrap', async (req, res) => {
   if (!authz.ok) { const status = authz.error === 'invalid_bootstrap' ? 400 : 403; return res.status(status).json({ error: authz.error }); }
   const { worker_id: id, worker_token: token, access_token: access, refresh_token: refresh } = authz.value;
   workerId = id; workerToken = token; ownerSession = { access_token: access, refresh_token: refresh };
-  last = { status: 'bootstrapped', worker_id: id, updated_at: new Date().toISOString() };
+  ownerSessionRestored = false;
+  const persisted = await coreOwnerSessionStore(refresh);
+  last = { status: 'bootstrapped', worker_id: id, owner_session_persisted: persisted, updated_at: new Date().toISOString() };
   scheduleBootstrapLoop(loop);
   return res.json({ ok: true, worker_id: id, version: RUNTIME_VERSION, certification_started: true });
 });
@@ -123,6 +159,7 @@ async function runProtectedAudio(job) {
 }
 
 async function loop() {
+  if (!ownerSession?.access_token && !ownerSessionRestored) await coreOwnerSessionRestore();
   if (running || !workerId || !workerToken) return;
   running = true;
   try {

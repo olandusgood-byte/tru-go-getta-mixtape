@@ -39,6 +39,7 @@ const V223_SOCIAL_SCHEDULE_ONLY=String(process.env.TGG_3D_V223_SOCIAL_SCHEDULE_O
 const V224_SOCIAL_WORLD_ONLY=String(process.env.TGG_3D_V224_SOCIAL_WORLD_ONLY||'0')==='1';
 const V225_RIVAL_ONLY=String(process.env.TGG_3D_V225_RIVAL_ONLY||'0')==='1';
 const V226_INFLUENCE_ONLY=String(process.env.TGG_3D_V226_INFLUENCE_ONLY||'0')==='1';
+const V227_CONSEQUENCES_ONLY=String(process.env.TGG_3D_V227_CONSEQUENCES_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function startV218SnapshotServer(){
@@ -75,6 +76,159 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(V227_CONSEQUENCES_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,cssResponse,coreResponse,runtimeResponse,gameResponse]=await Promise.all([
+        fetch(base+'/index.html'),fetch(base+'/style.css'),fetch(base+'/v227-district-consequences-core.js'),
+        fetch(base+'/v227-district-consequences.js'),fetch(base+'/game.js')
+      ]);
+      if(!htmlResponse.ok||!cssResponse.ok||!coreResponse.ok||!runtimeResponse.ok||!gameResponse.ok){
+        throw new Error('V2.27 harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', core='+coreResponse.status+', runtime='+runtimeResponse.status+', game='+gameResponse.status);
+      }
+      let html=await htmlResponse.text();
+      const [css,coreSource,runtimeSource,gameSource]=await Promise.all([
+        cssResponse.text(),coreResponse.text(),runtimeResponse.text(),gameResponse.text()
+      ]);
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      const pageErrors=[];const consoleErrors=[];
+      mp.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+      mp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      await mp.setContent(html,{waitUntil:'domcontentloaded'});
+      await mp.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
+        window.__qaScreen='game';
+        window.__qaGame={x:50,y:50,cash:500,xp:100,level:4,inVehicle:false};
+        window.__qaCareer={reputation:20,recordings:2};
+        window.__qaLife={day:1,minute:600};
+        window.__qaToasts=[];
+        window.__qaInfluence={
+          version:'V2.26',cityScore:48,rivalScore:38,captures:1,totalPushes:3,
+          metrics:{recordings:2,battleWins:1,shows:1,visuals:0},
+          districts:[
+            {id:'studio',name:'STUDIO ROW',x:24,y:37,color:'#7b86ff',player:66,rival:40,control:'TGG CONTROL'},
+            {id:'downtown',name:'DOWNTOWN',x:50,y:50,color:'#c7ff00',player:48,rival:44,control:'CONTESTED'},
+            {id:'mixtape',name:'MIXTAPE AVE',x:76,y:63,color:'#48d7ff',player:45,rival:47,control:'CONTESTED'},
+            {id:'media',name:'MEDIA DISTRICT',x:50,y:89,color:'#c56cff',player:38,rival:58,control:'NIGHT SHIFT LEAN'}
+          ]
+        };
+        window.TGGGame={
+          getState:()=>window.__qaGame,getActiveScreen:()=>window.__qaScreen,
+          show:id=>{window.__qaScreen=id;document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));document.getElementById(id)?.classList.add('active');return true},
+          reward:(cash,xp)=>{window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return true}
+        };
+        window.TGGCareer={career:window.__qaCareer,addRep:n=>{window.__qaCareer.reputation+=Number(n)||0;return true}};
+        window.TGGLifeOS={getState:()=>window.__qaLife};
+        window.TGGV226={status:()=>JSON.parse(JSON.stringify(window.__qaInfluence))};
+        window.__tggToast=t=>window.__qaToasts.push(String(t));
+      });
+      await mp.addScriptTag({content:coreSource});
+      await mp.addScriptTag({content:runtimeSource});
+      await mp.waitForTimeout(220);
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+
+      let snap=await mp.evaluate(()=>({
+        title:document.title,status:window.TGGV227?.status?.(),core:window.TGGV227Core?.VERSION,
+        button:!!document.getElementById('cityConsequencesBtn'),board:!!document.getElementById('cityConsequencesBoard')
+      }));
+      add('v227-title',snap.title.includes('V2.27 DISTRICT CONSEQUENCES'),snap.title);
+      add('v227-core-api',snap.core==='V2.27');
+      add('v227-runtime-api',snap.status?.version==='V2.27'&&snap.status?.ready===true,JSON.stringify(snap.status));
+      add('v227-ui-hosts',snap.button&&snap.board,JSON.stringify({button:snap.button,board:snap.board}));
+      add('v227-router-registered',gameSource.includes("'cityConsequencesBoard'"));
+      add('v227-studio-perk-active',snap.status?.perks?.find(x=>x.id==='studio')?.active===true,JSON.stringify(snap.status?.perks));
+      add('v227-daily-income-one-control',snap.status?.dailyIncome===65,String(snap.status?.dailyIncome));
+      add('v227-recognition-tier',typeof snap.status?.recognitionLabel==='string'&&snap.status.recognition>0,JSON.stringify({recognition:snap.status?.recognition,label:snap.status?.recognitionLabel}));
+
+      const beforeRecord=await mp.evaluate(()=>({game:{...window.__qaGame},rep:window.__qaCareer.reputation,status:window.TGGV227.status()}));
+      await mp.evaluate(()=>{window.__qaInfluence.metrics.recordings+=1;window.TGGV227.sync();});
+      await mp.waitForTimeout(100);
+      snap=await mp.evaluate(()=>({game:{...window.__qaGame},rep:window.__qaCareer.reputation,status:window.TGGV227.status(),stored:JSON.parse(localStorage.getItem('tgg-v227-district-consequences-v1')||'null')}));
+      add('v227-studio-recording-perk',snap.game.xp===beforeRecord.game.xp+10&&snap.rep===beforeRecord.rep+5&&snap.status.perkTriggers===1,JSON.stringify({before:beforeRecord,after:snap}));
+      add('v227-persistence',snap.stored?.perkTriggers===1&&snap.stored?.metrics?.recordings===3,JSON.stringify(snap.stored));
+
+      const beforeNoPerk=await mp.evaluate(()=>({cash:window.__qaGame.cash,rep:window.__qaCareer.reputation,triggers:window.TGGV227.status().perkTriggers}));
+      await mp.evaluate(()=>{window.__qaInfluence.metrics.battleWins+=1;window.TGGV227.sync();});
+      await mp.waitForTimeout(80);
+      snap=await mp.evaluate(()=>({cash:window.__qaGame.cash,rep:window.__qaCareer.reputation,triggers:window.TGGV227.status().perkTriggers}));
+      add('v227-no-perk-without-control',snap.cash===beforeNoPerk.cash&&snap.rep===beforeNoPerk.rep&&snap.triggers===beforeNoPerk.triggers,JSON.stringify({before:beforeNoPerk,after:snap}));
+
+      await mp.evaluate(()=>{
+        const d=window.__qaInfluence.districts.find(x=>x.id==='downtown');d.control='TGG CONTROL';d.player=70;d.rival=42;
+        window.__qaInfluence.cityScore=58;window.__qaInfluence.metrics.battleWins+=1;window.TGGV227.sync();
+      });
+      await mp.waitForTimeout(80);
+      snap=await mp.evaluate(()=>({game:{...window.__qaGame},rep:window.__qaCareer.reputation,status:window.TGGV227.status()}));
+      add('v227-downtown-home-court',snap.game.cash===beforeNoPerk.cash+50&&snap.rep===beforeNoPerk.rep+6&&snap.status.perks.find(x=>x.id==='downtown')?.active===true,JSON.stringify(snap));
+
+      const beforeDay=await mp.evaluate(()=>({cash:window.__qaGame.cash,rep:window.__qaCareer.reputation,income:window.TGGV227.status().totalPassiveIncome}));
+      await mp.evaluate(()=>{window.__qaLife.day=2;window.TGGV227.sync();});
+      await mp.waitForTimeout(80);
+      snap=await mp.evaluate(()=>({game:{...window.__qaGame},rep:window.__qaCareer.reputation,status:window.TGGV227.status()}));
+      add('v227-territory-daily-income',snap.game.cash===beforeDay.cash+130&&snap.rep===beforeDay.rep+4&&snap.status.totalPassiveIncome===beforeDay.income+130,JSON.stringify({before:beforeDay,after:snap}));
+
+      const beforeTakeover=await mp.evaluate(()=>({cash:window.__qaGame.cash,xp:window.__qaGame.xp,rep:window.__qaCareer.reputation}));
+      await mp.evaluate(()=>{
+        window.__qaInfluence.districts.forEach(d=>{d.control='TGG CONTROL';d.player=Math.max(70,d.player);d.rival=Math.min(45,d.rival)});
+        window.__qaInfluence.cityScore=82;window.__qaInfluence.rivalScore=35;window.TGGV227.sync();
+      });
+      await mp.waitForTimeout(80);
+      snap=await mp.evaluate(()=>({game:{...window.__qaGame},rep:window.__qaCareer.reputation,status:window.TGGV227.status()}));
+      add('v227-full-city-takeover',snap.status.fullTakeoverClaimed===true&&snap.game.cash===beforeTakeover.cash+1500&&snap.game.xp===beforeTakeover.xp+350&&snap.rep===beforeTakeover.rep+75,JSON.stringify({before:beforeTakeover,after:snap}));
+      const once={cash:snap.game.cash,xp:snap.game.xp,rep:snap.rep};
+      await mp.evaluate(()=>window.TGGV227.sync());
+      await mp.waitForTimeout(50);
+      snap=await mp.evaluate(()=>({game:{...window.__qaGame},rep:window.__qaCareer.reputation,status:window.TGGV227.status()}));
+      add('v227-takeover-no-repeat',snap.game.cash===once.cash&&snap.game.xp===once.xp&&snap.rep===once.rep,JSON.stringify({once,after:snap}));
+
+      const coreCheck=await mp.evaluate(()=>{
+        const s=window.TGGV227Core.createState();
+        const inf={cityScore:30,rivalScore:62,districts:[
+          {id:'studio',control:'NIGHT SHIFT'},{id:'downtown',control:'NIGHT SHIFT'},{id:'mixtape',control:'CONTESTED'},{id:'media',control:'CONTESTED'}
+        ]};
+        const sum=window.TGGV227Core.summary(inf);
+        const day=window.TGGV227Core.processDay(s,{cityScore:70,rivalScore:30,districts:[
+          {id:'studio',control:'TGG CONTROL'},{id:'downtown',control:'TGG CONTROL'},{id:'mixtape',control:'CONTESTED'},{id:'media',control:'CONTESTED'}
+        ]},2);
+        return {sum,day};
+      });
+      add('v227-night-shift-pressure',coreCheck.sum.rivalCount===2&&coreCheck.sum.pressure>=36,JSON.stringify(coreCheck.sum));
+      add('v227-core-income',coreCheck.day.rewards.cash===130&&coreCheck.day.rewards.rep===4,JSON.stringify(coreCheck.day));
+
+      await mp.evaluate(()=>{window.TGGV227.render();window.TGGGame.show('cityConsequencesBoard')});
+      await mp.waitForTimeout(100);
+      const layout=await mp.evaluate(()=>{
+        const shell=document.querySelector('.v227-shell')?.getBoundingClientRect();
+        const perks=[...document.querySelectorAll('.v227-perk')].map(x=>x.getBoundingClientRect());
+        const grid=document.querySelector('.v227-perks');
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,
+          perks:perks.map(x=>({width:x.width,height:x.height,top:x.top})),
+          columns:grid?getComputedStyle(grid).gridTemplateColumns:'',
+          back:document.getElementById('v227Back')?.getBoundingClientRect()?.height||0
+        };
+      });
+      add('v227-mobile-no-overflow',layout.scrollWidth<=391,JSON.stringify(layout));
+      add('v227-mobile-shell-contained',!!layout.shell&&layout.shell.left>=0&&layout.shell.right<=layout.width+1,JSON.stringify(layout.shell));
+      add('v227-mobile-four-perks',layout.perks.length===4,JSON.stringify(layout.perks));
+      add('v227-mobile-one-column',!!layout.columns&&!layout.columns.includes(' '),layout.columns);
+      add('v227-mobile-back-readable',layout.back>=46,String(layout.back));
+      add('v227-3d-control-flags-source',runtimeSource.includes('v227Consequence')&&runtimeSource.includes('new THREE.PlaneGeometry')&&runtimeSource.includes("d.control==='TGG CONTROL'"));
+
+      result={ok:checks.every(x=>x.pass)&&pageErrors.length===0,status:'done',mode:'v227_district_consequences_harness',target:TARGET,checks,console_errors:consoleErrors,page_errors:pageErrors,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
 
     if(V226_INFLUENCE_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
@@ -347,8 +501,7 @@ async function run(){
         const a=window.TGGV225Core.createState();
         const respect=window.TGGV225Core.applyChoice(a,'respect',{crewStrength:0});
         const compete=window.TGGV225Core.applyChoice(a,'compete',{crewStrength:0});
-        const locked=window.TGGV225Core.applyChoice(a,'collab',{crewStrength:0});
-        return {respect,compete,locked};
+        const locked=window.TGGV225Core.applyChoice(a,'collab',{crewStrength:0});        return {respect,compete,locked};
       });
       add('v225-respect-path',coreCheck.respect?.respect===24&&coreCheck.respect?.rivalry===16&&coreCheck.respect?.route==='RESPECT ROUTE',JSON.stringify(coreCheck.respect));
       add('v225-compete-path',coreCheck.compete?.rivalry===41&&coreCheck.compete?.respect===16&&coreCheck.compete?.route==='RIVAL ROUTE',JSON.stringify(coreCheck.compete));
@@ -697,8 +850,7 @@ async function run(){
       let snap=await tp.evaluate(()=>({
         title:document.title,
         version:window.TGGLifeOS?.version,
-        perks:window.TGGLifeOS?.relationshipPerks?.(),
-        battle:window.TGGLifeOS?.careerOutcome?.('battle'),
+        perks:window.TGGLifeOS?.relationshipPerks?.(),        battle:window.TGGLifeOS?.careerOutcome?.('battle'),
         recording:window.TGGLifeOS?.careerOutcome?.('recording'),
         show:window.TGGLifeOS?.careerOutcome?.('show'),
         visual:window.TGGLifeOS?.careerOutcome?.('visual'),
@@ -1047,8 +1199,7 @@ async function run(){
       await tp.waitForTimeout(80);
       snap=await tp.evaluate(()=>({
         cine:window.TGGStoryCinematics.getState(),
-        kicker:document.getElementById('storyCineKicker')?.textContent||'',
-        title:document.getElementById('storyCineTitle')?.textContent||'',
+        kicker:document.getElementById('storyCineKicker')?.textContent||'',        title:document.getElementById('storyCineTitle')?.textContent||'',
         badge:document.getElementById('storyCineBadge')?.textContent||'',
         type:document.getElementById('storyCineType')?.textContent||'',
         camera:window.TGG3D.getCameraMode()      }));
@@ -1397,8 +1548,7 @@ async function run(){
         window.TGGStreetPresence.setDensity('HIGH');
         const status=window.TGGStreetPresence.getStatus();
         return {
-          density:status.density,
-          citizens:window.TGGStreetPresence.citizens.filter(x=>x.visible).length,
+          density:status.density,          citizens:window.TGGStreetPresence.citizens.filter(x=>x.visible).length,
           social:window.TGGStreetPresence.socialPeople.filter(x=>x.visible).length,
           total:status.totalStreetPopulation        };
       });
@@ -1747,8 +1897,7 @@ async function run(){
           clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
         }});        window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:0,xp:0,level:5};        window.__qaCareer={recordings:3,mixtapes:1,reputation:0,studioLevel:3};
         window.__qaContent={completed:['flyer-run']};
-        window.__qaLife={battleWins:1,shows:1,activeOpportunity:null,contacts:{}};
-        window.__qaShown='game'; window.__qaToasts=[];
+        window.__qaLife={battleWins:1,shows:1,activeOpportunity:null,contacts:{}};        window.__qaShown='game'; window.__qaToasts=[];
         window.TGGGame={          getState:()=>window.__qaGame,
           getActiveScreen:()=>window.__qaShown,
           show:id=>{window.__qaShown=id;return true},
@@ -2097,8 +2246,7 @@ async function run(){
       });
       record('story-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
       record('story-mobile-shell-contained',!!layout.shell&&layout.shell.left>=0&&layout.shell.right<=layout.width+1,JSON.stringify(layout.shell));
-      record('story-mobile-one-column',!!layout.columns&&!layout.columns.includes(' '),layout.columns);
-      record('story-mobile-action-readable',!!layout.action&&layout.action.height>=50&&layout.action.width>=300,JSON.stringify(layout.action));
+      record('story-mobile-one-column',!!layout.columns&&!layout.columns.includes(' '),layout.columns);      record('story-mobile-action-readable',!!layout.action&&layout.action.height>=50&&layout.action.width>=300,JSON.stringify(layout.action));
       result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'story_mission_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await mobile.close();await ctx.close();return;
@@ -2447,8 +2595,7 @@ async function run(){
         window.__qaCalls=[];
         window.__qaActions=[];
         window.__qaPad={
-          connected:true,          axes:[0,0,0,0],
-          buttons:Array.from({length:16},()=>({pressed:false,value:0}))
+          connected:true,          axes:[0,0,0,0],          buttons:Array.from({length:16},()=>({pressed:false,value:0}))
         };
         Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.__qaPad]});
         window.TGGGame={
@@ -2797,8 +2944,7 @@ async function run(){
         const paint=window.TGG3D?.car?.userData?.bodyMaterial?.color?.getHexString?.();
         const stored=JSON.parse(localStorage.getItem('tgg-garage-v1')||'null');
         return {before,after,tuning,paint,stored};      });
-      record('garage-paint-runtime',garageResult.paint==='ff315f',JSON.stringify(garageResult));
-      record('garage-tune-runtime',Number(garageResult.tuning?.maxForward)>10,JSON.stringify(garageResult.tuning));
+      record('garage-paint-runtime',garageResult.paint==='ff315f',JSON.stringify(garageResult));      record('garage-tune-runtime',Number(garageResult.tuning?.maxForward)>10,JSON.stringify(garageResult.tuning));
       record('garage-persistence',garageResult.stored?.color==='#ff315f'&&garageResult.stored?.tuning==='sport',JSON.stringify(garageResult.stored));
       await page.evaluate(()=>document.getElementById('studioBtn')?.click());
       await page.waitForTimeout(350);

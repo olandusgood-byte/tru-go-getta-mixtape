@@ -38,10 +38,13 @@ try{
   check(appSource.includes('toggleKeyframe'),'keyframe engine missing');
   check(appSource.includes('data-trim="left"'),'trim handle renderer missing');
   check(appSource.includes('data-fx-amount'),'effect amount control missing');
+  check(appSource.includes('titleStyleFor'),'title designer engine missing');
+  check(appSource.includes('data-transition-duration'),'transition duration control missing');
+  check(appSource.includes('transitionOut'),'out transition engine missing');
 
   await page.screenshot({path:'video-studio-smoke.png',fullPage:true});
   if(failures.length)throw new Error(failures.join('; '));
-  console.log(JSON.stringify({ok:true,url:file,checks:10}));
+  console.log(JSON.stringify({ok:true,url:file,checks:13}));
 } finally {
   await browser.close();
 }

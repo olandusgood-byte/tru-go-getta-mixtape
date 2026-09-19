@@ -22,6 +22,9 @@ app.use((req,res,next)=>{
 
 // TGG_VIDEO_STUDIO_V2_STATIC
 const VIDEO_STUDIO_PUBLIC_ROOT = path.resolve(process.cwd(), 'tgg-core/public/video-studio');
+const LIVE_VIEWER_PUBLIC_ROOT = path.resolve(process.cwd(), 'tgg-core/public/live-viewer');
+app.use('/live-viewer', express.static(LIVE_VIEWER_PUBLIC_ROOT, { etag:true, maxAge:'5m', index:'index.html' }));
+
 app.use('/video-studio', express.static(VIDEO_STUDIO_PUBLIC_ROOT, {
   etag: true,
   maxAge: '5m',

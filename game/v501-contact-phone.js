@@ -51,7 +51,7 @@
     const contract=contracts().active;
     const strip=document.getElementById('v501ContractStrip');
     if(strip)strip.innerHTML=contract
-      ?'<div class="v501-contract"><b>ACTIVE CONTRACT • '+contract.label+'</b><span>'+contract.sponsor+' • '+contract.beat.replaceAll('-',' ').toUpperCase()+'</span></div>'
+      ?'<div class="v501-contract"><b>ACTIVE CONTRACT • '+String(contract.label||contract.id||'ACTIVE CONTRACT')+'</b><span>'+String(contract.sponsor||'CITY')+' • '+String(contract.beat||contract.id||'ACTIVE').replaceAll('-',' ').toUpperCase()+'</span></div>'
       :'<div class="v501-contract"><b>CAREER DIRECTOR READY</b><span>Relationships and completed favors unlock contracts.</span></div>';
     const list=document.getElementById('v501Contacts');
     if(!list)return;
@@ -89,16 +89,17 @@
     return {version:VERSION,mutationPolicy:POLICY,ok:!failed.length,checks,failed,snapshot:snapshot(),at:new Date().toISOString()};
   }
   function boot(){
-    ensure();render();
+    window.TGGPhone={version:VERSION,mutationPolicy:POLICY,openPhone,closePhone,callContact,callFavor,contactData,snapshot,run};
+    window.TGGV501={version:VERSION,mutationPolicy:POLICY,run,snapshot};
+    document.documentElement.dataset.tggV501='on';
+    ensure();
+    render();
     window.addEventListener('tgg:npc-choice-resolved',render);
     window.addEventListener('tgg:npc-favor',render);
     window.addEventListener('tgg:npc-favor-outcome',render);
     window.addEventListener('tgg:career-contract-start',render);
     window.addEventListener('tgg:career-contract-outcome',render);
     window.addEventListener('tgg:v503-ready',render);
-    window.TGGPhone={version:VERSION,mutationPolicy:POLICY,openPhone,closePhone,callContact,callFavor,contactData,snapshot,run};
-    window.TGGV501={version:VERSION,mutationPolicy:POLICY,run,snapshot};
-    document.documentElement.dataset.tggV501='on';
     window.dispatchEvent(new CustomEvent('tgg:v501-ready',{detail:run()}));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

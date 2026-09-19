@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.36 TGG CROWD + NPC FORGE 100';
+  const VERSION='V2.37 TGG MISSION + INTERACTION FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

@@ -1,0 +1,8 @@
+html[data-tgg-reality-master="v250"] #city3d canvas{filter:contrast(1.045) saturate(.9) brightness(.97)}
+html[data-tgg-reality-master="v250"] .city{background:radial-gradient(circle at 50% 25%,rgba(132,158,186,.07),transparent 42%),#05070b}
+html[data-tgg-reality-master="v250"] .vehicle-hud,html[data-tgg-reality-master="v250"] .player-move-hud,html[data-tgg-reality-master="v250"] .nav-hud,html[data-tgg-reality-master="v250"] .city-title{border-color:rgba(255,255,255,.12);box-shadow:0 12px 42px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.04)}
+html[data-tgg-reality-master="v250"][data-tgg-master-quality="performance"] #v245CinematicOverlay .v245-grain{display:none}
+html[data-tgg-reality-master="v250"][data-tgg-master-quality="performance"] #v245CinematicOverlay .v245-bloom{opacity:.35}
+html[data-tgg-reality-master="v250"] .game-controls button{transition:transform .16s ease,box-shadow .16s ease,background .16s ease}
+html[data-tgg-reality-master="v250"] .game-controls button:active{transform:scale(.975)}
+@media (prefers-reduced-motion:reduce){#v245CinematicOverlay .v245-grain{animation:none!important}}

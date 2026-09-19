@@ -1,9 +1,9 @@
 {
   "project": "TRU GO GETTA WORLD",
-  "canonical_runtime": "V2.45 PHOTOREAL CORE BULK",
+  "canonical_runtime": "V2.50 REALITY MASTER CONSOLIDATION",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v245_photoreal_contract_pending",
+  "verification": "v250_master_contract_pending_live_browser",
   "features": [
     "threejs_city",
     "smooth_player_locomotion",
@@ -24,6 +24,14 @@
     "physical_road_materials",
     "adaptive_graphics_quality",
     "texture_anisotropy",
-    "cinematic_overlay"
+    "cinematic_overlay",
+    "human_realism",
+    "vehicle_realism",
+    "world_detail",
+    "cinematic_fx",
+    "adaptive_master_quality",
+    "surface_microdetail",
+    "atmospheric_moisture",
+    "camera_realism"
   ]
 }

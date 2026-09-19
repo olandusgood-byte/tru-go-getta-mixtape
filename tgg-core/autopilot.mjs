@@ -13,7 +13,9 @@ if (!DATABASE_URL) {
     ssl: process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false },
     max: 3,
     connectionTimeoutMillis: 5000,
-    idleTimeoutMillis: 30000
+    idleTimeoutMillis: 30000,
+    statement_timeout: 10000,
+    query_timeout: 15000
   });
   pool.on('error', err => console.error('[TGG Autopilot] pool error', err.message));
 
@@ -145,6 +147,7 @@ if (!DATABASE_URL) {
   }
 
   async function runTask(task) {
+    console.log(JSON.stringify({service:'tgg-autopilot',event:'task_start',task:task.task_key}));
     const run = await pool.query(
       `insert into tgg_autopilot_runs(instance_id,task_key,status,summary)
        values($1,$2,'running','{}'::jsonb) returning id`,
@@ -163,6 +166,7 @@ if (!DATABASE_URL) {
         `update tgg_autopilot_runs set status='succeeded',summary=$2,finished_at=now() where id=$1`,
         [run.rows[0].id, summary]
       );
+      console.log(JSON.stringify({service:'tgg-autopilot',task:task.task_key,status:'succeeded',summary}));
       await pool.query(
         `update tgg_scheduled_tasks
          set last_run_at=now(),next_run_at=now()+make_interval(secs=>schedule_seconds),

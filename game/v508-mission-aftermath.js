@@ -6,7 +6,7 @@
     M:{district:'BUSINESS DISTRICT',followup:'property-deal',color:'#3b82f6'},
     'DJ V':{district:'PARKSIDE',followup:'headline-night',color:'#a855f7'},
     Kane:{district:'STUDIO ROW',followup:'brand-meeting',color:'#ff8a3d'},
-    'Rico Flame':{district:'MIXTAPE AVE',followup:'headline-night',color:'#ff3b30'}
+    'Rico Flame':{district:'MIXTAPE AVE',followup:'brand-meeting',color:'#ff3b30'}
   };
   const defaults={
     districtRep:{'BUSINESS DISTRICT':0,PARKSIDE:0,'STUDIO ROW':0,'MIXTAPE AVE':0},

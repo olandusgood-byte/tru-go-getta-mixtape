@@ -3,7 +3,7 @@
   "canonical_runtime": "V3.90 CAREER MISSION ECONOMY WORLD LOOP MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v380_production_deployed_browser_certified",
+  "verification": "v390_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V3.80 LIFE SIM PROPERTY SOCIAL WORLD MEGA",
   "features": [
@@ -122,7 +122,7 @@
     "opportunity_history",
     "adaptive_opportunity_ranking"
   ],
-  "release_gate": "v390_validation_pending",
+  "release_gate": "closed_certified",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -130,10 +130,10 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PENDING_V390_REVALIDATION",
+    "browser_gate": "PASS",
     "public_alias": "https://tgg-world-play.vercel.app",
-    "browser_cert_run_id": 35442240277,
-    "browser_cert_artifact_id": 10584290716,
-    "browser_cert_artifact_digest": "sha256:d814683c37ae40a691345d2c4dff2a1c8d4817c114a2c9d501c17d5bf54a3e78"
+    "browser_cert_run_id": 35442511088,
+    "browser_cert_artifact_id": 10583684259,
+    "browser_cert_artifact_digest": "sha256:4c90651f83eebeed8f7a629a701b00413cc5b996d5ebfe97039ff248ffb573c2"
   }
 }

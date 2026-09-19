@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "5.56",
-  "module": "GAME-V5.56-BULK",
-  "name": "Bulk V5.42-V5.56 Release Browser Live Viewer Audits Gates",
+  "version": "6.05",
+  "module": "GAME-V6.05-MEGA",
+  "name": "Mega V5.57-V6.05 Release Browser Live Viewer Audits Gates",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -174,7 +174,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V5.57",
+  "next": "V6.06",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,
@@ -195,7 +195,8 @@
     "skipCompleted": true,
     "autoAdvance": true,
     "failClosed": true,
-    "noOneByOneUnlessDependencyRequires": true
+    "noOneByOneUnlessDependencyRequires": true,
+    "megaBatchSize": 49
   },
   "v5_25_contact_world_mega": true,
   "v5_41_world_continuity": true

@@ -1,0 +1,17 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const root=new URL('.',import.meta.url);
+const html=fs.readFileSync(new URL('index.html',root),'utf8');
+const css=fs.readFileSync(new URL('v310-aaa-visual-polish.css',root),'utf8');
+const js=fs.readFileSync(new URL('v310-aaa-visual-polish.js',root),'utf8');
+assert.match(html,/v310-aaa-visual-polish\.css/);
+assert.match(html,/v310-aaa-visual-polish\.js/);
+assert.match(js,/V3\.10 AAA VISUAL POLISH/);
+assert.match(js,/cinematic-glass-ui/);
+assert.match(js,/hud-depth/);
+assert.match(js,/viewport-vignette/);
+assert.match(css,/v310BuildBadge/);
+assert.match(css,/vehicle-hud/);
+assert.match(css,/player-move-hud/);
+assert.match(css,/nav-hud/);
+console.log(JSON.stringify({ok:true,version:'V3.10 AAA VISUAL POLISH',checks:10}));

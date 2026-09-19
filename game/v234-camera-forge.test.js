@@ -16,5 +16,6 @@
   assert(s.enabled===true,'enabled default');
   assert(s.preset==='street','street default');
   assert(s.layerCount===100,'layer count');
+  assert(s.blackBars===false,'full game view has no black cinematic bars');
   return true;
 })();

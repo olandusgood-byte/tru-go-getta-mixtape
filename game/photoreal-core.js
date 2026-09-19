@@ -192,6 +192,7 @@
   }
 
   wait().then(api=>{
+    try {
     const THREE=window.THREE;
     const {renderer,scene,camera}=api;
     tuneRenderer(THREE,renderer,camera);
@@ -225,5 +226,9 @@
     };
     document.documentElement.dataset.tggRealism='v245';
     window.dispatchEvent(new CustomEvent('tgg:realism-ready',{detail:window.TGGRealism.getStatus()}));
-  });
+    } catch(error) {
+      window.TGGRealism={version:VERSION,mode:'safe-fallback',error:String(error?.message||error),getStatus(){return {version:VERSION,mode:'safe-fallback'}}};
+      document.documentElement.dataset.tggRealism='fallback';
+    }
+  }).catch(()=>{ document.documentElement.dataset.tggRealism='fallback'; });
 })();

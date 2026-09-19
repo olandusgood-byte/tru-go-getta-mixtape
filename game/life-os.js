@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.21';
+  const VERSION='V2.22';
   const KEY='tgg-life-os-v1';
   const $=id=>document.getElementById(id);
   const clamp=(n,min=0,max=100)=>Math.max(min,Math.min(max,Number(n)||0));
@@ -103,6 +103,39 @@
     if(score>=45)return 'SOLID';
     if(score>=25)return 'BUILDING';
     return 'NEW LINK';
+  }
+  function perkFor(id){
+    const score=Number(state.relationships[id])||0;
+    const high=score>=75;
+    if(id==='manager')return {active:score>=45,label:score>=45?'M PERK • +'+(high?15:8)+'% SHOW/BATTLE PAYOUT':'M PERK • BUILD TO 45'};
+    if(id==='producer')return {active:score>=45,label:score>=45?'KANE PERK • +'+(high?20:10)+' RECORDING REP':'KANE PERK • BUILD TO 45'};
+    if(id==='dj')return {active:score>=45,label:score>=45?'DJ V PERK • +'+(high?15:8)+' SHOW CROWD':'DJ V PERK • BUILD TO 45'};
+    if(id==='director')return {active:score>=45,label:score>=45?'DIRECTOR K • +'+(high?30:15)+' VIDEO REP':'DIRECTOR K • BUILD TO 45'};
+    if(id==='friend')return {active:score>=45,label:score>=45?'DAY ONE • '+(high?25:12)+'% TRAINING DISCOUNT':'DAY ONE • BUILD TO 45'};
+    if(id==='family')return {active:score>=60,label:score>=60?'MAMA G • +'+(score>=85?5:2.5)+'% CAREER RESILIENCE':'MAMA G • BUILD TO 60'};
+    return {active:false,label:'NO PERK'};
+  }
+  function relationshipPerks(){return CONTACTS.map(c=>({id:c.id,name:c.name,score:Math.round(state.relationships[c.id]||0),...perkFor(c.id)}))}
+  function careerOutcome(kind='career'){
+    const rel=state.relationships;
+    let scoreMultiplier=readiness();
+    let rewardMultiplier=1,repBonus=0,startBonus=0,trainingDiscount=0;
+    const manager=Number(rel.manager)||0,producer=Number(rel.producer)||0,dj=Number(rel.dj)||0,director=Number(rel.director)||0,friend=Number(rel.friend)||0,family=Number(rel.family)||0;
+    if(manager>=45)rewardMultiplier+=manager>=75?.15:.08;
+    if(kind==='release'&&manager>=45)repBonus+=manager>=75?20:10;
+    if(kind==='recording'&&producer>=45)repBonus+=producer>=75?20:10;
+    if(kind==='show'&&dj>=45)startBonus+=dj>=75?15:8;
+    if(kind==='visual'&&director>=45)repBonus+=director>=75?30:15;
+    if(kind==='training'&&friend>=45)trainingDiscount=friend>=75?.25:.12;
+    if(family>=60)scoreMultiplier+=family>=85?.05:.025;
+    if(state.needs.stress>=75)scoreMultiplier-=.08;
+    if(state.needs.energy<=20)scoreMultiplier-=.10;
+    scoreMultiplier=Math.max(.65,Math.min(1.30,scoreMultiplier));
+    return {
+      kind,readiness:Number(readiness().toFixed(3)),scoreMultiplier:Number(scoreMultiplier.toFixed(3)),
+      rewardMultiplier:Number(rewardMultiplier.toFixed(3)),repBonus,startBonus,trainingDiscount,
+      perks:relationshipPerks().filter(x=>x.active)
+    };
   }
   function contactInteraction(id,type='call'){
     const c=CONTACTS.find(x=>x.id===id);if(!c)return false;
@@ -218,7 +251,7 @@
     return JSON.parse(JSON.stringify({
       version:VERSION,day:state.day,minute:state.minute,clock:clock(),needs:state.needs,
       relationships:state.relationships,upgrades:state.upgrades,stats:state.stats,
-      readiness:Number(readiness().toFixed(3)),readinessLabel:readinessLabel(),lastAction:state.lastAction
+      readiness:Number(readiness().toFixed(3)),readinessLabel:readinessLabel(),perks:relationshipPerks(),lastAction:state.lastAction
     }));
   }
   function metricCard(key,label,invert=false){
@@ -248,7 +281,7 @@
       .lifeos-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.lifeos-head h2{margin:2px 0 4px;font-size:clamp(28px,4vw,52px)}.lifeos-head p{max-width:680px;color:#9aa4b6}.lifeos-clock{display:grid;gap:5px;text-align:right;padding:12px 14px;border:1px solid #c7ff0038;border-radius:14px;background:#c7ff0009}.lifeos-clock b{color:#c7ff00;font-size:13px}.lifeos-clock strong{font-size:20px}
       .lifeos-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;margin-top:18px}.lifeos-card{padding:17px;border:1px solid #ffffff14;border-radius:18px;background:#0d1119cc}.lifeos-card h3{margin:0 0 12px;font-size:13px;letter-spacing:.14em}.lifeos-needs{display:grid;grid-template-columns:1fr 1fr;gap:9px}.lifeos-need{padding:10px;border:1px solid #ffffff10;border-radius:12px;background:#070a10}.lifeos-need>div{display:flex;justify-content:space-between;gap:10px;font-size:11px}.lifeos-need strong{color:#c7ff00}.lifeos-need>span{display:block;height:5px;margin-top:8px;border-radius:999px;background:#ffffff12;overflow:hidden}.lifeos-need i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#c7ff00,#48d7ff)}.lifeos-need.low i{background:linear-gradient(90deg,#ff466d,#ffc857)}
       .lifeos-readiness{margin-top:13px;padding:13px;border:1px solid #c7ff002d;border-radius:14px;display:flex;justify-content:space-between;align-items:center;background:#c7ff0008}.lifeos-readiness b{font-size:12px}.lifeos-readiness strong{font-size:25px;color:#c7ff00}.lifeos-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.lifeos-actions button,.lifeos-contact button,.lifeos-upgrade button{min-height:44px;font-weight:900}
-      .lifeos-contacts{display:grid;gap:8px}.lifeos-contact{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:11px;border:1px solid #ffffff11;border-radius:13px;background:#070a10}.lifeos-contact div{display:grid;gap:2px}.lifeos-contact span,.lifeos-contact small{font-size:9px;color:#9da7b6}.lifeos-contact .relationship{color:#fff;font-weight:900}.lifeos-contact .available{color:#c7ff00}.lifeos-contact .busy{color:#ff8b9d}.lifeos-contact .contact-actions{display:flex;gap:6px}.lifeos-contact button{padding:8px 10px;font-size:9px}
+      .lifeos-contacts{display:grid;gap:8px}.lifeos-contact{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:11px;border:1px solid #ffffff11;border-radius:13px;background:#070a10}.lifeos-contact div{display:grid;gap:2px}.lifeos-contact span,.lifeos-contact small{font-size:9px;color:#9da7b6}.lifeos-contact .relationship{color:#fff;font-weight:900}.lifeos-contact .available{color:#c7ff00}.lifeos-contact .busy{color:#ff8b9d}.lifeos-contact .perk{color:#c7ff00;font-weight:900}.lifeos-contact .contact-actions{display:flex;gap:6px}.lifeos-contact button{padding:8px 10px;font-size:9px}
       .lifeos-upgrades{display:grid;grid-template-columns:1fr 1fr;gap:8px}.lifeos-upgrade{padding:12px;border:1px solid #ffffff12;border-radius:13px;background:#070a10;display:grid;gap:6px}.lifeos-upgrade b{font-size:10px}.lifeos-upgrade span{font-size:9px;color:#9da7b6}.lifeos-upgrade.owned{border-color:#c7ff0040}.lifeos-upgrade.owned b{color:#c7ff00}.lifeos-log{margin-top:12px;padding:12px 14px;border-left:3px solid #c7ff00;background:#05080d;color:#b8c0cf;font-size:10px}.lifeos-back{margin-top:16px;width:100%;min-height:48px}
       .life-mini-hud{position:absolute;right:14px;top:14px;z-index:17;display:none;gap:5px;padding:8px 10px;border:1px solid #ffffff16;border-radius:12px;background:#06090dcc;backdrop-filter:blur(9px);font-size:8px}.life-mini-hud.active{display:flex}.life-mini-hud b{color:#c7ff00}
       @media(max-width:760px){.lifeos-shell{width:calc(100% - 20px);margin:10px auto 50px;padding:14px;border-radius:18px}.lifeos-head{display:grid}.lifeos-clock{text-align:left}.lifeos-grid{grid-template-columns:1fr}.lifeos-needs{grid-template-columns:1fr 1fr}.lifeos-actions{grid-template-columns:1fr 1fr}.lifeos-upgrades{grid-template-columns:1fr}.lifeos-contact{grid-template-columns:1fr}.lifeos-contact .contact-actions{display:grid;grid-template-columns:1fr 1fr}.life-mini-hud{right:8px;top:8px}.lifeos-head h2{font-size:30px}}
@@ -264,7 +297,7 @@
   }
   function render(){
     const root=ensure();if(!root)return;
-    root.innerHTML='<div class="lifeos-shell"><header class="lifeos-head"><div><p class="eyebrow">V2.21 • SIMS-STYLE DAILY LIFE</p><h2>LIFE OS.</h2><p>Your career hits harder when your life is together. Manage recovery, mood, stress, relationships and your home between city moves.</p></div><div class="lifeos-clock"><b>'+clock()+'</b><span>READINESS</span><strong>'+readinessLabel()+' • '+Math.round(readiness()*100)+'%</strong></div></header><div class="lifeos-grid"><section class="lifeos-card"><h3>DAILY NEEDS</h3><div class="lifeos-needs">'+metricCard('energy','ENERGY')+metricCard('fuel','FUEL')+metricCard('hygiene','HYGIENE')+metricCard('mood','MOOD')+metricCard('social','SOCIAL')+metricCard('stress','STRESS',true)+'</div><div class="lifeos-readiness"><b>CAREER PERFORMANCE MODIFIER</b><strong>x'+performanceModifier().toFixed(2)+'</strong></div><div class="lifeos-actions"><button data-life-action="sleep">SLEEP 8H</button><button data-life-action="nap">POWER NAP</button><button data-life-action="meal">EAT MEAL</button><button data-life-action="shower">SHOWER</button><button data-life-action="chill">CHILL</button><button data-life-action="advance">PASS 1H</button></div><div class="lifeos-log">'+state.lastAction+'</div></section><section class="lifeos-card"><h3>RELATIONSHIPS + AVAILABILITY</h3><div class="lifeos-contacts">'+CONTACTS.map(c=>{const score=Math.round(state.relationships[c.id]||0),open=availability(c.id);return '<article class="lifeos-contact"><div><b>'+c.name+' • '+c.role+'</b><span class="relationship">'+score+'/100 • '+relationshipLabel(score)+'</span><small class="'+(open?'available':'busy')+'">'+(open?'AVAILABLE NOW':'BUSY • '+formatWindow(c))+'</small></div><div class="contact-actions"><button data-life-call="'+c.id+'" '+(open?'':'disabled')+'>CALL</button><button data-life-hangout="'+c.id+'" '+(open?'':'disabled')+'>HANG OUT</button></div></article>'}).join('')+'</div></section><section class="lifeos-card"><h3>APARTMENT UPGRADES</h3><div class="lifeos-upgrades">'+UPGRADES.map(u=>'<article class="lifeos-upgrade '+(hasUpgrade(u.id)?'owned':'')+'"><b>'+u.name+'</b><span>'+u.detail+'</span>'+(hasUpgrade(u.id)?'<strong>INSTALLED</strong>':'<button data-life-upgrade="'+u.id+'">BUY $'+u.cost+'</button>')+'</article>').join('')+'</div></section><section class="lifeos-card"><h3>LIFE STATS</h3><div class="stats"><span><b>'+state.stats.sleeps+'</b><small>FULL SLEEPS</small></span><span><b>'+state.stats.meals+'</b><small>MEALS</small></span><span><b>'+state.stats.hangouts+'</b><small>HANGOUTS</small></span><span><b>'+state.stats.careerActions+'</b><small>CAREER SESSIONS</small></span></div><p>Home upgrades persist locally and improve recovery. Existing TGG career, battle, show and gym systems stay intact.</p></section></div><button id="lifeOsBack" class="secondary lifeos-back">BACK TO CITY</button></div>';
+    root.innerHTML='<div class="lifeos-shell"><header class="lifeos-head"><div><p class="eyebrow">V2.22 • RELATIONSHIP PERKS</p><h2>LIFE OS.</h2><p>Your career hits harder when your life is together. Manage recovery, mood, stress, relationships and your home between city moves.</p></div><div class="lifeos-clock"><b>'+clock()+'</b><span>READINESS</span><strong>'+readinessLabel()+' • '+Math.round(readiness()*100)+'%</strong></div></header><div class="lifeos-grid"><section class="lifeos-card"><h3>DAILY NEEDS</h3><div class="lifeos-needs">'+metricCard('energy','ENERGY')+metricCard('fuel','FUEL')+metricCard('hygiene','HYGIENE')+metricCard('mood','MOOD')+metricCard('social','SOCIAL')+metricCard('stress','STRESS',true)+'</div><div class="lifeos-readiness"><b>CAREER PERFORMANCE MODIFIER</b><strong>x'+performanceModifier().toFixed(2)+'</strong></div><div class="lifeos-actions"><button data-life-action="sleep">SLEEP 8H</button><button data-life-action="nap">POWER NAP</button><button data-life-action="meal">EAT MEAL</button><button data-life-action="shower">SHOWER</button><button data-life-action="chill">CHILL</button><button data-life-action="advance">PASS 1H</button></div><div class="lifeos-log">'+state.lastAction+'</div></section><section class="lifeos-card"><h3>RELATIONSHIPS + AVAILABILITY</h3><div class="lifeos-contacts">'+CONTACTS.map(c=>{const score=Math.round(state.relationships[c.id]||0),open=availability(c.id);return '<article class="lifeos-contact"><div><b>'+c.name+' • '+c.role+'</b><span class="relationship">'+score+'/100 • '+relationshipLabel(score)+'</span><small class="'+(open?'available':'busy')+'">'+(open?'AVAILABLE NOW':'BUSY • '+formatWindow(c))+'</small><small class="perk">'+perkFor(c.id).label+'</small></div><div class="contact-actions"><button data-life-call="'+c.id+'" '+(open?'':'disabled')+'>CALL</button><button data-life-hangout="'+c.id+'" '+(open?'':'disabled')+'>HANG OUT</button></div></article>'}).join('')+'</div></section><section class="lifeos-card"><h3>APARTMENT UPGRADES</h3><div class="lifeos-upgrades">'+UPGRADES.map(u=>'<article class="lifeos-upgrade '+(hasUpgrade(u.id)?'owned':'')+'"><b>'+u.name+'</b><span>'+u.detail+'</span>'+(hasUpgrade(u.id)?'<strong>INSTALLED</strong>':'<button data-life-upgrade="'+u.id+'">BUY $'+u.cost+'</button>')+'</article>').join('')+'</div></section><section class="lifeos-card"><h3>LIFE STATS</h3><div class="stats"><span><b>'+state.stats.sleeps+'</b><small>FULL SLEEPS</small></span><span><b>'+state.stats.meals+'</b><small>MEALS</small></span><span><b>'+state.stats.hangouts+'</b><small>HANGOUTS</small></span><span><b>'+state.stats.careerActions+'</b><small>CAREER SESSIONS</small></span></div><p>Home upgrades persist locally and improve recovery. Existing TGG career, battle, show and gym systems stay intact.</p></section></div><button id="lifeOsBack" class="secondary lifeos-back">BACK TO CITY</button></div>';
     root.querySelectorAll('[data-life-action]').forEach(b=>b.onclick=()=>({sleep,nap,meal,shower,chill,advance:()=>advance(60)}[b.dataset.lifeAction]?.()));
     root.querySelectorAll('[data-life-call]').forEach(b=>b.onclick=()=>contactInteraction(b.dataset.lifeCall,'call'));
     root.querySelectorAll('[data-life-hangout]').forEach(b=>b.onclick=()=>contactInteraction(b.dataset.lifeHangout,'hangout'));
@@ -288,7 +321,7 @@
   }
   window.TGGLifeOS={
     version:VERSION,getState:snapshot,load,save,render,advance,sleep,nap,meal,shower,chill,upgrade,
-    contactInteraction,availability,performanceModifier,readinessLabel,applyCareerAction,
+    contactInteraction,availability,performanceModifier,readinessLabel,applyCareerAction,careerOutcome,relationshipPerks,perkFor,
     contacts:CONTACTS.map(x=>({...x})),upgrades:UPGRADES.map(x=>({...x}))
   };
   load();

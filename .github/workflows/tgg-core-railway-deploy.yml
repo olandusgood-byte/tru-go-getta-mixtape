@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
     paths:
+      - 'game/**'
+      - 'tgg-core/**'
+      - 'worker.mjs'
+      - 'package.json'
       - '.github/workflows/tgg-core-railway-deploy.yml'
 
 permissions:

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.93",
-  "module": "GAME-V1.93",
-  "name": "Production Watch + Browser Live Continuity + Runtime Release Sentinel",
+  "version": "1.99",
+  "module": "GAME-V1.99",
+  "name": "Continuous Runtime Watch + Browser Viewer Recovery + Release Integrity Sentinel",
   "workflow": [
     "BUILD",
     "TEST",
@@ -154,9 +154,17 @@
     "v1_91_production_watch": true,
     "v1_92_browser_live_continuity": true,
     "v1_93_runtime_release_sentinel": true,
-    "v1_93_local_state": true
+    "v1_93_local_state": true,
+    "v1_94_production_hardening": true,
+    "v1_95_browser_session_watchdog": true,
+    "v1_96_live_viewer_recovery_gate": true,
+    "v1_96_local_state": true,
+    "v1_97_continuous_runtime_watch": true,
+    "v1_98_browser_viewer_recovery": true,
+    "v1_99_release_integrity_sentinel": true,
+    "v1_99_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.94 CONTINUOUS HARDENING"
+  "next": "V2.00 CONTINUOUS PRODUCTION INTEGRITY"
 }

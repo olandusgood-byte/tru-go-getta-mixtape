@@ -295,10 +295,10 @@
     beam.position.y=3.8;group.add(beam);
     const marker=new THREE.Mesh(new THREE.OctahedronGeometry(.48),new THREE.MeshStandardMaterial({color:d.color,emissive:d.color,emissiveIntensity:2.8,metalness:.45,roughness:.25}));
     marker.position.y=2.25;group.add(marker);
-    const label=makeTextSprite(d.label,'#'+color.getHexString());
-    label.position.y=5.8;group.add(label);
+    const labelSprite=makeTextSprite(d.label,'#'+color.getHexString());
+    labelSprite.position.y=5.8;group.add(labelSprite);
     scene.add(group);
-    return {...d,group,ring,beam,marker,label};
+    return {...d,group,ring,beam,marker,labelSprite};
   });
 
   function nearbyDestination(s,radius=7.2){
@@ -567,7 +567,7 @@
       d.beam.material.opacity=hot ? .27 : .10;
       d.marker.rotation.y=t*1.4+i;
       d.marker.position.y=2.25+Math.sin(t*2+i)*.18;
-      d.label.material.opacity=hot?1:.78;
+      d.labelSprite.material.opacity=hot?1:.78;
     });
     const interactButton=document.getElementById('interact3dBtn');
     if(interactButton){

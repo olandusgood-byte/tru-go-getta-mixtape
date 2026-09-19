@@ -372,8 +372,10 @@
     const meetupHere=!!meetup?.arrived;
     const encounter=window.TGGStreetEncounters?.navigationTarget?.();
     const encounterHere=!!encounter?.arrived;
+    const streetMission=window.TGGStreetMissions?.navigationTarget?.();
+    const streetMissionHere=!!streetMission?.arrived;
     const storyStatus=storyHere?window.TGGStoryMissions?.status?.():null;
-    interactButton.disabled=!near&&!person&&!storyHere&&!beatHere&&!meetupHere&&!encounterHere;
+    interactButton.disabled=!near&&!person&&!storyHere&&!beatHere&&!meetupHere&&!encounterHere&&!streetMissionHere;
     interactButton.textContent=storyHere
       ?'DO '+String(storyStatus?.current?.title||storyTarget?.label||'STORY OBJECTIVE').toUpperCase()
       :beatHere
@@ -382,12 +384,15 @@
           ?'MEET '+String(meetup?.name||'CONTACT').toUpperCase()
           :encounterHere
             ?'TALK TO '+String(encounter?.name||'CONTACT').toUpperCase()+' • STREET'
-            :person?'TALK TO '+person.name.toUpperCase():near?'ENTER '+near.label:'INTERACT';
-    interactButton.classList.toggle('nearby',!!near||!!person||storyHere||beatHere||meetupHere||encounterHere);
+            :streetMissionHere
+              ?'DO '+String(streetMission?.label||streetMission?.title||'STREET MISSION').toUpperCase()
+              :person?'TALK TO '+person.name.toUpperCase():near?'ENTER '+near.label:'INTERACT';
+    interactButton.classList.toggle('nearby',!!near||!!person||storyHere||beatHere||meetupHere||encounterHere||streetMissionHere);
     interactButton.classList.toggle('story-ready',storyHere);
     interactButton.classList.toggle('world-beat-ready',beatHere);
     interactButton.classList.toggle('meetup-ready',meetupHere);
     interactButton.classList.toggle('encounter-ready',encounterHere);
+    interactButton.classList.toggle('street-mission-ready',streetMissionHere);
     return {
       ready:!interactButton.disabled,
       near:near?.id||null,
@@ -396,6 +401,7 @@
       beatHere,
       meetupHere,
       encounterHere,
+      streetMissionHere,
       text:String(interactButton.textContent||'').trim()
     };
   }
@@ -461,6 +467,14 @@
       const result=window.TGGStreetEncounters?.beginConversation?.();
       if(result?.status==='choice_required'){
         window.__tggToast?.('STREET ENCOUNTER — '+(encounter.name||'CONTACT'));
+        return true;
+      }
+    }
+    const streetMission=window.TGGStreetMissions?.navigationTarget?.();
+    if(streetMission?.arrived){
+      const result=window.TGGStreetMissions?.advanceMission?.();
+      if(result?.status==='stage_complete'||result?.status==='complete'){
+        window.__tggToast?.('STREET MISSION — '+(result.status==='complete'?'COMPLETE':String(streetMission.label||'STAGE COMPLETE')));
         return true;
       }
     }

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.84",
-  "module": "GAME-V1.84",
-  "name": "Continuous Integrity Hardening + Browser Viewer Failover + Autonomous Release Sentinel",
+  "version": "1.87",
+  "module": "GAME-V1.87",
+  "name": "Runtime Resilience + Browser Session Resilience + Live Runtime Sentinel",
   "workflow": [
     "BUILD",
     "TEST",
@@ -142,9 +142,13 @@
     "v1_82_continuous_integrity_hardening": true,
     "v1_83_browser_viewer_failover": true,
     "v1_84_autonomous_release_sentinel": true,
-    "v1_84_local_state": true
+    "v1_84_local_state": true,
+    "v1_85_runtime_resilience": true,
+    "v1_86_browser_session_resilience": true,
+    "v1_87_live_runtime_sentinel": true,
+    "v1_87_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.85 CONTINUOUS HARDENING"
+  "next": "V1.88 CONTINUOUS HARDENING"
 }

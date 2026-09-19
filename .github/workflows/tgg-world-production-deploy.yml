@@ -46,7 +46,8 @@ jobs:
         run: |
           set -euo pipefail
           grep -q "TGG_3D_V218_ROOT: 'game'" .github/workflows/game-v218-mega-regression.yml
-          grep -q 'V2.50 REALITY MASTER CONSOLIDATION' game/runtime-version.json
+          grep -q 'V3.00 FINAL MEGA BUILD' game/runtime-version.json
+          grep -q '"base_runtime": "V2.50 REALITY MASTER CONSOLIDATION"' game/runtime-version.json
           grep -q 'GAME V2.50' game/index.html
           grep -q 'window.TGGMegaQA' game/mega-qa.js
           echo "verified=true" >> "$GITHUB_OUTPUT"
@@ -58,7 +59,7 @@ jobs:
           if [ -n "${VERCEL_TOKEN:-}" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::VERCEL_TOKEN is not configured; production remains unchanged."
+            echo "::error::VERCEL_TOKEN is not configured; production deployment is blocked."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -103,4 +104,5 @@ jobs:
       - name: Credential status
         if: steps.auth.outputs.ready != 'true'
         run: |
-          echo "Deployment skipped fail-closed: VERCEL_TOKEN is not configured."
+          echo "Deployment blocked fail-closed: VERCEL_TOKEN is not configured." >&2
+          exit 1

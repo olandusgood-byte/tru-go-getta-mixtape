@@ -170,8 +170,10 @@
 
     cameraCue(type);
     clearTimeout(timer);
-    if(showFrame)cancelAnimationFrame(showFrame);
-    showFrame=requestAnimationFrame(()=>{showFrame=0;root.classList.add('show')});
+    if(showFrame){cancelAnimationFrame(showFrame);showFrame=0;}
+    root.classList.remove('show');
+    void root.offsetWidth;
+    root.classList.add('show');
     const duration=type==='objective'?1500:type==='chapter-complete'?3400:2750;
     timer=setTimeout(hide,duration);
     return true;

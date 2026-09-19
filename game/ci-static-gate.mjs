@@ -15,6 +15,18 @@ for(const name of fs.readdirSync(root).filter(n=>n.endsWith('.json'))){
   try{JSON.parse(read(name));}catch(e){throw new Error('Invalid JSON '+name+': '+e.message);}
 }
 
+const browserWorkflowPath=path.resolve('.github/workflows/game-browser-smoke.yml');
+const browserWorkflow=fs.readFileSync(browserWorkflowPath,'utf8');
+assert((browserWorkflow.match(/- name: Stop local game server/g)||[]).length===1,'Browser workflow duplicate tail detected');
+assert((browserWorkflow.match(/^name: Game Browser Smoke$/gm)||[]).length===1,'Browser workflow header duplicated or missing');
+assert(browserWorkflow.includes('run: node game/browser-smoke.mjs'),'Browser workflow must execute checked-in smoke runner');
+const browserScriptPath=path.join(root,'browser-smoke.mjs');
+assert(fs.existsSync(browserScriptPath),'Checked-in browser smoke runner missing');
+const browserScript=fs.readFileSync(browserScriptPath,'utf8');
+assert(browserScript.includes("const v2=/^v2([0-9]{2})"),'Browser smoke runner missing V2.xx discovery');
+const browserSyntax=spawnSync(process.execPath,['--check',browserScriptPath],{encoding:'utf8'});
+assert(browserSyntax.status===0,'Browser smoke JavaScript syntax failed:\n'+(browserSyntax.stderr||browserSyntax.stdout||''));
+
 const contract=spawnSync(process.execPath,[path.join(root,'static-contract.test.mjs')],{encoding:'utf8'});
 assert(contract.status===0,'V1.13 static contract failed:\n'+(contract.stderr||contract.stdout||''));
 

@@ -226,6 +226,81 @@ try{
     throw new Error('V4.98 NPC favor routing failed '+JSON.stringify(favorResult));
   }
 
+  await page.waitForFunction(()=>!!window.TGGContactConsequences&&!!window.TGGV499,{timeout:15000});
+  const obligationOpen=await page.evaluate(()=>({
+    run:window.TGGV499.run(),
+    snap:window.TGGContactConsequences.snapshot()
+  }));
+  const djObligation=obligationOpen.snap?.active?.find(x=>x.name==='DJ V'&&x.beat==='park-cypher');
+  if(obligationOpen.run?.ok!==true||!djObligation||obligationOpen.snap?.contacts?.['DJ V']?.debt<1){
+    throw new Error('V4.99 NPC obligation open failed '+JSON.stringify(obligationOpen));
+  }
+  const favorPhysicalRoute=await page.evaluate(()=>{
+    const start={...window.TGGGame.getState()};
+    const nav=window.TGGWorldDepth?.beatNavigation?.();
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    const routed=!!nav&&stepAxis('y',50)&&stepAxis('x',nav.x)&&stepAxis('y',nav.y);
+    return {start,routed,arrived:window.TGGWorldDepth?.beatNavigation?.()||null};
+  });
+  if(!favorPhysicalRoute.routed||favorPhysicalRoute.arrived?.arrived!==true){
+    throw new Error('V4.99 favor physical route failed '+JSON.stringify(favorPhysicalRoute));
+  }
+  await page.waitForTimeout(180);
+  const favorInteract=await page.locator('#interact3dBtn').evaluate(el=>({
+    disabled:!!el.disabled,
+    text:String(el.textContent||'').trim(),
+    ready:el.classList.contains('world-beat-ready')
+  }));
+  if(favorInteract.disabled||!favorInteract.ready||!/^DO\s+/i.test(favorInteract.text)){
+    throw new Error('V4.99 favor INTERACT unavailable '+JSON.stringify(favorInteract));
+  }
+  await page.evaluate(()=>{
+    const el=document.getElementById('interact3dBtn');
+    if(!el||el.disabled)throw new Error('V4.99 favor interact runtime unavailable');
+    el.click();
+  });
+  await page.waitForTimeout(160);
+  const obligationResolved=await page.evaluate(start=>{
+    const contact=window.TGGContactConsequences.snapshot();
+    const relation=window.TGGNPCRelations.relationship('DJ V');
+    const world=window.TGGWorldDepth?.getStatus?.()||{};
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    const restored=stepAxis('y',50)&&stepAxis('x',start.x)&&stepAxis('y',start.y);
+    return {contact,relation,world,restored,current:{...window.TGGGame.getState()}};
+  },favorPhysicalRoute.start);
+  if(obligationResolved.contact?.lastOutcome?.type!=='favor-complete'||
+     obligationResolved.contact?.lastOutcome?.name!=='DJ V'||
+     obligationResolved.contact?.contacts?.['DJ V']?.debt!==0||
+     obligationResolved.contact?.contacts?.['DJ V']?.completed<1||
+     !(obligationResolved.relation?.relation?.affinity>relationResolved.after.relation.affinity)||
+     obligationResolved.world?.activeBeat||
+     !obligationResolved.restored||
+     Math.hypot(obligationResolved.current.x-favorPhysicalRoute.start.x,obligationResolved.current.y-favorPhysicalRoute.start.y)>.05){
+    throw new Error('V4.99 favor outcome failed '+JSON.stringify(obligationResolved));
+  }
+
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
@@ -364,7 +439,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity}));
 }finally{
   await browser.close();
 }

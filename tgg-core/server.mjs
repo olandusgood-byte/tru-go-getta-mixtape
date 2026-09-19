@@ -1106,9 +1106,9 @@ app.get('/v1/browser/sessions/:id/viewer/stream', auth, async (req,res,next)=>{
     const own=await pool.query('select 1 from tgg_browser_sessions where id=$1 and user_id=$2',[req.params.id,req.user.id]);
     if(!own.rowCount)return res.status(404).json({error:'browser_session_not_found'});
     res.status(200); res.setHeader('Content-Type','text/event-stream'); res.setHeader('Cache-Control','no-cache, no-transform'); res.setHeader('Connection','keep-alive'); res.flushHeaders?.();
-    const after=Number(req.query.after||0); let closed=false; const client=await pool.connect();
+    const after=Number(req.query.after||0); let closed=false; let lastSentId=after; const client=await pool.connect();
     await client.query('listen tgg_browser_viewer');
-    const send=e=>{if(!closed)res.write('id: '+e.id+'\nevent: '+e.event_type+'\ndata: '+JSON.stringify(e.payload||{})+'\n\n');};
+    const send=e=>{if(!closed && Number(e.id)>lastSentId){lastSentId=Number(e.id);res.write('id: '+e.id+'\\nevent: '+e.event_type+'\\ndata: '+JSON.stringify({id:e.id,event_type:e.event_type,payload:e.payload||{},created_at:e.created_at})+'\\n\\n');}};
     const onNotification=msg=>{try{const e=JSON.parse(msg.payload);if(String(e.browser_session_id)===String(req.params.id))send(e);}catch{}};
     client.on('notification',onNotification);
     const backlog=await pool.query('select * from tgg_browser_viewer_events where id>$1 and browser_session_id=$2 order by id asc limit 200',[after,req.params.id]);

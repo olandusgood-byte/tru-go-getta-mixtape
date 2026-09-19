@@ -21,7 +21,6 @@ create table if not exists sessions (
 create index if not exists sessions_user_idx on sessions(user_id);
 create index if not exists sessions_expiry_idx on sessions(expires_at);
 
-create index if not exists tgg_browser_sessions_credential_idx on tgg_browser_sessions(credential_hash,credential_expires_at);
 
 create table if not exists artists (
   id uuid primary key default gen_random_uuid(),
@@ -275,6 +274,8 @@ create table if not exists tgg_browser_sessions (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create index if not exists tgg_browser_sessions_credential_idx on tgg_browser_sessions(credential_hash,credential_expires_at);
 
 create table if not exists tgg_certifications (
   id uuid primary key default gen_random_uuid(),

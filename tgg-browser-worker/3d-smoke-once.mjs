@@ -35,6 +35,7 @@ const V219_CROWD_ONLY=String(process.env.TGG_3D_V219_CROWD_ONLY||'0')==='1';
 const V220_CINEMATIC_ONLY=String(process.env.TGG_3D_V220_CINEMATIC_ONLY||'0')==='1';
 const LIFE_OS_ONLY=String(process.env.TGG_3D_LIFE_OS_ONLY||'0')==='1';
 const V222_RELATIONSHIP_ONLY=String(process.env.TGG_3D_V222_RELATIONSHIP_ONLY||'0')==='1';
+const V223_SOCIAL_SCHEDULE_ONLY=String(process.env.TGG_3D_V223_SOCIAL_SCHEDULE_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function startV218SnapshotServer(){
@@ -71,6 +72,178 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(V223_SOCIAL_SCHEDULE_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,cssResponse,lifeResponse,scheduleResponse,navResponse,storyWorldResponse]=await Promise.all([
+        fetch(base+'/index.html'),fetch(base+'/style.css'),fetch(base+'/life-os.js'),fetch(base+'/social-schedule.js'),
+        fetch(base+'/navigation.js'),fetch(base+'/story-world-3d.js')
+      ]);
+      if(!htmlResponse.ok||!cssResponse.ok||!lifeResponse.ok||!scheduleResponse.ok||!navResponse.ok||!storyWorldResponse.ok){
+        throw new Error('V2.23 social schedule harness fetch failed');
+      }
+      let html=await htmlResponse.text();
+      const [css,lifeSource,scheduleSource,navSource,storyWorldSource]=await Promise.all([
+        cssResponse.text(),lifeResponse.text(),scheduleResponse.text(),navResponse.text(),storyWorldResponse.text()
+      ]);
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<script\b[^>]*\/?>/gi,'')
+               .replace(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi,'<style>'+css+'</style>');
+      const testCtx=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const tp=await testCtx.newPage();
+      const pageErrors=[];const consoleErrors=[];
+      tp.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+      tp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      await tp.setContent(html,{waitUntil:'domcontentloaded'});
+      await tp.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
+        window.__qaScreen='game';
+        window.__qaGame={x:50,y:55,cash:5000,xp:0,level:5,heading:0,inVehicle:false};
+        window.__qaToasts=[];
+        window.TGGGame={
+          getState:()=>window.__qaGame,
+          getActiveScreen:()=>window.__qaScreen,
+          show:id=>{
+            window.__qaScreen=id;
+            document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
+            document.getElementById(id)?.classList.add('active');
+            return true;
+          },
+          spend:n=>{n=Number(n)||0;if(window.__qaGame.cash<n)return false;window.__qaGame.cash-=n;return true}
+        };
+        window.__tggToast=t=>window.__qaToasts.push(String(t));
+      });
+      await tp.addScriptTag({content:lifeSource});
+      await tp.addScriptTag({content:scheduleSource});
+      await tp.addScriptTag({content:navSource});
+      await tp.waitForTimeout(180);
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+
+      let snap=await tp.evaluate(()=>({
+        title:document.title,
+        version:window.TGGSocialSchedule?.version,
+        status:window.TGGSocialSchedule?.status?.(),
+        button:!!document.getElementById('scheduleBtn'),
+        board:!!document.getElementById('scheduleBoard'),
+        hud:!!document.getElementById('appointmentHud'),
+        navApi:typeof window.TGGNavigation?.getTarget==='function'
+      }));
+      add('v223-title',snap.title.includes('V2.23 SOCIAL SCHEDULE'),snap.title);
+      add('v223-api',snap.version==='V2.23',snap.version);
+      add('v223-ui-hosts',snap.button&&snap.board&&snap.hud,JSON.stringify(snap));
+      add('v223-navigation-api',snap.navApi);
+      add('v223-two-daily-invites',snap.status?.invites?.filter(x=>x.day===1).length===2,JSON.stringify(snap.status?.invites));
+      add('v223-deterministic-manager',snap.status?.invites?.some(x=>x.templateId==='manager-meet'&&x.start===660),JSON.stringify(snap.status?.invites));
+      add('v223-deterministic-director',snap.status?.invites?.some(x=>x.templateId==='video-call'&&x.start===960),JSON.stringify(snap.status?.invites));
+
+      const managerId=await tp.evaluate(()=>window.TGGSocialSchedule.status().invites.find(x=>x.templateId==='manager-meet')?.id);
+      const directorId=await tp.evaluate(()=>window.TGGSocialSchedule.status().invites.find(x=>x.templateId==='video-call')?.id);
+      await tp.evaluate(id=>window.TGGSocialSchedule.accept(id),managerId);
+      snap=await tp.evaluate(()=>({
+        schedule:window.TGGSocialSchedule.status(),
+        target:window.TGGSocialSchedule.navigationTarget(),
+        nav:window.TGGNavigation.getTarget(),
+        hud:{
+          active:document.getElementById('appointmentHud')?.classList.contains('active'),
+          title:document.getElementById('appointmentHudTitle')?.textContent||'',
+          checkDisabled:document.getElementById('appointmentHudCheck')?.disabled
+        }
+      }));
+      add('v223-accept-runtime',snap.schedule.active?.status==='accepted',JSON.stringify(snap.schedule.active));
+      add('v223-city-target',snap.target?.x===72&&snap.target?.y===36&&snap.target?.schedule===true,JSON.stringify(snap.target));
+      add('v223-nav-priority',snap.nav?.schedule===true&&String(snap.nav?.label||'').includes('APPOINTMENT'),JSON.stringify(snap.nav));
+      add('v223-hud-active',snap.hud.active===true&&snap.hud.title.includes('M'),JSON.stringify(snap.hud));
+
+      const tooEarly=await tp.evaluate(id=>window.TGGSocialSchedule.checkIn(id),managerId);
+      add('v223-too-early-blocked',tooEarly===false);
+      const earlyToast=await tp.evaluate(()=>window.__qaToasts.at(-1)||'');
+      add('v223-too-early-message',earlyToast.includes('TOO EARLY'),earlyToast);
+
+      await tp.evaluate(()=>window.TGGLifeOS.advance(60));
+      await tp.evaluate(()=>{window.__qaGame.x=72;window.__qaGame.y=36;window.TGGSocialSchedule.render(true)});
+      snap=await tp.evaluate(()=>({
+        near:window.TGGSocialSchedule.near(window.TGGSocialSchedule.activeInvite()),
+        checkDisabled:document.getElementById('appointmentHudCheck')?.disabled,
+        relationship:window.TGGLifeOS.getState().relationships.manager
+      }));
+      add('v223-arrival-detected',snap.near===true,JSON.stringify(snap));
+      add('v223-checkin-enabled',snap.checkDisabled===false,JSON.stringify(snap));
+
+      const managerBefore=snap.relationship;
+      const checked=await tp.evaluate(id=>window.TGGSocialSchedule.checkIn(id),managerId);
+      snap=await tp.evaluate(()=>({
+        schedule:window.TGGSocialSchedule.status(),
+        life:window.TGGLifeOS.getState(),
+        stored:JSON.parse(localStorage.getItem('tgg-social-schedule-v1')||'null')
+      }));
+      const managerDone=snap.schedule.invites.find(x=>x.id===managerId);
+      add('v223-checkin-completes',checked===true&&managerDone?.status==='completed',JSON.stringify(managerDone));
+      add('v223-showup-relationship',snap.life.relationships.manager===managerBefore+10,JSON.stringify(snap.life.relationships));
+      add('v223-complete-stat',snap.schedule.stats.completed===1,JSON.stringify(snap.schedule.stats));
+      add('v223-persistence',snap.stored?.invites?.some(x=>x.id===managerId&&x.status==='completed'),JSON.stringify(snap.stored));
+
+      const directorBefore=await tp.evaluate(()=>window.TGGLifeOS.getState().relationships.director);
+      await tp.evaluate(id=>window.TGGSocialSchedule.decline(id),directorId);
+      snap=await tp.evaluate(()=>({
+        schedule:window.TGGSocialSchedule.status(),
+        relationship:window.TGGLifeOS.getState().relationships.director
+      }));
+      const director= snap.schedule.invites.find(x=>x.id===directorId);
+      add('v223-decline-runtime',director?.status==='declined'&&snap.schedule.stats.declined===1,JSON.stringify(director));
+      add('v223-decline-penalty',snap.relationship===directorBefore-1,String(snap.relationship));
+
+      await tp.evaluate(()=>{
+        window.TGGSocialSchedule.reset();
+        const manager=window.TGGSocialSchedule.status().invites.find(x=>x.templateId==='manager-meet');
+        window.TGGSocialSchedule.accept(manager.id);
+      });
+      const missBefore=await tp.evaluate(()=>window.TGGLifeOS.getState().relationships.manager);
+      await tp.evaluate(()=>window.TGGLifeOS.advance(180));
+      await tp.evaluate(()=>window.TGGSocialSchedule.sync());
+      snap=await tp.evaluate(()=>({
+        schedule:window.TGGSocialSchedule.status(),
+        relationship:window.TGGLifeOS.getState().relationships.manager
+      }));
+      const missedManager=snap.schedule.invites.find(x=>x.templateId==='manager-meet');
+      add('v223-missed-runtime',missedManager?.status==='missed'&&snap.schedule.stats.missed===1,JSON.stringify(missedManager));
+      add('v223-missed-penalty',snap.relationship===missBefore-6,JSON.stringify({before:missBefore,after:snap.relationship}));
+
+      add('v223-nav-source-hook',navSource.includes('TGGSocialSchedule?.navigationTarget?.()'));
+      add('v223-3d-beacon-source-hook',storyWorldSource.includes('TGGSocialSchedule?.navigationTarget?.()'));
+
+      await tp.evaluate(()=>{window.TGGSocialSchedule.render(true);window.TGGGame.show('scheduleBoard')});
+      const layout=await tp.evaluate(()=>{
+        const shell=document.querySelector('.schedule-shell')?.getBoundingClientRect();
+        const cards=[...document.querySelectorAll('.schedule-card')].map(x=>x.getBoundingClientRect());
+        const list=document.querySelector('.schedule-list');
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          overflowX:document.documentElement.scrollWidth>innerWidth+1,
+          shell:shell?{left:shell.left,right:shell.right,width:shell.width,height:shell.height}:null,
+          cardCount:cards.length,
+          minCardWidth:cards.length?Math.min(...cards.map(x=>x.width)):0,
+          columns:list?getComputedStyle(list).gridTemplateColumns:''
+        };
+      });
+      add('v223-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
+      add('v223-mobile-shell-contained',!!layout.shell&&layout.shell.width>250&&layout.shell.left>=0&&layout.shell.right<=layout.width+1,JSON.stringify(layout.shell));
+      add('v223-mobile-one-column',!!layout.columns&&!layout.columns.includes(' '),layout.columns);
+      add('v223-mobile-cards-readable',layout.cardCount>=2&&layout.minCardWidth>=250,JSON.stringify(layout));
+
+      result={
+        ok:checks.every(x=>x.pass)&&pageErrors.length===0,
+        status:'done',mode:'v223_social_schedule_harness',target:TARGET,
+        checks,console_errors:consoleErrors,page_errors:pageErrors,updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await testCtx.close();await ctx.close();return;
+    }
 
     if(V222_RELATIONSHIP_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
@@ -297,8 +470,7 @@ async function run(){
       const beforeAdvance=snap.state;
       await mp.evaluate(()=>window.TGGLifeOS.advance(60));
       snap=await mp.evaluate(()=>window.TGGLifeOS.getState());
-      record('lifeos-time-advance',snap.minute===600,JSON.stringify(snap));
-      record('lifeos-needs-decay',snap.needs.energy<beforeAdvance.needs.energy&&snap.needs.fuel<beforeAdvance.needs.fuel,JSON.stringify(snap.needs));
+      record('lifeos-time-advance',snap.minute===600,JSON.stringify(snap));      record('lifeos-needs-decay',snap.needs.energy<beforeAdvance.needs.energy&&snap.needs.fuel<beforeAdvance.needs.fuel,JSON.stringify(snap.needs));
 
       const beforeSleep=snap;
       await mp.evaluate(()=>window.TGGLifeOS.sleep());
@@ -597,8 +769,7 @@ async function run(){
         mode:'v220_cinematic_story_harness',
         target:TARGET,
         checks,
-        console_errors:consoleErrors,
-        page_errors:pageErrors,
+        console_errors:consoleErrors,        page_errors:pageErrors,
         updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
@@ -897,8 +1068,7 @@ async function run(){
           const filePath=path.resolve(serveRoot,relative);
           if(!filePath.startsWith(serveRoot+path.sep)&&filePath!==serveRoot){
             res.statusCode=400;res.end('bad path');return;
-          }
-          const bytes=await fs.readFile(filePath);
+          }          const bytes=await fs.readFile(filePath);
           res.statusCode=200;
           res.setHeader('content-type',mimeFor(filePath));          res.setHeader('cache-control','no-store');
           res.end(bytes);
@@ -1197,8 +1367,7 @@ async function run(){
           setItem:(k,v)=>{store[k]=String(v)},
           removeItem:k=>{delete store[k]},
           clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
-        }});
-        window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:0,xp:0,level:5};        window.__qaCareer={recordings:3,mixtapes:1,reputation:0,studioLevel:3};
+        }});        window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:0,xp:0,level:5};        window.__qaCareer={recordings:3,mixtapes:1,reputation:0,studioLevel:3};
         window.__qaContent={completed:['flyer-run']};
         window.__qaLife={battleWins:1,shows:1,activeOpportunity:null,contacts:{}};
         window.__qaShown='game'; window.__qaToasts=[];
@@ -1497,8 +1666,7 @@ async function run(){
         status:window.TGGStoryMissions?.status?.()
       }));
       record('story-api',snap.api);      record('story-entry-button',snap.button);
-      record('story-board',snap.board);
-      record('story-six-steps',snap.status?.steps?.length===6,JSON.stringify(snap.status));
+      record('story-board',snap.board);      record('story-six-steps',snap.status?.steps?.length===6,JSON.stringify(snap.status));
 
       await mp.evaluate(()=>window.TGGStoryMissions.start());
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
@@ -1797,8 +1965,7 @@ async function run(){
         </div><div id="pause" class="screen"></div><div id="toast"></div>      </body></html>`);
       await page.evaluate(()=>{
         const store={};
-        Object.defineProperty(window,'localStorage',{configurable:true,value:{
-          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
           setItem:(k,v)=>{store[k]=String(v)},
           removeItem:k=>{delete store[k]},
           clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
@@ -2097,8 +2264,7 @@ async function run(){
       document.getElementById('startGame')?.click();
     });
     let webglReady=false;
-    try{      const readyDeadline=Date.now()+30000;
-      while(Date.now()<readyDeadline){
+    try{      const readyDeadline=Date.now()+30000;      while(Date.now()<readyDeadline){
         webglReady=await page.evaluate(()=>window.TGG3D?.isReady?.()===true).catch(()=>false);
         if(webglReady)break;
         await page.waitForTimeout(250);
@@ -2397,8 +2563,7 @@ async function run(){
 
     await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());    const exited=await page.evaluate(()=>({
       state:window.TGGGame?.getState?.(),
-      hudActive:document.getElementById('vehicleHud')?.classList.contains('active'),
-      camera:window.TGG3D?.getCameraMode?.()
+      hudActive:document.getElementById('vehicleHud')?.classList.contains('active'),      camera:window.TGG3D?.getCameraMode?.()
     }));
     record('exit-car',exited.state?.inVehicle===false);
     record('exit-restores-orbit',exited.camera==='orbit',String(exited.camera));

@@ -36,8 +36,8 @@ async function run(){
       page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
       page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
       page.on('requestfailed',req=>failedResources.push(req.url()));
-      const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
-      await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:30000});
+      const response=await page.goto(TARGET,{waitUntil:'commit',timeout:90000});
+      await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:60000});
       await page.waitForTimeout(900);
       const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
 
@@ -45,8 +45,8 @@ async function run(){
       const mp=await mobile.newPage();
       const mobileErrors=[];
       mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
-      await mp.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
-      await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:30000});
+      await mp.goto(TARGET,{waitUntil:'commit',timeout:90000});
+      await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:60000});
       await mp.waitForTimeout(650);
       const mobileResult=await mp.evaluate(()=>{
         const qa=window.TGGMegaQA.run();
@@ -248,7 +248,6 @@ async function run(){
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await mobile.close();await ctx.close();return;    }
-
     if(STORY_WORLD_3D_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
       const [htmlResponse,threeResponse,storyResponse,worldResponse]=await Promise.all([
@@ -497,8 +496,7 @@ async function run(){
 
       await mp.evaluate(()=>document.querySelector('[data-media="video"]')?.click());
       await mp.waitForTimeout(40);      await mp.evaluate(()=>window.TGGStoryMissions.sync());
-      snap=await mp.evaluate(()=>({
-        status:window.TGGStoryMissions.status(),
+      snap=await mp.evaluate(()=>({        status:window.TGGStoryMissions.status(),
         game:{...window.__qaGame},career:{...window.__qaCareer},
         stored:JSON.parse(localStorage.getItem('tgg-story-missions-v1')||'null')
       }));
@@ -747,8 +745,7 @@ async function run(){
       record('world-life-persistence',snap.stored?.attributes?.stamina===snap.life.attributes.stamina&&snap.stored?.activeOpportunity?.contactId==='director');
       const layout=await mp.evaluate(()=>{
         document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
-        document.getElementById('worldLifeBoard')?.classList.add('active');
-        const shell=document.querySelector('.world-life-shell')?.getBoundingClientRect();
+        document.getElementById('worldLifeBoard')?.classList.add('active');        const shell=document.querySelector('.world-life-shell')?.getBoundingClientRect();
         const tabs=[...document.querySelectorAll('.life-tabs button')].map(x=>x.getBoundingClientRect());
         return {width:innerWidth,scrollWidth:document.documentElement.scrollWidth,overflowX:document.documentElement.scrollWidth>innerWidth+1,shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,minTab:tabs.length?Math.min(...tabs.map(x=>x.height)):0};
       });
@@ -997,8 +994,7 @@ async function run(){
         document.getElementById('game')?.classList.add('active');        const dpad=document.querySelector('.dpad')?.getBoundingClientRect();
         const move=document.querySelector('.move-pad')?.getBoundingClientRect();
         const deck=document.querySelector('.action-deck')?.getBoundingClientRect();
-        const buttons=[...document.querySelectorAll('.action-deck .actions button')].map(b=>b.getBoundingClientRect());
-        return {
+        const buttons=[...document.querySelectorAll('.action-deck .actions button')].map(b=>b.getBoundingClientRect());        return {
           width:innerWidth,
           scrollWidth:document.documentElement.scrollWidth,
           overflowX:document.documentElement.scrollWidth>innerWidth+1,
@@ -1247,8 +1243,7 @@ async function run(){
         city3d:!!document.getElementById('city3d'),
         cityCanvas:!!document.querySelector('#city3d canvas'),
         scripts:[...document.scripts].map(s=>s.src||'[inline]'),
-        readyState:document.readyState
-      })).catch(()=>({evaluationFailed:true}));
+        readyState:document.readyState      })).catch(()=>({evaluationFailed:true}));
       console.log(JSON.stringify({tgg_3d_smoke_step:'mobile-complete'}));
     result={
         ok:false,status:'webgl_not_ready',target:TARGET,
@@ -1497,8 +1492,7 @@ async function run(){
       hudActive:document.getElementById('vehicleHud')?.classList.contains('active')
     }));
     const accelSpeed=Number(accelerated.driving?.speed)||0;    const accelDistance=Math.hypot(Number(accelerated.state?.x)-startX,Number(accelerated.state?.y)-startY);
-    record('smooth-acceleration',accelSpeed>3,`speed=${accelSpeed}`);
-    record('continuous-forward-travel',accelDistance>1.5,`distance=${accelDistance}`);
+    record('smooth-acceleration',accelSpeed>3,`speed=${accelSpeed}`);    record('continuous-forward-travel',accelDistance>1.5,`distance=${accelDistance}`);
     record('speedometer-hud',accelerated.hudActive&&Number(accelerated.speedText)>0,`mph=${accelerated.speedText}`);    record('drive-gear',accelerated.gearText==='D',String(accelerated.gearText));
 
     console.log(JSON.stringify({tgg_3d_smoke_step:'acceleration-complete'}));

@@ -35,7 +35,7 @@ export async function protectedAudioBrowserFlow(input = {}) {
     const record=await fetchStage('server_evidence_record', supabaseUrl + '/v1/protected-audio/evidence', {method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+accessToken},body:JSON.stringify({track_id:trackId,load_ms:Math.max(1,Math.round(now()-started)),playback_started:true})});
     const recorded=await record.json().catch(()=>({})); if(!record.ok||!recorded?.ok)throw new Error(recorded?.error||'TGG browser evidence recording failed.');
     const message = `PASS · Protected Audio browser QA recorded.\nBrowser evidence: ${String(recorded.verified ?? '?')}/${String(recorded.required ?? '?')} · remaining ${String(recorded.remaining ?? '?')}\nEvidence was recorded through the hardened server bridge.`;
-    say(message); return { ok: true, playbackStarted: true, trackId, anonymousStatus, anonymousError, anonymousProofPresent: true, statusText: message, record: recorded };
+    say(message); return { ok: true, playbackStarted: true, trackId, anonymousStatus: null, anonymousError: null, anonymousProofPresent: true, statusText: message, record: recorded };
   } catch (error) {
     const message = `QA not complete: ${String(error?.message || error || 'Unknown error')}`; say(message);
     return { ok: false, playbackStarted: false, statusText: message, error: String(error?.message || error || 'Unknown error') };

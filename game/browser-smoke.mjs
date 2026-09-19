@@ -69,6 +69,23 @@ try{
 
   const continuity=await page.evaluate(()=>{
     const payload={pageErrorCount:0,runtime:true,runtimePresent:true,eventContract:true,allowSynthetic:true,assetLoad:true,runtimeStart:true,stateRead:true,eventLoop:true,session:true,navigation:true,viewerState:true,stream:true,sessionLinkage:true};
+    const seedNumbers=Object.keys(window)
+      .map(k=>/^TGGV(\\d{2,3})$/.exec(k))
+      .filter(Boolean)
+      .map(m=>Number(m[1]))
+      .filter(n=>n>=176&&n<188)
+      .sort((a,b)=>a-b);
+    const seedFailures=[];
+    for(const runtimeNumber of seedNumbers){
+      const api=window['TGGV'+runtimeNumber];
+      try{
+        const result=api?.run?.(payload);
+        if(result&&result.ok===false)seedFailures.push({runtimeNumber,checks:result.checks||{},result});
+      }catch(error){
+        seedFailures.push({runtimeNumber,error:String(error)});
+      }
+    }
+    if(seedFailures.length)throw new Error('Seed continuity failed '+JSON.stringify(seedFailures));
     const runtimeNumbers=Object.keys(window)
       .map(k=>/^TGGV(\d{3})$/.exec(k))
       .filter(Boolean)

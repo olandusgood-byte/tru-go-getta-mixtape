@@ -1,3 +1,4 @@
 TGG Core source refresh marker
 GitHub main sync target: 0a477314dce7635d75e41fc3496be6cca2859c66
 Updated: 2026-09-18T16:04:00Z
+Deployment trigger refresh: 2026-09-19T07:00:00Z

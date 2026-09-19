@@ -19,7 +19,7 @@ const contract=spawnSync(process.execPath,[path.join(root,'static-contract.test.
 assert(contract.status===0,'V1.13 static contract failed:\n'+(contract.stderr||contract.stdout||''));
 
 const continuity=spawnSync(process.execPath,[path.join(root,'v149-v160-runtime.test.mjs')],{encoding:'utf8'});
-assert(continuity.status===0,'V1.49-V1.99 dynamic runtime continuity failed:\n'+(continuity.stderr||continuity.stdout||''));
+assert(continuity.status===0,'V1.49-V2.xx dynamic runtime continuity failed:\n'+(continuity.stderr||continuity.stdout||''));
 
 const html=read('index.html');
 const v114=read('v114-live-city.js');
@@ -28,26 +28,29 @@ for(const src of scripts){
   const scriptPath=path.join(root,src);assert(fs.existsSync(scriptPath)&&fs.statSync(scriptPath).isFile(),'Missing script referenced by index.html: '+src);
 }
 
-// Auto-discover additive V1.xx gameplay layers so new builder checkpoints cannot load
-// without also exposing a verifiable runtime contract.
-const v1Layers=scripts
-  .map(src=>({src,match:/^v1(\d{2})-[^/]+\.js$/.exec(src)}))
-  .filter(x=>x.match);
-for(const layer of v1Layers){
-  const minor=Number(layer.match[1]);
+// Auto-discover additive V1.88+ and V2.xx gameplay layers so new builder checkpoints
+// cannot load without exposing a verifiable, evidence-based local runtime contract.
+const additiveLayers=scripts
+  .map(src=>{
+    const v1=/^v1(\d{2})-[^/]+\.js$/.exec(src);
+    const v2=/^v2(\d{2})-[^/]+\.js$/.exec(src);
+    if(v1&&Number(v1[1])>=88)return{src,major:1,minor:Number(v1[1]),runtimeNumber:100+Number(v1[1])};
+    if(v2)return{src,major:2,minor:Number(v2[1]),runtimeNumber:200+Number(v2[1])};
+    return null;
+  })
+  .filter(Boolean);
+for(const layer of additiveLayers){
   const source=read(layer.src);
-  const longRuntime='window.TGGV1'+String(minor).padStart(2,'0');
-  const shortRuntime='window.TGGV'+String(minor).padStart(2,'0');
-  const hasRuntime=source.includes(longRuntime)||source.includes(shortRuntime);
-  const versionPattern=new RegExp("(?:VERSION|V)\\s*=\\s*['\"]1\\.(?:"+minor+"|"+(100+minor)+")\\.\\d+['\"]");
-  assert(hasRuntime,'Missing additive runtime export '+longRuntime+' or '+shortRuntime+' in '+layer.src);
-  assert(versionPattern.test(source),'Missing matching semantic version 1.'+minor+'.x in '+layer.src);
-  if(minor>=61){
-    assert(!/\bok\s*:\s*true\b/.test(source),'False-green audit/gate is forbidden in '+layer.src+'; derive ok from evidence');
-  }
-  if(minor>=79){
-    assert(/\.snapshot\b|getState\b|document\.|performance\b/.test(source),'Evidence-free runtime audit forbidden in '+layer.src);
-  }
+  const runtimeToken='window.TGGV'+layer.runtimeNumber;
+  const legacyToken=layer.major===1?'window.TGGV'+layer.minor:null;
+  const hasRuntime=source.includes(runtimeToken)||(legacyToken&&source.includes(legacyToken));
+  const versionPattern=layer.major===1
+    ? new RegExp("(?:VERSION|V)\\s*=\\s*['\"]1\\.(?:"+layer.minor+"|"+layer.runtimeNumber+")\\.\\d+['\"]")
+    : new RegExp("(?:VERSION|V)\\s*=\\s*['\"]2\\."+layer.minor+"\\.\\d+['\"]");
+  assert(hasRuntime,'Missing additive runtime export '+runtimeToken+' in '+layer.src);
+  assert(versionPattern.test(source),'Missing matching semantic version in '+layer.src);
+  assert(!/\bok\s*:\s*true\b/.test(source),'False-green audit/gate is forbidden in '+layer.src+'; derive ok from evidence');
+  assert(/\.snapshot\b|getState\b|document\.|performance\b/.test(source),'Evidence-free runtime audit forbidden in '+layer.src);
   for(const forbidden of ['SUPABASE_SERVICE_ROLE_KEY','sb_secret_','sk_live_']){
     assert(!source.includes(forbidden),'Forbidden secret marker in '+layer.src+': '+forbidden);
   }

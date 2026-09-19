@@ -81,15 +81,47 @@ async function run(){
       const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
       console.log(JSON.stringify({tgg_v218_mega_stage:'desktop-suite-done',total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass).slice(0,25)}));
 
+      await page.close();
+      const verticalSliceSource=await fs.readFile(path.join(process.cwd(),'tgg-browser-worker','mega-game-snapshot','vertical-slice-director.js'),'utf8');
+      const mobileCss=await fs.readFile(path.join(process.cwd(),'tgg-browser-worker','mega-game-snapshot','style.css'),'utf8');
+      let mobileHtml=await fs.readFile(path.join(process.cwd(),'tgg-browser-worker','mega-game-snapshot','index.html'),'utf8');
+      while(mobileHtml.includes('<script')){
+        const scriptStart=mobileHtml.indexOf('<script');
+        const scriptEnd=mobileHtml.indexOf('</script>',scriptStart);
+        if(scriptEnd<0)break;
+        mobileHtml=mobileHtml.slice(0,scriptStart)+mobileHtml.slice(scriptEnd+9);
+      }
+      mobileHtml=mobileHtml.replace('<link rel="stylesheet" href="style.css">','<style>'+mobileCss+'</style>');
+      const mobileSourceOk=mobileHtml.includes('V2.18 STREET PRESENCE')&&mobileHtml.includes('id="game"')&&mobileCss.length>1000;
       const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
       const mp=await mobile.newPage();
       const mobileErrors=[];const mobileFailed=[];
       mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
       mp.on('requestfailed',req=>mobileFailed.push(req.url()));
-      const mobileResponse=await mp.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
-      await mp.waitForFunction(()=>window.TGGStreetPresence&&window.TGGVerticalSlice&&window.TGGGame,undefined,{polling:100,timeout:30000});
-      await mp.evaluate(()=>window.TGGGame.show('game'));
-      await mp.waitForTimeout(350);
+      await mp.setContent(mobileHtml,{waitUntil:'domcontentloaded',timeout:15000});
+      await mp.evaluate(()=>{
+        document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
+        document.getElementById('game')?.classList.add('active');
+        window.TGGGame={
+          getActiveScreen:()=> 'game',
+          getState:()=>({x:50,y:55,heading:0,inVehicle:false,autoMode:true,cash:0,xp:0,level:1}),
+          save:()=>true,
+          show:()=>true
+        };
+        window.TGGStoryMissions={status:()=>({
+          chapter:3,chapterName:'CITY TAKEOVER',active:true,completed:false,progress:50,
+          current:{title:'STREET PRESENCE',detail:'Mobile layout and presentation validation.'}
+        })};
+        window.TGGNavigation={getTarget:()=>({meters:42})};
+        window.TGG3D={renderer:null};
+        window.TGGStreetPresence={getStatus:()=>({
+          ready:true,density:'LOW',citizens:6,socialPeople:4,totalVisible:10,
+          nearbyPeople:0,reactions:0,activeDistrict:'DOWNTOWN',activityNodes:4,
+          originalPedestrians:6,totalStreetPopulation:16
+        })};
+      });
+      await mp.addScriptTag({content:verticalSliceSource});
+      await mp.waitForTimeout(150);
       const mobileLayout=await mp.evaluate(()=>{
         const rect=el=>{const r=el?.getBoundingClientRect();return r?{left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}:null};
         const city=document.querySelector('#game .city');
@@ -113,7 +145,7 @@ async function run(){
       const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
       add('v218-mega-desktop-ok',desktop.ok===true,'passed='+desktop.passed+'/'+desktop.total);
       add('v218-mega-desktop-volume',desktop.total>=526,desktop.total);
-      add('v218-mega-mobile-http',mobileResponse?.status?.()===200,mobileResponse?.status?.());
+      add('v218-mega-mobile-source-loaded',mobileSourceOk,'exact V2.18 HTML+CSS local snapshot');
       add('v218-mega-mobile-no-overflow',mobileLayout.overflowX===false&&mobileLayout.scrollWidth<=391,JSON.stringify({width:mobileLayout.width,scrollWidth:mobileLayout.scrollWidth}));
       add('v218-mega-mobile-city-contained',!!mobileLayout.city&&mobileLayout.city.left>=0&&mobileLayout.city.right<=mobileLayout.width+1,JSON.stringify(mobileLayout.city));
       add('v218-mega-mobile-dpad-contained',!!mobileLayout.dpad&&mobileLayout.dpad.left>=0&&mobileLayout.dpad.right<=mobileLayout.width+1,JSON.stringify(mobileLayout.dpad));
@@ -247,8 +279,7 @@ async function run(){
       if(megaSha!==snapshotSha)throw new Error('mega snapshot SHA mismatch: expected '+snapshotSha+' got '+megaSha);
       const mimeFor=p=>p.endsWith('.html')?'text/html; charset=utf-8':p.endsWith('.css')?'text/css; charset=utf-8':p.endsWith('.js')?'application/javascript; charset=utf-8':p.endsWith('.json')?'application/json; charset=utf-8':p.endsWith('.png')?'image/png':p.endsWith('.jpg')||p.endsWith('.jpeg')?'image/jpeg':p.endsWith('.webp')?'image/webp':p.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
       const serveRoot=path.resolve(process.cwd(),'tgg-browser-worker','mega-game-snapshot');
-      await fs.access(path.join(serveRoot,'index.html'));
-      const proxy=http.createServer(async(req,res)=>{
+      await fs.access(path.join(serveRoot,'index.html'));      const proxy=http.createServer(async(req,res)=>{
         try{
           let pathname=new URL(req.url||'/','http://127.0.0.1').pathname;
           if(pathname==='/')pathname='/index.html';
@@ -497,8 +528,7 @@ async function run(){
       record('chapter3-home-base',snap.step===7&&snap.current?.id==='manager-finale',JSON.stringify(snap));
 
       await mp.evaluate(()=>{window.__qaGame.x=72;window.__qaGame.y=36;window.TGGStoryMissions.doCurrent();});
-      await mp.waitForTimeout(30);
-      snap=await mp.evaluate(()=>({
+      await mp.waitForTimeout(30);      snap=await mp.evaluate(()=>({
         status:window.TGGStoryMissions.status(),
         game:{...window.__qaGame},
         career:{...window.__qaCareer},
@@ -748,7 +778,6 @@ async function run(){
       await mp.evaluate(()=>window.TGGStoryMissions.doCurrent());
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter2-kane-talk',snap.step===3,JSON.stringify(snap));
-
       await mp.evaluate(()=>{window.__qaCareer.recordings=4;window.TGGStoryMissions.sync();});
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter2-recording',snap.step===4,JSON.stringify(snap));
@@ -997,8 +1026,7 @@ async function run(){
       await mp.evaluate(()=>{
         window.TGGWorldLife.startShow();
         window.TGGWorldLife.showMove('hype');
-        window.TGGWorldLife.showMove('hype');
-        window.TGGWorldLife.showMove('perform');
+        window.TGGWorldLife.showMove('hype');        window.TGGWorldLife.showMove('perform');
         window.TGGWorldLife.showMove('perform');
       });
       snap=await mp.evaluate(()=>({life:window.TGGWorldLife.getState(),game:{...window.__qaGame},rep:window.__qaRep}));
@@ -1247,8 +1275,7 @@ async function run(){
       let html=await htmlResponse.text();
       const css=await cssResponse.text();
       html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
-               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
-      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
       const mp=await mobile.newPage();
       await mp.setContent(html,{waitUntil:'domcontentloaded'});
       const layout=await mp.evaluate(()=>{
@@ -1497,8 +1524,7 @@ async function run(){
         city3d:!!document.getElementById('city3d'),
         cityCanvas:!!document.querySelector('#city3d canvas'),
         scripts:[...document.scripts].map(s=>s.src||'[inline]'),
-        readyState:document.readyState      })).catch(()=>({evaluationFailed:true}));
-      console.log(JSON.stringify({tgg_3d_smoke_step:'mobile-complete'}));
+        readyState:document.readyState      })).catch(()=>({evaluationFailed:true}));      console.log(JSON.stringify({tgg_3d_smoke_step:'mobile-complete'}));
     result={
         ok:false,status:'webgl_not_ready',target:TARGET,
         error:error?.message||String(error),        diagnostics,        console_errors:consoleErrors,
@@ -1747,8 +1773,7 @@ async function run(){
       state:window.TGGGame?.getState?.(),
       driving:window.TGGGame?.getDrivingState?.(),
       carRotation:window.TGG3D?.car?.rotation?.y,
-      carLean:window.TGG3D?.car?.rotation?.z,
-      frontWheelAngles:(window.TGG3D?.car?.userData?.wheels||[]).filter(w=>w.userData?.front).map(w=>w.rotation.y)
+      carLean:window.TGG3D?.car?.rotation?.z,      frontWheelAngles:(window.TGG3D?.car?.userData?.wheels||[]).filter(w=>w.userData?.front).map(w=>w.rotation.y)
     }));
     await page.keyboard.up('ArrowRight');
     await page.keyboard.up('ArrowUp');

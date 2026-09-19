@@ -197,12 +197,41 @@
     test('v235 surface HUD',!!document.getElementById('v235ForgeHud')&&!!document.getElementById('v235ForgePanel'));
     test('v235 surface forge css',!!document.querySelector('link[href*="v235-surface-forge.css"]'));
     const crowdForge=window.TGGV236?.status?.()||{};
-    test('v236 crowd core api',!!window.TGGV236Core&&typeof window.TGGV236Core.archetype==='function'&&typeof window.TGGV236Core.densityBudget==='function');
-    test('v236 crowd forge api',!!window.TGGV236&&typeof window.TGGV236.rebuild==='function'&&typeof window.TGGV236.restore==='function');
+    test('v236 crowd core api',!!window.TGGV236Core&&typeof window.TGGV236Core.personality==='function'&&typeof window.TGGV236Core.budget==='function');
+    test('v236 crowd forge api',!!window.TGGV236&&typeof window.TGGV236.rebuild==='function'&&typeof window.TGGV236.setDensity==='function');
     test('v236 100 layers',Array.isArray(window.TGGV236?.layers)&&window.TGGV236.layers.length===100);
     test('v236 native crowd mode',crowdForge.mode==='native-crowd-forge'&&crowdForge.enabled===true);
     test('v236 crowd HUD',!!document.getElementById('v236ForgeHud')&&!!document.getElementById('v236ForgePanel'));
     test('v236 crowd forge css',!!document.querySelector('link[href*="v236-crowd-forge.css"]'));
+
+    const missionForge=window.TGGV237?.status?.()||{};
+    test('v237 mission core api',!!window.TGGV237Core&&typeof window.TGGV237Core.mission==='function'&&typeof window.TGGV237Core.nextStep==='function');
+    test('v237 mission forge api',!!window.TGGV237&&typeof window.TGGV237.start==='function'&&typeof window.TGGV237.advance==='function');
+    test('v237 100 layers',Array.isArray(window.TGGV237?.layers)&&window.TGGV237.layers.length===100);
+    test('v237 mission mode',missionForge.mode==='native-mission-forge'&&missionForge.enabled===true);
+    test('v237 mission css',!!document.querySelector('link[href*="v237-mission-forge.css"]'));
+
+    const effectsForge=window.TGGV238?.status?.()||{};
+    test('v238 effects core api',!!window.TGGV238Core&&typeof window.TGGV238Core.profile==='function'&&typeof window.TGGV238Core.budget==='function');
+    test('v238 effects forge api',!!window.TGGV238&&typeof window.TGGV238.emit==='function'&&typeof window.TGGV238.clear==='function');
+    test('v238 100 layers',Array.isArray(window.TGGV238?.layers)&&window.TGGV238.layers.length===100);
+    test('v238 effects mode',effectsForge.mode==='native-effects-forge'&&effectsForge.enabled===true);
+    test('v238 effects css',!!document.querySelector('link[href*="v238-effects-forge.css"]'));
+
+    const perfForge=window.TGGV239?.status?.()||{};
+    test('v239 performance core api',!!window.TGGV239Core&&typeof window.TGGV239Core.tier==='function'&&typeof window.TGGV239Core.chooseTier==='function');
+    test('v239 performance forge api',!!window.TGGV239&&typeof window.TGGV239.applyTier==='function'&&typeof window.TGGV239.autoTune==='function');
+    test('v239 100 layers',Array.isArray(window.TGGV239?.layers)&&window.TGGV239.layers.length===100);
+    test('v239 performance mode',perfForge.mode==='native-performance-forge'&&perfForge.controlMode==='auto');
+    test('v239 performance css',!!document.querySelector('link[href*="v239-performance-forge.css"]'));
+
+    const audioForge240=window.TGGV240?.status?.()||{};
+    test('v240 audio core api',!!window.TGGV240Core&&typeof window.TGGV240Core.profile==='function'&&typeof window.TGGV240Core.attenuation==='function');
+    test('v240 audio forge api',!!window.TGGV240&&typeof window.TGGV240.unlock==='function'&&typeof window.TGGV240.play==='function');
+    test('v240 100 layers',Array.isArray(window.TGGV240?.layers)&&window.TGGV240.layers.length===100);
+    test('v240 native audio mode',audioForge240.mode==='native-audio-forge'&&audioForge240.enabled===true);
+    test('v240 audio css',!!document.querySelector('link[href*="v240-audio-forge.css"]'));
+
     const cameraForgeCompat=window.TGGV234?.status?.()||{};
     test('v234 camera core api',!!window.TGGV234Core&&typeof window.TGGV234Core.preset==='function'&&typeof window.TGGV234Core.blend==='function');
     test('v234 camera forge api',!!window.TGGV234&&typeof window.TGGV234.applyPreset==='function'&&typeof window.TGGV234.pulse==='function'&&typeof window.TGGV234.togglePhoto==='function');

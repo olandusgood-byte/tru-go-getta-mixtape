@@ -19,7 +19,7 @@ const contract=spawnSync(process.execPath,[path.join(root,'static-contract.test.
 assert(contract.status===0,'V1.13 static contract failed:\n'+(contract.stderr||contract.stdout||''));
 
 const continuity=spawnSync(process.execPath,[path.join(root,'v149-v160-runtime.test.mjs')],{encoding:'utf8'});
-assert(continuity.status===0,'V1.49-V1.78 runtime continuity failed:\n'+(continuity.stderr||continuity.stdout||''));
+assert(continuity.status===0,'V1.49-V1.81 runtime continuity failed:\n'+(continuity.stderr||continuity.stdout||''));
 
 const html=read('index.html');
 const v114=read('v114-live-city.js');
@@ -42,6 +42,9 @@ for(const layer of v1Layers){
   const versionPattern=new RegExp("(?:VERSION|V)\\s*=\\s*['\"]1\\."+minor+"\\.\\d+['\"]");
   assert(hasRuntime,'Missing additive runtime export '+longRuntime+' or '+shortRuntime+' in '+layer.src);
   assert(versionPattern.test(source),'Missing matching semantic version 1.'+minor+'.x in '+layer.src);
+  if(minor>=61){
+    assert(!/\bok\s*:\s*true\b/.test(source),'False-green audit/gate is forbidden in '+layer.src+'; derive ok from evidence');
+  }
   for(const forbidden of ['SUPABASE_SERVICE_ROLE_KEY','sb_secret_','sk_live_']){
     assert(!source.includes(forbidden),'Forbidden secret marker in '+layer.src+': '+forbidden);
   }

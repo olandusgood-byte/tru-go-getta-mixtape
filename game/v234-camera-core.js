@@ -2,9 +2,9 @@
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)));
   const PRESETS={
     street:{id:'street',shake:.06,fovBoost:1.5,roll:.018,letterbox:0,vignette:.16,photo:false},
-    action:{id:'action',shake:.32,fovBoost:10,roll:.085,letterbox:.025,vignette:.3,photo:false},
-    cinematic:{id:'cinematic',shake:.12,fovBoost:3,roll:.025,letterbox:.12,vignette:.42,photo:false},
-    photo:{id:'photo',shake:0,fovBoost:0,roll:0,letterbox:.06,vignette:.24,photo:true}
+    action:{id:'action',shake:.32,fovBoost:10,roll:.085,letterbox:0,vignette:.3,photo:false},
+    cinematic:{id:'cinematic',shake:.12,fovBoost:3,roll:.025,letterbox:0,vignette:.42,photo:false},
+    photo:{id:'photo',shake:0,fovBoost:0,roll:0,letterbox:0,vignette:.24,photo:true}
   };
   function normalize(input={}){
     return {

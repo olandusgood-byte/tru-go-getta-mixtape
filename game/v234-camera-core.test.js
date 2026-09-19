@@ -14,6 +14,7 @@
   assert(action.fovBoost>street.fovBoost&&action.roll>street.roll,'action preset');
   const photo=core.preset('photo');
   assert(photo.photo===true,'photo preset');
+  assert(['street','action','cinematic','photo'].every(id=>core.preset(id).letterbox===0),'all camera presets keep full-screen view with no black bars');
 
   const n=core.normalize({shake:9,fovBoost:99,roll:8,letterbox:4,vignette:-1});
   assert(n.shake<=1&&n.fovBoost<=18&&n.roll<=.16&&n.letterbox<=.18&&n.vignette>=0,'camera clamps');

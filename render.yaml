@@ -24,7 +24,7 @@ services:
     runtime: node
     region: oregon
     plan: free
-    branch: main
+    branch: tgg-worker-stable
     autoDeploy: true
     rootDir: tgg-browser-worker
     buildCommand: npm install && npx playwright install chromium

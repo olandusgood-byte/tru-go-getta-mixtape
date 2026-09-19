@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "2.02",
-  "module": "GAME-V2.02",
-  "name": "Production Integrity + Browser Runtime Continuity + Release Integrity Gate",
+  "version": "2.05",
+  "module": "GAME-V2.05",
+  "name": "Continuous Production Watch + Browser Session Integrity + Live Viewer Release Watch",
   "workflow": [
     "BUILD",
     "TEST",
@@ -166,9 +166,13 @@
     "v2_00_production_integrity": true,
     "v2_01_browser_runtime_continuity": true,
     "v2_02_release_integrity_gate": true,
-    "v2_02_local_state": true
+    "v2_02_local_state": true,
+    "v2_03_continuous_production_watch": true,
+    "v2_04_browser_session_integrity": true,
+    "v2_05_live_viewer_release_watch": true,
+    "v2_05_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V2.03 CONTINUOUS PRODUCTION WATCH"
+  "next": "V2.06 CONTINUOUS INTEGRITY"
 }

@@ -1,4 +1,4 @@
-name: TGG V3.60 Live Browser Certification
+name: TGG V3.70 Live Browser Certification
 # cert revision 4
 
 on:
@@ -50,8 +50,8 @@ jobs:
           if(!response || response.status()>=400) throw new Error('HTTP '+(response?.status()||'NO_RESPONSE'));
 
           const title=await page.title();
-          if(!/V3\.60 LIVING CITY REACTIVE WORLD MEGA/i.test(title)) throw new Error('Wrong title: '+title);
-          await page.getByText('GAME V3.60 • LIVING CITY + REACTIVE WORLD',{exact:false}).waitFor({timeout:30000});
+          if(!/V3\.70 NPC TRAFFIC WORLD INTERACTION MEGA/i.test(title)) throw new Error('Wrong title: '+title);
+          await page.getByText('GAME V3.70 • NPC + TRAFFIC + WORLD INTERACTION',{exact:false}).waitFor({timeout:30000});
 
           const runtime=await page.evaluate(()=>({
             three:!!window.THREE,
@@ -61,11 +61,12 @@ jobs:
             realism:window.TGGRealismMega?.version||null,
             motion:window.TGGMotionRealism?.version||null,
             world:window.TGGCityWorldMega?.version||null,
-            living:window.TGGLivingCity?.version||null
+            living:window.TGGLivingCity?.version||null,
+            interaction:window.TGGWorldInteraction?.version||null
           }));
           if(!runtime.game || !runtime.game3d) throw new Error('Core runtime not ready: '+JSON.stringify(runtime));
           for(const [k,v] of Object.entries({
-            polish:runtime.polish,realism:runtime.realism,motion:runtime.motion,world:runtime.world,living:runtime.living
+            polish:runtime.polish,realism:runtime.realism,motion:runtime.motion,world:runtime.world,living:runtime.living,interaction:runtime.interaction
           })) if(!v) throw new Error('Missing runtime layer '+k);
 
           await page.getByRole('button',{name:'CREATE PLAYER'}).click();
@@ -118,7 +119,7 @@ jobs:
           if(pageErrors.length) throw new Error('Page errors: '+JSON.stringify(pageErrors));
           if(benign.length) throw new Error('Console errors: '+JSON.stringify(benign));
 
-          console.log('TGG_V360_BROWSER_CERT_PASS '+JSON.stringify({title,runtime,moved,driven,final}));
+          console.log('TGG_V370_BROWSER_CERT_PASS '+JSON.stringify({title,runtime,moved,driven,final}));
           await browser.close();
           EOF
           node tgg-cert.mjs
@@ -127,10 +128,10 @@ jobs:
         if: success()
         run: |
           mkdir -p cert
-          printf '%s\n' '{"runtime":"V3.60 LIVING CITY REACTIVE WORLD MEGA","production":"READY","browser":"PASS","checks":["load","runtime-layers","create-player","enter-city","player-movement","vehicle-entry","vehicle-movement","camera","horn","save","console-errors"],"result":"CERTIFIED"}' > cert/v360-live-browser-certificate.json
+          printf '%s\n' '{"runtime":"V3.70 NPC TRAFFIC WORLD INTERACTION MEGA","production":"READY","browser":"PASS","checks":["load","runtime-layers","create-player","enter-city","player-movement","vehicle-entry","vehicle-movement","camera","horn","save","console-errors"],"result":"CERTIFIED"}' > cert/v370-live-browser-certificate.json
 
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: tgg-v360-live-browser-certificate
-          path: cert/v360-live-browser-certificate.json
+          name: tgg-v370-live-browser-certificate
+          path: cert/v370-live-browser-certificate.json

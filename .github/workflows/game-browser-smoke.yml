@@ -3,7 +3,7 @@ name: Game Browser Smoke
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, game/v218-canonical-promotion]
     paths:
       - 'game/**'
       - '.github/workflows/game-browser-smoke.yml'
@@ -76,6 +76,30 @@ jobs:
             window.TGGGame?.show?.('progressionBoard');
             const progressionVisible = document.getElementById('progressionBoard')?.classList.contains('active');
             const achievementCatalog = (window.TGGProgression?.achievements?.length || 0) >= 7;
+
+            window.TGGGame?.show?.('game');
+            const movementApi = ['setWalkKey','getWalkingState','setWalkTuning','getWalkTuning','setDriveKey','getDrivingState','setDriveTuning','getDriveTuning']
+              .every(name => typeof window.TGGGame?.[name] === 'function');
+            const startPos = {...window.TGGGame.getState()};
+            window.TGGGame.setWalkKey('right',true);
+            await new Promise(r=>setTimeout(r,320));
+            window.TGGGame.setWalkKey('right',false);
+            await new Promise(r=>setTimeout(r,180));
+            const endPos = {...window.TGGGame.getState()};
+            const smoothWalkMoved = endPos.x > startPos.x + 0.05;
+            const walkTuning = window.TGGGame.getWalkTuning();
+            const driveTuning = window.TGGGame.getDriveTuning();
+            const steeringTuning = driveTuning.highSpeedSteer < driveTuning.lowSpeedSteer &&
+              driveTuning.steerOut > driveTuning.steerIn &&
+              walkTuning.inputResponse > 0;
+
+            const overlap=(a,b)=>!(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top);
+            const dpadButtons=[...document.querySelectorAll('.dpad button')].map(el=>el.getBoundingClientRect());
+            const actionButtons=[...document.querySelectorAll('.action-deck .actions button')].map(el=>el.getBoundingClientRect());
+            const pairwiseClear=rects=>rects.every((a,i)=>rects.every((b,j)=>i===j||!overlap(a,b)));
+            const controlsSeparated=pairwiseClear(dpadButtons)&&pairwiseClear(actionButtons);
+            const directionLabels=['FWD','LEFT','RIGHT','REV'].every(label=>[...document.querySelectorAll('.dpad small')].some(el=>el.textContent.trim()===label));
+
             return {
               missing,
               qaPassed: qa?.passed ?? false,
@@ -88,6 +112,11 @@ jobs:
               localStorageSaved: stored,
               progressionVisible,
               achievementCatalog,
+              movementApi,
+              smoothWalkMoved,
+              steeringTuning,
+              controlsSeparated,
+              directionLabels,
               currentScreen: [...document.querySelectorAll('.screen')].find(el => el.classList.contains('active'))?.id || null
             };
           });
@@ -98,7 +127,7 @@ jobs:
             console.error(errors.join('\n'));
             process.exit(1);
           }
-          if (result.missing.length || !result.qaPassed || !result.releasePassed || !result.missionStarted || !result.advanceReturned || !result.progressAdvanced || !result.localStorageSaved || !result.progressionVisible || !result.achievementCatalog) {
+          if (result.missing.length || !result.qaPassed || !result.releasePassed || !result.missionStarted || !result.advanceReturned || !result.progressAdvanced || !result.localStorageSaved || !result.progressionVisible || !result.achievementCatalog || !result.movementApi || !result.smoothWalkMoved || !result.steeringTuning || !result.controlsSeparated || !result.directionLabels) {
             console.error(JSON.stringify(result, null, 2));
             process.exit(1);
           }

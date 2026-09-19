@@ -94,7 +94,7 @@
     state.history=state.history.slice(-50);
     save();renderPanel();
     const profile=PROFILES[name];
-    return {ok:true,status:'choice_required',name,role:profile.role,dialogue:name+': How you want to play this?',choices:['professional','loyal','street'],relation:{...rel}};
+    return {ok:!!PROFILES[name],status:'choice_required',name,role:profile.role,dialogue:name+': How you want to play this?',choices:['professional','loyal','street'],relation:{...rel}};
   }
   function resolveChoice(choice){
     const pending=state.pending;
@@ -113,7 +113,7 @@
       opportunity=window.TGGWorldDepth?.spawnBeat?.()||null;
     }
     const resolved={
-      ok:true,status:'resolved',name,choice,affinity:rel.affinity,affinityDelta:preview.affinityDelta,
+      ok:!!pending&&!!PROFILES[name],status:'resolved',name,choice,affinity:rel.affinity,affinityDelta:preview.affinityDelta,
       xp:preview.xp,property:preview.property,propertyLevel:preview.propertyLevel,
       streak:rel.streak,worldChoice:base,opportunity:opportunity?.id||null,at:Date.now()
     };

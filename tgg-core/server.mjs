@@ -13,12 +13,28 @@ app.use((req,res,next)=>{
   if(origin && CORS_ORIGINS.has(origin)){
     res.set('Access-Control-Allow-Origin',origin);
     res.set('Vary','Origin');
-    res.set('Access-Control-Allow-Headers','Authorization, Content-Type, X-TGG-Worker-ID, X-TGG-Worker-Token, X-TGG-Bootstrap-Secret');
-    res.set('Access-Control-Allow-Methods','GET,POST,PATCH,OPTIONS');
+    res.set('Access-Control-Allow-Headers','Authorization, Content-Type, X-File-Name, X-Mime-Type, X-Project-Media-Kind, X-TGG-Worker-ID, X-TGG-Worker-Token, X-TGG-Bootstrap-Secret');
+    res.set('Access-Control-Allow-Methods','GET,POST,PATCH,PUT,OPTIONS');
   }
   if(req.method==='OPTIONS') return res.sendStatus(204);
   next();
 });
+
+// TGG_VIDEO_STUDIO_V2_STATIC
+const VIDEO_STUDIO_PUBLIC_ROOT = path.resolve(process.cwd(), 'tgg-core/public/video-studio');
+app.get('/video-studio', (_req,res)=>res.redirect(301,'/video-studio/'));
+app.use('/video-studio', express.static(VIDEO_STUDIO_PUBLIC_ROOT, {
+  etag: true,
+  maxAge: '5m',
+  index: 'index.html',
+  setHeaders(res,filePath) {
+    if (/\.(?:css|js|webmanifest|svg)$/i.test(filePath)) {
+      res.set('Cache-Control','public, max-age=300, stale-while-revalidate=86400');
+    } else if (/index\.html$/i.test(filePath)) {
+      res.set('Cache-Control','no-cache');
+    }
+  }
+}));
 
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL;

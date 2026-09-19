@@ -355,7 +355,7 @@
     const sprinting=!!walkKeys.sprint&&mag>.01;
     const movementCore=window.TGGV235Core;
     const inputHeading=mag>.01
-      ? (movementCore?.inputHeading?.(ix,iy) ?? ((Math.atan2(iy,ix)*180/Math.PI+360)%360))
+      ? (window.TGGV235Core?.inputHeading?.(ix,iy) ?? ((Math.atan2(iy,ix)*180/Math.PI+360)%360))
       : null;
 
     if(inputHeading!==null){
@@ -364,7 +364,7 @@
         ?? angleDeltaDeg(Number(state.heading)||0,inputHeading);
       const pivoting=Math.abs(rawTurnDelta)>92;
       const turnRate=(pivoting?WALK.pivotTurnRateDeg:WALK.turnRateDeg)*(sprinting?1.08:1);
-      state.heading=movementCore?.turnTowards?.(Number(state.heading)||0,inputHeading,turnRate*dt)
+      state.heading=window.TGGV235Core?.turnTowards?.(Number(state.heading)||0,inputHeading,turnRate*dt)
         ?? ((Number(state.heading||0)+rawTurnDelta*Math.min(1,WALK.turnResponse*dt)+360)%360);
       walkRuntime.turnDelta=movementCore?.deltaDeg?.(Number(state.heading)||0,inputHeading)
         ?? angleDeltaDeg(Number(state.heading)||0,inputHeading);
@@ -373,10 +373,10 @@
     }
 
     const turnSpeedScale=mag>.01
-      ? (movementCore?.turnSpeedScale?.(walkRuntime.turnDelta) ?? Math.max(.28,1-Math.min(180,Math.abs(walkRuntime.turnDelta))/225))
+      ? (window.TGGV235Core?.turnSpeedScale?.(walkRuntime.turnDelta) ?? Math.max(.28,1-Math.min(180,Math.abs(walkRuntime.turnDelta))/225))
       : 0;
     const targetSpeed=(sprinting?WALK.sprintSpeed:WALK.walkSpeed)*turnSpeedScale;
-    const forward=movementCore?.forwardVector?.(Number(state.heading)||0) ?? {
+    const forward=window.TGGV235Core?.forwardVector?.(Number(state.heading)||0) ?? {
       x:Math.cos((Number(state.heading)||0)*Math.PI/180),
       y:Math.sin((Number(state.heading)||0)*Math.PI/180)
     };
@@ -449,8 +449,8 @@
     }
     if(dx||dy){
       const movementCore=window.TGGV235Core;
-      const desired=movementCore?.inputHeading?.(dx,dy) ?? ((Math.atan2(dy,dx)*180/Math.PI+360)%360);
-      state.heading=movementCore?.turnTowards?.(Number(state.heading)||0,desired,Math.max(12,WALK.turnRateDeg/18))
+      const desired=window.TGGV235Core?.inputHeading?.(dx,dy) ?? ((Math.atan2(dy,dx)*180/Math.PI+360)%360);
+      state.heading=window.TGGV235Core?.turnTowards?.(Number(state.heading)||0,desired,Math.max(12,WALK.turnRateDeg/18))
         ?? ((Number(state.heading||0)+angleDeltaDeg(Number(state.heading)||0,desired)*.35+360)%360);
       walkRuntime.desiredHeading=desired;
       walkRuntime.turnDelta=movementCore?.deltaDeg?.(Number(state.heading)||0,desired) ?? angleDeltaDeg(Number(state.heading)||0,desired);

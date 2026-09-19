@@ -473,7 +473,14 @@ async function run(){
         updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-      await mobile.close();await new Promise(resolve=>local.proxy.close(resolve));await ctx.close();return;
+      await mobile.close();
+      await ctx.close();
+      local.proxy.closeAllConnections?.();
+      await Promise.race([
+        new Promise(resolve=>local.proxy.close(()=>resolve())),
+        new Promise(resolve=>setTimeout(resolve,1000))
+      ]);
+      return;
     }
 
     if(STREET_PRESENCE_ONLY){

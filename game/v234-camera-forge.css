@@ -1,0 +1,26 @@
+/* V2.34 TGG CAMERA + CINEMATIC FORGE 100 */
+body.tgg-v234 .v234-forge-btn{height:32px;margin-left:6px;padding:0 10px;border:1px solid #ffd45c33;border-radius:999px;background:#171207;color:#ffe8a2;font-size:8px;font-weight:1000;letter-spacing:.1em;cursor:pointer}
+body.tgg-v234 .v234-forge-panel{position:fixed;right:16px;top:58px;z-index:260;display:grid;gap:10px;width:min(390px,calc(100vw - 24px));max-height:calc(100vh - 76px);overflow:auto;padding:15px;transform:translateX(22px);opacity:0;pointer-events:none;border:1px solid #ffd45c24;border-radius:22px;background:linear-gradient(155deg,#171207fb,#101827fb);box-shadow:0 32px 110px #000e;transition:.22s ease}
+body.tgg-v234 .v234-forge-panel.active{opacity:1;pointer-events:auto;transform:translateX(0)}
+body.tgg-v234 .v234-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+body.tgg-v234 .v234-head div{display:grid;gap:2px}
+body.tgg-v234 .v234-head small{font-size:7px;font-weight:900;letter-spacing:.18em;color:#ffd45c}
+body.tgg-v234 .v234-head b{font-size:13px;color:#fff}
+body.tgg-v234 .v234-head button{width:32px;height:32px;border:1px solid #ffffff18;border-radius:50%;background:#111722;color:#fff;font-size:18px}
+body.tgg-v234 .v234-presets{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+body.tgg-v234 .v234-presets button,body.tgg-v234 .v234-actions button{min-height:40px;border:1px solid #ffffff14;border-radius:10px;background:#111722;color:#fff;font-size:8px;font-weight:900;cursor:pointer}
+body.tgg-v234 .v234-presets button.active{border-color:#ffd45c;color:#fff0b6;background:#241c0c}
+body.tgg-v234 .v234-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+body.tgg-v234 .v234-stats{padding:8px;border:1px solid #ffffff0d;border-radius:9px;background:#ffffff04;color:#7f8a9d;font-size:7px}
+body.tgg-v234 .v234-forge-hud{position:absolute;right:18px;top:424px;z-index:13;display:grid;gap:2px;padding:8px 10px;border:1px solid #ffd45c2d;border-radius:11px;background:#070b12dd}
+body.tgg-v234 .v234-forge-hud small{font-size:6px;font-weight:900;letter-spacing:.15em;color:#ffd45c}
+body.tgg-v234 .v234-forge-hud b{font-size:8px;color:#fff}
+body.tgg-v234 .v234-forge-hud span{font-size:7px;color:#95a1b4}
+body.tgg-v234 .v234-cinematic-overlay{--v234-bars:0vh;--v234-vignette:0;position:fixed;inset:0;z-index:205;pointer-events:none}
+body.tgg-v234 .v234-bar{position:absolute;left:0;width:100%;height:var(--v234-bars);background:#000;transition:height .18s ease}
+body.tgg-v234 .v234-bar.top{top:0}body.tgg-v234 .v234-bar.bottom{bottom:0}
+body.tgg-v234 .v234-vignette{position:absolute;inset:0;background:radial-gradient(circle at center,transparent 45%,rgba(0,0,0,calc(var(--v234-vignette) * .65)) 78%,rgba(0,0,0,var(--v234-vignette)) 100%);transition:opacity .12s ease}
+body.tgg-v234 .v234-cinematic-overlay.photo .v234-vignette{box-shadow:inset 0 0 0 1px #ffffff14}
+@media(prefers-reduced-motion:reduce){body.tgg-v234 .v234-forge-panel,body.tgg-v234 .v234-bar{transition:none!important}}
+@media(max-width:700px){body.tgg-v234 .v234-forge-panel{right:8px;top:50px;width:calc(100vw - 16px);padding:12px;border-radius:17px}body.tgg-v234 .v234-forge-hud{right:10px;top:370px}}
+@media(max-width:700px) and (orientation:landscape){body.tgg-v234 .v234-forge-panel{left:8px;right:auto;top:8px;width:min(410px,49vw);max-height:calc(100vh - 16px)}body.tgg-v234 .v234-forge-hud{top:248px;right:8px}}

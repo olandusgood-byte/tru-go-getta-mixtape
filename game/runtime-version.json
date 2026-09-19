@@ -1,11 +1,11 @@
 {
   "project": "TRU GO GETTA WORLD",
-  "canonical_runtime": "V3.50 GAME FEEL CINEMATIC MEGA",
+  "canonical_runtime": "V3.60 LIVING CITY REACTIVE WORLD MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
   "verification": "v350_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
-  "base_runtime": "V3.40 CITY WORLD MEGA PASS",
+  "base_runtime": "V3.50 GAME FEEL CINEMATIC MEGA",
   "features": [
     "threejs_city",
     "smooth_player_locomotion",
@@ -84,9 +84,18 @@
     "mission_audio_cues",
     "story_cinematic_sync",
     "crowd_reaction_feedback",
-    "reduced_motion_guard"
+    "reduced_motion_guard",
+    "v360_living_city_reactive_world",
+    "district_heat_system",
+    "time_of_day_ambience",
+    "reactive_crowd_mood",
+    "dynamic_city_events",
+    "context_interaction_prompts",
+    "performance_safe_density_sync",
+    "district_entry_callouts",
+    "story_activity_reactivity"
   ],
-  "release_gate": "closed_certified",
+  "release_gate": "v360_validation_pending",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -94,7 +103,7 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PASS",
+    "browser_gate": "PENDING_V360_REVALIDATION",
     "public_alias": "https://tgg-world-play.vercel.app",
     "browser_cert_run_id": 35441341802,
     "browser_cert_artifact_id": 10583164514,

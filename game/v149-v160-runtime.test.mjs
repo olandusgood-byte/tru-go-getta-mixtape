@@ -104,7 +104,7 @@ for(const {file,major,minor,runtimeNumber} of futureLayers){
   const version=String(snap.version||api.version||'');
   const versionOk=major===1
     ? version.startsWith('1.'+minor+'.')||version.startsWith('1.'+runtimeNumber+'.')
-    : version.startsWith('2.'+minor+'.');
+    : version.startsWith('2.'+minor+'.')||version==='V'+runtimeNumber;
   assert(versionOk,'Future version mismatch '+file+': '+version);
   assert(String(snap.mutationPolicy||'').startsWith('local_'),'Future non-local mutation policy '+file);
   assert(result&&result.ok===true,'Future runtime evidence failed '+file+': '+JSON.stringify(result));

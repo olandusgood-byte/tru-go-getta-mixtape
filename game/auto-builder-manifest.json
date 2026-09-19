@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "7.55",
-  "module": "GAME-V7.55-COMMERCIAL-CITY",
-  "name": "V7.55 Commercial City — Malls Shops Gas Warehouses Business Income",
+  "version": "7.56",
+  "module": "GAME-V7.56-REAL-USA-WORLD",
+  "name": "V7.56 Real USA World — Official 50-State Geography Travel Layer",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -182,11 +182,16 @@
     "v7_55_commercial_city": true,
     "v7_55_physical_business_routes": true,
     "v7_55_business_ownership": true,
-    "v7_55_passive_income": true
+    "v7_55_passive_income": true,
+    "v7_56_real_usa_world": true,
+    "v7_56_census_state_geometry": true,
+    "v7_56_all_50_states": true,
+    "v7_56_state_travel": true,
+    "v7_56_regional_terrain_weather_roads": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V7.56",
+  "next": "V7.57",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

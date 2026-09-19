@@ -65,11 +65,23 @@
   let fanIndex=0;
   clusters.forEach(cluster=>{
     cluster.fans=[];
-    cluster.points.forEach(([dx,dz])=>{
+    cluster.points.forEach(([dx,dz],localIndex)=>{
       const fan=makeFan(fanIndex++);
       fan.position.set(cluster.x+dx,0,cluster.z+dz);
       fan.userData.cluster=cluster.id;
       fan.userData.home={x:fan.position.x,z:fan.position.z};
+
+      if(cluster.id==='stage'){
+        fan.userData.mode=localIndex===1?'record':localIndex===0||localIndex===2?'cheer':'watch';
+      }else if(cluster.id==='downtown'){
+        fan.userData.mode=localIndex===1?'record':localIndex===0||localIndex===3?'cheer':'watch';
+      }else if(cluster.id==='media'){
+        fan.userData.mode=localIndex===0?'record':'watch';
+      }else if(cluster.id==='studio'){
+        fan.userData.mode=localIndex===1?'record':'watch';
+      }
+      if(fan.userData.parts?.phone)fan.userData.parts.phone.visible=fan.userData.mode==='record';
+
       scene.add(fan);
       cluster.fans.push(fan);
       fans.push(fan);

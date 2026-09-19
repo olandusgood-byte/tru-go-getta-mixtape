@@ -179,10 +179,19 @@ if (!DATABASE_URL) {
     try {
       await ensureSchema();
       const due = await pool.query(`
-        select * from tgg_scheduled_tasks
-        where enabled=true and next_run_at<=now()
-        order by next_run_at asc
-        for update skip locked limit 10
+        with claimed as (
+          select id from tgg_scheduled_tasks
+          where enabled=true and next_run_at<=now()
+            and coalesce(last_status,'') <> 'running'
+          order by next_run_at asc
+          for update skip locked
+          limit 10
+        )
+        update tgg_scheduled_tasks t
+        set last_status='running', updated_at=now()
+        from claimed c
+        where t.id=c.id
+        returning t.*
       `);
       await Promise.all(due.rows.map(task => runTask(task)));
     } catch (e) {

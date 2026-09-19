@@ -84,7 +84,10 @@ jobs:
             await new Promise(r=>setTimeout(r,250));
             const movementApi = ['setWalkKey','setWalkAnalog','getWalkingState','setWalkTuning','getWalkTuning','setDriveKey','setDriveAnalog','getDrivingState','setDriveTuning','getDriveTuning']
               .every(name => typeof window.TGGGame?.[name] === 'function');
-            const startPos = {...window.TGGGame.getState()};
+            window.TGGGame.resetForNewGame?.();
+  window.TGGGame.show?.('game');
+  await new Promise(r=>setTimeout(r,120));
+  const startPos = {...window.TGGGame.getState()};
             window.TGGGame.setWalkKey('right',true);
             await new Promise(r=>setTimeout(r,700));
             window.TGGGame.setWalkKey('right',false);

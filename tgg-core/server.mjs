@@ -1036,7 +1036,14 @@ app.patch('/v1/browser/sessions/:id', auth, async (req,res,next)=>{
       [req.params.id,status ?? null,req.body?.metadata ?? null,req.user.id]
     );
     if(!r.rowCount) return res.status(404).json({error:'browser_session_not_found'});
-    res.json({session:r.rows[0]});
+    const s=r.rows[0];
+    await pool.query(
+      `insert into tgg_browser_viewer_events(browser_session_id,event_type,payload)
+       values($1,$2,$3)`,
+      [s.id,'session_updated',{status:s.status,metadata:s.metadata,source:'tgg_core'}]
+    );
+    await pool.query('select pg_notify($1,$2)',['tgg_browser_viewer',JSON.stringify({browser_session_id:s.id,event_type:'session_updated'})]);
+    res.json({session:s});
   } catch(e){next(e);}
 });
 

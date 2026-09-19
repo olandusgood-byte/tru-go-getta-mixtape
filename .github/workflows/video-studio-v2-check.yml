@@ -39,6 +39,7 @@ jobs:
       - name: Verify Video Studio contract markers
         run: |
           grep -q 'TGG_VIDEO_STUDIO_V2_STATIC' tgg-core/server.mjs
+          if grep -Fq "app.get('/video-studio'" tgg-core/server.mjs; then echo 'explicit /video-studio redirect must stay removed'; exit 1; fi
           grep -q 'TGG_VIDEO_STUDIO_V2_API' tgg-core/server.mjs
           grep -q 'TGG_VIDEO_STUDIO_V2_SCHEMA' tgg-core/schema.sql
           grep -q 'TGG_VIDEO_STUDIO_V2_RENDER_BRIDGE_API' tgg-core/server.mjs

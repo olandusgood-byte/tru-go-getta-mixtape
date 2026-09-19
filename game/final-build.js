@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.34 TGG CAMERA + CINEMATIC FORGE 100';
+  const VERSION='V2.35 TGG AUDIO + SPATIAL FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

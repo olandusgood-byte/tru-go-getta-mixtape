@@ -33,6 +33,7 @@ const STREET_PRESENCE_ONLY=String(process.env.TGG_3D_STREET_PRESENCE_ONLY||'0')=
 const V218_MEGA_ONLY=String(process.env.TGG_3D_V218_MEGA_ONLY||'0')==='1';
 const V219_CROWD_ONLY=String(process.env.TGG_3D_V219_CROWD_ONLY||'0')==='1';
 const V220_CINEMATIC_ONLY=String(process.env.TGG_3D_V220_CINEMATIC_ONLY||'0')==='1';
+const LIFE_OS_ONLY=String(process.env.TGG_3D_LIFE_OS_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function startV218SnapshotServer(){
@@ -69,6 +70,161 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(LIFE_OS_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,cssResponse,lifeResponse]=await Promise.all([
+        fetch(base+'/index.html'),fetch(base+'/style.css'),fetch(base+'/life-os.js')
+      ]);
+      if(!htmlResponse.ok||!cssResponse.ok||!lifeResponse.ok){
+        throw new Error('V2.21 Life OS harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', life='+lifeResponse.status);
+      }
+      let html=await htmlResponse.text();
+      const [css,lifeSource]=await Promise.all([cssResponse.text(),lifeResponse.text()]);
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<script\b[^>]*\/?>/gi,'')
+               .replace(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi,'<style>'+css+'</style>');
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      const errors=[]; const consoleErrors=[];
+      mp.on('pageerror',e=>errors.push(e.message||String(e)));
+      mp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      await mp.setContent(html,{waitUntil:'domcontentloaded'});
+      await mp.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
+        window.__qaScreen='game';
+        window.__qaCash=5000;
+        window.__qaToasts=[];
+        window.TGGGame={
+          getActiveScreen:()=>window.__qaScreen,
+          show:id=>{
+            window.__qaScreen=id;
+            document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
+            document.getElementById(id)?.classList.add('active');
+            return true;
+          },
+          spend:n=>{
+            n=Number(n)||0;
+            if(window.__qaCash<n)return false;
+            window.__qaCash-=n;
+            return true;
+          }
+        };
+        window.__tggToast=t=>window.__qaToasts.push(String(t));
+      });
+      await mp.addScriptTag({content:lifeSource});
+      await mp.waitForTimeout(120);
+      const checks=[];const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+
+      let snap=await mp.evaluate(()=>({
+        api:!!window.TGGLifeOS,
+        version:window.TGGLifeOS?.version,
+        state:window.TGGLifeOS?.getState?.(),
+        board:!!document.getElementById('lifeBoard'),
+        cityButton:!!document.getElementById('lifeOsBtn'),
+        homeSleep:!!document.getElementById('homeSleepBtn'),
+        homeLife:!!document.getElementById('homeLifeBtn'),
+        needs:document.querySelectorAll('.lifeos-need').length,
+        contacts:document.querySelectorAll('.lifeos-contact').length,
+        upgrades:document.querySelectorAll('.lifeos-upgrade').length
+      }));
+      record('lifeos-api',snap.api);
+      record('lifeos-version',snap.version==='V2.21',snap.version);
+      record('lifeos-board',snap.board);
+      record('lifeos-entry-buttons',snap.cityButton&&snap.homeSleep&&snap.homeLife,JSON.stringify(snap));
+      record('lifeos-six-needs',snap.needs===6,snap.needs);
+      record('lifeos-six-contacts',snap.contacts===6,snap.contacts);
+      record('lifeos-four-upgrades',snap.upgrades===4,snap.upgrades);
+      record('lifeos-initial-clock',snap.state?.day===1&&snap.state?.minute===540,snap.state?.clock);
+      record('lifeos-readiness-valid',Number(snap.state?.readiness)>=.72&&Number(snap.state?.readiness)<=1.18,snap.state?.readiness);
+
+      const beforeAdvance=snap.state;
+      await mp.evaluate(()=>window.TGGLifeOS.advance(60));
+      snap=await mp.evaluate(()=>window.TGGLifeOS.getState());
+      record('lifeos-time-advance',snap.minute===600,JSON.stringify(snap));
+      record('lifeos-needs-decay',snap.needs.energy<beforeAdvance.needs.energy&&snap.needs.fuel<beforeAdvance.needs.fuel,JSON.stringify(snap.needs));
+
+      const beforeSleep=snap;
+      await mp.evaluate(()=>window.TGGLifeOS.sleep());
+      snap=await mp.evaluate(()=>window.TGGLifeOS.getState());
+      record('lifeos-sleep-stat',snap.stats.sleeps===1,JSON.stringify(snap.stats));
+      record('lifeos-sleep-recovers',snap.needs.energy>beforeSleep.needs.energy,JSON.stringify({before:beforeSleep.needs.energy,after:snap.needs.energy}));
+
+      const beforeMeal=await mp.evaluate(()=>({state:window.TGGLifeOS.getState(),cash:window.__qaCash}));
+      await mp.evaluate(()=>window.TGGLifeOS.meal());
+      snap=await mp.evaluate(()=>({state:window.TGGLifeOS.getState(),cash:window.__qaCash}));
+      record('lifeos-meal-spends',snap.cash===beforeMeal.cash-15,JSON.stringify({before:beforeMeal.cash,after:snap.cash}));
+      record('lifeos-meal-stat',snap.state.stats.meals===1,JSON.stringify(snap.state.stats));
+
+      await mp.evaluate(()=>{
+        const state=window.TGGLifeOS.getState();
+        const delta=(9*60-state.minute+1440)%1440;
+        if(delta)window.TGGLifeOS.advance(delta);
+      });
+      let avail=await mp.evaluate(()=>({
+        manager:window.TGGLifeOS.availability('manager'),
+        producer:window.TGGLifeOS.availability('producer'),
+        state:window.TGGLifeOS.getState()
+      }));
+      record('lifeos-availability-window',avail.manager===true&&avail.producer===false,JSON.stringify(avail));
+
+      const relBefore=await mp.evaluate(()=>window.TGGLifeOS.getState().relationships.manager);
+      await mp.evaluate(()=>window.TGGLifeOS.contactInteraction('manager','call'));
+      snap=await mp.evaluate(()=>window.TGGLifeOS.getState());
+      record('lifeos-call-relationship',snap.relationships.manager===relBefore+4,JSON.stringify(snap.relationships));
+      record('lifeos-call-stat',snap.stats.calls===1,JSON.stringify(snap.stats));
+
+      const cashBeforeHangout=await mp.evaluate(()=>window.__qaCash);
+      await mp.evaluate(()=>window.TGGLifeOS.contactInteraction('manager','hangout'));
+      snap=await mp.evaluate(()=>({state:window.TGGLifeOS.getState(),cash:window.__qaCash}));
+      record('lifeos-hangout-spends',snap.cash===cashBeforeHangout-20,JSON.stringify({before:cashBeforeHangout,after:snap.cash}));
+      record('lifeos-hangout-stat',snap.state.stats.hangouts===1,JSON.stringify(snap.state.stats));
+
+      const cashBeforeUpgrade=await mp.evaluate(()=>window.__qaCash);
+      await mp.evaluate(()=>window.TGGLifeOS.upgrade('bed'));
+      snap=await mp.evaluate(()=>({state:window.TGGLifeOS.getState(),cash:window.__qaCash}));
+      record('lifeos-upgrade-installed',snap.state.upgrades.includes('bed'),JSON.stringify(snap.state.upgrades));
+      record('lifeos-upgrade-spends',snap.cash===cashBeforeUpgrade-700,JSON.stringify({before:cashBeforeUpgrade,after:snap.cash}));
+
+      const beforeCareer=await mp.evaluate(()=>window.TGGLifeOS.getState());
+      await mp.evaluate(()=>window.TGGLifeOS.applyCareerAction('recording'));
+      snap=await mp.evaluate(()=>window.TGGLifeOS.getState());
+      record('lifeos-recording-costs-life',snap.stats.careerActions===beforeCareer.stats.careerActions+1&&snap.needs.energy<beforeCareer.needs.energy,JSON.stringify({before:beforeCareer,after:snap}));
+
+      const persisted=await mp.evaluate(()=>JSON.parse(localStorage.getItem('tgg-life-os-v1')||'null'));
+      record('lifeos-persistence',persisted?.version==='V2.21'&&Array.isArray(persisted?.upgrades)&&persisted.upgrades.includes('bed'),JSON.stringify(persisted));
+
+      const layout=await mp.evaluate(()=>{
+        window.TGGLifeOS.render();window.TGGGame.show('lifeBoard');
+        const shell=document.querySelector('.lifeos-shell')?.getBoundingClientRect();
+        const grid=document.querySelector('.lifeos-grid');
+        const actions=document.querySelector('.lifeos-actions');
+        const contact=document.querySelector('.lifeos-contact')?.getBoundingClientRect();
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          overflowX:document.documentElement.scrollWidth>innerWidth+1,
+          shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,
+          gridColumns:grid?getComputedStyle(grid).gridTemplateColumns:'',
+          actionColumns:actions?getComputedStyle(actions).gridTemplateColumns:'',
+          contact:contact?{left:contact.left,right:contact.right,width:contact.width}:null
+        };
+      });
+      record('lifeos-mobile-no-overflow',layout.overflowX===false&&layout.scrollWidth<=391,JSON.stringify(layout));
+      record('lifeos-mobile-shell-contained',!!layout.shell&&layout.shell.left>=0&&layout.shell.right<=layout.width+1,JSON.stringify(layout.shell));
+      record('lifeos-mobile-one-column',!!layout.gridColumns&&!layout.gridColumns.includes(' '),layout.gridColumns);
+      record('lifeos-mobile-action-grid',layout.actionColumns.trim().split(/\s+/).length===2,layout.actionColumns);
+      record('lifeos-mobile-contact-contained',!!layout.contact&&layout.contact.left>=0&&layout.contact.right<=layout.width+1,JSON.stringify(layout.contact));
+
+      result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'life_os_v221_harness',target:TARGET,checks,console_errors:consoleErrors,page_errors:errors,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
 
     if(V220_CINEMATIC_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
@@ -297,8 +453,7 @@ async function run(){
         updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-      await testCtx.close();await ctx.close();return;
-    }
+      await testCtx.close();await ctx.close();return;    }
 
     if(V219_CROWD_ONLY){
       const consoleErrors=[];const pageErrors=[];const failedResources=[];
@@ -597,8 +752,7 @@ async function run(){
           }
           const bytes=await fs.readFile(filePath);
           res.statusCode=200;
-          res.setHeader('content-type',mimeFor(filePath));
-          res.setHeader('cache-control','no-store');
+          res.setHeader('content-type',mimeFor(filePath));          res.setHeader('cache-control','no-store');
           res.end(bytes);
         }catch(error){
           res.statusCode=error?.code==='ENOENT'?404:500;
@@ -897,8 +1051,7 @@ async function run(){
           removeItem:k=>{delete store[k]},
           clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
         }});
-        window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:0,xp:0,level:5};
-        window.__qaCareer={recordings:3,mixtapes:1,reputation:0,studioLevel:3};
+        window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:0,xp:0,level:5};        window.__qaCareer={recordings:3,mixtapes:1,reputation:0,studioLevel:3};
         window.__qaContent={completed:['flyer-run']};
         window.__qaLife={battleWins:1,shows:1,activeOpportunity:null,contacts:{}};
         window.__qaShown='game'; window.__qaToasts=[];
@@ -1197,8 +1350,7 @@ async function run(){
         board:!!document.getElementById('storyMissionsBoard'),
         status:window.TGGStoryMissions?.status?.()
       }));
-      record('story-api',snap.api);
-      record('story-entry-button',snap.button);
+      record('story-api',snap.api);      record('story-entry-button',snap.button);
       record('story-board',snap.board);
       record('story-six-steps',snap.status?.steps?.length===6,JSON.stringify(snap.status));
 
@@ -1497,8 +1649,7 @@ async function run(){
           <span id="speedValue"></span><span id="gearValue"></span><div id="vehicleHud"></div><span id="driveStateValue"></span>
           <div id="playerMoveHud"></div><span id="walkSpeedValue"></span><span id="walkModeValue"></span><div id="npcDialogue"></div>
           <button data-key="ArrowUp">UP</button><button data-key="ArrowDown">DOWN</button><button data-key="ArrowLeft">LEFT</button><button data-key="ArrowRight">RIGHT</button><button id="sprintBtn">RUN</button>
-        </div><div id="pause" class="screen"></div><div id="toast"></div>
-      </body></html>`);
+        </div><div id="pause" class="screen"></div><div id="toast"></div>      </body></html>`);
       await page.evaluate(()=>{
         const store={};
         Object.defineProperty(window,'localStorage',{configurable:true,value:{
@@ -1797,8 +1948,7 @@ async function run(){
     page.on('pageerror',e=>pageErrors.push(e.message||String(e)));    page.on('response',r=>{if(r.status()>=400)failedResources.push({url:r.url(),status:r.status()})});    const res=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
     await page.waitForSelector('#newGame',{state:'attached',timeout:15000});
     await page.evaluate(()=>document.getElementById('newGame')?.click());
-    await page.evaluate(()=>{      const stage=document.getElementById('stageName');      const style=document.getElementById('styleChoice');
-      if(stage)stage.value='TGG 3D QA';
+    await page.evaluate(()=>{      const stage=document.getElementById('stageName');      const style=document.getElementById('styleChoice');      if(stage)stage.value='TGG 3D QA';
       if(style)style.value='Artist';
       document.getElementById('startGame')?.click();
     });
@@ -2097,8 +2247,7 @@ async function run(){
     record('reverse-gear',Number(braking.driving?.speed)<-.2&&braking.gearText==='R',`speed=${braking.driving?.speed},gear=${braking.gearText}`);
 
     console.log(JSON.stringify({tgg_3d_smoke_step:'braking-complete'}));
-    console.log(JSON.stringify({tgg_3d_smoke_step:'reverse-complete'}));
-    const reversed=braking;
+    console.log(JSON.stringify({tgg_3d_smoke_step:'reverse-complete'}));    const reversed=braking;
     await page.waitForTimeout(500);
     const coast=await page.evaluate(()=>window.TGGGame?.getDrivingState?.());
     record('coast-deceleration',Math.abs(Number(coast?.speed)||0)<Math.abs(Number(reversed.driving?.speed)||0),`reverse=${reversed.driving?.speed},coast=${coast?.speed}`);

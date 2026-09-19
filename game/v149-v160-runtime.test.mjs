@@ -35,9 +35,10 @@ const futureFiles=fs.readdirSync(root)
   .filter(file=>{
     const single=/^v(\d)(\d{2})-(?!v\d{3}-)[^/]+[.]js$/.exec(file);
     const bulk=/^v(\d{3})-v(\d{3})-bulk-[^/]+[.]js$/.exec(file);
-    if(bulk)return Number(bulk[2])>=188;
-    if(single)return Number(single[1])*100+Number(single[2])>=188;
-    return false;
+    const versionEligible=bulk?Number(bulk[2])>=188:(single?Number(single[1])*100+Number(single[2])>=188:false);
+    if(!versionEligible)return false;
+    const source=fs.readFileSync(path.join(root,file),'utf8');
+    return /window\.TGGV\d{2,3}\b/.test(source);
   })
   .sort((a,b)=>{
     const na=Number((/^v(\d{3})/.exec(a)||[])[1]||0);

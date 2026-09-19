@@ -48,15 +48,24 @@ jobs:
           const browser = await chromium.launch({headless:true});
           const page = await browser.newPage();
           const errors = [];
+          const scriptResponses = [];
           page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
           page.on('console', msg => { if (msg.type() === 'error') errors.push(`console: ${msg.text()}`); });
+          page.on('response', response => {
+            const url=response.url();
+            if (/\\.js(?:\\?|$)/.test(url)) scriptResponses.push({url:url.split('/').pop(),status:response.status()});
+          });
 
           await page.goto('http://127.0.0.1:8765/index.html', {waitUntil:'networkidle'});
           await page.waitForTimeout(1500);
           const requiredGlobals = ['TGGGame','TGGCareer','TGGContent','TGGExpansion','TGGProgression','TGGBridge','TGGAvatar','TGGWorldSync','TGGBusiness','TGGQA','TGGReleaseQA'];
           const missingGlobals = await page.evaluate(required => required.filter(name => !window[name]), requiredGlobals);
           if (missingGlobals.length || errors.length) {
-            console.error(JSON.stringify({ missingGlobals, errors }, null, 2));
+            const browserDiagnostics = await page.evaluate(() => ({
+              scripts:[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean),
+              resources:performance.getEntriesByType('resource').map(r=>r.name.split('/').pop()).filter(n=>/\\.js(?:\\?|$)/.test(n))
+            }));
+            console.error(JSON.stringify({ missingGlobals, errors, scriptResponses, browserDiagnostics }, null, 2));
             await browser.close();
             process.exit(1);
           }

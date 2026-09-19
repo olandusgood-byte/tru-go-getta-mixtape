@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const root=new URL('.',import.meta.url);
+const html=fs.readFileSync(new URL('index.html',root),'utf8');
+const js=fs.readFileSync(new URL('v340-city-world-mega.js',root),'utf8');
+const css=fs.readFileSync(new URL('v340-city-world-mega.css',root),'utf8');
+assert.match(html,/v340-city-world-mega\.css/);
+assert.match(html,/v340-city-world-mega\.js/);
+assert.match(js,/V3\.40 CITY WORLD MEGA PASS/);
+for(const token of ['city-perimeter-density','street-furniture','dynamic-cloud-layer','weather-state-api','interior-lighting-pass','crowd-quality-sync'])assert.match(js,new RegExp(token));
+assert.match(css,/data-tgg-v340/);
+console.log(JSON.stringify({ok:true,version:'V3.40 CITY WORLD MEGA PASS',checks:10}));

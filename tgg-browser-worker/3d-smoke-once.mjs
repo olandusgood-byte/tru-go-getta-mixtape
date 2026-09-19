@@ -38,6 +38,7 @@ const V222_RELATIONSHIP_ONLY=String(process.env.TGG_3D_V222_RELATIONSHIP_ONLY||'
 const V223_SOCIAL_SCHEDULE_ONLY=String(process.env.TGG_3D_V223_SOCIAL_SCHEDULE_ONLY||'0')==='1';
 const V224_SOCIAL_WORLD_ONLY=String(process.env.TGG_3D_V224_SOCIAL_WORLD_ONLY||'0')==='1';
 const V225_RIVAL_ONLY=String(process.env.TGG_3D_V225_RIVAL_ONLY||'0')==='1';
+const V226_INFLUENCE_ONLY=String(process.env.TGG_3D_V226_INFLUENCE_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function startV218SnapshotServer(){
@@ -74,6 +75,187 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(V226_INFLUENCE_ONLY){
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,cssResponse,coreResponse,runtimeResponse,navResponse,gameResponse]=await Promise.all([
+        fetch(base+'/index.html'),fetch(base+'/style.css'),fetch(base+'/v226-city-influence-core.js'),
+        fetch(base+'/v226-city-influence.js'),fetch(base+'/navigation.js'),fetch(base+'/game.js')
+      ]);
+      if(!htmlResponse.ok||!cssResponse.ok||!coreResponse.ok||!runtimeResponse.ok||!navResponse.ok||!gameResponse.ok){
+        throw new Error('V2.26 harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', core='+coreResponse.status+', runtime='+runtimeResponse.status+', nav='+navResponse.status+', game='+gameResponse.status);
+      }
+      let html=await htmlResponse.text();
+      const [css,coreSource,runtimeSource,navSource,gameSource]=await Promise.all([
+        cssResponse.text(),coreResponse.text(),runtimeResponse.text(),navResponse.text(),gameResponse.text()
+      ]);
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      const pageErrors=[];const consoleErrors=[];
+      mp.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+      mp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      await mp.setContent(html,{waitUntil:'domcontentloaded'});
+      await mp.evaluate(()=>{
+        localStorage.clear();
+        window.__qaScreen='game';
+        window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:1000,xp:100,level:4};
+        window.__qaCareer={recordings:2,mixtapes:1,reputation:30,studioLevel:2};
+        window.__qaLife={day:1,minute:600,readiness:1.0,relationships:{manager:35}};
+        window.__qaWorldLife={battleWins:1,shows:1};
+        window.__qaToasts=[];
+        window.__qaAdvanced=0;
+        window.TGGGame={
+          getState:()=>window.__qaGame,
+          getActiveScreen:()=>window.__qaScreen,
+          show:id=>{
+            window.__qaScreen=id;
+            document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
+            document.getElementById(id)?.classList.add('active');
+            return true;
+          },
+          reward:(cash,xp)=>{window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return true}
+        };
+        window.TGGCareer={career:window.__qaCareer,addRep:n=>{window.__qaCareer.reputation+=Number(n)||0;return true}};
+        window.TGGWorldLife={getState:()=>window.__qaWorldLife};
+        window.TGGLifeOS={
+          getState:()=>window.__qaLife,
+          advance:(mins)=>{window.__qaLife.minute=(window.__qaLife.minute+(Number(mins)||0))%1440;window.__qaAdvanced+=Number(mins)||0;return true}
+        };
+        window.TGGCrew={state:{members:['dj-v','kane']},catalog:[{id:'dj-v'},{id:'kane'},{id:'manager'}]};
+        window.TGGV225={
+          status:()=>({rivalry:25,respect:10,alliance:0,crewStrength:67,distance:99}),
+          navigationTarget:()=>null
+        };
+        window.TGGStoryMissions={navigationTarget:()=>null};
+        window.TGGStoryWorld3D={getStatus:()=>({near:false,target:null})};
+        window.TGGSocialSchedule={near:()=>false,navigationTarget:()=>null};
+        window.TGG3D={interactNearest:()=>false,destinations:[]};
+        window.__tggToast=t=>window.__qaToasts.push(String(t));
+      });
+      await mp.addScriptTag({content:coreSource});
+      await mp.addScriptTag({content:runtimeSource});
+      await mp.addScriptTag({content:navSource});
+      await mp.waitForTimeout(250);
+
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      let snap=await mp.evaluate(()=>({
+        title:document.title,
+        api:window.TGGV226?.status?.(),
+        core:window.TGGV226Core?.VERSION,
+        button:!!document.getElementById('cityInfluenceBtn'),
+        board:!!document.getElementById('cityInfluenceBoard'),
+        routerSource:window.__routerSource||''
+      }));
+      add('v226-title',snap.title.includes('V2.26 CITY INFLUENCE'),snap.title);
+      add('v226-core-api',snap.core==='V2.26');
+      add('v226-runtime-api',snap.api?.version==='V2.26'&&snap.api?.ready===true,JSON.stringify(snap.api));
+      add('v226-four-districts',snap.api?.districts?.length===4,JSON.stringify(snap.api?.districts));
+      add('v226-ui-hosts',snap.button&&snap.board,JSON.stringify({button:snap.button,board:snap.board}));
+      add('v226-router-registered',gameSource.includes("'cityInfluenceBoard'"));
+
+      await mp.evaluate(()=>window.TGGV226.track('downtown'));
+      await mp.waitForTimeout(120);
+      snap=await mp.evaluate(()=>({status:window.TGGV226.status(),nav:window.TGGNavigation?.getTarget?.()}));
+      add('v226-track-downtown',snap.status?.trackedDistrict==='downtown',JSON.stringify(snap.status));
+      add('v226-navigation-target',snap.nav?.influence===true&&snap.nav?.districtId==='downtown'&&String(snap.nav?.label||'').includes('DOWNTOWN'),JSON.stringify(snap.nav));
+
+      await mp.evaluate(()=>{window.__qaGame.x=50;window.__qaGame.y=50;window.TGGV226.render();});
+      await mp.waitForTimeout(160);
+      snap=await mp.evaluate(()=>({
+        status:window.TGGV226.status(),
+        interact:{text:document.getElementById('interact3dBtn')?.textContent||'',disabled:document.getElementById('interact3dBtn')?.disabled},
+        before:{game:{...window.__qaGame},career:{...window.__qaCareer},life:{...window.__qaLife}}
+      }));
+      add('v226-downtown-proximity',snap.status?.near===true,JSON.stringify(snap.status));
+      add('v226-work-interact',snap.interact.disabled===false&&snap.interact.text==='WORK DOWNTOWN',JSON.stringify(snap.interact));
+      const beforeWork=snap.before;
+
+      await mp.evaluate(()=>window.TGGV226.work());
+      await mp.waitForTimeout(120);
+      snap=await mp.evaluate(()=>({
+        status:window.TGGV226.status(),game:{...window.__qaGame},career:{...window.__qaCareer},
+        advanced:window.__qaAdvanced,stored:JSON.parse(localStorage.getItem('tgg-v226-city-influence-v1')||'null')
+      }));
+      const downtown=snap.status?.districts?.find(x=>x.id==='downtown');
+      add('v226-work-increases-influence',downtown?.player>28,JSON.stringify(downtown));
+      add('v226-work-reward',snap.game.cash===beforeWork.game.cash+45&&snap.game.xp===beforeWork.game.xp+18&&snap.career.reputation===beforeWork.career.reputation+2,JSON.stringify({before:beforeWork,after:snap}));
+      add('v226-life-time-cost',snap.advanced===45,String(snap.advanced));
+      add('v226-persistence',snap.stored?.state?.trackedDistrict==='downtown'&&snap.stored?.state?.totalPushes===1,JSON.stringify(snap.stored));
+
+      const studioBefore=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='studio').player);
+      await mp.evaluate(()=>{window.__qaCareer.recordings+=1;window.TGGV226.sync();});
+      await mp.waitForTimeout(100);
+      const studioAfter=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='studio').player);
+      add('v226-recording-affects-studio',studioAfter>=studioBefore+8,studioBefore+'->'+studioAfter);
+
+      const battleBefore=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='downtown').player);
+      await mp.evaluate(()=>{window.__qaWorldLife.battleWins+=1;window.TGGV226.sync();});
+      await mp.waitForTimeout(100);
+      const battleAfter=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='downtown').player);
+      add('v226-battle-affects-downtown',battleAfter>=battleBefore+11,battleBefore+'->'+battleAfter);
+
+      const showBefore=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='mixtape').player);
+      await mp.evaluate(()=>{window.__qaWorldLife.shows+=1;window.TGGV226.sync();});
+      await mp.waitForTimeout(100);
+      const showAfter=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='mixtape').player);
+      add('v226-show-affects-mixtape',showAfter>=showBefore+10,showBefore+'->'+showAfter);
+
+      const mediaBefore=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='media').player);
+      await mp.evaluate(()=>document.querySelector('[data-media="video"]')?.click());
+      await mp.waitForTimeout(160);
+      const mediaAfter=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='media').player);
+      add('v226-visual-affects-media',mediaAfter>=mediaBefore+10,mediaBefore+'->'+mediaAfter);
+
+      const rivalBefore=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='downtown'));
+      await mp.evaluate(()=>window.dispatchEvent(new CustomEvent('tgg:v225-choice',{detail:{choice:'compete'}})));
+      await mp.waitForTimeout(100);
+      const rivalAfter=await mp.evaluate(()=>window.TGGV226.status().districts.find(x=>x.id==='downtown'));
+      add('v226-rival-choice-consequence',rivalAfter.player>=rivalBefore.player+9&&rivalAfter.rival>=rivalBefore.rival+7,JSON.stringify({before:rivalBefore,after:rivalAfter}));
+
+      const coreCheck=await mp.evaluate(()=>{
+        const s=window.TGGV226Core.createState();
+        s.districts.downtown.player=59;s.districts.downtown.rival=45;
+        const first=window.TGGV226Core.workDistrict(s,'downtown',{crewStrength:100,readiness:1.2,rivalry:25,alliance:0});
+        const second=window.TGGV226Core.workDistrict(first,'downtown',{crewStrength:100,readiness:1.2,rivalry:25,alliance:0});
+        const day=window.TGGV226Core.applyDayPressure(s,{rivalry:70,respect:10,alliance:0,day:2});
+        return {first,second,day};
+      });
+      add('v226-first-capture-bonus',coreCheck.first?.justCaptured===true&&coreCheck.first?.rewards?.cash===350&&coreCheck.first?.rewards?.rep===20,JSON.stringify(coreCheck.first));
+      add('v226-no-repeat-capture-bonus',coreCheck.second?.justCaptured===false&&coreCheck.second?.rewards?.cash===45,JSON.stringify(coreCheck.second));
+      add('v226-rival-daily-pressure',coreCheck.day?.districts?.studio?.rival===37,JSON.stringify(coreCheck.day?.districts?.studio));
+
+      await mp.evaluate(()=>{window.TGGV226.render();window.TGGGame.show('cityInfluenceBoard')});
+      await mp.waitForTimeout(120);
+      const layout=await mp.evaluate(()=>{
+        const shell=document.querySelector('.v226-shell')?.getBoundingClientRect();
+        const cards=[...document.querySelectorAll('.v226-card')].map(x=>x.getBoundingClientRect());
+        const buttons=[...document.querySelectorAll('.v226-actions button')].map(x=>x.getBoundingClientRect());
+        const grid=document.querySelector('.v226-grid');
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          shell:shell?{left:shell.left,right:shell.right,width:shell.width}:null,
+          cards:cards.map(x=>({width:x.width,height:x.height,top:x.top})),
+          buttons:buttons.map(x=>({width:x.width,height:x.height})),
+          columns:grid?getComputedStyle(grid).gridTemplateColumns:''
+        };
+      });
+      add('v226-mobile-no-overflow',layout.scrollWidth<=391,JSON.stringify(layout));
+      add('v226-mobile-shell-contained',!!layout.shell&&layout.shell.left>=0&&layout.shell.right<=layout.width+1,JSON.stringify(layout.shell));
+      add('v226-mobile-four-cards',layout.cards.length===4,JSON.stringify(layout.cards));
+      add('v226-mobile-one-column',!!layout.columns&&!layout.columns.includes(' '),layout.columns);
+      add('v226-mobile-buttons-readable',layout.buttons.length===8&&layout.buttons.every(x=>x.height>=44),JSON.stringify(layout.buttons));
+      add('v226-3d-marker-source',runtimeSource.includes('v226District')&&runtimeSource.includes('new THREE.TorusGeometry')&&runtimeSource.includes('CITY INFLUENCE'));
+
+      result={
+        ok:checks.every(x=>x.pass)&&pageErrors.length===0,
+        status:'done',mode:'v226_city_influence_harness',target:TARGET,
+        checks,console_errors:consoleErrors,page_errors:pageErrors,updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
 
     if(V225_RIVAL_ONLY){
       const pageErrors=[];const consoleErrors=[];const failedResources=[];
@@ -347,7 +529,6 @@ async function run(){
       add('v223-two-daily-invites',snap.status?.invites?.filter(x=>x.day===1).length===2,JSON.stringify(snap.status?.invites));
       add('v223-deterministic-manager',snap.status?.invites?.some(x=>x.templateId==='manager-meet'&&x.start===660),JSON.stringify(snap.status?.invites));
       add('v223-deterministic-director',snap.status?.invites?.some(x=>x.templateId==='video-call'&&x.start===960),JSON.stringify(snap.status?.invites));
-
       const managerId=await tp.evaluate(()=>window.TGGSocialSchedule.status().invites.find(x=>x.templateId==='manager-meet')?.id);
       const directorId=await tp.evaluate(()=>window.TGGSocialSchedule.status().invites.find(x=>x.templateId==='video-call')?.id);
       await tp.evaluate(id=>window.TGGSocialSchedule.accept(id),managerId);
@@ -697,8 +878,7 @@ async function run(){
         manager:window.TGGLifeOS.availability('manager'),
         producer:window.TGGLifeOS.availability('producer'),
         state:window.TGGLifeOS.getState()
-      }));
-      record('lifeos-availability-window',avail.manager===true&&avail.producer===false,JSON.stringify(avail));
+      }));      record('lifeos-availability-window',avail.manager===true&&avail.producer===false,JSON.stringify(avail));
 
       const relBefore=await mp.evaluate(()=>window.TGGLifeOS.getState().relationships.manager);
       await mp.evaluate(()=>window.TGGLifeOS.contactInteraction('manager','call'));
@@ -1047,8 +1227,7 @@ async function run(){
 
     if(V218_MEGA_ONLY){
       const consoleErrors=[];const pageErrors=[];const failedResources=[];
-      const local=await startV218SnapshotServer();
-      const qaTarget=local.url;
+      const local=await startV218SnapshotServer();      const qaTarget=local.url;
       console.log(JSON.stringify({tgg_v218_mega_stage:'local-runtime-ready',target:qaTarget,source_root:path.relative(process.cwd(),local.serveRoot)}));
       page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
       page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
@@ -1397,8 +1576,7 @@ async function run(){
       ]);
       if(!htmlResponse.ok||!cssResponse.ok||!storyResponse.ok||!cineResponse.ok){
         throw new Error('Story Chapter 3 harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', story='+storyResponse.status+', cine='+cineResponse.status);
-      }      let html=await htmlResponse.text();
-      const [css,storySource,cineSource]=await Promise.all([cssResponse.text(),storyResponse.text(),cineResponse.text()]);
+      }      let html=await htmlResponse.text();      const [css,storySource,cineSource]=await Promise.all([cssResponse.text(),storyResponse.text(),cineResponse.text()]);
       html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
                .replace(/<link[^>]*href=["']style\.css["'][^>]*>/i,'<style>'+css+'</style>');
       const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
@@ -1747,8 +1925,7 @@ async function run(){
       record('chapter2-kane-talk',snap.step===3,JSON.stringify(snap));
       await mp.evaluate(()=>{window.__qaCareer.recordings=4;window.TGGStoryMissions.sync();});
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
-      record('chapter2-recording',snap.step===4,JSON.stringify(snap));
-      await mp.evaluate(()=>{window.__qaGame.x=50;window.__qaGame.y=50;window.TGGStoryMissions.sync();});
+      record('chapter2-recording',snap.step===4,JSON.stringify(snap));      await mp.evaluate(()=>{window.__qaGame.x=50;window.__qaGame.y=50;window.TGGStoryMissions.sync();});
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter2-downtown-arrival',snap.step===5,JSON.stringify(snap));
 
@@ -2097,7 +2274,6 @@ async function run(){
       await page.waitForTimeout(120);
       const checks=[];const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
       record('career-director-api',await page.evaluate(()=>typeof window.TGGCareerDirector?.getState==='function'));
-
       async function runContract(contactId,advance){        await page.evaluate(({contactId,stamp})=>{window.__qaLife.activeOpportunity={contactId,title:'QA',detail:'QA',createdAt:stamp}}, {contactId,stamp:Date.now()});
         await page.waitForTimeout(1050);        const active=await page.evaluate(()=>window.TGGCareerDirector?.getState?.().activeContract);        advance();
         await page.waitForTimeout(1050);
@@ -2447,8 +2623,7 @@ async function run(){
     }
 
     const consoleErrors=[],pageErrors=[],failedResources=[];
-    page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
-    page.on('pageerror',e=>pageErrors.push(e.message||String(e)));    page.on('response',r=>{if(r.status()>=400)failedResources.push({url:r.url(),status:r.status()})});    const res=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
+    page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});    page.on('pageerror',e=>pageErrors.push(e.message||String(e)));    page.on('response',r=>{if(r.status()>=400)failedResources.push({url:r.url(),status:r.status()})});    const res=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
     await page.waitForSelector('#newGame',{state:'attached',timeout:15000});
     await page.evaluate(()=>document.getElementById('newGame')?.click());
     await page.evaluate(()=>{      const stage=document.getElementById('stageName');      const style=document.getElementById('styleChoice');      if(stage)stage.value='TGG 3D QA';
@@ -2797,7 +2972,6 @@ async function run(){
     await ctx.close();
   } finally {await browser.close();}
 }
-
 const statusServer=http.createServer((_req,res)=>{
   res.setHeader('content-type','application/json; charset=utf-8');
   res.end(JSON.stringify(result));

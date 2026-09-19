@@ -27,6 +27,15 @@ assert(browserScript.includes("Object.keys(window)")&&browserScript.includes("TG
 const browserSyntax=spawnSync(process.execPath,['--check',browserScriptPath],{encoding:'utf8'});
 assert(browserSyntax.status===0,'Browser smoke JavaScript syntax failed:\n'+(browserSyntax.stderr||browserSyntax.stdout||''));
 
+const liveViewerPath=path.resolve('tgg-core/public/live-viewer/index.html');
+const liveViewerHtml=fs.readFileSync(liveViewerPath,'utf8');
+const liveViewerInline=[...liveViewerHtml.matchAll(/<script>([\\s\\S]*?)<\\/script>/gi)].map(m=>m[1]).filter(Boolean);
+assert(liveViewerInline.length>0,'LiveViewer inline runtime missing');
+for(const [i,source] of liveViewerInline.entries()){
+  try{new Function(source)}catch(e){throw new Error('LiveViewer inline JavaScript syntax failed #'+(i+1)+': '+e.message);}
+}
+assert(liveViewerHtml.includes('window.TGGLiveViewerLaunch'),'LiveViewer deterministic launch runtime missing');
+
 const contract=spawnSync(process.execPath,[path.join(root,'static-contract.test.mjs')],{encoding:'utf8'});
 assert(contract.status===0,'V1.13 static contract failed:\n'+(contract.stderr||contract.stdout||''));
 

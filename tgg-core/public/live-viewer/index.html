@@ -4,7 +4,73 @@
 const API=location.origin;let token='',sid='',es=null,count=0,lastEventId=0,reconnectTimer=null;const $=id=>document.getElementById(id);
 function headers(){return {'Authorization':'Bearer '+token,'Content-Type':'application/json'}}
 async function load(){if(!token)return;const r=await fetch(API+'/v1/live-viewer/overview',{headers:headers()});if(!r.ok){$('conn').textContent='Auth failed';return}const d=await r.json();const el=$('sessions');el.innerHTML='';(d.sessions||[]).forEach(s=>{const x=document.createElement('div');x.className='session'+(s.id===sid?' active':'');x.innerHTML='<b>'+s.id.slice(0,8)+'</b><div class="muted">'+new Date(s.updated_at).toLocaleString()+'</div><span class="pill '+(s.status==='active'?'live':'')+'">'+s.status+'</span>';x.onclick=()=>select(s.id);el.appendChild(x)});const cl=$('certList');cl.innerHTML=(d.certifications||[]).length?(d.certifications||[]).map(c=>'<div class="event"><b>'+c.status+'</b> · '+escapeHtml(c.certification_type||'certification')+' · '+String(c.id).slice(0,8)+'</div>').join(''):'<span class="muted">No certifications yet.</span>';if(!sid&&d.sessions?.[0])select(d.sessions[0].id)}
-async function select(id){sid=id;count=0;lastEventId=0;if(reconnectTimer)clearTimeout(reconnectTimer);$('count').textContent='0';document.querySelectorAll('.session').forEach(x=>x.classList.remove('active'));const r=await fetch(API+'/v1/browser/sessions/'+encodeURIComponent(id)+'/viewer/state',{headers:headers()});if(!r.ok)return;const d=await r.json();$('status').textContent=d.session.status||'—';$('worker').textContent=d.session.metadata?.worker_id||'—';$('flow').textContent=d.latest_event?.event_type||'idle';$('stream').innerHTML='';if(d.latest_event)addEvent(d.latest_event);if(es)es.abort?.();const ctl=new AbortController();es=ctl; (async()=>{try{const resp=await fetch(API+'/v1/browser/sessions/'+encodeURIComponent(id)+'/viewer/stream?after='+lastEventId',{headers:{Authorization:'Bearer '+token},signal:ctl.signal});if(!resp.ok)throw new Error('stream '+resp.status);$('conn').textContent='LIVE';$('conn').className='live';const reader=resp.body.getReader(),dec=new TextDecoder();let buf='';for(;;){const q=await reader.read();if(q.done)break;buf+=dec.decode(q.value,{stream:true});const parts=buf.split('\\n\\n');buf=parts.pop();for(const block of parts){let typ='state',data='{}',created_at=new Date().toISOString();for(const line of block.split('\\n')){if(line.startsWith('event:'))typ=line.slice(6).trim();if(line.startsWith('data:'))data=line.slice(5).trim();}if(data&&data!=='{}')try{const parsed=JSON.parse(data);if(parsed.id)lastEventId=Math.max(lastEventId,Number(parsed.id)||0);addEvent({id:parsed.id,event_type:parsed.event_type||typ,payload:parsed.payload||parsed,created_at:parsed.created_at||created_at})}catch{}}}}catch(e){if(e.name!=='AbortError'){$('conn').textContent='Reconnecting…';$('conn').className='muted';reconnectTimer=setTimeout(()=>select(id),1500)}}})()}
+async function select(id){
+  sid=id;
+  count=0;
+  lastEventId=0;
+  if(reconnectTimer)clearTimeout(reconnectTimer);
+  $('count').textContent='0';
+  document.querySelectorAll('.session').forEach(x=>x.classList.remove('active'));
+  const r=await fetch(API+'/v1/browser/sessions/'+encodeURIComponent(id)+'/viewer/state',{headers:headers()});
+  if(!r.ok)return;
+  const d=await r.json();
+  $('status').textContent=d.session?.status||'—';
+  $('worker').textContent=d.session?.metadata?.worker_id||'—';
+  $('flow').textContent=d.latest_event?.event_type||'idle';
+  $('stream').innerHTML='';
+  if(d.latest_event)addEvent(d.latest_event);
+  if(es)es.abort?.();
+  const ctl=new AbortController();
+  es=ctl;
+  (async()=>{
+    try{
+      const resp=await fetch(API+'/v1/browser/sessions/'+encodeURIComponent(id)+'/viewer/stream?after='+lastEventId,{
+        headers:{Authorization:'Bearer '+token},
+        signal:ctl.signal
+      });
+      if(!resp.ok)throw new Error('stream '+resp.status);
+      $('conn').textContent='LIVE';
+      $('conn').className='live';
+      const reader=resp.body.getReader();
+      const dec=new TextDecoder();
+      let buf='';
+      for(;;){
+        const q=await reader.read();
+        if(q.done)break;
+        buf+=dec.decode(q.value,{stream:true});
+        const parts=buf.split('\\n\\n');
+        buf=parts.pop()||'';
+        for(const block of parts){
+          let typ='state';
+          let data='{}';
+          const created_at=new Date().toISOString();
+          for(const line of block.split('\\n')){
+            if(line.startsWith('event:'))typ=line.slice(6).trim();
+            if(line.startsWith('data:'))data=line.slice(5).trim();
+          }
+          if(data&&data!=='{}'){
+            try{
+              const parsed=JSON.parse(data);
+              if(parsed.id)lastEventId=Math.max(lastEventId,Number(parsed.id)||0);
+              addEvent({
+                id:parsed.id,
+                event_type:parsed.event_type||typ,
+                payload:parsed.payload||parsed,
+                created_at:parsed.created_at||created_at
+              });
+            }catch{}
+          }
+        }
+      }
+    }catch(e){
+      if(e.name!=='AbortError'){
+        $('conn').textContent='Reconnecting…';
+        $('conn').className='muted';
+        reconnectTimer=setTimeout(()=>select(id),1500);
+      }
+    }
+  })();
+}
 function addEvent(e){count++;$('count').textContent=count;$('flow').textContent=e.event_type||'—';const x=document.createElement('div');x.className='event';x.innerHTML='<b>'+String(e.event_type||'event')+'</b> <span class="muted">'+new Date(e.created_at||Date.now()).toLocaleTimeString()+'</span><div>'+escapeHtml(JSON.stringify(e.payload||{}))+'</div>';$('stream').prepend(x)}
 function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 $('connect').onclick=()=>{token=$('token').value.trim();sid='';$('conn').textContent='Connecting…';load()};

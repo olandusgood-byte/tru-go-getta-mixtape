@@ -108,8 +108,8 @@
   function isForgeObject(obj){
     let p=obj;
     while(p&&p!==scene()){
-      if(p.userData?.v227Forge||p.userData?.v228Forge||p.userData?.v229||p.userData?.v230||
-         ['tgg-forge-player','tgg-forge-car','tgg-world-forge','tgg-interior-forge'].includes(p.name))return true;
+      if(p.userData?.v227Forge||p.userData?.v228Forge||p.userData?.v229||p.userData?.v230||p.userData?.v236Crowd||
+         ['tgg-forge-player','tgg-forge-car','tgg-world-forge','tgg-interior-forge','tgg-crowd-forge'].includes(p.name))return true;
       p=p.parent;
     }
     return false;

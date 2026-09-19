@@ -39,7 +39,7 @@ async function run(){
 
     if(MEGA_QA_ONLY){
       const megaSha=String(process.env.TGG_3D_MEGA_QA_SHA||'').trim();
-      const snapshotSha='1f728a7ef0b26f6714c1fad8e01eb7ff4a6977d9';
+      const snapshotSha='e565a5f209a55b3c4d70a8b874454c23b85816bd';
       if(megaSha!==snapshotSha)throw new Error('mega snapshot SHA mismatch: expected '+snapshotSha+' got '+megaSha);
       const mimeFor=p=>p.endsWith('.html')?'text/html; charset=utf-8':p.endsWith('.css')?'text/css; charset=utf-8':p.endsWith('.js')?'application/javascript; charset=utf-8':p.endsWith('.json')?'application/json; charset=utf-8':p.endsWith('.png')?'image/png':p.endsWith('.jpg')||p.endsWith('.jpeg')?'image/jpeg':p.endsWith('.webp')?'image/webp':p.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
       const serveRoot=path.resolve(process.cwd(),'tgg-browser-worker','mega-game-snapshot');

@@ -948,7 +948,15 @@ app.post('/v1/workers/jobs/complete', async (req,res,next)=>{
       where id=$4 and worker_id=$5 and lease_token=$6 returning *`,
       [verdict,req.body?.result||null,req.body?.evidence||[],req.body?.job_id,w.id,req.body?.lease_token]);
     if(!r.rowCount)return res.status(409).json({error:'job_lease_invalid'});
-    res.json({job:r.rows[0]});
+    const finished=r.rows[0];
+    const certId=finished.payload?.certification_id;
+    if(certId){
+      await pool.query(
+        "update tgg_certifications set status=$2,evidence=coalesce(evidence,'{}'::jsonb)||jsonb_build_object('browser_job_id',$3,'browser_result',$4::jsonb),completed_at=case when $2 in ('passed','failed','expired') then now() else completed_at end where id=$1",
+        [certId,verdict,finished.id,JSON.stringify(req.body?.result||{})]
+      );
+    }
+    res.json({job:finished});
   }catch(e){next(e);}
 });
 

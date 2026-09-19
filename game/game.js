@@ -4,10 +4,12 @@
   let state={name:'PLAYER',style:'Artist',x:50,y:55,cash:0,xp:0,level:1,mission:null,accepted:false,autoMode:true,heading:0,inVehicle:false};
   let activeScreen='menu';
   const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false};
+  const driveAnalog={steer:0,throttle:0,handbrake:0};
   const driveRuntime={speed:0,steer:0,lastTime:performance.now(),braking:false,handbrake:false};
   const DRIVE={maxForward:10,maxReverse:-4.5,accel:7.5,reverseAccel:5.5,brake:12,coast:3.4,turnRate:108,steerIn:4.2,steerOut:7.4,lowSpeedSteer:1,highSpeedSteer:.58};
 
   const walkKeys={up:false,down:false,left:false,right:false,sprint:false};
+  const walkAnalog={x:0,y:0,sprint:0};
   const walkReleaseTimers={up:null,down:null,left:null,right:null,sprint:null};
   const walkRuntime={vx:0,vy:0,inputX:0,inputY:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false};
   const WALK={walkSpeed:6.8,sprintSpeed:10.5,accel:24,decel:30,turnResponse:11,inputResponse:8.5,stopEpsilon:.025};
@@ -173,6 +175,20 @@
     return true;
   }
 
+  function setDriveAnalog(next={}){
+    if(Number.isFinite(Number(next.steer)))driveAnalog.steer=Math.max(-1,Math.min(1,Number(next.steer)));
+    if(Number.isFinite(Number(next.throttle)))driveAnalog.throttle=Math.max(-1,Math.min(1,Number(next.throttle)));
+    if(Number.isFinite(Number(next.handbrake)))driveAnalog.handbrake=Math.max(0,Math.min(1,Number(next.handbrake)));
+    return {...driveAnalog};
+  }
+
+  function setWalkAnalog(next={}){
+    if(Number.isFinite(Number(next.x)))walkAnalog.x=Math.max(-1,Math.min(1,Number(next.x)));
+    if(Number.isFinite(Number(next.y)))walkAnalog.y=Math.max(-1,Math.min(1,Number(next.y)));
+    if(Number.isFinite(Number(next.sprint)))walkAnalog.sprint=Math.max(0,Math.min(1,Number(next.sprint)));
+    return {...walkAnalog};
+  }
+
   function setWalkKey(control,on,releaseDelay=0){
     if(!(control in walkKeys))return false;
     if(walkReleaseTimers[control]){
@@ -235,9 +251,12 @@
       return;
     }
 
-    const wantsForward=driveKeys.forward&&!driveKeys.reverse;
-    const wantsReverse=driveKeys.reverse&&!driveKeys.forward;
-    driveRuntime.handbrake=!!driveKeys.handbrake;
+    const keyThrottle=(driveKeys.forward?1:0)-(driveKeys.reverse?1:0);
+    const throttle=Math.abs(keyThrottle)>.01?keyThrottle:driveAnalog.throttle;
+    const wantsForward=throttle>.05;
+    const wantsReverse=throttle<-.05;
+    const throttleAmount=Math.min(1,Math.abs(throttle));
+    driveRuntime.handbrake=!!driveKeys.handbrake||driveAnalog.handbrake>.35;
 
     let remaining=elapsed;
     while(remaining>.0001){
@@ -249,11 +268,11 @@
       driveRuntime.braking=(wantsReverse&&movingForward)||(wantsForward&&movingReverse);
 
       if(wantsForward){
-        const rate=movingReverse?DRIVE.brake:DRIVE.accel;
-        driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxForward,rate*dt);
+        const rate=(movingReverse?DRIVE.brake:DRIVE.accel)*(.35+.65*throttleAmount);
+        driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxForward*throttleAmount,rate*dt);
       }else if(wantsReverse){
-        const rate=movingForward?DRIVE.brake:DRIVE.reverseAccel;
-        driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxReverse,rate*dt);
+        const rate=(movingForward?DRIVE.brake:DRIVE.reverseAccel)*(.35+.65*throttleAmount);
+        driveRuntime.speed=approach(driveRuntime.speed,DRIVE.maxReverse*throttleAmount,rate*dt);
       }else{
         driveRuntime.speed=approach(driveRuntime.speed,0,DRIVE.coast*dt);
       }
@@ -261,7 +280,8 @@
         driveRuntime.speed=approach(driveRuntime.speed,0,5.8*dt);
       }
 
-      const rawSteer=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
+      const keySteer=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
+      const rawSteer=Math.abs(keySteer)>.01?keySteer:driveAnalog.steer;
       const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/Math.max(1,DRIVE.maxForward));
       const steerLimit=DRIVE.lowSpeedSteer+(DRIVE.highSpeedSteer-DRIVE.lowSpeedSteer)*speedRatio;
       const steerTarget=Math.max(-1,Math.min(1,rawSteer))*steerLimit;
@@ -315,8 +335,10 @@
       return;
     }
 
-    let rawX=(walkKeys.right?1:0)-(walkKeys.left?1:0);
-    let rawY=(walkKeys.down?1:0)-(walkKeys.up?1:0);
+    const keyX=(walkKeys.right?1:0)-(walkKeys.left?1:0);
+    const keyY=(walkKeys.down?1:0)-(walkKeys.up?1:0);
+    let rawX=Math.abs(keyX)>.01?keyX:walkAnalog.x;
+    let rawY=Math.abs(keyY)>.01?keyY:walkAnalog.y;
     const rawMag=Math.hypot(rawX,rawY);
     if(rawMag>1){rawX/=rawMag;rawY/=rawMag;}
 
@@ -325,7 +347,7 @@
     const inputMag=Math.min(1,Math.hypot(walkRuntime.inputX,walkRuntime.inputY));
     const ix=inputMag>.001?walkRuntime.inputX/inputMag:0;
     const iy=inputMag>.001?walkRuntime.inputY/inputMag:0;
-    const sprinting=!!walkKeys.sprint&&inputMag>.08;
+    const sprinting=(!!walkKeys.sprint||walkAnalog.sprint>.35)&&inputMag>.08;
     const targetSpeed=(sprinting?WALK.sprintSpeed:WALK.walkSpeed)*inputMag;
     const targetVx=inputMag>.01?ix*targetSpeed:0;
     const targetVy=inputMag>.01?iy*targetSpeed:0;
@@ -414,6 +436,8 @@
       state.inVehicle=false;
       driveRuntime.speed=0;
       Object.keys(driveKeys).forEach(k=>driveKeys[k]=false);
+      driveAnalog.steer=0;driveAnalog.throttle=0;driveAnalog.handbrake=0;
+      walkAnalog.x=0;walkAnalog.y=0;walkAnalog.sprint=0;
       clearWalkKeys();
       walkRuntime.lastTime=performance.now();
       window.TGG3D?.setVehicleDynamics?.({speed:0,steer:0,braking:false,handbrake:false});
@@ -429,6 +453,7 @@
     const carHeading=window.TGG3D?.getCarHeading?.();
     if(Number.isFinite(carHeading))state.heading=carHeading;
     clearWalkKeys();
+    walkAnalog.x=0;walkAnalog.y=0;walkAnalog.sprint=0;
     walkRuntime.vx=0;walkRuntime.vy=0;walkRuntime.inputX=0;walkRuntime.inputY=0;walkRuntime.speed=0;
     state.inVehicle=true;
     driveRuntime.speed=0;
@@ -644,8 +669,8 @@
   window.TGGAutoMode={enabled:()=>true,toggle:()=>true};
   window.TGGGame={
     getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,
-    driveVehicle,setDriveKey,getDrivingState:()=>({...driveRuntime}),setDriveTuning,getDriveTuning,
-    setWalkKey,getWalkingState:()=>({...walkRuntime}),setWalkTuning,getWalkTuning,
+    driveVehicle,setDriveKey,setDriveAnalog,getDrivingState:()=>({...driveRuntime,analog:{...driveAnalog}}),setDriveTuning,getDriveTuning,
+    setWalkKey,setWalkAnalog,getWalkingState:()=>({...walkRuntime,analog:{...walkAnalog}}),setWalkTuning,getWalkTuning,
     horn,mission,toggleVehicle,resetForNewGame,startBusinessActivity,activityReward
   };
 

@@ -896,6 +896,20 @@ app.post('/v1/workers/heartbeat', async (req,res,next)=>{
   try{ const w=await requireWorker(req,res); if(!w)return; res.json({ok:true,worker_id:w.worker_id,at:new Date().toISOString()}); }catch(e){next(e);}
 });
 
+app.post('/v1/workers/jobs/recover-certification', async (req,res,next)=>{
+  try{
+    const w=await requireWorker(req,res); if(!w)return;
+    const r=await pool.query("select c.* from tgg_certifications c where c.status='started' order by c.created_at asc limit 1");
+    const cert=r.rows[0];
+    if(!cert) return res.json({job:null,reason:'no_started_certification'});
+    const existing=await pool.query("select * from tgg_browser_jobs where flow_key='certification_runtime' and payload->>'certification_id'=$1 and status in ('queued','running') order by created_at desc limit 1",[String(cert.id)]);
+    if(existing.rowCount) return res.json({job:existing.rows[0],existing:true});
+    const job=await pool.query("insert into tgg_browser_jobs(flow_key,payload) values('certification_runtime',$1) returning *",[{certification_id:cert.id,browser_session_id:cert.browser_session_id||null,user_id:cert.user_id,certification_type:cert.certification_type}]);
+    await pool.query("update tgg_certifications set evidence=coalesce(evidence,'{}'::jsonb)||$2::jsonb where id=$1",[cert.id,JSON.stringify({browser_job_id:job.rows[0].id})]);
+    res.status(201).json({job:job.rows[0],recovered:true});
+  }catch(e){next(e);}
+});
+
 app.post('/v1/workers/jobs/claim', async (req,res,next)=>{
   try{
     const w=await requireWorker(req,res); if(!w)return;

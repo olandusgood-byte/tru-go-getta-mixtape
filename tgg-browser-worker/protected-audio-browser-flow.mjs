@@ -17,7 +17,7 @@ export async function protectedAudioBrowserFlow(input = {}) {
     catch (error) { throw new Error(`${stage}: ${String(error?.message || error || 'fetch failed')}`); }
   };
   try {
-    if (!supabaseUrl || !apiKey || !accessToken) throw new Error('Browser QA auth input missing.');
+    if (!supabaseUrl || !accessToken) throw new Error('Browser QA auth input missing.');
     if (!audio) throw new Error('Protected audio element missing.');
     say('Finding a published protected-audio track…');
     const candResp = await fetchStage('candidate_lookup', `${supabaseUrl}/v1/protected-audio/candidate`, { method:'GET', headers:{authorization:`Bearer ${accessToken}`,accept:'application/json'} }); const candRaw=await candResp.json().catch(()=>({})); if(!candResp.ok) throw new Error(candRaw?.error||'Protected-audio candidate lookup failed.'); const trackId=candRaw?.track_id; if(!trackId) throw new Error('No published protected-audio candidate is available.');

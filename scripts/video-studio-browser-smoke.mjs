@@ -42,10 +42,11 @@ try{
   check(appSource.includes('titleStyleFor'),'title designer engine missing');
   check(appSource.includes('data-transition-duration'),'transition duration control missing');
   check(appSource.includes('transitionOut'),'out transition engine missing');
+  check(appSource.includes('function drawScopes'),'live scope engine missing');
 
   await page.screenshot({path:'video-studio-smoke.png',fullPage:true});
   if(failures.length)throw new Error(failures.join('; '));
-  console.log(JSON.stringify({ok:true,url:file,checks:13}));
+  console.log(JSON.stringify({ok:true,url:file,checks:14}));
 } finally {
   await browser.close();
 }

@@ -24,8 +24,10 @@
   const T=()=>hasDOM()?window.THREE:null;
   const scene=()=>hasDOM()?window.TGG3D?.scene||null:null;
   const quality=()=>{
-    const q=hasDOM()?window.TGGV212?.status?.()?.quality:null;
-    return ['high','balanced','performance'].includes(q)?q:'high';
+    const modern=hasDOM()?window.TGGV235?.status?.()?.activeProfile:null;
+    if(['high','balanced','performance'].includes(modern))return modern;
+    const legacy=hasDOM()?window.TGGV212?.status?.()?.quality:null;
+    return ['high','balanced','performance'].includes(legacy)?legacy:'high';
   };
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const lerp=(a,b,t)=>a+(b-a)*t;

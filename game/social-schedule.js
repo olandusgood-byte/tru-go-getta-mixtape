@@ -7,7 +7,7 @@
     {id:'studio-session',contact:'producer',name:'Kane',title:'STUDIO LINK',message:'I got a session open. Come lock in while the room is free.',start:840,end:1020,duration:120,relationship:10,target:{label:'KANE — STUDIO ROW',x:24,y:37,radius:8,color:'#7b86ff'}},
     {id:'club-set',contact:'dj',name:'DJ V',title:'CITY SET',message:'I got a crowd tonight. Slide through and make some noise.',start:1200,end:1380,duration:90,relationship:10,target:{label:'DJ V — MIXTAPE AVE',x:76,y:63,radius:8,color:'#48d7ff'}},
     {id:'video-call',contact:'director',name:'Director K',title:'VISUAL MEETING',message:'I have a treatment ready. Meet me at Media District.',start:960,end:1110,duration:90,relationship:10,target:{label:'DIRECTOR K — MEDIA DISTRICT',x:50,y:89,radius:8,color:'#c56cff'}},
-    {id:'day-one-run',contact:'friend',name:'Day One',title:'DAY ONE LINK-UP',message:'Come kick it at the park. You been moving nonstop.',start:1080,end:1260,duration:75,relationship:9,target:{label:'DAY ONE — THE PARK',x:76,y:63,radius:9,color:'#c7ff00'}},
+    {id:'day-one-run',contact:'friend',name:'Day One',title:'DAY ONE LINK-UP',message:'Come kick it at the park. You been moving nonstop.',start:1080,end:1260,duration:75,relationship:9,target:{label:'DAY ONE — THE PARK',x:72,y:67,radius:9,color:'#c7ff00'}},
     {id:'family-dinner',contact:'family',name:'Mama G',title:'FAMILY DINNER',message:'Come home and eat. Career can wait for one hour.',start:1140,end:1320,duration:75,relationship:12,target:{label:'MAMA G — HOME',x:63,y:24,radius:9,color:'#ffc857'}}
   ];
   const defaults=()=>({version:VERSION,generatedDays:[],invites:[],stats:{accepted:0,declined:0,completed:0,missed:0},lastNoticeDay:0,updatedAt:Date.now()});

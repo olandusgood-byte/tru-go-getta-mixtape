@@ -4,6 +4,8 @@ const { Pool } = pg;
 const DATABASE_URL = process.env.DATABASE_URL;
 const INTERVAL_MS = Math.max(15000, Number(process.env.TGG_AUTOPILOT_INTERVAL_MS || 15000));
 const INSTANCE_ID = process.env.TGG_AUTOPILOT_ID || 'tgg-core-autopilot';
+const SUPABASE_URL = String(process.env.TGG_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\\/$/, '');
+const SUPABASE_SERVICE_ROLE_KEY = String(process.env.TGG_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '');
 
 if (!DATABASE_URL) {
   console.warn('[TGG Autopilot] DATABASE_URL is not configured; scheduler paused');
@@ -87,6 +89,27 @@ if (!DATABASE_URL) {
     return Number(r.rows[0]?.count || 0);
   }
 
+  async function masterBrainBridge(snapshot) {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return { enabled: false, reason: 'supabase_bridge_credentials_missing' };
+    const headers = { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` };
+    const tables = ['tgg_brain_goals','tgg_brain_decisions','tgg_brain_memory','tgg_autobuilder_cycles','tgg_autonomic_cycles','tgg_master_change_queue','tgg_final_completion_ledger'];
+    const inventory = {};
+    for (const table of tables) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=id&limit=1`, { headers: { ...headers, Prefer: 'count=exact' } });
+      if (!res.ok) throw new Error(`supabase_${table}_${res.status}`);
+      const range = res.headers.get('content-range') || '';
+      const total = range.includes('/') ? range.split('/')[1] : null;
+      inventory[table] = total === '*' || total === null ? 0 : Number(total);
+    }
+    const payload = { source: 'tgg-core-autopilot', snapshot, inventory, observed_at: new Date().toISOString() };
+    const queue = await fetch(`${SUPABASE_URL}/rest/v1/tgg_master_change_queue`, {
+      method: 'POST', headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ target_site_key: 'supabase', change_type: 'autopilot_source_sync', payload, status: 'pending' })
+    });
+    if (!queue.ok) throw new Error(`supabase_master_queue_${queue.status}`);
+    return { enabled: true, inventory, queued: true };
+  }
+
   async function sourceTruthAudit() {
     const names = ['users','artists','releases','tracks','media_objects','tgg_jobs','tgg_browser_sessions','tgg_certifications','tgg_audit_log'];
     const counts = await Promise.all(names.map(async name => [name, await countIfExists(name)]));
@@ -157,7 +180,7 @@ if (!DATABASE_URL) {
       let summary = {};
       if (task.task_key === 'source_truth_audit') {
         const snapshot = await sourceTruthAudit();
-        summary = {...snapshot, ...(await generateIdeas(snapshot))};
+        summary = {...snapshot, ...(await generateIdeas(snapshot)), master_bridge: await masterBrainBridge(snapshot)};
       }
       if (task.task_key === 'job_queue_maintenance') summary = await recoverExpiredJobs();
       if (task.task_key === 'runtime_heartbeat') summary = await heartbeat();

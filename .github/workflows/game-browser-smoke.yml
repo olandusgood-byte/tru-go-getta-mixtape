@@ -182,6 +182,9 @@ jobs:
               continuity.v76 = window.TGGV76?.run?.({pageErrorCount});
               continuity.v77 = window.TGGV77?.run?.();
               continuity.v78 = window.TGGV78?.run?.();
+              continuity.v79 = window.TGGV79?.run?.({pageErrorCount});
+              continuity.v80 = window.TGGV80?.run?.();
+              continuity.v81 = window.TGGV81?.run?.();
             } catch (error) {
               continuity.error = String(error?.message || error);
             }
@@ -213,7 +216,10 @@ jobs:
               continuity.v75?.ok === true &&
               continuity.v76?.ok === true &&
               continuity.v77?.ok === true &&
-              continuity.v78?.ok === true;
+              continuity.v78?.ok === true &&
+              continuity.v79?.ok === true &&
+              continuity.v80?.ok === true &&
+              continuity.v81?.ok === true;
 
             return {
               missing,

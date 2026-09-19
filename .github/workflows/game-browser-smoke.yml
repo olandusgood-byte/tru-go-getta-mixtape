@@ -6,10 +6,12 @@ on:
     branches: [main, game/v218-canonical-promotion]
     paths:
       - 'game/**'
+      - 'tgg-core/public/live-viewer/**'
       - '.github/workflows/game-browser-smoke.yml'
   pull_request:
     paths:
       - 'game/**'
+      - 'tgg-core/public/live-viewer/**'
       - '.github/workflows/game-browser-smoke.yml'
 
 concurrency:
@@ -42,8 +44,24 @@ jobs:
           done
           cat /tmp/tgg-game-server.log
           exit 1
+      - name: Start TGG LiveViewer server
+        run: |
+          python3 -m http.server 8766 --directory tgg-core/public > /tmp/tgg-live-viewer.log 2>&1 &
+          echo $! > /tmp/tgg-live-viewer.pid
+          for i in $(seq 1 20); do
+            curl -fsS http://127.0.0.1:8766/live-viewer/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/tgg-live-viewer.log
+          exit 1
       - name: Run browser smoke
         run: node game/browser-smoke.mjs
+      - name: Run TGG LiveViewer smoke
+        run: node game/live-viewer-smoke.mjs
+      - name: Stop TGG LiveViewer server
+        if: always()
+        run: |
+          if [ -f /tmp/tgg-live-viewer.pid ]; then kill $(cat /tmp/tgg-live-viewer.pid) || true; fi
       - name: Stop local game server
         if: always()
         run: |

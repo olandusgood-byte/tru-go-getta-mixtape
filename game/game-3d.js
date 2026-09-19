@@ -312,16 +312,42 @@
     return best&&bestDist<=radius?{...best,distance:bestDist}:null;
   }
 
+  function interactionActionsHost(){
+    const gameRoot=document.getElementById('game');
+    if(!gameRoot)return null;
+    let actions=gameRoot.querySelector('.action-deck .actions');
+    if(actions)return actions;
+    const cameraButton=document.getElementById('camera3dBtn');
+    if(cameraButton?.parentElement)return cameraButton.parentElement;
+    let deck=gameRoot.querySelector('.action-deck');
+    if(!deck){
+      const controls=gameRoot.querySelector('.game-controls');
+      if(!controls)return null;
+      deck=document.createElement('div');
+      deck.className='action-deck tgg-interaction-recovery';
+      deck.innerHTML='<div class="control-title"><b>ACTIONS</b><small>runtime controls restored</small></div><div class="actions"></div>';
+      controls.appendChild(deck);
+    }
+    actions=deck.querySelector('.actions');
+    if(!actions){
+      actions=document.createElement('div');
+      actions.className='actions';
+      deck.appendChild(actions);
+    }
+    return actions;
+  }
+
   function ensureInteractButton(){
     let interactButton=document.getElementById('interact3dBtn');
     if(interactButton)return interactButton;
-    const actions=document.querySelector('#game .action-deck .actions');
+    const actions=interactionActionsHost();
     if(!actions)return null;
     interactButton=document.createElement('button');
     interactButton.id='interact3dBtn';
     interactButton.className='action-primary';
     interactButton.disabled=true;
     interactButton.textContent='INTERACT';
+    interactButton.dataset.tggRecovered='true';
     interactButton.addEventListener('click',()=>interactNearest());
     const cameraButton=document.getElementById('camera3dBtn');
     if(cameraButton&&cameraButton.parentNode===actions){
@@ -365,6 +391,38 @@
       beatHere,
       meetupHere,
       text:String(interactButton.textContent||'').trim()
+    };
+  }
+
+  let interactionHealQueued=false;
+  function healInteractionRuntime(){
+    if(interactionHealQueued)return false;
+    interactionHealQueued=true;
+    queueMicrotask(()=>{
+      interactionHealQueued=false;
+      refreshInteractionState(window.TGGGame?.getState?.());
+    });
+    return true;
+  }
+
+  const interactionObserverRoot=document.getElementById('game');
+  if(interactionObserverRoot&&typeof MutationObserver!=='undefined'){
+    const interactionObserver=new MutationObserver(()=>{
+      if(!document.getElementById('interact3dBtn'))healInteractionRuntime();
+    });
+    interactionObserver.observe(interactionObserverRoot,{childList:true,subtree:true});
+  }
+  ensureInteractButton();
+
+  function interactionRuntimeStatus(){
+    const button=document.getElementById('interact3dBtn');
+    const actions=interactionActionsHost();
+    return {
+      buttonPresent:!!button,
+      actionsPresent:!!actions,
+      recovered:button?.dataset?.tggRecovered==='true',
+      disabled:button?!!button.disabled:null,
+      text:button?String(button.textContent||'').trim():null
     };
   }
 
@@ -775,8 +833,11 @@
     setCarAppearance,
     destinations,
     nearbyDestination,
+    interactionActionsHost,
     ensureInteractButton,
     refreshInteractionState,
+    healInteractionRuntime,
+    interactionRuntimeStatus,
     interactNearest,
     nearbyNamedNpc,
     interactNamedNpc,

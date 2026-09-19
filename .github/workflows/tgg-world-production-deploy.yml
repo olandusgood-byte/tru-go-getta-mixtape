@@ -1,0 +1,105 @@
+name: TGG World Production Deploy
+
+on:
+  workflow_run:
+    workflows: ["Game V2.18 Mega Regression"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgg-world-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERCEL_ORG_ID: team_TeV8b8Rv4jnchCzdYOOIehl2
+      VERCEL_PROJECT_ID: prj_U2qDy9qZ5EZAKuHTEaA03BMmmplX
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Resolve verified source
+        id: source
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+
+      - name: Verify canonical regression contract
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "TGG_3D_V218_ROOT: 'game'" .github/workflows/game-v218-mega-regression.yml
+          grep -q 'GAME V2.18' game/index.html
+          grep -q 'window.TGGMegaQA' game/mega-qa.js
+          echo "verified=true" >> "$GITHUB_OUTPUT"
+
+      - name: Check Vercel deploy credential
+        id: auth
+        shell: bash
+        run: |
+          if [ -n "${VERCEL_TOKEN:-}" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::VERCEL_TOKEN is not configured; production remains unchanged."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install pinned Vercel CLI
+        if: steps.auth.outputs.ready == 'true'
+        run: npm install --global vercel@latest
+
+      - name: Link production project
+        if: steps.auth.outputs.ready == 'true'
+        working-directory: game
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Deploy canonical game to production
+        if: steps.auth.outputs.ready == 'true'
+        id: deploy
+        working-directory: game
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(vercel deploy --prod --yes --token="$VERCEL_TOKEN" 2>/tmp/vercel-deploy.log | tail -n 1)"
+          cat /tmp/vercel-deploy.log
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Production URL: $url"
+
+      - name: Verify deployed page
+        if: steps.auth.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="${{ steps.deploy.outputs.url }}"
+          for attempt in 1 2 3 4 5; do
+            body="$(curl -fsSL --max-time 30 "$url" || true)"
+            if grep -q 'GAME V2.18' <<<"$body" && grep -q 'city3d' <<<"$body"; then
+              echo "TGG World production deployment verified: $url"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Production deployment did not expose the expected V2.18 contract." >&2
+          exit 1
+
+      - name: Credential status
+        if: steps.auth.outputs.ready != 'true'
+        run: |
+          echo "Deployment skipped fail-closed: VERCEL_TOKEN is not configured."

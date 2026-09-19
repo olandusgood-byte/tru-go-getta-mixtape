@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "release": "V1.13 Progression + Business Discovery",
-  "base": "V1.12 Property + Vehicle Discovery",
+  "release": "V1.14 Live City Activities + Vehicle/Property Gameplay",
+  "base": "V1.13 Progression + Business Discovery",
   "workflow": "BUILD > TEST > REPAIR > VERIFY > CHECKPOINT > ADVANCE",
   "modules": [
     "V1.0-FOUNDATION",
@@ -42,7 +42,10 @@
     "V1.13-PROGRESSION-DISCOVERY",
     "V1.13-BUSINESS-DISCOVERY",
     "V1.13-BUSINESS-PERSISTENCE",
-    "V1.13-BUSINESS-SCREEN"
+    "V1.13-BUSINESS-SCREEN",
+    "V1.14-LIVE-CITY-ACTIVITIES",
+    "V1.14-VEHICLE-GAMEPLAY",
+    "V1.14-PROPERTY-GAMEPLAY"
   ],
   "gates": [
     "runtime_api_presence",
@@ -104,10 +107,15 @@
     "business_api",
     "business_catalog",
     "business_discovery_persistence",
-    "business_screen"
+    "business_screen",
+    "live_city_activity_runtime",
+    "vehicle_activity_gameplay",
+    "property_activity_gameplay",
+    "local_gameplay_only",
+    "no_asset_mutation_bridge"
   ],
   "static_gate": "candidate_pending_ci",
   "browser_smoke": "manual_only",
-  "release_checkpoint": "V1.13-PROGRESSION-BUSINESS-DISCOVERY-STATIC-CANDIDATE",
+  "release_checkpoint": "V1.14-LIVE-CITY-VEHICLE-PROPERTY-GAMEPLAY-STATIC-CANDIDATE",
   "production": "gated"
 }

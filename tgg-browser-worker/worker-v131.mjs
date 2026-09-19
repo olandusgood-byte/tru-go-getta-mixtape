@@ -11,7 +11,7 @@ import { buildStoredSupabaseSession } from './access-session.mjs';
 import { protectedAudioBrowserFlow } from './protected-audio-browser-flow.mjs';
 import { prepareTrustedQaNavigationResponse } from './qa-navigation-response.mjs';
 import { runMultiFlowBrowser } from './multi-flow-browser-runner.mjs';
-import { tggCoreEnabled, tggWorkerHeartbeat, tggWorkerClaim, tggWorkerComplete, tggStoreOwnerRefreshToken, tggRestoreOwnerRefreshToken, tggWorkerBootstrap, tggWorkerRegister, tggWorkerRecoverCertification } from './tgg-core-client.mjs';
+import { tggCoreEnabled, tggWorkerHeartbeat, tggWorkerClaim, tggWorkerComplete, tggStoreOwnerRefreshToken, tggRestoreOwnerRefreshToken, tggWorkerBootstrap, tggWorkerRegister, tggWorkerRecoverCertification, tggWorkerCertificationStatus } from './tgg-core-client.mjs';
 
 const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvlpj.supabase.co';
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || 'sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv';

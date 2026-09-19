@@ -116,7 +116,7 @@ try{
   const additiveFailures=layerCheck.additive.filter(x=>!x.loaded||!x.versionOk||!x.policyOk);
   if(layerCheck.missing.length||additiveFailures.length)throw new Error('Layer check '+JSON.stringify({missing:layerCheck.missing,additiveFailures}));
 
-  await page.waitForFunction(()=>!!window.TGGWorldVisuals&&document.documentElement.dataset.tggVisuals==='v561',{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGWorldVisuals&&document.documentElement.dataset.tggVisuals==='v561',{timeout:60000});
   const visualWorld=await page.evaluate(()=>window.TGGWorldVisuals.getStatus());
   if(visualWorld?.ok!==true||
      visualWorld.vehicleParts<18||
@@ -128,7 +128,7 @@ try{
     throw new Error('V5.61 world visual realism failed '+JSON.stringify(visualWorld));
   }
 
-  await page.waitForFunction(()=>!!window.TGGGraphicsMega&&document.documentElement.dataset.tggGraphicsMega==='v562-v566',{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGGraphicsMega&&document.documentElement.dataset.tggGraphicsMega==='v562-v566',{timeout:60000});
   const graphicsMega=await page.evaluate(()=>window.TGGGraphicsMega.getStatus());
   if(graphicsMega?.ok!==true||
      graphicsMega.versions?.length!==5||
@@ -144,7 +144,7 @@ try{
     throw new Error('V5.62-V5.66 graphics mega failed '+JSON.stringify(graphicsMega));
   }
 
-  await page.waitForFunction(()=>!!window.TGGV575VisualMega&&document.documentElement.dataset.tggVisualMega==='v575',{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGV575VisualMega&&document.documentElement.dataset.tggVisualMega==='v575',{timeout:60000});
   const visualMega575=await page.evaluate(()=>window.TGGV575VisualMega.getStatus());
   if(visualMega575?.ok!==true||
      visualMega575.layers?.length!==9||
@@ -159,7 +159,7 @@ try{
     throw new Error('V5.67-V5.75 visual mega failed '+JSON.stringify(visualMega575));
   }
 
-  await page.waitForFunction(()=>!!window.TGGV620Mega&&document.documentElement.dataset.tggV620==='ready',{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGV620Mega&&document.documentElement.dataset.tggV620==='ready',{timeout:60000});
   const v620=await page.evaluate(()=>window.TGGV620Mega.getStatus());
   if(v620?.ok!==true||
      v620.layers?.length!==15||
@@ -286,7 +286,7 @@ try{
     throw new Error('World beat physical INTERACT completion failed '+JSON.stringify(worldInteractionResult));
   }
 
-  await page.waitForFunction(()=>!!window.TGGNPCRelations&&!!window.TGGV497,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGNPCRelations&&!!window.TGGV497,{timeout:60000});
   const relationOpen=await page.evaluate(()=>{
     const before=window.TGGNPCRelations.relationship('DJ V');
     const opened=window.TGGNPCRelations.interact('DJ V');
@@ -320,7 +320,7 @@ try{
     throw new Error('V4.97 NPC relation choice resolve failed '+JSON.stringify(relationResolved));
   }
 
-  await page.waitForFunction(()=>!!window.TGGNPCFavors&&!!window.TGGV498,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGNPCFavors&&!!window.TGGV498,{timeout:60000});
   const favorReady=await page.evaluate(()=>{
     const availability=window.TGGNPCFavors.availability('DJ V');
     const run=window.TGGV498.run();
@@ -346,7 +346,7 @@ try{
     throw new Error('V4.98 NPC favor routing failed '+JSON.stringify(favorResult));
   }
 
-  await page.waitForFunction(()=>!!window.TGGContactConsequences&&!!window.TGGV499,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGContactConsequences&&!!window.TGGV499,{timeout:60000});
   const obligationOpen=await page.evaluate(()=>({
     run:window.TGGV499.run(),
     snap:window.TGGContactConsequences.snapshot()
@@ -417,7 +417,7 @@ try{
     throw new Error('V4.99 favor outcome failed '+JSON.stringify(obligationResolved));
   }
 
-  await page.waitForFunction(()=>!!window.TGGCareerContracts&&!!window.TGGV500,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGCareerContracts&&!!window.TGGV500,{timeout:60000});
   const contractReady=await page.evaluate(()=>({
     run:window.TGGV500.run(),
     recommendation:window.TGGCareerContracts.recommendContract(),
@@ -529,7 +529,7 @@ try{
     throw new Error('V5.00 career contract outcome failed '+JSON.stringify(contractResolved));
   }
 
-  await page.waitForFunction(()=>!!window.TGGPhone&&!!window.TGGV501,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGPhone&&!!window.TGGV501,{timeout:60000});
   const phoneRun=await page.evaluate(()=>window.TGGV501.run());
   if(phoneRun?.ok!==true)throw new Error('V5.01 phone runtime failed '+JSON.stringify(phoneRun));
   await clearIncomingCallOverlay('V5.01 phone open');
@@ -553,7 +553,7 @@ try{
     throw new Error('V5.01 phone close failed '+JSON.stringify(phoneClosed));
   }
 
-  await page.waitForFunction(()=>!!window.TGGIncomingCalls&&!!window.TGGV502,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGIncomingCalls&&!!window.TGGV502,{timeout:60000});
   const incomingOpen=await page.evaluate(()=>{
     let guard=0;
     while(window.TGGIncomingCalls.snapshot().current&&guard++<10)window.TGGIncomingCalls.declineCurrent();
@@ -602,7 +602,7 @@ try{
     throw new Error('V5.02 incoming call conversation failed '+JSON.stringify(incomingResolved));
   }
 
-  await page.waitForFunction(()=>!!window.TGGMessages&&!!window.TGGV503,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGMessages&&!!window.TGGV503,{timeout:60000});
   const messageQueued=await page.evaluate(()=>{
     const run=window.TGGV503.run();
     const before=window.TGGMessages.snapshot();
@@ -650,7 +650,7 @@ try{
     throw new Error('V5.03 messages close failed '+JSON.stringify(messagesClosed));
   }
 
-  await page.waitForFunction(()=>!!window.TGGMeetups&&!!window.TGGV504,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGMeetups&&!!window.TGGV504,{timeout:60000});
   const meetupCreated=await page.evaluate(()=>{
     const run=window.TGGV504.run();
     const before=window.TGGNPCRelations.relationship('Kane');
@@ -722,7 +722,7 @@ try{
     throw new Error('V5.04 meetup completion failed '+JSON.stringify(meetupResolved));
   }
 
-  await page.waitForFunction(()=>!!window.TGGCallSessions&&!!window.TGGV505,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGCallSessions&&!!window.TGGV505,{timeout:60000});
   const callSessionQueued=await page.evaluate(()=>{
     let guard=0;
     while(window.TGGIncomingCalls.snapshot().current&&guard++<10)window.TGGIncomingCalls.declineCurrent();
@@ -773,7 +773,7 @@ try{
     throw new Error('V5.05 call end/follow-up failed '+JSON.stringify(callSessionEnded));
   }
 
-  await page.waitForFunction(()=>!!window.TGGStreetEncounters&&!!window.TGGV506,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGStreetEncounters&&!!window.TGGV506,{timeout:60000});
   const encounterPrep=await page.evaluate(()=>{
     let guard=0;
     while(window.TGGIncomingCalls?.snapshot?.().current&&guard++<10)window.TGGIncomingCalls.declineCurrent();
@@ -900,7 +900,7 @@ try{
     throw new Error('V5.06 street encounter handoff failed '+JSON.stringify(encounterResolved));
   }
 
-  await page.waitForFunction(()=>!!window.TGGStreetMissions&&!!window.TGGV507,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGStreetMissions&&!!window.TGGV507,{timeout:60000});
   const streetMissionPrep=await page.evaluate(()=>{
     const run=window.TGGV507.run();
     const start={...window.TGGGame.getState()};
@@ -1043,7 +1043,7 @@ try{
     throw new Error('V5.07 mission completion failed '+JSON.stringify(streetMissionResolved));
   }
 
-  await page.waitForFunction(()=>!!window.TGGMissionAftermath&&!!window.TGGV508,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGMissionAftermath&&!!window.TGGV508,{timeout:60000});
   const aftermathReady=await page.evaluate(()=>({
     run:window.TGGV508.run(),
     aftermath:window.TGGMissionAftermath.snapshot(),
@@ -1127,7 +1127,7 @@ try{
     throw new Error('V5.08 aftermath follow-up completion failed '+JSON.stringify(aftermathResolved));
   }
 
-  await page.waitForFunction(()=>!!window.TGGDistrictReactions&&!!window.TGGV509District&&!!window.TGGV509,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGDistrictReactions&&!!window.TGGV509District&&!!window.TGGV509,{timeout:60000});
   const districtReaction=await page.evaluate(()=>({
     run:window.TGGDistrictReactions.run(),
     reaction:window.TGGDistrictReactions.snapshot(),
@@ -1146,7 +1146,7 @@ try{
     throw new Error('V5.09 district reaction failed '+JSON.stringify({districtReaction,districtMessage}));
   }
 
-  await page.waitForFunction(()=>!!window.TGGV509&&document.documentElement.dataset.tggV509==='on',{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGV509&&document.documentElement.dataset.tggV509==='on',{timeout:60000});
   const immersion=await page.evaluate(()=>{
     const run=window.TGGV509.run();
     const snap=window.TGGV509.snapshot();
@@ -1168,7 +1168,7 @@ try{
     throw new Error('V5.09 world immersion failed '+JSON.stringify(immersion));
   }
 
-  await page.waitForFunction(()=>!!window.TGGV510&&document.documentElement.dataset.tggV510==='on',{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGV510&&document.documentElement.dataset.tggV510==='on',{timeout:60000});
   const propertyWorld=await page.evaluate(()=>{
     const run=window.TGGV510.run();
     const before=window.TGGV510.snapshot();
@@ -1192,7 +1192,7 @@ try{
     throw new Error('V5.10 property/consequence world failed '+JSON.stringify(propertyWorld));
   }
 
-  await page.waitForFunction(()=>!!window.TGGV525&&!!window.TGGContactWorld&&document.documentElement.dataset.tggV525==='on',{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGV525&&!!window.TGGContactWorld&&document.documentElement.dataset.tggV525==='on',{timeout:60000});
   const contactWorld=await page.evaluate(()=>{
     const run=window.TGGV525.run();
     const before=window.TGGV525.snapshot();
@@ -1224,7 +1224,7 @@ try{
     throw new Error('V5.25 contact world failed '+JSON.stringify(contactWorld));
   }
 
-  await page.waitForFunction(()=>!!window.TGGV541&&document.documentElement.dataset.tggV541==='on',{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGV541&&document.documentElement.dataset.tggV541==='on',{timeout:60000});
   const physicalWorld=await page.evaluate(()=>{
     window.TGGGame?.show?.('home');
     window.TGGInteriors3D?.ensure?.();

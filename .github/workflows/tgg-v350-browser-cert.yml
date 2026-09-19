@@ -1,4 +1,4 @@
-name: TGG V4.00 Live Browser Certification
+name: TGG V4.10 Live Browser Certification
 # cert revision 4
 
 on:
@@ -29,7 +29,7 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Run live V4.00 browser certificate
+      - name: Run live V4.10 browser certificate
         run: |
           cat > tgg-cert.mjs <<'EOF'
           import { chromium } from 'playwright';
@@ -50,8 +50,8 @@ jobs:
           if(!response || response.status()>=400) throw new Error('HTTP '+(response?.status()||'NO_RESPONSE'));
 
           const title=await page.title();
-          if(!/V4\.00 WORLD SYSTEMS/i.test(title)) throw new Error('Wrong title: '+title);
-          await page.getByText('GAME V4.00 • WORLD SYSTEMS',{exact:false}).waitFor({timeout:30000});
+          if(!/V4\.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA/i.test(title)) throw new Error('Wrong title: '+title);
+          await page.getByText('GAME V4.10 • PROPERTY + RELATIONSHIP + LIFESTYLE',{exact:false}).waitFor({timeout:30000});
 
           const runtime=await page.evaluate(()=>({
             three:!!window.THREE,
@@ -65,11 +65,12 @@ jobs:
             interaction:window.TGGWorldInteraction?.version||null,
             life:window.TGGLifeSim?.version||null,
             opportunity:window.TGGOpportunityLoop?.version||null,
-            worldSystems:window.TGGWorldSystems?.version||null
+            worldSystems:window.TGGWorldSystems?.version||null,
+            lifestyle:window.TGGLifestyle?.version||null
           }));
           if(!runtime.game || !runtime.game3d) throw new Error('Core runtime not ready: '+JSON.stringify(runtime));
           for(const [k,v] of Object.entries({
-            polish:runtime.polish,realism:runtime.realism,motion:runtime.motion,world:runtime.world,living:runtime.living,interaction:runtime.interaction,life:runtime.life,opportunity:runtime.opportunity,worldSystems:runtime.worldSystems
+            polish:runtime.polish,realism:runtime.realism,motion:runtime.motion,world:runtime.world,living:runtime.living,interaction:runtime.interaction,life:runtime.life,opportunity:runtime.opportunity,worldSystems:runtime.worldSystems,lifestyle:runtime.lifestyle
           })) if(!v) throw new Error('Missing runtime layer '+k);
 
           await page.getByRole('button',{name:'CREATE PLAYER'}).click();
@@ -119,6 +120,7 @@ jobs:
             v380:window.TGGLifeSim?.getStatus?.()||null,
             v390:window.TGGOpportunityLoop?.getStatus?.()||null,
             v400:window.TGGWorldSystems?.getStatus?.()||null,
+            v410:window.TGGLifestyle?.getStatus?.()||null,
             weather:window.TGGCityWorldMega?.getStatus?.()||null
           }));
 
@@ -126,7 +128,7 @@ jobs:
           if(pageErrors.length) throw new Error('Page errors: '+JSON.stringify(pageErrors));
           if(benign.length) throw new Error('Console errors: '+JSON.stringify(benign));
 
-          console.log('TGG_V400_BROWSER_CERT_PASS '+JSON.stringify({title,runtime,moved,driven,final}));
+          console.log('TGG_V410_BROWSER_CERT_PASS '+JSON.stringify({title,runtime,moved,driven,final}));
           await browser.close();
           EOF
           node tgg-cert.mjs
@@ -135,10 +137,10 @@ jobs:
         if: success()
         run: |
           mkdir -p cert
-          printf '%s\n' '{"runtime":"V4.00 WORLD SYSTEMS","production":"READY","browser":"PASS","checks":["load","runtime-layers","create-player","enter-city","player-movement","vehicle-entry","vehicle-movement","camera","horn","save","console-errors"],"result":"CERTIFIED"}' > cert/v400-live-browser-certificate.json
+          printf '%s\n' '{"runtime":"V4.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA","production":"READY","browser":"PASS","checks":["load","runtime-layers","create-player","enter-city","player-movement","vehicle-entry","vehicle-movement","camera","horn","save","console-errors"],"result":"CERTIFIED"}' > cert/v410-live-browser-certificate.json
 
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: tgg-v400-live-browser-certificate
-          path: cert/v400-live-browser-certificate.json
+          name: tgg-v410-live-browser-certificate
+          path: cert/v410-live-browser-certificate.json

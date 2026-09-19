@@ -250,7 +250,7 @@
     v.beacon.visible=true;v.route.visible=true;v.beacon.position.set(w.x,0,w.z);
     v.ring.material.color.copy(color);v.beam.material.color.copy(color);v.marker.material.color.copy(color);v.marker.material.emissive.copy(color);v.light.color.copy(color);v.route.material.color.copy(color);
     const g=gameState(),p=core().toWorld({x:Number(g.x)||50,y:Number(g.y)||50});
-    routeGeo.setFromPoints([new (THREE()).Vector3(p.x,.12,p.z),new (THREE()).Vector3(w.x,.12,w.z)]);v.route.computeLineDistances();
+    const T=THREE();routeGeo.setFromPoints([new T.Vector3(p.x,.12,p.z),new T.Vector3(w.x,.12,w.z)]);v.route.computeLineDistances();
     const activeContact=step.kind==='talk'?step.contact:null;
     v.contacts.forEach(c=>{const hot=c.id===activeContact;c.light.intensity=hot?5.2:1.15;c.ring.material.opacity=hot?.9:.22;c.group.scale.setScalar(hot?1.07:1)});
   }
@@ -276,11 +276,11 @@
       hud.innerHTML='<small>STORY WORLD</small><b id="v244HudTitle">CITY BUZZ</b><span id="v244HudDetail">Start the story.</span><em id="v244HudDistance"></em><button id="v244HudAction">START STORY</button>';
       city.appendChild(hud);document.getElementById('v244HudAction').onclick=()=>state.active?interact():start('city-buzz');
     }
-    buildVisuals();renderUI();state.ready=true;
+    buildVisuals();state.ready=true;
   }
 
   function renderUI(){
-    if(!hasDOM())return;ensureUI();
+    if(!hasDOM())return;if(!state.ready)ensureUI();
     const s=currentStory(),step=currentStep(),pct=s?core().progress(s.id,state.step):0;
     const title=document.getElementById('v244Title'),detail=document.getElementById('v244Detail'),bar=document.getElementById('v244Progress'),list=document.getElementById('v244Steps'),primary=document.getElementById('v244Primary');
     if(title)title.textContent=s?.title||'CITY BUZZ';

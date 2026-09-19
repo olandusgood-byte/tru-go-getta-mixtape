@@ -43,10 +43,11 @@ try{
   check(appSource.includes('data-transition-duration'),'transition duration control missing');
   check(appSource.includes('transitionOut'),'out transition engine missing');
   check(appSource.includes('function drawScopes'),'live scope engine missing');
+  check(appSource.includes('reverbAmt*.48'),'audio FX amount DSP missing');
 
   await page.screenshot({path:'video-studio-smoke.png',fullPage:true});
   if(failures.length)throw new Error(failures.join('; '));
-  console.log(JSON.stringify({ok:true,url:file,checks:14}));
+  console.log(JSON.stringify({ok:true,url:file,checks:15}));
 } finally {
   await browser.close();
 }

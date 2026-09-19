@@ -419,6 +419,55 @@ try{
     throw new Error('V5.01 phone close failed '+JSON.stringify(phoneClosed));
   }
 
+  await page.waitForFunction(()=>!!window.TGGIncomingCalls&&!!window.TGGV502,{timeout:15000});
+  const incomingOpen=await page.evaluate(()=>{
+    let guard=0;
+    while(window.TGGIncomingCalls.snapshot().current&&guard++<10)window.TGGIncomingCalls.declineCurrent();
+    window.TGGIncomingCalls.clearMissed();
+    const before=window.TGGNPCRelations.relationship('Kane');
+    const run=window.TGGV502.run();
+    const queued=window.TGGIncomingCalls.queueCall('Kane','studio check-in','relationship',{});
+    const snap=window.TGGIncomingCalls.snapshot();
+    const root=document.getElementById('v502IncomingCall');
+    return {before,run,queued,snap,visible:!!root&&!root.hidden,caller:document.getElementById('v502Caller')?.textContent||''};
+  });
+  if(incomingOpen.run?.ok!==true||
+     incomingOpen.queued?.status!=='ringing'||
+     incomingOpen.snap?.current?.name!=='Kane'||
+     incomingOpen.visible!==true||
+     incomingOpen.caller!=='Kane'){
+    throw new Error('V5.02 incoming call ring failed '+JSON.stringify(incomingOpen));
+  }
+  await page.locator('#v502Accept').click();
+  await page.waitForTimeout(100);
+  const incomingAccepted=await page.evaluate(()=>({
+    calls:window.TGGIncomingCalls.snapshot(),
+    choiceVisible:document.getElementById('v497NpcChoice')?.hidden===false,
+    pending:window.TGGNPCRelations.snapshot()?.pending||null
+  }));
+  if(incomingAccepted.calls?.lastResult?.type!=='accepted'||
+     incomingAccepted.calls?.lastResult?.call?.name!=='Kane'||
+     incomingAccepted.calls?.lastResult?.routed?.kind!=='relationship'||
+     incomingAccepted.calls?.lastResult?.routed?.success!==true||
+     !incomingAccepted.choiceVisible||
+     incomingAccepted.pending?.name!=='Kane'){
+    throw new Error('V5.02 incoming call accept routing failed '+JSON.stringify(incomingAccepted));
+  }
+  await page.locator('#v497NpcChoice [data-v497-choice="professional"]').click();
+  await page.waitForTimeout(100);
+  const incomingResolved=await page.evaluate(before=>({
+    calls:window.TGGIncomingCalls.snapshot(),
+    after:window.TGGNPCRelations.relationship('Kane'),
+    callHidden:document.getElementById('v502IncomingCall')?.hidden,
+    choiceHidden:document.getElementById('v497NpcChoice')?.hidden
+  }),incomingOpen.before);
+  if(incomingResolved.calls?.accepted<1||
+     incomingResolved.callHidden!==true||
+     incomingResolved.choiceHidden!==true||
+     !(incomingResolved.after?.relation?.affinity>incomingOpen.before?.relation?.affinity)){
+    throw new Error('V5.02 incoming call conversation failed '+JSON.stringify(incomingResolved));
+  }
+
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
@@ -557,7 +606,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards,incomingCall:incomingAccepted.calls.lastResult.call.name}));
 }finally{
   await browser.close();
 }

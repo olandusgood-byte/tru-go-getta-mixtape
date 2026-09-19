@@ -165,6 +165,7 @@ if (!DATABASE_URL) {
          where id=$1`,
         [task.id,e.message]
       );
+      console.error(JSON.stringify({service:'tgg-autopilot',task:task.task_key,status:'failed',error:e.message}));
     }
   }
 

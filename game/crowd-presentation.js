@@ -210,6 +210,11 @@
     });
   }
 
+  window.addEventListener('tgg:worldlife:focus',event=>{
+    const next=String(event?.detail?.focus||'');
+    if(['downtown','stage','studio','media','free'].includes(next))focus=next;
+  });
+
   const clock=new THREE.Clock();
   function animate(){
     requestAnimationFrame(animate);

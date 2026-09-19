@@ -3,7 +3,7 @@
   "canonical_runtime": "V3.50 GAME FEEL CINEMATIC MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v350_code_merged_pending_live_promotion",
+  "verification": "v350_production_deployed_ready_browser_gate_pending_sso",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V3.40 CITY WORLD MEGA PASS",
   "features": [
@@ -86,5 +86,14 @@
     "crowd_reaction_feedback",
     "reduced_motion_guard"
   ],
-  "release_gate": "vercel_production_promotion_pending"
+  "release_gate": "production_ready_browser_interaction_pending_vercel_sso",
+  "production": {
+    "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
+    "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
+    "target": "production",
+    "state": "READY",
+    "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
+    "runtime_errors_last_hour": 0,
+    "browser_gate": "pending_vercel_sso"
+  }
 }

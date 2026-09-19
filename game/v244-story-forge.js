@@ -11,7 +11,7 @@
   let panel=null,hud=null,lastTick=0,lastTargetId='',routeGeo=null;
   const hasDOM=()=>typeof window!=='undefined'&&typeof document!=='undefined';
   const scene=()=>hasDOM()?window.TGG3D?.scene||null:null;
-  const THREE=()=>hasDOM()?window.THREE:null:null;
+  const THREE=()=>hasDOM()?window.THREE:null;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,Number(v)||0));
 
   function currentStory(){return state.active?core()?.story?.(state.active)||null:null}

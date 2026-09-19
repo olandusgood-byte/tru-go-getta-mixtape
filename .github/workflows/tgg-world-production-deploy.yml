@@ -46,10 +46,22 @@ jobs:
         run: |
           set -euo pipefail
           grep -q "TGG_3D_V218_ROOT: 'game'" .github/workflows/game-v218-mega-regression.yml
-          grep -q 'V4.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA' game/runtime-version.json
-          grep -q '"base_runtime": "V4.00 WORLD SYSTEMS"' game/runtime-version.json
-          grep -q 'GAME V4.10' game/index.html
-          grep -q 'window.TGGMegaQA' game/mega-qa.js
+          node <<'NODE'
+          const fs=require('fs');
+          const runtime=JSON.parse(fs.readFileSync('game/runtime-version.json','utf8'));
+          const html=fs.readFileSync('game/index.html','utf8');
+          const mega=fs.readFileSync('game/mega-qa.js','utf8');
+          const canonical=String(runtime.canonical_runtime||'').trim();
+          const base=String(runtime.base_runtime||'').trim();
+          if(!/^V\d+\.\d+\s+/.test(canonical)) throw new Error('Invalid canonical_runtime: '+canonical);
+          if(!base) throw new Error('Missing base_runtime');
+          if(!html.includes(canonical)) throw new Error('index.html does not expose canonical runtime: '+canonical);
+          if(!html.includes('city3d')) throw new Error('index.html missing city3d contract');
+          if(!mega.includes('window.TGGMegaQA')) throw new Error('mega QA contract missing');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'canonical_runtime='+canonical+'\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'base_runtime='+base+'\n');
+          console.log('Canonical runtime verified:',canonical,'base:',base);
+          NODE
           echo "verified=true" >> "$GITHUB_OUTPUT"
 
       - name: Check Vercel deploy credential
@@ -90,16 +102,17 @@ jobs:
         run: |
           set -euo pipefail
           url="${{ steps.deploy.outputs.url }}"
+          expected="${{ steps.gate.outputs.canonical_runtime }}"
           for attempt in 1 2 3 4 5; do
             body="$(vercel curl "$url" 2>/tmp/vercel-curl.log || true)"
             cat /tmp/vercel-curl.log || true
-            if grep -q 'GAME V4.10' <<<"$body" && grep -q 'city3d' <<<"$body"; then
-              echo "TGG World production deployment verified: $url"
+            if grep -Fq "$expected" <<<"$body" && grep -q 'city3d' <<<"$body"; then
+              echo "TGG World production deployment verified: $url · $expected"
               exit 0
             fi
             sleep 5
           done
-          echo "Production deployment did not expose the expected V4.10 contract." >&2
+          echo "Production deployment did not expose expected runtime: $expected" >&2
           exit 1
 
       - name: Credential status

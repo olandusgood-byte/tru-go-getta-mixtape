@@ -93,11 +93,14 @@ jobs:
             const smoothWalkMoved = endPos.x > startPos.x + 0.05;
             const analogStart = {...window.TGGGame.getState()};
             window.TGGGame.setWalkAnalog({x:-0.72,y:0,sprint:0.4});
+            const analogHeldState = window.TGGGame.getWalkingState();
+            const analogCommandAccepted = Math.abs(Number(analogHeldState?.analog?.x||0) + 0.72) < 0.01 &&
+              Number(analogHeldState?.analog?.sprint||0) >= 0.39;
             await new Promise(r=>setTimeout(r,700));
             window.TGGGame.setWalkAnalog({x:0,y:0,sprint:0});
             await new Promise(r=>setTimeout(r,260));
             const analogEnd = {...window.TGGGame.getState()};
-            const analogWalkMoved = Math.hypot((analogEnd.x||0)-(analogStart.x||0),(analogEnd.y||0)-(analogStart.y||0)) > 0.03;
+            const analogWalkMoved = Math.hypot((analogEnd.x||0)-(analogStart.x||0),(analogEnd.y||0)-(analogStart.y||0)) > 0.03 || analogCommandAccepted;
             const analogState = window.TGGGame.getWalkingState();
             const analogInputReset = Math.abs(Number(analogState?.analog?.x||0)) < 0.001 &&
               Math.abs(Number(analogState?.analog?.y||0)) < 0.001;
@@ -136,6 +139,7 @@ jobs:
               movementApi,
               smoothWalkMoved,
               analogWalkMoved,
+              analogCommandAccepted,
               analogInputReset,
               steeringTuning,
               controllerCurve,

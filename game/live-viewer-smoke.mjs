@@ -23,13 +23,19 @@ try{
 
   const launchState=await page.locator('#launch').evaluate(el=>({
     disabled:!!el.disabled,
-    visible:!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length)
+    visible:!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length),
+    bound:typeof el.onclick==='function'
   }));
-  if(launchState.disabled||!launchState.visible)throw new Error('LiveViewer launch control unavailable '+JSON.stringify(launchState));
-  await page.locator('#launch').click();
-  await page.waitForFunction(()=>/Enter your real TGG session token first/i.test(document.getElementById('action')?.textContent||''),{timeout:3000});
-  const guard=await page.locator('#action').innerText();
-  if(!/Enter your real TGG session token first/i.test(guard))throw new Error('Real-session guard failed: '+guard);
+  if(launchState.disabled||!launchState.visible||!launchState.bound)throw new Error('LiveViewer launch control unavailable '+JSON.stringify(launchState));
+  const launchResult=await page.evaluate(()=>{
+    const el=document.getElementById('launch');
+    const action=document.getElementById('action');
+    if(!el||typeof el.onclick!=='function')return{bound:false,action:action?.textContent||''};
+    el.click();
+    return{bound:true,action:action?.textContent||''};
+  });
+  if(!launchResult.bound||!/Enter your real TGG session token first/i.test(launchResult.action))throw new Error('Real-session guard failed: '+JSON.stringify(launchResult));
+  const guard=launchResult.action;
 
   const source=await page.content();
   if(!source.includes("source:'tgg-live-viewer'")||!source.includes("real_user_session:true"))throw new Error('LiveViewer certification evidence wiring missing');

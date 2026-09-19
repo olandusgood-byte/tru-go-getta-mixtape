@@ -1,0 +1,22 @@
+#v350Fx{position:fixed;inset:0;z-index:9993;pointer-events:none;overflow:hidden;--v350-speed:0}
+#v350Fx .v350-flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.08),transparent 38%);opacity:0;transition:opacity .14s ease}
+#v350Fx[data-pulse="soft"] .v350-flash{opacity:.5}
+#v350Fx[data-pulse="hard"] .v350-flash{opacity:.9}
+#v350Fx .v350-speed{position:absolute;inset:-8%;background:radial-gradient(circle at 50% 50%,transparent 50%,rgba(0,0,0,calc(.16 + var(--v350-speed)*.22)) 100%);opacity:calc(.35 + var(--v350-speed)*.45)}
+#v350Fx .v350-letterbox{position:absolute;left:0;right:0;height:9vh;background:#020305;transform:scaleY(0);transition:transform .28s cubic-bezier(.2,.9,.2,1)}
+#v350Fx .v350-letterbox.top{top:0;transform-origin:top}
+#v350Fx .v350-letterbox.bottom{bottom:0;transform-origin:bottom}
+#v350Fx.cinematic .v350-letterbox{transform:scaleY(1)}
+#v350Fx .v350-objective{position:absolute;top:84px;left:50%;transform:translate(-50%,-12px);min-width:min(520px,88vw);padding:12px 16px;border:1px solid rgba(199,255,0,.25);border-radius:14px;background:linear-gradient(135deg,rgba(7,16,8,.94),rgba(5,7,11,.94));box-shadow:0 18px 50px rgba(0,0,0,.52);opacity:0;transition:.2s ease}
+#v350Fx .v350-objective.show{opacity:1;transform:translate(-50%,0)}
+#v350Fx .v350-objective small{display:block;font:800 8px/1.2 system-ui;letter-spacing:.2em;color:#c7ff00;margin-bottom:5px}
+#v350Fx .v350-objective b{display:block;font:900 18px/1 system-ui;letter-spacing:-.02em;color:#fff}
+#v350Fx .v350-objective span{display:block;margin-top:5px;font:600 9px/1.4 system-ui;letter-spacing:.05em;color:#b9c2d2;text-transform:uppercase}
+html[data-tgg-v350="on"] .toast{backdrop-filter:blur(15px) saturate(135%);box-shadow:0 16px 44px rgba(0,0,0,.35)}
+html[data-tgg-v350="on"] .nav-hud,
+html[data-tgg-v350="on"] .vehicle-hud,
+html[data-tgg-v350="on"] .player-move-hud{transition:transform .14s ease,opacity .14s ease}
+@media(prefers-reduced-motion:reduce){
+  #v350Fx .v350-flash,#v350Fx .v350-letterbox,#v350Fx .v350-objective{transition:none}
+  #v350Fx .v350-speed{display:none}
+}

@@ -1036,6 +1036,15 @@ app.patch('/v1/browser/sessions/:id', auth, async (req,res,next)=>{
   } catch(e){next(e);}
 });
 
+app.get('/v1/browser/sessions', auth, async (req,res,next)=>{
+  try {
+    const limit=Math.min(100,Math.max(1,Number(req.query.limit)||50));
+    const r=await pool.query(`select s.*, coalesce((select json_build_object('id',e.id,'event_type',e.event_type,'payload',e.payload,'created_at',e.created_at) from tgg_browser_viewer_events e where e.browser_session_id=s.id order by e.id desc limit 1),'null'::json) as latest_event
+      from tgg_browser_sessions s where s.user_id=$1 order by s.updated_at desc limit $2`,[req.user.id,limit]);
+    res.json({sessions:r.rows});
+  } catch(e){next(e);}
+});
+
 app.get('/v1/browser/sessions/:id', auth, async (req,res,next)=>{
   try {
     const r=await pool.query('select * from tgg_browser_sessions where id=$1 and user_id=$2',[req.params.id,req.user.id]);

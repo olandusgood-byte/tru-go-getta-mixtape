@@ -71,20 +71,24 @@ if (!DATABASE_URL) {
     `);
   }
 
+  async function tableExists(name) {
+    const r = await pool.query(
+      `select to_regclass($1) is not null as exists`,
+      [`public.${name}`]
+    );
+    return Boolean(r.rows[0]?.exists);
+  }
+
+  async function countIfExists(name) {
+    if (!(await tableExists(name))) return 0;
+    const r = await pool.query(`select count(*)::int as count from public.${name}`);
+    return Number(r.rows[0]?.count || 0);
+  }
+
   async function sourceTruthAudit() {
-    const r = await pool.query(`
-      select
-        (select count(*)::int from users) as users,
-        (select count(*)::int from artists) as artists,
-        (select count(*)::int from releases) as releases,
-        (select count(*)::int from tracks) as tracks,
-        (select count(*)::int from media_objects) as media_objects,
-        (select count(*)::int from tgg_jobs) as jobs,
-        (select count(*)::int from tgg_browser_sessions) as browser_sessions,
-        (select count(*)::int from tgg_certifications) as certifications,
-        (select count(*)::int from tgg_audit_log) as audit_log
-    `);
-    return r.rows[0];
+    const names = ['users','artists','releases','tracks','media_objects','tgg_jobs','tgg_browser_sessions','tgg_certifications','tgg_audit_log'];
+    const counts = await Promise.all(names.map(async name => [name, await countIfExists(name)]));
+    return Object.fromEntries(counts);
   }
 
   async function generateIdeas(snapshot) {
@@ -110,8 +114,9 @@ if (!DATABASE_URL) {
   }
 
   async function recoverExpiredJobs() {
+    if (!(await tableExists('tgg_jobs'))) return { recovered_jobs: 0, skipped: 'tgg_jobs_missing' };
     const r = await pool.query(`
-      update tgg_jobs
+      update public.tgg_jobs
       set status='queued', available_at=now(), error=coalesce(error,'Recovered by TGG Autopilot')
       where status='running' and available_at < now() - interval '10 minutes'
       returning id
@@ -202,9 +207,10 @@ if (!DATABASE_URL) {
         where t.id=c.id
         returning t.*
       `);
+      console.log(JSON.stringify({service:'tgg-autopilot',event:'tick',claimed:due.rowCount}));
       await Promise.all(due.rows.map(task => runTask(task)));
     } catch (e) {
-      console.error('[TGG Autopilot] tick failed', e.message);
+      console.error(JSON.stringify({service:'tgg-autopilot',event:'tick_failed',error:e.message}));
     } finally {
       busy = false;
     }

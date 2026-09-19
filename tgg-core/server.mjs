@@ -21,8 +21,8 @@ app.use((req,res,next)=>{
 });
 
 // TGG_VIDEO_STUDIO_V2_STATIC
-const VIDEO_STUDIO_PUBLIC_ROOT = path.resolve(process.cwd(), 'public/video-studio');
-const LIVE_VIEWER_PUBLIC_ROOT = path.resolve(process.cwd(), 'public/live-viewer');
+const VIDEO_STUDIO_PUBLIC_ROOT = path.resolve(process.cwd(), 'tgg-core/public/video-studio');
+const LIVE_VIEWER_PUBLIC_ROOT = path.resolve(process.cwd(), 'tgg-core/public/live-viewer');
 app.get('/live-viewer', (_req,res)=>res.sendFile(path.join(LIVE_VIEWER_PUBLIC_ROOT,'index.html')));
 app.use('/live-viewer', express.static(LIVE_VIEWER_PUBLIC_ROOT, { etag:true, maxAge:'5m', index:'index.html' }));
 

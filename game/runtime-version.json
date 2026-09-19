@@ -1,9 +1,11 @@
 {
   "project": "TRU GO GETTA WORLD",
-  "canonical_runtime": "V2.50 REALITY MASTER CONSOLIDATION",
+  "canonical_runtime": "V3.00 FINAL MEGA BUILD",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v250_master_contract_pending_live_browser",
+  "verification": "v300_integrated_qa_pending",
+  "consolidation": "all-compatible-layers-one-runtime",
+  "base_runtime": "V2.50 REALITY MASTER CONSOLIDATION",
   "features": [
     "threejs_city",
     "smooth_player_locomotion",
@@ -32,6 +34,16 @@
     "adaptive_master_quality",
     "surface_microdetail",
     "atmospheric_moisture",
-    "camera_realism"
+    "camera_realism",
+    "unified_quality_presets",
+    "unified_movement_tuning",
+    "unified_vehicle_tuning",
+    "adaptive_crowd_density",
+    "integrated_readiness_matrix",
+    "integrated_mega_qa",
+    "autosave_guard",
+    "focus_input_guard",
+    "world_sync_hook",
+    "career_economy_inventory_hooks"
   ]
 }

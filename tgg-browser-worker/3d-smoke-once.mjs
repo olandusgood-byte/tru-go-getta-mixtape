@@ -87,8 +87,13 @@ async function run(){
         const verticalSliceSource=await fs.readFile(path.join(serveRoot,'vertical-slice-director.js'),'utf8');
         const mobileCss=await fs.readFile(path.join(serveRoot,'style.css'),'utf8');
         let mobileHtml=await fs.readFile(path.join(serveRoot,'index.html'),'utf8');
-        mobileHtml=mobileHtml.replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi,'')
-          .replace(/<link[^>]*href=["']style\\.css["'][^>]*>/i,'<style>'+mobileCss+'</style>');
+        while(mobileHtml.includes('<script')){
+          const scriptStart=mobileHtml.indexOf('<script');
+          const scriptEnd=mobileHtml.indexOf('</script>',scriptStart);
+          if(scriptEnd<0)break;
+          mobileHtml=mobileHtml.slice(0,scriptStart)+mobileHtml.slice(scriptEnd+9);
+        }
+        mobileHtml=mobileHtml.replace('<link rel="stylesheet" href="style.css">','<style>'+mobileCss+'</style>');
         const mobileSourceOk=mobileHtml.includes('id="game"')&&mobileCss.length>1000;
         const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
         const mp=await mobile.newPage();

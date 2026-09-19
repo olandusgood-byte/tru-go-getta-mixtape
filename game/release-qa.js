@@ -189,7 +189,14 @@
     test('v234 native camera mode',cameraForgeV234.mode==='native-camera-forge'&&cameraForgeV234.enabled===true);
     test('v234 camera HUD',!!document.getElementById('v234ForgeHud')&&!!document.getElementById('v234ForgePanel'));
     test('v234 camera forge css',!!document.querySelector('link[href*="v234-camera-forge.css"]'));
-    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.34 TGG CAMERA + CINEMATIC FORGE 100');
+    const npcForgeV235=window.TGGV235?.status?.()||{};
+    test('v235 npc core api',!!window.TGGV235Core&&typeof window.TGGV235Core.profile==='function'&&typeof window.TGGV235Core.lod==='function');
+    test('v235 npc forge api',!!window.TGGV235&&typeof window.TGGV235.rebuild==='function'&&typeof window.TGGV235.refreshLOD==='function');
+    test('v235 100 layers',Array.isArray(window.TGGV235?.layers)&&window.TGGV235.layers.length===100);
+    test('v235 native npc mode',npcForgeV235.mode==='native-npc-forge'&&npcForgeV235.enabled===true);
+    test('v235 npc HUD',!!document.getElementById('v235ForgeHud')&&!!document.getElementById('v235ForgePanel'));
+    test('v235 npc forge css',!!document.querySelector('link[href*="v235-npc-forge.css"]'));
+    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.35 TGG NPC + CROWD FORGE 100');
     test('v2 movement hud',!!document.getElementById('playerMoveHud')&&!!document.getElementById('walkModeValue')&&!!document.getElementById('walkSpeedValue'));
     test('v2 sprint control',!!document.getElementById('sprintBtn'));test('v202 world gameplay',!!window.TGGWorldGameplay&&typeof window.TGGWorldGameplay.getNavTarget==='function'&&typeof window.TGGWorldGameplay.performObjective==='function');test('v202 world objective hud',!!document.getElementById('worldObjective'));test('v203 street contacts',!!window.TGGStreetContacts&&Array.isArray(window.TGGStreetContacts.contacts)&&window.TGGStreetContacts.contacts.length>=3&&typeof window.TGGStreetContacts.startContact==='function');test('v203 contact hud',!!document.getElementById('streetContactCard'));test('career api',!!window.TGGCareer);test('content api',!!window.TGGContent);test('expansion api',!!window.TGGExpansion);test('progression api',!!window.TGGProgression);test('bridge api',!!window.TGGBridge);test('chain api',!!window.TGGChains);test('district api',!!window.TGGDistricts);test('save api',!!window.TGGSave);test('inventory api',!!window.TGGInventory);test('crew api',!!window.TGGCrew);test('events api',!!window.TGGEvents);test('economy api',!!window.TGGEconomy&&typeof window.TGGEconomy.apply==='function');test('avatar api',!!window.TGGAvatar&&typeof window.TGGAvatar.get==='function'&&typeof window.TGGAvatar.save==='function');test('world sync api',!!window.TGGWorldSync&&typeof window.TGGWorldSync.snapshot==='function'&&typeof window.TGGWorldSync.setTransport==='function'&&typeof window.TGGWorldSync.sync==='function');
     ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud'].forEach(id=>test('dom:'+id,!!document.getElementById(id)));

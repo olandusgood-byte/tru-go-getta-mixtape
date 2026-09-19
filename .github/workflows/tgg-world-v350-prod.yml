@@ -1,4 +1,4 @@
-name: TGG World V4.20 Manual Deploy
+name: TGG World V4.30 Manual Deploy
 
 on:
   push:
@@ -22,12 +22,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify V4.20 payload
+      - name: Verify V4.30 payload
         run: |
-          test -f game/v420-social-world.js
-          test -f game/v420-social-world.css
-          grep -q "V4.20 SOCIAL NETWORK CITY STATUS MEGA" game/index.html
-          grep -q "V4.20 SOCIAL NETWORK CITY STATUS MEGA" game/runtime-version.json
+          test -f game/v430-routine-world.js
+          test -f game/v430-routine-world.css
+          grep -q "V4.30 DAILY ROUTINE WELLNESS SCHEDULE WORLD MEGA" game/index.html
+          grep -q "V4.30 DAILY ROUTINE WELLNESS SCHEDULE WORLD MEGA" game/runtime-version.json
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -38,7 +38,7 @@ jobs:
           mkdir -p .vercel
           printf '{"orgId":"team_TeV8b8Rv4jnchCzdYOOIehl2","projectId":"prj_U2qDy9qZ5EZAKuHTEaA03BMmmplX"}' > .vercel/project.json
 
-      - name: Deploy V4.20 to production
+      - name: Deploy V4.30 to production
         working-directory: game
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

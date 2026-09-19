@@ -24,6 +24,24 @@
     const hair=new THREE.Mesh(new THREE.SphereGeometry(.395,12,7,0,Math.PI*2,0,Math.PI*.48),pants);
     hair.position.y=3.01;g.add(hair);
 
+    // V5.59 street-character detail pass: lightweight accessories with no gameplay coupling.
+    const accessoryMat=new THREE.MeshStandardMaterial({color:i%3===0?0xc7ff00:(i%3===1?0x121722:0xd6d9df),roughness:.5,metalness:.28});
+    if(i%4===0){
+      const cap=new THREE.Mesh(new THREE.CylinderGeometry(.42,.42,.13,12),accessoryMat);
+      cap.position.y=3.22;cap.scale.z=.9;g.add(cap);
+      const brim=new THREE.Mesh(new THREE.BoxGeometry(.46,.05,.24),accessoryMat);
+      brim.position.set(0,3.18,.28);g.add(brim);
+    }
+    if(i%5===0){
+      const pack=new THREE.Mesh(new THREE.BoxGeometry(.62,.82,.24),accessoryMat);
+      pack.position.set(0,1.85,-.44);pack.rotation.x=-.08;g.add(pack);
+    }
+    if(i%3===0){
+      const chainMat=new THREE.MeshStandardMaterial({color:0xe4c46b,metalness:.9,roughness:.2});
+      const chain=new THREE.Mesh(new THREE.TorusGeometry(.2,.025,6,18,Math.PI),chainMat);
+      chain.position.set(0,2.02,.47);chain.rotation.x=Math.PI/2;g.add(chain);
+    }
+
     const parts={body,head,arms:[],legs:[]};
     [-1,1].forEach((side,idx)=>{
       const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.115,.68,3,6),shirt);
@@ -324,7 +342,9 @@
       activeDistrict,
       activityNodes:activityNodes.length,
       originalPedestrians:Array.isArray(core.pedestrians)?core.pedestrians.length:0,
-      totalStreetPopulation:(Array.isArray(core.pedestrians)?core.pedestrians.length:0)+allPeople.filter(x=>x.visible).length
+      totalStreetPopulation:(Array.isArray(core.pedestrians)?core.pedestrians.length:0)+allPeople.filter(x=>x.visible).length,
+      visualDetailVersion:'V5.59',
+      characterAccessories:true
     })
   };
 })();

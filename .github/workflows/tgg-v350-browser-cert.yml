@@ -29,7 +29,7 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Run live V3.60 browser certificate
+      - name: Run live V3.70 browser certificate
         run: |
           cat > tgg-cert.mjs <<'EOF'
           import { chromium } from 'playwright';
@@ -112,6 +112,7 @@ jobs:
             qa:window.TGGMegaQA?.getStatus?.()||null,
             v350:window.TGGGameFeel?.getStatus?.()||null,
             v360:window.TGGLivingCity?.getStatus?.()||null,
+            v370:window.TGGWorldInteraction?.getStatus?.()||null,
             weather:window.TGGCityWorldMega?.getStatus?.()||null
           }));
 

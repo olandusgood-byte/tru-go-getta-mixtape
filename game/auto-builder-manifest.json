@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "5.03",
-  "module": "GAME-V5.03-TGG-CONTACT-MESSAGES",
-  "name": "V4.97-V5.03 Relationships + Favors + Consequences + Contracts + Phone + Calls + Messages",
+  "version": "5.04",
+  "module": "GAME-V5.04-CONTACT-LOCATION-MEETUPS",
+  "name": "V4.97-V5.04 Relationships + Favors + Consequences + Contracts + Phone + Calls + Messages + Meetups",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -171,7 +171,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V5.04",
+  "next": "V5.05",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

@@ -1,0 +1,10 @@
+html[data-tgg-v330="on"] .player-move-hud b,
+html[data-tgg-v330="on"] .vehicle-hud b{font-variant-numeric:tabular-nums}
+html[data-tgg-v330="on"] .dpad button,
+html[data-tgg-v330="on"] .actions button{will-change:transform}
+html[data-tgg-v330="on"] .city{perspective:1200px}
+html[data-tgg-v330="on"] #v310BuildBadge::before{content:"MOTION ";opacity:.48;margin-right:2px}
+@media(prefers-reduced-motion:reduce){
+  html[data-tgg-v330="on"] .dpad button,
+  html[data-tgg-v330="on"] .actions button{will-change:auto}
+}

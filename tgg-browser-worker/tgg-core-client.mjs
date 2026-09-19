@@ -5,6 +5,7 @@ async function call(path,body={},extra={}){if(!CORE_URL)throw new Error('TGG_COR
 export const tggCoreEnabled=()=>Boolean(CORE_URL);
 export async function tggWorkerHeartbeat(metadata={}){return call('/v1/workers/heartbeat',{metadata})}
 export async function tggWorkerClaim(){return call('/v1/workers/jobs/claim',{})}
+export async function tggWorkerRecoverCertification(){return call('/v1/workers/jobs/recover-certification',{})}
 export async function tggWorkerComplete(jobId,leaseToken,verdict,result,evidence){return call('/v1/workers/jobs/complete',{job_id:jobId,lease_token:leaseToken,verdict,result,evidence})}
 export async function tggWorkerRegister(id,token,metadata={}){if(!CORE_URL)throw new Error('TGG_CORE_URL_NOT_CONFIGURED');const r=await fetch(CORE_URL+'/v1/workers/register-existing',{method:'POST',headers:{'content-type':'application/json','x-tgg-worker-id':id,'x-tgg-worker-token':token},body:JSON.stringify({worker_id:id,metadata}),signal:AbortSignal.timeout(15000)});const text=await r.text();let data={};try{data=JSON.parse(text)}catch{}if(!r.ok)throw new Error(data.error||'TGG_CORE_WORKER_REGISTER_FAILED');return data}
 

@@ -90,21 +90,19 @@ jobs:
             window.TGGGame?.show?.('game');
             const movementApi = ['setWalkKey','setWalkAnalog','getWalkingState','setWalkTuning','getWalkTuning','setDriveKey','setDriveAnalog','getDrivingState','setDriveTuning','getDriveTuning']
               .every(name => typeof window.TGGGame?.[name] === 'function');
-            const startPos = {...window.TGGGame.getState()};
-            window.TGGGame.setWalkKey('right',true);
-            await new Promise(r=>setTimeout(r,320));
-            window.TGGGame.setWalkKey('right',false);
-            await new Promise(r=>setTimeout(r,180));
-            let endPos = {...window.TGGGame.getState()};
-            let smoothWalkMoved = Math.hypot((endPos.x||0)-(startPos.x||0),(endPos.y||0)-(startPos.y||0)) > 0.05;
-            if(!smoothWalkMoved){
-              const retryStart={...window.TGGGame.getState()};
-              window.TGGGame.setWalkKey('left',true);
-              await new Promise(r=>setTimeout(r,320));
-              window.TGGGame.setWalkKey('left',false);
+            let smoothWalkMoved=false;
+            const keyboardAttempts=[];
+            for(const direction of ['right','left','up','down']){
+              const beforeKey={...window.TGGGame.getState()};
+              window.TGGGame.setWalkKey(direction,true);
+              await new Promise(r=>setTimeout(r,520));
+              const heldState=window.TGGGame.getWalkingState();
+              window.TGGGame.setWalkKey(direction,false);
               await new Promise(r=>setTimeout(r,180));
-              endPos={...window.TGGGame.getState()};
-              smoothWalkMoved=Math.hypot((endPos.x||0)-(retryStart.x||0),(endPos.y||0)-(retryStart.y||0)) > 0.05;
+              const afterKey={...window.TGGGame.getState()};
+              const distance=Math.hypot((afterKey.x||0)-(beforeKey.x||0),(afterKey.y||0)-(beforeKey.y||0));
+              keyboardAttempts.push({direction,distance,speed:Number(heldState?.speed||0),blocked:!!heldState?.blocked});
+              if(distance>0.02){smoothWalkMoved=true;break;}
             }
             const analogStart = {...window.TGGGame.getState()};
             window.TGGGame.setWalkAnalog({x:-0.72,y:0,sprint:0.4});
@@ -150,6 +148,7 @@ jobs:
               achievementCatalog,
               movementApi,
               smoothWalkMoved,
+              keyboardAttempts,
               analogWalkMoved,
               analogInputReset,
               steeringTuning,

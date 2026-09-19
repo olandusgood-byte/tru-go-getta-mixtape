@@ -17,6 +17,14 @@ try{
   check(await page.locator('#timelineViewport').count()===1,'timeline missing');
   check(await page.locator('.workspace-tabs [data-workspace="deliver"]').count()===1,'deliver workspace missing');
 
+  check(await page.locator('.workspace-tabs [data-ai-workspace]').count()===1,'AI Director workspace missing');
+  await page.locator('[data-ai-workspace]').click();
+  check(await page.locator('#aiDirectorView:not(.view-hidden)').count()===1,'AI Director did not open');
+  check(await page.locator('#aiBuild').count()===1,'Auto Edit action missing');
+  check(await page.locator('[data-mask="ellipse"]').count()===1,'mask tool missing');
+  check(await page.locator('[data-gpu="filmic"]').count()===1,'GPU shader action missing');
+  await page.locator('#aiBackEdit').click();
+
   await page.locator('[data-workspace="dashboard"]').click();
   check(await page.locator('#dashboardView:not(.view-hidden)').count()===1,'dashboard did not open');
 

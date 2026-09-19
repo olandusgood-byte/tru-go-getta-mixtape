@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "5.09",
-  "module": "GAME-V5.09-DISTRICT-REACTION-ESCALATION",
-  "name": "V5.09 Persistent District Reaction Escalation + Contact Response",
+  "version": "5.24",
+  "module": "GAME-V5.24-BULK",
+  "name": "Bulk V5.10-V5.24 Release Browser Live Viewer Audits Gates",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -171,7 +171,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V5.10",
+  "next": "V5.25",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

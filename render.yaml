@@ -8,7 +8,7 @@ services:
     autoDeploy: true
     rootDir: tgg-core
     buildCommand: npm install
-    startCommand: node tgg-core/server.mjs
+    startCommand: node server.mjs
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL

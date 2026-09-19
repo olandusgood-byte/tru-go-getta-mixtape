@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.16",
-  "module": "GAME-V1.16",
-  "name": "Dynamic NPC Routing + Activity Handoffs",
+  "version": "1.17",
+  "module": "GAME-V1.17",
+  "name": "City Schedules + Contextual Activity Discovery",
   "workflow": [
     "BUILD",
     "TEST",
@@ -36,9 +36,13 @@
     "v1_16_npc_routing": true,
     "v1_16_activity_handoffs": true,
     "v1_16_local_story_routing": true,
-    "v1_16_no_external_mutation": true
+    "v1_16_no_external_mutation": true,
+    "v1_17_city_schedules": true,
+    "v1_17_contextual_discovery": true,
+    "v1_17_local_schedule_state": true,
+    "v1_17_no_external_mutation": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.17 CITY SCHEDULES + CONTEXTUAL ACTIVITY DISCOVERY"
+  "next": "V1.18 WORLD EVENTS + CROWD MOMENTUM"
 }

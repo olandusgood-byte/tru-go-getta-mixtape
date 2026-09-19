@@ -31,13 +31,14 @@ const v390=read('v390-opportunity-loop.js');
 const v400=read('v400-world-systems.js');
 const v410=read('v410-lifestyle.js');
 const v420=read('v420-social-world.js');
-const v430=read('v430-routine-world.js');
+const v430=read('v430-routine-world.js','v440-home-social.js','v450-family-household.js');
 const v440=read('v440-home-social.js');
+const v450=read('v450-family-household.js');
 
-assert.match(html,/V4\.40 HOME SOCIAL LIFE MEGA/i);
-assert.match(html,/GAME V4\.40 • HOME \+ SOCIAL LIFE/);
-assert.equal(runtime.canonical_runtime,'V4.40 HOME SOCIAL LIFE MEGA');
-assert.equal(runtime.base_runtime,'V4.30 DAILY ROUTINE WELLNESS SCHEDULE WORLD MEGA');
+assert.match(html,/V4\.50 FAMILY HOUSEHOLD LEGACY WORLD MEGA/i);
+assert.match(html,/GAME V4\.50 • FAMILY \+ HOUSEHOLD \+ LEGACY/);
+assert.equal(runtime.canonical_runtime,'V4.50 FAMILY HOUSEHOLD LEGACY WORLD MEGA');
+assert.equal(runtime.base_runtime,'V4.40 HOME SOCIAL LIFE MEGA');
 assert.equal(runtime.consolidation,'all-compatible-layers-one-runtime');
 for(const id of [
   'city3d','radar3d','radarPlayer','radarCar','vehicleHud','speedValue','gearValue',
@@ -85,11 +86,12 @@ for(const token of ['V4.10 PROPERTY RELATIONSHIP LIFESTYLE MEGA','property-passi
 for(const token of ['V4.20 SOCIAL NETWORK CITY STATUS MEGA','city-status-score','contact-favor-system','social-consequences','city-reaction-text']) assert.ok(v420.includes(token),'V4.20 layer missing '+token);
 for(const token of ['V4.30 DAILY ROUTINE WELLNESS SCHEDULE WORLD MEGA','daily-routine-tracker','wellness-score','fatigue-system','routine-streaks','routine-consequence-loop']) assert.ok(v430.includes(token),'V4.30 layer missing '+token);
 for(const token of ['V4.40 HOME SOCIAL LIFE MEGA','home-upgrade-loop','social-bond-state','relationship-memory','relationship-tiers']) assert.ok(v440.includes(token),'V4.40 layer missing '+token);
+for(const token of ['V4.50 FAMILY HOUSEHOLD LEGACY WORLD MEGA','family-household-state','responsibility-loop','neglect-consequences','legacy-progression']) assert.ok(v450.includes(token),'V4.50 layer missing '+token);
 for(const token of [
   'human_realism','vehicle_realism','world_detail','unified_quality_presets','unified_movement_tuning',
   'unified_vehicle_tuning','adaptive_crowd_density','integrated_readiness_matrix','integrated_mega_qa',
   'v310_aaa_visual_polish','v320_realism_mega_pass','v330_motion_vehicle_character',
-  'v340_city_world_mega_pass','v350_game_feel_cinematic_mega','v360_living_city_reactive_world','v370_npc_traffic_world_interaction','v380_life_sim_property_social_world','v390_career_mission_economy_world_loop','v400_world_systems','v410_property_relationship_lifestyle','v420_social_network_city_status','v430_daily_routine_wellness_schedule_world','v440_home_social_life'
+  'v340_city_world_mega_pass','v350_game_feel_cinematic_mega','v360_living_city_reactive_world','v370_npc_traffic_world_interaction','v380_life_sim_property_social_world','v390_career_mission_economy_world_loop','v400_world_systems','v410_property_relationship_lifestyle','v420_social_network_city_status','v430_daily_routine_wellness_schedule_world','v440_home_social_life','v450_family_household_legacy_world'
 ]) assert.ok(runtime.features.includes(token),'runtime feature missing '+token);
 
 for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
@@ -98,4 +100,4 @@ for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   }
 }
 
-console.log('GAME_V4_40_HOME_SOCIAL_STATIC_CONTRACT_PASS');
+console.log('GAME_V4_50_FAMILY_HOUSEHOLD_STATIC_CONTRACT_PASS');

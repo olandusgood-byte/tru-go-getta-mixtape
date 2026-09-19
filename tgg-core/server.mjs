@@ -952,6 +952,33 @@ app.post('/v1/workers/jobs/complete', async (req,res,next)=>{
   }catch(e){next(e);}
 });
 
+app.post('/v1/workers/jobs/ensure-certification', async (req,res,next)=>{
+  try{
+    const w=await requireWorker(req,res); if(!w)return;
+    const email=String(req.body?.email||'').toLowerCase().trim();
+    const certification_type=String(req.body?.certification_type||'protected_audio_runtime').trim();
+    if(!/^\\S+@\\S+\\.\\S+$/.test(email)) return res.status(400).json({error:'valid_email_required'});
+    let u=await pool.query('select id,email,display_name,role from users where email=$1',[email]);
+    if(!u.rowCount){
+      const password_hash=passwordHash(crypto.randomBytes(32).toString('hex'));
+      u=await pool.query('insert into users(email,password_hash,display_name,role) values($1,$2,$3,$4) returning id,email,display_name,role',[email,password_hash,'TGG Owner','user']);
+    }
+    const user=u.rows[0];
+    const existing=await pool.query("select * from tgg_certifications where user_id=$1 and status not in ('passed','failed','expired') order by id desc limit 1",[user.id]);
+    if(existing.rowCount){
+      const j=await pool.query("select * from tgg_browser_jobs where payload->>'certification_id'=$1 and status in ('queued','running') order by created_at desc limit 1",[String(existing.rows[0].id)]);
+      if(j.rowCount) return res.json({certification:existing.rows[0],job:j.rows[0],created:true,existing:true});
+      const job=await pool.query("insert into tgg_browser_jobs(flow_key,payload) values('certification_runtime',$1) returning *",[{certification_id:existing.rows[0].id,browser_session_id:existing.rows[0].browser_session_id||null,user_id:user.id,certification_type:existing.rows[0].certification_type}]);
+      await pool.query("update tgg_certifications set evidence=coalesce(evidence,'{}'::jsonb)||$2::jsonb where id=$1",[existing.rows[0].id,JSON.stringify({browser_job_id:job.rows[0].id})]);
+      return res.status(201).json({certification:existing.rows[0],job:job.rows[0],created:true,recovered:true});
+    }
+    const cert=await pool.query("insert into tgg_certifications(user_id,certification_type,evidence) values($1,$2,$3) returning *",[user.id,certification_type,{}]);
+    const job=await pool.query("insert into tgg_browser_jobs(flow_key,payload) values('certification_runtime',$1) returning *",[{certification_id:cert.rows[0].id,browser_session_id:null,user_id:user.id,certification_type}]);
+    await pool.query("update tgg_certifications set evidence=coalesce(evidence,'{}'::jsonb)||$2::jsonb where id=$1",[cert.rows[0].id,JSON.stringify({browser_job_id:job.rows[0].id})]);
+    res.status(201).json({certification:cert.rows[0],job:job.rows[0],created:true});
+  }catch(e){next(e);}
+});
+
 app.post('/v1/browser/worker-session', async (req,res,next)=>{
   try{
     const w=await requireWorker(req,res); if(!w)return;

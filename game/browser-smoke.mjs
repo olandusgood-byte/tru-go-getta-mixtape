@@ -64,6 +64,41 @@ try{
   const qa=await page.evaluate(()=>({qa:window.TGGQA?.run?.(),release:window.TGGReleaseQA?.run?.()}));
   if(qa.qa?.passed!==true||qa.release?.passed!==true)throw new Error('QA failed '+JSON.stringify(qa));
 
+  const gameplayMega=await page.evaluate(()=>{
+    const story=window.TGGStoryMissions;
+    const world=window.TGGWorldDepth;
+    const api={
+      story:!!story,
+      missionCheckpoint:typeof story?.missionCheckpoint==='function',
+      resumeMission:typeof story?.resumeMission==='function',
+      routeGuide:typeof story?.routeGuide==='function',
+      missionEvidence:typeof story?.missionEvidence==='function',
+      world:!!world,
+      beatNavigation:typeof world?.beatNavigation==='function'
+    };
+    const checkpoint=story?.missionCheckpoint?.('BROWSER-SMOKE')||null;
+    const missionOps=story?.missionOps?.()||null;
+    const guide=story?.routeGuide?.()||null;
+    const beat=world?.spawnBeat?.(true)||null;
+    const nav=world?.beatNavigation?.()||null;
+    const guard=world?.completeBeat?.()||null;
+    const worldStatus=world?.getStatus?.()||null;
+    return {api,checkpoint,missionOps,guide,beat,nav,guard,worldStatus};
+  });
+  const gameplayFeatures=gameplayMega.worldStatus?.features||[];
+  const gameplayApiOk=Object.values(gameplayMega.api).every(Boolean);
+  const target=gameplayMega.beat?.target;
+  if(!gameplayApiOk||
+     gameplayMega.checkpoint?.reason!=='BROWSER-SMOKE'||
+     gameplayMega.missionOps?.checkpoint?.reason!=='BROWSER-SMOKE'||
+     !gameplayMega.guide?.objective||
+     !target||!Number.isFinite(Number(target.x))||!Number.isFinite(Number(target.y))||
+     !gameplayMega.nav||gameplayMega.nav.arrived!==false||!(gameplayMega.nav.meters>0)||
+     gameplayMega.guard?.status!=='travel_required'||
+     !['physical-world-beat-routing','arrival-gated-world-beat-completion','heading-aware-world-navigation'].every(x=>gameplayFeatures.includes(x))){
+    throw new Error('V4.60/Mission Ops gameplay contract failed '+JSON.stringify(gameplayMega));
+  }
+
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
@@ -202,7 +237,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,worldTravelGuard:gameplayMega.guard.status}));
 }finally{
   await browser.close();
 }

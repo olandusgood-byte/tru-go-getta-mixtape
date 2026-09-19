@@ -516,6 +516,82 @@ try{
     throw new Error('V5.03 messages close failed '+JSON.stringify(messagesClosed));
   }
 
+  await page.waitForFunction(()=>!!window.TGGMeetups&&!!window.TGGV504,{timeout:15000});
+  const meetupCreated=await page.evaluate(()=>{
+    const run=window.TGGV504.run();
+    const before=window.TGGNPCRelations.relationship('Kane');
+    const message=window.TGGMessages.sendMessage('Kane','Meet me at the studio. I sent the location.','location',{target:{x:24,y:37,radius:7,color:'#ff8a3d'}});
+    const meetup=window.TGGMeetups.snapshot();
+    const nav=window.TGGNavigation?.getTarget?.()||null;
+    return {run,before,message,meetup,nav};
+  });
+  if(meetupCreated.run?.ok!==true||
+     meetupCreated.message?.status!=='delivered'||
+     meetupCreated.meetup?.active?.name!=='Kane'||
+     meetupCreated.meetup?.navigation?.arrived!==false||
+     meetupCreated.nav?.meetup!==true||
+     !/MEETUP/i.test(String(meetupCreated.nav?.label||''))){
+    throw new Error('V5.04 location meetup creation failed '+JSON.stringify(meetupCreated));
+  }
+  const meetupRoute=await page.evaluate(()=>{
+    const start={...window.TGGGame.getState()};
+    const nav=window.TGGMeetups.navigationTarget();
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    const routed=!!nav&&stepAxis('y',50)&&stepAxis('x',nav.x)&&stepAxis('y',nav.y);
+    return {start,routed,arrived:window.TGGMeetups.navigationTarget()};
+  });
+  if(!meetupRoute.routed||meetupRoute.arrived?.arrived!==true){
+    throw new Error('V5.04 physical meetup route failed '+JSON.stringify(meetupRoute));
+  }
+  await page.waitForTimeout(160);
+  const meetupInteract=await page.locator('#interact3dBtn').evaluate(el=>({
+    disabled:!!el.disabled,
+    text:String(el.textContent||'').trim(),
+    ready:el.classList.contains('meetup-ready')
+  }));
+  if(meetupInteract.disabled||!meetupInteract.ready||!/^MEET\s+KANE/i.test(meetupInteract.text)){
+    throw new Error('V5.04 meetup INTERACT unavailable '+JSON.stringify(meetupInteract));
+  }
+  await page.evaluate(()=>document.getElementById('interact3dBtn')?.click());
+  await page.waitForTimeout(120);
+  const meetupResolved=await page.evaluate(start=>{
+    const meetup=window.TGGMeetups.snapshot();
+    const relation=window.TGGNPCRelations.relationship('Kane');
+    const stepAxis=(axis,target)=>{
+      let guard=0;
+      while(guard++<220){
+        const s=window.TGGGame.getState();
+        const current=Number(s[axis])||0;
+        const delta=Number(target)-current;
+        if(Math.abs(delta)<=0.01)return true;
+        const step=Math.max(-1,Math.min(1,delta));
+        if(!window.TGGGame.move(axis==='x'?step:0,axis==='y'?step:0))return false;
+      }
+      return false;
+    };
+    const restored=stepAxis('y',50)&&stepAxis('x',start.x)&&stepAxis('y',start.y);
+    return {meetup,relation,restored,current:{...window.TGGGame.getState()}};
+  },meetupRoute.start);
+  if(meetupResolved.meetup?.active||
+     meetupResolved.meetup?.lastCompleted?.name!=='Kane'||
+     meetupResolved.meetup?.completed<1||
+     !(meetupResolved.relation?.relation?.affinity>meetupCreated.before?.relation?.affinity)||
+     !meetupResolved.restored||
+     Math.hypot(meetupResolved.current.x-meetupRoute.start.x,meetupResolved.current.y-meetupRoute.start.y)>.05){
+    throw new Error('V5.04 meetup completion failed '+JSON.stringify(meetupResolved));
+  }
+
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
@@ -654,7 +730,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards,incomingCall:incomingAccepted.calls.lastResult.call.name,messageThread:messageReply.last.name,messageReply:messageReply.last.text}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards,incomingCall:incomingAccepted.calls.lastResult.call.name,messageThread:messageReply.last.name,messageReply:messageReply.last.text,meetupContact:meetupResolved.meetup.lastCompleted.name}));
 }finally{
   await browser.close();
 }

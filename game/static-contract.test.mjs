@@ -19,11 +19,16 @@ const style=read('style.css');
 const runtime=JSON.parse(read('runtime-version.json'));
 const photoreal=read('photoreal-core.js');
 const reality=read('reality-master.js');
+const v310=read('v310-aaa-visual-polish.js');
+const v320=read('v320-realism-mega.js');
+const v330=read('v330-motion-realism.js');
+const v340=read('v340-city-world-mega.js');
+const v350=read('v350-gamefeel-cinematic.js');
 
-assert.match(html,/Game V2\.50 REALITY MASTER/);
-assert.match(html,/GAME V2\.50 • REALITY MASTER/);
-assert.equal(runtime.canonical_runtime,'V3.00 FINAL MEGA BUILD');
-assert.equal(runtime.base_runtime,'V2.50 REALITY MASTER CONSOLIDATION');
+assert.match(html,/V3\.50 GAME FEEL CINEMATIC MEGA/i);
+assert.match(html,/GAME V3\.50 • GAME FEEL \+ CINEMATIC/);
+assert.equal(runtime.canonical_runtime,'V3.50 GAME FEEL CINEMATIC MEGA');
+assert.equal(runtime.base_runtime,'V3.40 CITY WORLD MEGA PASS');
 assert.equal(runtime.consolidation,'all-compatible-layers-one-runtime');
 for(const id of [
   'city3d','radar3d','radarPlayer','radarCar','vehicleHud','speedValue','gearValue',
@@ -36,7 +41,9 @@ for(const src of [
   'vendor/three-r152.min.js','game.js','game-3d.js','garage.js','garage-3d.js',
   'studio-3d.js','interiors-3d.js','navigation.js','gamepad.js','final-build.js',
   'story-missions.js','story-cinematics.js','story-world-3d.js','street-presence.js',
-  'vertical-slice-director.js','mega-qa.js','photoreal-core.js','reality-master.js'
+  'vertical-slice-director.js','mega-qa.js','photoreal-core.js','reality-master.js',
+  'v310-aaa-visual-polish.js','v320-realism-mega.js','v330-motion-realism.js',
+  'v340-city-world-mega.js','v350-gamefeel-cinematic.js'
 ]) assert.ok(html.includes('<script src="'+src+'"></script>'),'missing V2.18 script: '+src);
 
 for(const token of ['window.TGGGame','setDriveKey','getDrivingState']) assert.ok(game.includes(token),'game runtime missing '+token);
@@ -55,7 +62,17 @@ assert.ok(mega.includes('window.TGGMegaQA'),'mega QA runtime missing');
 assert.ok(style.includes('.city3d')&&style.includes('.vehicle-hud')&&style.includes('.player-move-hud'),'baseline presentation styles missing');
 for(const token of ['ACESFilmicToneMapping','MeshPhysicalMaterial','adaptive-pixel-ratio']) assert.ok(photoreal.includes(token),'photoreal core missing '+token);
 for(const token of ['V2.50 REALITY MASTER CONSOLIDATION','human-anatomy-detail','vehicle-clearcoat-glass-trim','adaptive-fps-quality']) assert.ok(reality.includes(token),'reality master missing '+token);
-for(const token of ['human_realism','vehicle_realism','world_detail','unified_quality_presets','unified_movement_tuning','unified_vehicle_tuning','adaptive_crowd_density','integrated_readiness_matrix','integrated_mega_qa']) assert.ok(runtime.features.includes(token),'runtime feature missing '+token);
+for(const token of ['V3.10 AAA VISUAL POLISH','cinematic-glass-ui','hud-depth']) assert.ok(v310.includes(token),'V3.10 layer missing '+token);
+for(const token of ['V3.20 REALISM MEGA PASS','physical-lighting-balance','adaptive-detail-scaling']) assert.ok(v320.includes(token),'V3.20 layer missing '+token);
+for(const token of ['V3.30 MOTION VEHICLE CHARACTER','body-weight-transfer','vehicle-pitch-roll']) assert.ok(v330.includes(token),'V3.30 layer missing '+token);
+for(const token of ['V3.40 CITY WORLD MEGA PASS','dynamic-cloud-layer','crowd-quality-sync']) assert.ok(v340.includes(token),'V3.40 layer missing '+token);
+for(const token of ['V3.50 GAME FEEL CINEMATIC MEGA','cinematic-letterbox','story-cinematic-sync']) assert.ok(v350.includes(token),'V3.50 layer missing '+token);
+for(const token of [
+  'human_realism','vehicle_realism','world_detail','unified_quality_presets','unified_movement_tuning',
+  'unified_vehicle_tuning','adaptive_crowd_density','integrated_readiness_matrix','integrated_mega_qa',
+  'v310_aaa_visual_polish','v320_realism_mega_pass','v330_motion_vehicle_character',
+  'v340_city_world_mega_pass','v350_game_feel_cinematic_mega'
+]) assert.ok(runtime.features.includes(token),'runtime feature missing '+token);
 
 for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   for(const [name,source] of Object.entries({game,game3d,street,garage,nav,finalBuild,story,story3d,vertical})){
@@ -63,4 +80,4 @@ for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   }
 }
 
-console.log('GAME_V3_00_FINAL_MEGA_STATIC_CONTRACT_PASS');
+console.log('GAME_V3_50_FINAL_MEGA_STATIC_CONTRACT_PASS');

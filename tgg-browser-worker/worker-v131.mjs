@@ -322,54 +322,76 @@ app.get('/enroll', (_req, res) => {
   const html = [
     '<!doctype html><html><head><meta charset="utf-8"><title>TGG Browser Worker Enrollment</title>',
     '<style>body{font-family:Arial;background:#080808;color:#fff;max-width:720px;margin:50px auto;padding:24px}button{background:#e50914;color:#fff;border:0;padding:12px 18px;border-radius:8px;font-weight:700}input{display:block;width:100%;margin:8px 0;padding:12px;background:#151515;color:#fff;border:1px solid #333;border-radius:8px;box-sizing:border-box}pre{white-space:pre-wrap;background:#111;padding:15px;border-radius:8px}</style></head><body>',
-    '<h1>TGG Self-Hosted Browser Worker</h1><p>Owner-only enrollment. Your authenticated session is handed directly to this worker; worker credentials never leave the server.</p>',
-    '<input id="email" type="email" placeholder="Owner email"><input id="password" type="password" placeholder="Owner password"><button id="go">Enroll Worker</button><pre id="out">Waiting...</pre>',
-    '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>',
-    '<script>window.__TGG_SUPABASE_URL__=', JSON.stringify(SUPABASE_URL), ';window.__TGG_SUPABASE_KEY__=', JSON.stringify(SUPABASE_KEY), ';</script>',
-    '<script>(async function(){const S=window.supabase.createClient(window.__TGG_SUPABASE_URL__,window.__TGG_SUPABASE_KEY__);const sleep=ms=>new Promise(r=>setTimeout(r,ms));async function signInRetry(email,password){let last=null;for(let i=1;i<=3;i++){const r=await S.auth.signInWithPassword({email,password});if(!r.error)return r;last=r.error;const msg=String(r.error&&r.error.message||"");if(!/504|timeout|gateway|fetch/i.test(msg))break;if(i<3)await sleep(i*1200);}throw last||new Error("Sign-in failed");}document.getElementById("go").addEventListener("click",async function(){const out=document.getElementById("out"),btn=this;btn.disabled=true;try{const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value;if(!email||!password)throw new Error("Enter owner email and password.");out.textContent="Signing in securely...";const a=await signInRetry(email,password);const sess=a.data&&a.data.session;if(!sess)throw new Error("No authenticated session returned.");out.textContent="Owner authenticated. Enrolling worker...";const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),20000);let b;try{b=await fetch("/enroll/session",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({access_token:sess.access_token,refresh_token:sess.refresh_token}),signal:ctl.signal});}finally{clearTimeout(timer)}const raw=await b.text();let bj={};try{bj=JSON.parse(raw)}catch{}if(!b.ok)throw new Error((bj.error||("Enrollment HTTP "+b.status))+(bj.stage?":"+bj.stage:""));out.textContent="Worker enrolled and browser session bootstrapped. Refresh session persisted. TGG certification started."}catch(e){const msg=e&&e.name==="AbortError"?"Enrollment handoff timed out; retry once.":(e.message||String(e));out.textContent="ERROR: "+msg;}finally{btn.disabled=false}});})();</script></body></html>'
+    '<h1>TGG Self-Hosted Browser Worker</h1><p>Owner-only enrollment. Credentials are sent only to this HTTPS worker, which signs in to Supabase server-side and never logs your password.</p>',
+    '<input id="email" type="email" autocomplete="username" placeholder="Owner email"><input id="password" type="password" autocomplete="current-password" placeholder="Owner password"><button id="go">Enroll Worker</button><pre id="out">Waiting...</pre>',
+    '<script>(function(){document.getElementById("go").addEventListener("click",async function(){const out=document.getElementById("out"),btn=this;btn.disabled=true;try{const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value;if(!email||!password)throw new Error("Enter owner email and password.");out.textContent="Signing in securely through TGG Worker...";const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),30000);let r;try{r=await fetch("/enroll/password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password}),signal:ctl.signal});}finally{clearTimeout(timer)}const raw=await r.text();let body={};try{body=JSON.parse(raw)}catch{}if(!r.ok)throw new Error((body.error||("Enrollment HTTP "+r.status))+(body.stage?":"+body.stage:"")+(body.detail?": "+body.detail:""));out.textContent=body.session_persisted===false?"Worker enrolled. Session is active in memory; persistence will retry automatically. TGG certification started.":"Worker enrolled and browser session bootstrapped. Refresh session persisted. TGG certification started.";}catch(e){out.textContent="ERROR: "+(e&&e.name==="AbortError"?"Enrollment request timed out. Retry once.":(e.message||String(e)));}finally{btn.disabled=false}})})();</script></body></html>'
   ].join('');
   return res.type('html').send(html);
 });
-app.post('/enroll/session', async (req, res) => {
-  try {
-    const access=String(req.body?.access_token||'').trim();
-    const refresh=String(req.body?.refresh_token||'').trim();
-    if(!access||!refresh)return res.status(400).json({error:'owner_session_required',stage:'request'});
-    if(!workerId||!workerToken)return res.status(503).json({error:'worker_not_configured',stage:'worker_config'});
-    console.log(JSON.stringify({tgg_owner_enroll:true,stage:'request_received',access_token_present:Boolean(access),refresh_token_present:Boolean(refresh)}));
-    const owner=await verifyOwnerSession(access);
-    if(!owner.ok){
-      console.error(JSON.stringify({tgg_owner_enroll:true,stage:'owner_verify',ok:false,reason:owner.error||'owner_auth_failed'}));
-      return res.status(403).json({error:'owner_auth_failed',stage:'owner_verify',detail:owner.error||'supabase_session_invalid'});
-    }
-    console.log(JSON.stringify({tgg_owner_enroll:true,stage:'owner_verify',ok:true}));
-    const worker=await verifyWorkerCredential(workerId,workerToken);
-    if(!worker.ok){
-      console.error(JSON.stringify({tgg_owner_enroll:true,stage:'worker_verify',ok:false,reason:worker.error||'worker_auth_failed'}));
-      return res.status(403).json({error:'worker_auth_failed',stage:'worker_verify',detail:worker.error||'worker_credential_invalid'});
-    }
-    console.log(JSON.stringify({tgg_owner_enroll:true,stage:'worker_verify',ok:true}));
-    ownerSession={access_token:access,refresh_token:refresh};
-    last={status:'bootstrapped',worker_id:workerId,updated_at:new Date().toISOString()};
-    let sessionPersisted=false;
-    let persistError=null;
-    for(let attempt=1;attempt<=3&&!sessionPersisted;attempt++){
+
+async function finishOwnerEnrollment(access, refresh) {
+  if(!access||!refresh) return {ok:false,status:400,body:{error:'owner_session_required',stage:'request'}};
+  if(!workerId||!workerToken) return {ok:false,status:503,body:{error:'worker_not_configured',stage:'worker_config'}};
+  const owner=await verifyOwnerSession(access);
+  if(!owner.ok) return {ok:false,status:403,body:{error:'owner_auth_failed',stage:'owner_verify',detail:owner.error||'supabase_session_invalid'}};
+  const worker=await verifyWorkerCredential(workerId,workerToken);
+  if(!worker.ok) return {ok:false,status:403,body:{error:'worker_auth_failed',stage:'worker_verify',detail:worker.error||'worker_credential_invalid'}};
+  ownerSession={access_token:access,refresh_token:refresh};
+  last={status:'bootstrapped',worker_id:workerId,updated_at:new Date().toISOString()};
+  let sessionPersisted=false;
+  let persistError=null;
+  for(let attempt=1;attempt<=3&&!sessionPersisted;attempt++){
+    try{ await persistOwnerRefreshToken(workerId,workerToken,refresh); sessionPersisted=true; }
+    catch(error){ persistError=error?.message||String(error); console.error(JSON.stringify({tgg_owner_enroll:true,stage:'session_persist',ok:false,attempt,reason:persistError})); if(attempt<3)await new Promise(r=>setTimeout(r,attempt*500)); }
+  }
+  scheduleBootstrapLoop(loop);
+  console.log(JSON.stringify({tgg_owner_enroll:true,stage:'session_ready',ok:true,session_persisted:sessionPersisted,persist_error:persistError||null}));
+  return {ok:true,status:sessionPersisted?200:202,body:{ok:true,worker_id:workerId,version:RUNTIME_VERSION,certification_started:true,session_persisted:sessionPersisted,persistence_warning:sessionPersisted?null:'session_memory_only'}};
+}
+
+app.post('/enroll/password', async (req,res)=>{
+  try{
+    const email=String(req.body?.email||'').trim();
+    const password=String(req.body?.password||'');
+    if(!email||!password) return res.status(400).json({error:'owner_credentials_required',stage:'request'});
+    console.log(JSON.stringify({tgg_owner_enroll:true,stage:'server_signin_start',email_present:true,password_present:true}));
+    const authClient=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:rpcFetch}});
+    let signIn=null;
+    let lastError=null;
+    for(let attempt=1;attempt<=3;attempt++){
       try{
-        await persistOwnerRefreshToken(workerId,workerToken,refresh);
-        sessionPersisted=true;
+        const result=await authClient.auth.signInWithPassword({email,password});
+        if(!result.error&&result.data?.session){signIn=result;break;}
+        lastError=result.error?.message||'owner_signin_failed';
+        if(!/504|timeout|gateway|fetch|network/i.test(String(lastError))||attempt===3)break;
       }catch(error){
-        persistError=error?.message||String(error);
-        console.error(JSON.stringify({tgg_owner_enroll:true,stage:'session_persist',ok:false,attempt,reason:persistError}));
-        if(attempt<3)await new Promise(r=>setTimeout(r,attempt*500));
+        lastError=error?.message||String(error);
+        if(!/504|timeout|gateway|fetch|network|aborted/i.test(String(lastError))||attempt===3)break;
       }
+      await new Promise(r=>setTimeout(r,attempt*700));
     }
-    scheduleBootstrapLoop(loop);
-    console.log(JSON.stringify({tgg_owner_enroll:true,stage:'session_ready',ok:true,session_persisted:sessionPersisted,persist_error:persistError||null}));
-    return res.status(sessionPersisted?200:202).json({ok:true,worker_id:workerId,version:RUNTIME_VERSION,certification_started:true,session_persisted:sessionPersisted,persistence_warning:sessionPersisted?null:'session_memory_only'});
-  } catch(error) {
+    if(!signIn?.data?.session){
+      console.error(JSON.stringify({tgg_owner_enroll:true,stage:'server_signin',ok:false,reason:String(lastError||'owner_signin_failed').slice(0,120)}));
+      return res.status(502).json({error:'owner_signin_failed',stage:'server_signin',detail:String(lastError||'Supabase sign-in failed').slice(0,120)});
+    }
+    const sess=signIn.data.session;
+    const done=await finishOwnerEnrollment(sess.access_token,sess.refresh_token);
+    return res.status(done.status).json(done.body);
+  }catch(error){
     const detail=String(error?.message||String(error)||'unknown_exception').slice(0,180);
-    console.error(JSON.stringify({tgg_owner_enroll:true,ok:false,stage:'exception',error:detail}));
-    return res.status(500).json({error:'owner_enrollment_failed',stage:'exception',detail});
+    console.error(JSON.stringify({tgg_owner_enroll:true,ok:false,stage:'password_exception',error:detail}));
+    return res.status(500).json({error:'owner_enrollment_failed',stage:'password_exception',detail});
+  }
+});
+
+app.post('/enroll/session', async (req,res)=>{
+  try{
+    const done=await finishOwnerEnrollment(String(req.body?.access_token||'').trim(),String(req.body?.refresh_token||'').trim());
+    return res.status(done.status).json(done.body);
+  }catch(error){
+    const detail=String(error?.message||String(error)||'unknown_exception').slice(0,180);
+    console.error(JSON.stringify({tgg_owner_enroll:true,ok:false,stage:'session_exception',error:detail}));
+    return res.status(500).json({error:'owner_enrollment_failed',stage:'session_exception',detail});
   }
 });
 app.post('/bootstrap', async (req, res) => { const authz = await authorizeBootstrap(req.body, { verifyOwner: verifyOwnerSession, verifyWorker: verifyWorkerCredential }); if (!authz.ok) return res.status(authz.error === 'invalid_bootstrap' ? 400 : 403).json({ error: authz.error }); const { worker_id:id, worker_token:token, access_token:access, refresh_token:refresh }=authz.value; workerId=id; workerToken=token; ownerSession={access_token:access,refresh_token:refresh}; try { await persistOwnerRefreshToken(id,token,refresh); } catch (_error) { return res.status(500).json({ error:'owner_session_persist_failed' }); } last={status:'bootstrapped',worker_id:id,updated_at:new Date().toISOString()}; scheduleBootstrapLoop(loop); return res.json({ok:true,worker_id:id,version:RUNTIME_VERSION,certification_started:true,session_persisted:true}); });

@@ -1,0 +1,2 @@
+(()=>{const K='tgg-v257-audit';function run(){const checks={runtime:!!window.TGGGame,continuity:!!window.TGGV256,release:!!window.TGGV254};const failed=Object.keys(checks).filter(k=>!checks[k]);const r={version:'V257',layer:'AUDIT',ok:!failed.length,checks,failed,at:new Date().toISOString(),mutationPolicy:'local-only'};try{localStorage.setItem(K,JSON.stringify(r))}catch{}return r}window.TGGV257={run,snapshot:()=>{try{return JSON.parse(localStorage.getItem(K)||'null')}catch{return null}}}})();
+window.TGGBulkAudits={versions:[257,258,259,269],localOnly:true};

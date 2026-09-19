@@ -52,6 +52,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/app.js?v=2.3.0' | grep -q 'queueServerRender'
-          curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/styles.css?v=2.3.0' | grep -q 'monitor-bezel'
+          app_body="$(curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/app.js?v=2.3.0')"
+          css_body="$(curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/styles.css?v=2.3.0')"
+          grep -q 'queueServerRender' <<<"$app_body"
+          grep -q 'monitor-bezel' <<<"$css_body"
           echo "Video Studio production assets verified."

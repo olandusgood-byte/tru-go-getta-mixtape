@@ -1186,7 +1186,7 @@ try{
     throw new Error('V5.41 physical interiors/crowd failed '+JSON.stringify(physicalWorld));
   }
 
-  await clearIncomingCallOverlay('pre keyboard movement');
+  await clearIncomingCallOverlay('pre player movement');
   await page.evaluate(()=>{
     window.TGGNPCRelations?.closeChoice?.();
     window.TGGGame?.show?.('game');
@@ -1196,23 +1196,46 @@ try{
     document.body.focus({preventScroll:true});
   });
   let moved=0;
-  let moveKey='';
-  for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
+  let moveAttempt='';
+  const apiAttempts=[
+    {name:'api-up',control:'up'},
+    {name:'api-right',control:'right'},
+    {name:'api-down',control:'down'},
+    {name:'api-left',control:'left'}
+  ];
+  for(const attempt of apiAttempts){
     const before=await page.evaluate(()=>({...window.TGGGame.getState()}));
-    await page.keyboard.down(key);
-    try{
-      await page.waitForFunction(prev=>{
-        const s=window.TGGGame.getState();
-        const walk=window.TGGGame.getWalkingState?.()||{};
-        return Math.hypot(s.x-prev.x,s.y-prev.y)>.01||Math.hypot(Number(walk.inputX)||0,Number(walk.inputY)||0)>.05;
-      },before,{timeout:1400});
-    }catch{}
-    await page.waitForTimeout(220);
-    await page.keyboard.up(key);
+    const supported=await page.evaluate(({control})=>{
+      const g=window.TGGGame;
+      if(typeof g?.setWalkKey!=='function')return false;
+      return g.setWalkKey(control,true)===true;
+    },attempt);
+    if(!supported)break;
+    await page.waitForTimeout(320);
+    await page.evaluate(({control})=>window.TGGGame?.setWalkKey?.(control,false),attempt);
     await page.waitForTimeout(140);
     const delta=await page.evaluate(prev=>{const s=window.TGGGame.getState();return Math.hypot(s.x-prev.x,s.y-prev.y)},before);
-    if(delta>moved){moved=delta;moveKey=key}
+    if(delta>moved){moved=delta;moveAttempt=attempt.name}
     if(moved>0.01)break;
+  }
+  if(!(moved>0.01)){
+    for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
+      const before=await page.evaluate(()=>({...window.TGGGame.getState()}));
+      await page.keyboard.down(key);
+      try{
+        await page.waitForFunction(prev=>{
+          const s=window.TGGGame.getState();
+          const walk=window.TGGGame.getWalkingState?.()||{};
+          return Math.hypot(s.x-prev.x,s.y-prev.y)>.01||Math.hypot(Number(walk.inputX)||0,Number(walk.inputY)||0)>.05;
+        },before,{timeout:1400});
+      }catch{}
+      await page.waitForTimeout(220);
+      await page.keyboard.up(key);
+      await page.waitForTimeout(140);
+      const delta=await page.evaluate(prev=>{const s=window.TGGGame.getState();return Math.hypot(s.x-prev.x,s.y-prev.y)},before);
+      if(delta>moved){moved=delta;moveAttempt='keyboard-'+key}
+      if(moved>0.01)break;
+    }
   }
   if(!(moved>0.01)){
     const diagnostics=await page.evaluate(()=>({

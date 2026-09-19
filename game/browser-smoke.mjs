@@ -139,6 +139,21 @@ try{
     throw new Error('V5.62-V5.66 graphics mega failed '+JSON.stringify(graphicsMega));
   }
 
+  await page.waitForFunction(()=>!!window.TGGV575VisualMega&&document.documentElement.dataset.tggVisualMega==='v575',{timeout:15000});
+  const visualMega575=await page.evaluate(()=>window.TGGV575VisualMega.getStatus());
+  if(visualMega575?.ok!==true||
+     visualMega575.layers?.length!==9||
+     visualMega575.reflectors<120||
+     visualMega575.streetFurniture<20||
+     visualMega575.districtSigns!==4||
+     visualMega575.landscaping!==8||
+     visualMega575.vehicleSignals<6||
+     visualMega575.atmosphereParticles!==120||
+     visualMega575.storefronts!==6||
+     visualMega575.animated!==true){
+    throw new Error('V5.67-V5.75 visual mega failed '+JSON.stringify(visualMega575));
+  }
+
   await clickRuntimeControl('#newGame','CREATE PLAYER');
   await page.waitForFunction(()=>document.getElementById('creator')?.classList.contains('active')&&!!document.getElementById('startGame'),{timeout:10000});
   await page.locator('#stageName').fill('TGG Smoke');

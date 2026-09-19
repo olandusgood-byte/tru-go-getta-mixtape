@@ -244,9 +244,15 @@
     if(state.enabled&&!gs.inVehicle&&rig()){
       const speedNorm=clamp((Number(dyn.speed)||0)/9.8,0,1);
       const a=clipPose(state.previous,state.phase,speedNorm),b=clipPose(state.current,state.phase,speedNorm);
-      const mixed=mixPose(a,b,state.blend);
+      const pose=mixPose(a,b,state.blend);
+      const turnLean=clamp((Number(dyn.turnDelta)||0)/105,-1,1)*(state.current==='run'?.115:.09)*(reducedMotion()?.35:1);
+      pose.body.z+=turnLean;
+      pose.body.y+=turnLean*.32;
+      pose.head.z-=turnLean*.48;
+      pose.leftArm.z-=turnLean*.18;
+      pose.rightArm.z-=turnLean*.18;
       const response=state.current==='run'?.36:state.current==='rap'||state.current==='perform'?.32:.26;
-      if(applyPose(mixed,response))state.appliedFrames++;
+      if(applyPose(pose,response))state.appliedFrames++;
       state.ready=true;
     }
     renderUI();

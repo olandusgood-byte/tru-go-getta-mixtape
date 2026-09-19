@@ -189,6 +189,13 @@
     test('v234 native camera mode',cameraForge.mode==='native-camera-forge'&&cameraForge.enabled===true);
     test('v234 camera HUD',!!document.getElementById('v234ForgeHud')&&!!document.getElementById('v234ForgePanel'));
     test('v234 camera forge css',!!document.querySelector('link[href*="v234-camera-forge.css"]'));
+    const cameraForge=window.TGGV234?.status?.()||{};
+    test('v234 camera core api',!!window.TGGV234Core&&typeof window.TGGV234Core.preset==='function'&&typeof window.TGGV234Core.blend==='function');
+    test('v234 camera forge api',!!window.TGGV234&&typeof window.TGGV234.applyPreset==='function'&&typeof window.TGGV234.pulse==='function');
+    test('v234 100 layers',Array.isArray(window.TGGV234?.layers)&&window.TGGV234.layers.length===100);
+    test('v234 native camera mode',cameraForge.mode==='native-camera-forge'&&cameraForge.enabled===true);
+    test('v234 camera HUD',!!document.getElementById('v234ForgeHud')&&!!document.getElementById('v234ForgePanel'));
+    test('v234 camera forge css',!!document.querySelector('link[href*="v234-camera-forge.css"]'));
     const cameraForgeV234=window.TGGV234?.status?.()||{};
     test('v234 camera core api',!!window.TGGV234Core&&typeof window.TGGV234Core.preset==='function'&&typeof window.TGGV234Core.blend==='function');
     test('v234 camera forge api',!!window.TGGV234&&typeof window.TGGV234.applyPreset==='function'&&typeof window.TGGV234.pulse==='function'&&typeof window.TGGV234.togglePhoto==='function');

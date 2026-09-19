@@ -121,14 +121,20 @@ if (!DATABASE_URL) {
 
   async function heartbeat() {
     await pool.query(`
-      insert into public.tgg_master_shared_settings(setting_key,title,config,is_published,updated_at)
-      values(
-        'auto_mode_runtime_heartbeat',
-        'TGG AUTO MODE Runtime Heartbeat',
-        jsonb_build_object('instance_id',$1,'status','online','heartbeat_at',now(),'interval_ms',$2),
-        true,now()
+      create table if not exists public.tgg_autopilot_heartbeat (
+        instance_id text primary key,
+        status text not null,
+        heartbeat_at timestamptz not null,
+        interval_ms integer not null,
+        updated_at timestamptz not null default now()
       )
-      on conflict(setting_key) do update set config=excluded.config,is_published=true,updated_at=now()
+    `);
+    await pool.query(`
+      insert into public.tgg_autopilot_heartbeat(instance_id,status,heartbeat_at,interval_ms,updated_at)
+      values($1,'online',now(),$2,now())
+      on conflict(instance_id) do update set
+        status=excluded.status,heartbeat_at=excluded.heartbeat_at,
+        interval_ms=excluded.interval_ms,updated_at=now()
     `, [INSTANCE_ID, INTERVAL_MS]);
     return { heartbeat: true };
   }
@@ -144,12 +150,6 @@ if (!DATABASE_URL) {
       if (task.task_key === 'source_truth_audit') {
         const snapshot = await sourceTruthAudit();
         summary = {...snapshot, ...(await generateIdeas(snapshot))};
-        await pool.query(
-          `insert into public.tgg_autonomic_events(event_key,event_type,payload,status)
-           values($1,'autopilot_source_audit',$2,'processed')
-           on conflict do nothing`,
-          [`autopilot_source_audit:${new Date().toISOString().slice(0,16)}`, snapshot]
-        ).catch(()=>{});
       }
       if (task.task_key === 'job_queue_maintenance') summary = await recoverExpiredJobs();
       if (task.task_key === 'runtime_heartbeat') summary = await heartbeat();

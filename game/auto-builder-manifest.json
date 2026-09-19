@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.20",
-  "module": "GAME-V1.20",
-  "name": "City Relationships + Contact Memory",
+  "version": "1.21",
+  "module": "GAME-V1.21",
+  "name": "Crew Social Graph + Contact Synergy",
   "workflow": [
     "BUILD",
     "TEST",
@@ -52,9 +52,13 @@
     "v1_20_relationships": true,
     "v1_20_contact_memory": true,
     "v1_20_local_memory_state": true,
-    "v1_20_no_external_mutation": true
+    "v1_20_no_external_mutation": true,
+    "v1_21_crew_graph": true,
+    "v1_21_contact_synergy": true,
+    "v1_21_local_social_state": true,
+    "v1_21_no_external_mutation": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.21 CREW SOCIAL GRAPH + CONTACT SYNERGY"
+  "next": "V1.22 CREW MISSIONS + COOPERATIVE ACTIVITY CHAINS"
 }

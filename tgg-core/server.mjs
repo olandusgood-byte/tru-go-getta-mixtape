@@ -1039,7 +1039,8 @@ app.post('/v1/workers/jobs/recover-certification', async (req,res,next)=>{
     if(!cert) return res.json({job:null,reason:'no_open_certification'});
     const existing=await pool.query("select * from tgg_browser_jobs where flow_key='certification_runtime' and payload->>'certification_id'=$1 and status in ('queued','running') order by id desc limit 1",[String(cert.id)]);
     if(existing.rowCount) return res.json({job:existing.rows[0],existing:true});
-    const job=await pool.query("insert into tgg_browser_jobs(flow_key,payload) values('certification_runtime',$1) returning *",[{certification_id:cert.id,browser_session_id:cert.browser_session_id||null,user_id:cert.user_id,certification_type:cert.certification_type}]);
+    const recoveryFlow=cert.certification_type==='recording_studio_runtime'?'recording_studio_runtime':'certification_runtime';
+    const job=await pool.query("insert into tgg_browser_jobs(flow_key,payload) values($1,$2) returning *",[recoveryFlow,{certification_id:cert.id,browser_session_id:cert.browser_session_id||null,user_id:cert.user_id,certification_type:cert.certification_type}]);
     await pool.query("update tgg_certifications set evidence=coalesce(evidence,'{}'::jsonb)||$2::jsonb where id=$1",[cert.id,JSON.stringify({browser_job_id:job.rows[0].id})]);
     res.status(201).json({job:job.rows[0],recovered:true});
   }catch(e){ console.error('[TGG Core] certification recovery failed',e); next(e); }
@@ -1124,7 +1125,8 @@ app.post('/v1/workers/jobs/ensure-certification', async (req,res,next)=>{
     if(existing.rowCount){
       const j=await pool.query("select * from tgg_browser_jobs where payload->>'certification_id'=$1 and status in ('queued','running') order by created_at desc limit 1",[String(existing.rows[0].id)]);
       if(j.rowCount) return res.json({certification:existing.rows[0],job:j.rows[0],created:true,existing:true});
-      const job=await pool.query("insert into tgg_browser_jobs(flow_key,payload) values('certification_runtime',$1) returning *",[{certification_id:existing.rows[0].id,browser_session_id:existing.rows[0].browser_session_id||null,user_id:user.id,certification_type:existing.rows[0].certification_type}]);
+      const recoveryFlow=existing.rows[0].certification_type==='recording_studio_runtime'?'recording_studio_runtime':'certification_runtime';
+      const job=await pool.query("insert into tgg_browser_jobs(flow_key,payload) values($1,$2) returning *",[recoveryFlow,{certification_id:existing.rows[0].id,browser_session_id:existing.rows[0].browser_session_id||null,user_id:user.id,certification_type:existing.rows[0].certification_type}]);
       await pool.query("update tgg_certifications set evidence=coalesce(evidence,'{}'::jsonb)||$2::jsonb where id=$1",[existing.rows[0].id,JSON.stringify({browser_job_id:job.rows[0].id})]);
       return res.status(201).json({certification:existing.rows[0],job:job.rows[0],created:true,recovered:true});
     }

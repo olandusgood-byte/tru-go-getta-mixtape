@@ -78,6 +78,7 @@
     document.getElementById('businessSync').onclick=loadAssets;
     renderAssets();
     window.TGGV114?.render?.('v114CityActivities');
+    const v115=document.createElement('div'); v115.id='v115CityRoutes'; el.querySelector('.panel')?.appendChild(v115); window.TGGV115?.render?.(v115);
     return el;
   }
 

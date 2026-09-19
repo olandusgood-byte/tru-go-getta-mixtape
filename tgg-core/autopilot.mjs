@@ -107,7 +107,7 @@ if (!DATABASE_URL) {
     return {ideas_generated: ideas.length};
   }
 
-  async function recoverExpiredJobs()
+  async function recoverExpiredJobs() {
     const r = await pool.query(`
       update tgg_jobs
       set status='queued', available_at=now(), error=coalesce(error,'Recovered by TGG Autopilot')

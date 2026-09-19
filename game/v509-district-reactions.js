@@ -105,9 +105,9 @@
     ensureUi();render();
     window.addEventListener('tgg:mission-aftermath',e=>applyAftermath(e.detail||{}));
     window.TGGDistrictReactions={version:VERSION,mutationPolicy:POLICY,applyAftermath,tierFor,snapshot,run};
-    window.TGGV509={version:VERSION,mutationPolicy:POLICY,run,snapshot};
-    document.documentElement.dataset.tggV509='on';
-    window.dispatchEvent(new CustomEvent('tgg:v509-ready',{detail:run()}));
+    window.TGGV509District={version:VERSION,mutationPolicy:POLICY,run,snapshot};
+    document.documentElement.dataset.tggV509District='on';
+    window.dispatchEvent(new CustomEvent('tgg:v509-district-ready',{detail:run()}));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

@@ -1061,9 +1061,9 @@ try{
     throw new Error('V5.08 aftermath follow-up completion failed '+JSON.stringify(aftermathResolved));
   }
 
-  await page.waitForFunction(()=>!!window.TGGDistrictReactions&&!!window.TGGV509,{timeout:15000});
+  await page.waitForFunction(()=>!!window.TGGDistrictReactions&&!!window.TGGV509District&&!!window.TGGV509,{timeout:15000});
   const districtReaction=await page.evaluate(()=>({
-    run:window.TGGV509.run(),
+    run:window.TGGDistrictReactions.run(),
     reaction:window.TGGDistrictReactions.snapshot(),
     relation:window.TGGNPCRelations.relationship('Rico Flame'),
     messages:window.TGGMessages.snapshot()

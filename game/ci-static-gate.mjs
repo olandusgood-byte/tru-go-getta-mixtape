@@ -29,7 +29,7 @@ assert(browserSyntax.status===0,'Browser smoke JavaScript syntax failed:\n'+(bro
 
 const liveViewerPath=path.resolve('tgg-core/public/live-viewer/index.html');
 const liveViewerHtml=fs.readFileSync(liveViewerPath,'utf8');
-const liveViewerInline=liveViewerHtml.split('<script>').slice(1).map(chunk=>chunk.split('</script>')[0]).filter(Boolean);
+const liveViewerInline=[...liveViewerHtml.matchAll(new RegExp('<script>([\\s\\S]*?)</script>','gi'))].map(m=>m[1]).filter(Boolean);
 assert(liveViewerInline.length>0,'LiveViewer inline runtime missing');
 for(const [i,source] of liveViewerInline.entries()){
   try{new Function(source)}catch(e){throw new Error('LiveViewer inline JavaScript syntax failed #'+(i+1)+': '+e.message);}

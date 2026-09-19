@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.81",
-  "module": "GAME-V1.81",
-  "name": "Continuous Production Watch + Browser Viewer Recovery Monitoring + Autonomous Runtime Controller",
+  "version": "1.84",
+  "module": "GAME-V1.84",
+  "name": "Continuous Integrity Hardening + Browser Viewer Failover + Autonomous Release Sentinel",
   "workflow": [
     "BUILD",
     "TEST",
@@ -138,9 +138,13 @@
     "v1_79_continuous_production_watch": true,
     "v1_80_browser_viewer_recovery_monitor": true,
     "v1_81_autonomous_runtime_controller": true,
-    "v1_81_local_state": true
+    "v1_81_local_state": true,
+    "v1_82_continuous_integrity_hardening": true,
+    "v1_83_browser_viewer_failover": true,
+    "v1_84_autonomous_release_sentinel": true,
+    "v1_84_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.82 CONTINUOUS HARDENING"
+  "next": "V1.85 CONTINUOUS HARDENING"
 }

@@ -56,6 +56,18 @@
           arrived:!!encounter.arrived
         };
       }
+      const streetMission=window.TGGStreetMissions?.navigationTarget?.();
+      if(streetMission){
+        const p=toWorld(streetMission);
+        return {
+          label:'MISSION • '+(streetMission.title||streetMission.name||'STREET RUN'),
+          x:p.x,z:p.z,
+          color:streetMission.color||'#c7ff00',
+          radius:Number(streetMission.radius)||7,
+          streetMission:true,
+          arrived:!!streetMission.arrived
+        };
+      }
       if(s?.accepted)return {label:'MISSION',x:(72-50)*.92,z:(36-50)*.92,color:'#ff466d'};
       const p=toWorld(s);
       const ds=window.TGG3D?.destinations||[];
@@ -88,10 +100,11 @@
       distance.textContent=(t.arrived||t.meters<4)?'ARRIVED':t.meters+' m';
       arrow.style.transform='rotate('+relative+'deg)';
       root.style.setProperty('--nav-color',t.color);
-      root.classList.toggle('story-active',!!t.story||!!t.worldBeat||!!t.meetup||!!t.encounter);
+      root.classList.toggle('story-active',!!t.story||!!t.worldBeat||!!t.meetup||!!t.encounter||!!t.streetMission);
       root.classList.toggle('world-beat-active',!!t.worldBeat);
       root.classList.toggle('meetup-active',!!t.meetup);
       root.classList.toggle('encounter-active',!!t.encounter);
+      root.classList.toggle('street-mission-active',!!t.streetMission);
       root.classList.add('active');
       requestAnimationFrame(update);
     }

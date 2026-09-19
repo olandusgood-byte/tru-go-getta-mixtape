@@ -111,20 +111,11 @@ try{
   const additiveFailures=layerCheck.additive.filter(x=>!x.loaded||!x.versionOk||!x.policyOk);
   if(layerCheck.missing.length||additiveFailures.length)throw new Error('Layer check '+JSON.stringify({missing:layerCheck.missing,additiveFailures}));
 
-  await page.getByRole('button',{name:'CREATE PLAYER'}).click();
+  await clickRuntimeControl('#newGame','CREATE PLAYER');
+  await page.waitForFunction(()=>document.getElementById('creator')?.classList.contains('active')&&!!document.getElementById('startGame'),{timeout:10000});
   await page.locator('#stageName').fill('TGG Smoke');
   await page.locator('#styleChoice').selectOption({label:'Artist'});
-  const startBtn=page.locator('#startGame');
-  const startState=await startBtn.evaluate(el=>({
-    disabled:!!el.disabled,
-    visible:!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length)
-  }));
-  if(startState.disabled||!startState.visible)throw new Error('ENTER THE CITY unavailable '+JSON.stringify(startState));
-  try{
-    await startBtn.click({timeout:5000});
-  }catch{
-    await startBtn.evaluate(el=>el.click());
-  }
+  await clickRuntimeControl('#startGame','ENTER THE CITY');
   await page.locator('#game.active').waitFor({timeout:30000});
 
   const qa=await page.evaluate(()=>({qa:window.TGGQA?.run?.(),release:window.TGGReleaseQA?.run?.()}));

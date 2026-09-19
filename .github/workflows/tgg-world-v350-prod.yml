@@ -1,4 +1,4 @@
-name: TGG World V3.50 Production Deploy
+name: TGG World V3.60 Production Deploy
 
 on:
   push:
@@ -22,12 +22,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify V3.50 payload
+      - name: Verify V3.60 payload
         run: |
-          test -f game/v350-gamefeel-cinematic.js
-          test -f game/v350-gamefeel-cinematic.css
-          grep -q "V3.50 GAME FEEL CINEMATIC MEGA" game/index.html
-          grep -q "V3.50 GAME FEEL CINEMATIC MEGA" game/runtime-version.json
+          test -f game/v360-living-city.js
+          test -f game/v360-living-city.css
+          grep -q "V3.60 LIVING CITY REACTIVE WORLD MEGA" game/index.html
+          grep -q "V3.60 LIVING CITY REACTIVE WORLD MEGA" game/runtime-version.json
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -38,7 +38,7 @@ jobs:
           mkdir -p .vercel
           printf '{"orgId":"team_TeV8b8Rv4jnchCzdYOOIehl2","projectId":"prj_U2qDy9qZ5EZAKuHTEaA03BMmmplX"}' > .vercel/project.json
 
-      - name: Deploy V3.50 to production
+      - name: Deploy V3.60 to production
         working-directory: game
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

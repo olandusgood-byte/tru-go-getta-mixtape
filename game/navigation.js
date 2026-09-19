@@ -45,6 +45,19 @@
           arrived:!!rival.arrived
         };
       }
+      const influence=window.TGGV226?.navigationTarget?.();
+      if(influence){
+        const p=toWorld(influence);
+        return {
+          label:influence.label||'CITY INFLUENCE',
+          x:p.x,z:p.z,
+          color:influence.color||'#48d7ff',
+          radius:Number(influence.radius)||7,
+          influence:true,
+          arrived:!!influence.arrived,
+          districtId:influence.districtId||''
+        };
+      }
       if(s?.accepted)return {label:'MISSION',x:(72-50)*.92,z:(36-50)*.92,color:'#ff466d'};
       const p=toWorld(s);
       const ds=window.TGG3D?.destinations||[];
@@ -80,6 +93,7 @@
       root.classList.toggle('story-active',!!t.story);
       root.classList.toggle('schedule-active',!!t.schedule);
       root.classList.toggle('rival-active',!!t.rival);
+      root.classList.toggle('influence-active',!!t.influence);
       root.classList.add('active');
       requestAnimationFrame(update);
     }

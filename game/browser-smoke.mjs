@@ -133,7 +133,11 @@ try{
   if(interactState.disabled||!interactState.worldBeatReady||!/^DO\s+/i.test(interactState.text)){
     throw new Error('World beat contextual INTERACT unavailable '+JSON.stringify(interactState));
   }
-  await page.locator('#interact3dBtn').click();
+  await page.evaluate(()=>{
+    const el=document.getElementById('interact3dBtn');
+    if(!el||el.disabled||!el.classList.contains('world-beat-ready'))throw new Error('World beat interaction runtime unavailable');
+    el.click();
+  });
   await page.waitForTimeout(180);
   const worldInteractionResult=await page.evaluate(start=>{
     const status=window.TGGWorldDepth?.getStatus?.()||{};

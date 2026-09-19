@@ -76,7 +76,7 @@ async function run(){
         const response=await page.goto(qaTarget,{waitUntil:'commit',timeout:15000});
         console.log(JSON.stringify({tgg_mega_stage:'desktop-page-committed',status:response?.status?.()||0}));
         await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGGGame&&window.TGGStoryMissions,{polling:100,timeout:90000});
-        console.log(JSON.stringify({tgg_mega_stage:'desktop-core-apis-ready',has3d:!!window.TGG3D}));
+        console.log(JSON.stringify({tgg_mega_stage:'desktop-core-apis-ready'}));
         await page.waitForTimeout(700);
         const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
         console.log(JSON.stringify({tgg_mega_stage:'desktop-suite-done',total:desktop.total,passed:desktop.passed,failed:desktop.failed}));
@@ -247,8 +247,7 @@ async function run(){
       record('chapter3-media-arrival',snap.step===5&&snap.current?.id==='premiere',JSON.stringify(snap));
 
       await mp.evaluate(()=>document.querySelector('[data-media="premiere"]')?.click());      await mp.waitForTimeout(25);
-      await mp.evaluate(()=>window.TGGStoryMissions.sync());
-      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
+      await mp.evaluate(()=>window.TGGStoryMissions.sync());      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter3-premiere',snap.step===6&&snap.current?.id==='home-base',JSON.stringify(snap));
 
       await mp.evaluate(()=>{window.__qaGame.x=63;window.__qaGame.y=24;window.TGGStoryMissions.sync();});
@@ -497,8 +496,7 @@ async function run(){
       record('first-contract-preserved',snap.status?.completed===true&&snap.status?.step===6&&snap.status?.steps?.length===6,JSON.stringify(snap.status));
       await mp.evaluate(()=>window.TGGStoryMissions.startChapter2());
       snap=await mp.evaluate(()=>({status:window.TGGStoryMissions.status(),target:window.TGGStoryMissions.navigationTarget(),nav:window.TGGNavigation?.getTarget?.(),hud:document.getElementById('storyWorldHud')?.classList.contains('active')}));
-      record('chapter2-starts',snap.status?.active===true&&snap.status?.step===0&&snap.status?.steps?.length===10,JSON.stringify(snap.status));
-      record('chapter2-manager-marker',snap.target?.id==='manager-return'&&snap.target?.x===72&&snap.target?.y===36,JSON.stringify(snap.target));
+      record('chapter2-starts',snap.status?.active===true&&snap.status?.step===0&&snap.status?.steps?.length===10,JSON.stringify(snap.status));      record('chapter2-manager-marker',snap.target?.id==='manager-return'&&snap.target?.x===72&&snap.target?.y===36,JSON.stringify(snap.target));
       record('chapter2-navigation-priority',snap.nav?.story===true&&String(snap.nav?.label||'').includes('CITY BUZZ'),JSON.stringify(snap.nav));
       record('chapter2-world-hud',snap.hud===true);
 
@@ -747,8 +745,7 @@ async function run(){
         api:typeof window.TGGWorldLife?.battleChoice==='function'&&typeof window.TGGWorldLife?.showMove==='function'&&typeof window.TGGWorldLife?.callContact==='function'&&typeof window.TGGWorldLife?.train==='function',        button:!!document.getElementById('worldLifeBtn'),
         board:!!document.getElementById('worldLifeBoard'),
         tabs:document.querySelectorAll('[data-life-tab]').length,
-        gameIntegrated:window.__gameSourceCheck||false
-      }));
+        gameIntegrated:window.__gameSourceCheck||false      }));
       record('world-life-api',initial.api);
       record('world-life-entry-button',initial.button);
       record('world-life-board',initial.board);      record('world-life-tabs',initial.tabs===4,String(initial.tabs));
@@ -997,8 +994,7 @@ async function run(){
       await page.waitForTimeout(700);      const reversed=await page.evaluate(()=>({drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.(),gear:document.getElementById('gearValue')?.textContent}));
       record('vehicle-reverse',Number(reversed.drive?.speed)<-.2&&reversed.gear==='R',JSON.stringify(reversed));
       await page.evaluate(()=>window.TGGGame?.setDriveKey?.('reverse',false));
-      await page.waitForTimeout(350);
-      const coast=await page.evaluate(()=>window.TGGGame?.getDrivingState?.());
+      await page.waitForTimeout(350);      const coast=await page.evaluate(()=>window.TGGGame?.getDrivingState?.());
       record('vehicle-coast-deceleration',Math.abs(Number(coast?.speed)||0)<Math.abs(Number(reversed.drive?.speed)||0),JSON.stringify({reversed:reversed.drive,coast}));
 
       await page.evaluate(()=>window.TGGGame?.setDriveKey?.('forward',true));
@@ -1247,8 +1243,7 @@ async function run(){
 
     const consoleErrors=[],pageErrors=[],failedResources=[];
     page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
-    page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
-    page.on('response',r=>{if(r.status()>=400)failedResources.push({url:r.url(),status:r.status()})});
+    page.on('pageerror',e=>pageErrors.push(e.message||String(e)));    page.on('response',r=>{if(r.status()>=400)failedResources.push({url:r.url(),status:r.status()})});
     const res=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
     await page.waitForSelector('#newGame',{state:'attached',timeout:15000});
     await page.evaluate(()=>document.getElementById('newGame')?.click());
@@ -1497,8 +1492,7 @@ async function run(){
     record('walk-movement',Number(walk?.x)>x0,`${x0}->${walk?.x}`);
 
     console.log(JSON.stringify({tgg_3d_smoke_step:'walk-complete'}));
-    await page.evaluate(()=>{
-      const s=window.TGGGame?.getState?.();
+    await page.evaluate(()=>{      const s=window.TGGGame?.getState?.();
       if(s){s.x=50;s.y=55;s.heading=0;s.inVehicle=false;}
       window.TGGGame?.refresh?.();
     });

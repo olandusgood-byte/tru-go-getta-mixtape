@@ -79,7 +79,9 @@ jobs:
             return {
               missing,
               qaPassed: qa?.passed ?? false,
+              qaFailures: (qa?.report || []).filter(x => x.status === 'FAIL').map(x => ({name:x.name,detail:x.detail})),
               releasePassed: release?.passed ?? false,
+              releaseFailures: (release?.checks || []).filter(x => !x.pass).map(x => ({name:x.name,detail:x.detail})),
               missionStarted: !!start,
               advanceReturned: !!advanced,
               progressAdvanced: after === before + 1 || after === 0,

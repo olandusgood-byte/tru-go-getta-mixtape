@@ -118,7 +118,7 @@ async function run(){
       add('v220-chapter-camera-cue',snap.camera==='orbit',snap.camera);
 
       await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tgg-story-event',{detail:{
-        type:'objective',chapter:2,title:'DRIVE TO STUDIO ROW',detail:'TAKE THE CAR OR WALK TO STUDIO ROW.'
+        type:'objective',chapter:1,title:'MEET M',detail:'OPEN THE MANAGER OPPORTUNITY AND LOCK IN YOUR FIRST CONTRACT.'
       }})));
       await page.waitForTimeout(150);
       snap=await page.evaluate(()=>({
@@ -129,8 +129,8 @@ async function run(){
         camera:window.TGG3D?.getCameraMode?.()
       }));
       add('v220-objective-visible',snap.cine?.visible===true&&String(snap.cine?.className||'').includes('objective'),snap.cine?.className);
-      add('v220-objective-copy',snap.kicker==='NEW OBJECTIVE'&&snap.title==='DRIVE TO STUDIO ROW',JSON.stringify(snap));
-      add('v220-objective-type',snap.type==='TRAVEL',snap.type);
+      add('v220-objective-copy',snap.kicker==='NEW OBJECTIVE'&&snap.title==='MEET M',JSON.stringify(snap));
+      add('v220-objective-type',snap.type==='CONTACT',snap.type);
       add('v220-objective-camera-cue',snap.camera==='chase',snap.camera);
 
       await page.waitForTimeout(1750);

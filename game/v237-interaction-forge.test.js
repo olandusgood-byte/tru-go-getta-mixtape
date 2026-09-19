@@ -1,0 +1,20 @@
+(() => {
+  const forge=globalThis.__V237ForgeUnderTest;
+  const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
+  assert(forge,'V2.37 Interaction IK Forge adapter API must exist');
+  assert(Array.isArray(forge.layers)&&forge.layers.length===100,'exact 100 Interaction layers');
+  assert(typeof forge.status==='function','status API');
+  assert(typeof forge.interact==='function','interact API');
+  assert(typeof forge.focus==='function','focus API');
+  assert(typeof forge.clearFocus==='function','clear focus API');
+  assert(typeof forge.setEnabled==='function','enabled API');
+  assert(typeof forge.restore==='function','restore API');
+  assert(Array.isArray(forge.interactions)&&forge.interactions.includes('mic')&&forge.interactions.includes('console')&&forge.interactions.includes('door')&&forge.interactions.includes('npc'),'interactions');
+  const s=forge.status();
+  assert(s.version==='V2.37 TGG INTERACTION + IK FORGE 100','version');
+  assert(s.mode==='native-interaction-ik-forge','mode');
+  assert(s.enabled===true,'enabled default');
+  assert(s.layerCount===100,'layer count');
+  assert(s.active===false,'inactive default');
+  return true;
+})();

@@ -1,11 +1,11 @@
 {
   "project": "TRU GO GETTA WORLD",
-  "canonical_runtime": "V3.20 REALISM MEGA PASS",
+  "canonical_runtime": "V3.30 MOTION VEHICLE CHARACTER",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v320_code_merged_pending_live_promotion",
+  "verification": "v330_code_merged_pending_live_promotion",
   "consolidation": "all-compatible-layers-one-runtime",
-  "base_runtime": "V3.00 FINAL MEGA BUILD",
+  "base_runtime": "V3.20 REALISM MEGA PASS",
   "features": [
     "threejs_city",
     "smooth_player_locomotion",
@@ -56,7 +56,15 @@
     "vehicle_clearcoat_refinement",
     "street_light_fixtures",
     "wet_surface_puddles",
-    "adaptive_detail_scaling"
+    "adaptive_detail_scaling",
+    "v330_motion_vehicle_character",
+    "body_weight_transfer",
+    "sprint_posture",
+    "vehicle_pitch_roll",
+    "suspension_micro_motion",
+    "camera_roll_bob",
+    "crowd_idle_motion",
+    "traffic_micro_suspension"
   ],
   "release_gate": "vercel_production_promotion_pending"
 }

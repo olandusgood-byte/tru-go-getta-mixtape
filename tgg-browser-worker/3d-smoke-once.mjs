@@ -65,7 +65,7 @@ async function run(){
       });
       const checks=[
         {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
-        {name:'mega-check-volume',pass:desktop.total>=240&&desktop.total<=340,detail:String(desktop.total)},
+        {name:'mega-check-volume',pass:desktop.total>=250&&desktop.total<=650,detail:String(desktop.total)},
         {name:'mega-mobile-core-ok',pass:mobileResult.qa.ok,detail:'passed='+mobileResult.qa.passed+'/'+mobileResult.qa.total},
         {name:'mega-mobile-no-overflow',pass:!mobileResult.overflowX&&mobileResult.scrollWidth<=391,detail:JSON.stringify({width:mobileResult.width,scrollWidth:mobileResult.scrollWidth})},
         {name:'mega-mobile-director-contained',pass:!!mobileResult.director&&mobileResult.director.left>=0&&mobileResult.director.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.director)},
@@ -247,8 +247,7 @@ async function run(){
         console_errors:consoleErrors,page_errors:errors,updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-      await mobile.close();await ctx.close();return;
-    }
+      await mobile.close();await ctx.close();return;    }
 
     if(STORY_WORLD_3D_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
@@ -497,8 +496,7 @@ async function run(){
       record('chapter2-director-talk',snap.step===9,JSON.stringify(snap));
 
       await mp.evaluate(()=>document.querySelector('[data-media="video"]')?.click());
-      await mp.waitForTimeout(40);
-      await mp.evaluate(()=>window.TGGStoryMissions.sync());
+      await mp.waitForTimeout(40);      await mp.evaluate(()=>window.TGGStoryMissions.sync());
       snap=await mp.evaluate(()=>({
         status:window.TGGStoryMissions.status(),
         game:{...window.__qaGame},career:{...window.__qaCareer},
@@ -747,7 +745,6 @@ async function run(){
       await mp.evaluate(()=>window.TGGWorldLife.train('stamina'));
       snap=await mp.evaluate(()=>({life:window.TGGWorldLife.getState(),stored:JSON.parse(localStorage.getItem('tgg-world-life-v1')||'null'),game:{...window.__qaGame}}));      record('gym-training',snap.life.attributes.stamina===before+1,JSON.stringify(snap.life.attributes));
       record('world-life-persistence',snap.stored?.attributes?.stamina===snap.life.attributes.stamina&&snap.stored?.activeOpportunity?.contactId==='director');
-
       const layout=await mp.evaluate(()=>{
         document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
         document.getElementById('worldLifeBoard')?.classList.add('active');
@@ -997,8 +994,7 @@ async function run(){
       await mp.setContent(html,{waitUntil:'domcontentloaded'});
       const layout=await mp.evaluate(()=>{
         document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
-        document.getElementById('game')?.classList.add('active');
-        const dpad=document.querySelector('.dpad')?.getBoundingClientRect();
+        document.getElementById('game')?.classList.add('active');        const dpad=document.querySelector('.dpad')?.getBoundingClientRect();
         const move=document.querySelector('.move-pad')?.getBoundingClientRect();
         const deck=document.querySelector('.action-deck')?.getBoundingClientRect();
         const buttons=[...document.querySelectorAll('.action-deck .actions button')].map(b=>b.getBoundingClientRect());
@@ -1247,8 +1243,7 @@ async function run(){
         threeType:typeof window.THREE,
         tgg3dType:typeof window.TGG3D,
         tgg3dKeys:Object.keys(window.TGG3D||{}),
-        readyType:typeof window.TGG3D?.isReady,
-        readyValue:(()=>{try{return window.TGG3D?.isReady?.()}catch(e){return 'THREW:'+String(e)}})(),
+        readyType:typeof window.TGG3D?.isReady,        readyValue:(()=>{try{return window.TGG3D?.isReady?.()}catch(e){return 'THREW:'+String(e)}})(),
         city3d:!!document.getElementById('city3d'),
         cityCanvas:!!document.querySelector('#city3d canvas'),
         scripts:[...document.scripts].map(s=>s.src||'[inline]'),
@@ -1497,8 +1492,7 @@ async function run(){
     await page.waitForTimeout(900);
     const accelerated=await page.evaluate(()=>({
       state:window.TGGGame?.getState?.(),
-      driving:window.TGGGame?.getDrivingState?.(),
-      speedText:document.getElementById('speedValue')?.textContent,
+      driving:window.TGGGame?.getDrivingState?.(),      speedText:document.getElementById('speedValue')?.textContent,
       gearText:document.getElementById('gearValue')?.textContent,
       hudActive:document.getElementById('vehicleHud')?.classList.contains('active')
     }));

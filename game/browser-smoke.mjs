@@ -396,6 +396,29 @@ try{
     throw new Error('V5.00 career contract outcome failed '+JSON.stringify(contractResolved));
   }
 
+  await page.waitForFunction(()=>!!window.TGGPhone&&!!window.TGGV501,{timeout:15000});
+  const phoneRun=await page.evaluate(()=>window.TGGV501.run());
+  if(phoneRun?.ok!==true)throw new Error('V5.01 phone runtime failed '+JSON.stringify(phoneRun));
+  await page.locator('#v501PhoneBtn').click();
+  await page.waitForTimeout(80);
+  const phoneState=await page.evaluate(()=>({
+    snap:window.TGGPhone.snapshot(),
+    hidden:document.getElementById('v501Phone')?.hidden,
+    cards:document.querySelectorAll('#v501Contacts .v501-contact').length,
+    dj:(()=>{const d=window.TGGPhone.contactData('DJ V');return d})()
+  }));
+  if(phoneState.hidden!==false||
+     phoneState.cards!==4||
+     phoneState.snap?.open!==true||
+     !(phoneState.dj?.affinity>=contractResolved.relation.relation.affinity)){
+    throw new Error('V5.01 phone UI failed '+JSON.stringify(phoneState));
+  }
+  await page.locator('#v501PhoneClose').click();
+  const phoneClosed=await page.evaluate(()=>({snap:window.TGGPhone.snapshot(),hidden:document.getElementById('v501Phone')?.hidden}));
+  if(phoneClosed.hidden!==true||phoneClosed.snap?.open!==false){
+    throw new Error('V5.01 phone close failed '+JSON.stringify(phoneClosed));
+  }
+
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
@@ -534,7 +557,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards}));
 }finally{
   await browser.close();
 }

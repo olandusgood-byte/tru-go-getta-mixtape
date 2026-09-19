@@ -1,11 +1,11 @@
 {
   "project": "TRU GO GETTA WORLD",
-  "canonical_runtime": "V3.80 LIFE SIM PROPERTY SOCIAL WORLD MEGA",
+  "canonical_runtime": "V3.90 CAREER MISSION ECONOMY WORLD LOOP MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
   "verification": "v380_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
-  "base_runtime": "V3.70 NPC TRAFFIC WORLD INTERACTION MEGA",
+  "base_runtime": "V3.80 LIFE SIM PROPERTY SOCIAL WORLD MEGA",
   "features": [
     "threejs_city",
     "smooth_player_locomotion",
@@ -111,9 +111,18 @@
     "performance_social_loop",
     "relationship_state",
     "career_momentum",
-    "story_momentum_hook"
+    "story_momentum_hook",
+    "v390_career_mission_economy_world_loop",
+    "dynamic_world_opportunities",
+    "life_stat_gating",
+    "city_heat_gating",
+    "career_momentum_gating",
+    "economy_reward_hooks",
+    "relationship_reward_hooks",
+    "opportunity_history",
+    "adaptive_opportunity_ranking"
   ],
-  "release_gate": "closed_certified",
+  "release_gate": "v390_validation_pending",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -121,7 +130,7 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PASS",
+    "browser_gate": "PENDING_V390_REVALIDATION",
     "public_alias": "https://tgg-world-play.vercel.app",
     "browser_cert_run_id": 35442240277,
     "browser_cert_artifact_id": 10584290716,

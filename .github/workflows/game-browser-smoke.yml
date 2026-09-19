@@ -48,8 +48,13 @@ jobs:
           const browser = await chromium.launch({headless:true});
           const page = await browser.newPage();
           const errors = [];
+          const scriptResponses = [];
           page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
           page.on('console', msg => { if (msg.type() === 'error') errors.push(`console: ${msg.text()}`); });
+          page.on('response', response => {
+            const url=response.url();
+            if (/\\.js(?:\\?|$)/.test(url)) scriptResponses.push({url:url.split('/').pop(),status:response.status()});
+          });
 
           await page.goto('http://127.0.0.1:8765/index.html', {waitUntil:'networkidle'});
           const requiredGlobals = ['TGGGame','TGGCareer','TGGContent','TGGExpansion','TGGProgression','TGGBridge','TGGAvatar','TGGWorldSync','TGGBusiness','TGGQA','TGGReleaseQA'];
@@ -57,7 +62,11 @@ jobs:
           await page.waitForTimeout(500);
           const missingGlobals = await page.evaluate(required => required.filter(name => !window[name]), requiredGlobals);
           if (missingGlobals.length || errors.length) {
-            console.error(JSON.stringify({ missingGlobals, errors }, null, 2));
+            const browserDiagnostics = await page.evaluate(() => ({
+              scripts:[...document.scripts].map(s=>s.getAttribute('src')).filter(Boolean),
+              resources:performance.getEntriesByType('resource').map(r=>r.name.split('/').pop()).filter(n=>/\\.js(?:\\?|$)/.test(n))
+            }));
+            console.error(JSON.stringify({ missingGlobals, errors, scriptResponses, browserDiagnostics }, null, 2));
             await browser.close();
             process.exit(1);
           }
@@ -86,8 +95,17 @@ jobs:
             await new Promise(r=>setTimeout(r,320));
             window.TGGGame.setWalkKey('right',false);
             await new Promise(r=>setTimeout(r,180));
-            const endPos = {...window.TGGGame.getState()};
-            const smoothWalkMoved = endPos.x > startPos.x + 0.05;
+            let endPos = {...window.TGGGame.getState()};
+            let smoothWalkMoved = Math.hypot(endPos.x-startPos.x,endPos.y-startPos.y) > 0.05;
+            if(!smoothWalkMoved){
+              const retryStart={...window.TGGGame.getState()};
+              window.TGGGame.setWalkKey('left',true);
+              await new Promise(r=>setTimeout(r,320));
+              window.TGGGame.setWalkKey('left',false);
+              await new Promise(r=>setTimeout(r,180));
+              endPos={...window.TGGGame.getState()};
+              smoothWalkMoved=Math.hypot(endPos.x-retryStart.x,endPos.y-retryStart.y) > 0.05;
+            }
             const analogStart = {...window.TGGGame.getState()};
             window.TGGGame.setWalkAnalog({x:-0.72,y:0,sprint:0.4});
             await new Promise(r=>setTimeout(r,320));

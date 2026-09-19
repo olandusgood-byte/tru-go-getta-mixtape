@@ -1,0 +1,28 @@
+{
+  "build": "V3.00 FINAL MEGA BUILD",
+  "mode": "MAX BATCH",
+  "base": "V2.50 REALITY MASTER CONSOLIDATION",
+  "layers": [
+    "graphics",
+    "character realism",
+    "world detail",
+    "vehicles",
+    "audio/runtime readiness",
+    "performance",
+    "gameplay",
+    "cinematics-ui hooks",
+    "qa-production"
+  ],
+  "policy": {
+    "skip_completed": true,
+    "one_runtime": true,
+    "one_qa_gate": true,
+    "fail_closed": true
+  },
+  "presets": [
+    "ultra",
+    "high",
+    "balanced",
+    "performance"
+  ]
+}

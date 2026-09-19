@@ -22,7 +22,9 @@ const reality=read('reality-master.js');
 
 assert.match(html,/Game V2\.50 REALITY MASTER/);
 assert.match(html,/GAME V2\.50 • REALITY MASTER/);
-assert.equal(runtime.canonical_runtime,'V2.50 REALITY MASTER CONSOLIDATION');
+assert.equal(runtime.canonical_runtime,'V3.00 FINAL MEGA BUILD');
+assert.equal(runtime.base_runtime,'V2.50 REALITY MASTER CONSOLIDATION');
+assert.equal(runtime.consolidation,'all-compatible-layers-one-runtime');
 for(const id of [
   'city3d','radar3d','radarPlayer','radarCar','vehicleHud','speedValue','gearValue',
   'driveStateValue','playerMoveHud','walkModeValue','walkSpeedValue','navHud','navArrow',
@@ -45,6 +47,7 @@ assert.ok(garage3d.includes('THREE'),'garage 3D runtime missing Three.js integra
 assert.ok(nav.includes('window.TGGNavigation'),'navigation runtime missing');
 assert.ok(gamepad.includes('gamepad')||gamepad.includes('Gamepad'),'gamepad runtime missing');
 assert.ok(finalBuild.length>1000,'final build runtime unexpectedly small');
+for(const token of ['V3.00 FINAL MEGA BUILD','applyPreset','readiness','runIntegratedQA','TGGRealism','TGGRealityMaster','setWalkTuning','setDriveTuning','setDensity']) assert.ok(finalBuild.includes(token),'V3 mega runtime missing '+token);
 assert.ok(story.includes('window.TGGStoryMissions'),'story mission runtime missing');
 assert.ok(story3d.includes('THREE')||story3d.includes('TGG3D'),'story 3D integration missing');
 assert.ok(vertical.includes('window.TGGVerticalSlice'),'adaptive vertical slice runtime missing');
@@ -52,6 +55,7 @@ assert.ok(mega.includes('window.TGGMegaQA'),'mega QA runtime missing');
 assert.ok(style.includes('.city3d')&&style.includes('.vehicle-hud')&&style.includes('.player-move-hud'),'baseline presentation styles missing');
 for(const token of ['ACESFilmicToneMapping','MeshPhysicalMaterial','adaptive-pixel-ratio']) assert.ok(photoreal.includes(token),'photoreal core missing '+token);
 for(const token of ['V2.50 REALITY MASTER CONSOLIDATION','human-anatomy-detail','vehicle-clearcoat-glass-trim','adaptive-fps-quality']) assert.ok(reality.includes(token),'reality master missing '+token);
+for(const token of ['human_realism','vehicle_realism','world_detail','unified_quality_presets','unified_movement_tuning','unified_vehicle_tuning','adaptive_crowd_density','integrated_readiness_matrix','integrated_mega_qa']) assert.ok(runtime.features.includes(token),'runtime feature missing '+token);
 
 for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   for(const [name,source] of Object.entries({game,game3d,street,garage,nav,finalBuild,story,story3d,vertical})){
@@ -59,4 +63,4 @@ for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   }
 }
 
-console.log('GAME_V2_50_REALITY_MASTER_STATIC_CONTRACT_PASS');
+console.log('GAME_V3_00_FINAL_MEGA_STATIC_CONTRACT_PASS');

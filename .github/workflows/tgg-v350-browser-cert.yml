@@ -1,4 +1,4 @@
-name: TGG V4.30 Live Browser Certification
+name: TGG V4.40 Live Browser Certification
 # cert revision 4
 
 on:
@@ -29,7 +29,7 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Run live V4.30 browser certificate
+      - name: Run live V4.40 browser certificate
         run: |
           cat > tgg-cert.mjs <<'EOF'
           import { chromium } from 'playwright';
@@ -50,8 +50,8 @@ jobs:
           if(!response || response.status()>=400) throw new Error('HTTP '+(response?.status()||'NO_RESPONSE'));
 
           const title=await page.title();
-          if(!/V4\.30 DAILY ROUTINE WELLNESS SCHEDULE WORLD MEGA/i.test(title)) throw new Error('Wrong title: '+title);
-          await page.getByText('GAME V4.30 • DAILY ROUTINE + WELLNESS + SCHEDULE',{exact:false}).waitFor({timeout:30000});
+          if(!/V4\.40 HOME SOCIAL LIFE MEGA/i.test(title)) throw new Error('Wrong title: '+title);
+          await page.getByText('GAME V4.40 • HOME + SOCIAL LIFE',{exact:false}).waitFor({timeout:30000});
 
           const runtime=await page.evaluate(()=>({
             three:!!window.THREE,
@@ -68,11 +68,12 @@ jobs:
             worldSystems:window.TGGWorldSystems?.version||null,
             lifestyle:window.TGGLifestyle?.version||null,
             social:window.TGGSocialWorld?.version||null,
-            routine:window.TGGRoutineWorld?.version||null
+            routine:window.TGGRoutineWorld?.version||null,
+            homeSocial:window.TGGHomeSocial?.version||null
           }));
           if(!runtime.game || !runtime.game3d) throw new Error('Core runtime not ready: '+JSON.stringify(runtime));
           for(const [k,v] of Object.entries({
-            polish:runtime.polish,realism:runtime.realism,motion:runtime.motion,world:runtime.world,living:runtime.living,interaction:runtime.interaction,life:runtime.life,opportunity:runtime.opportunity,worldSystems:runtime.worldSystems,lifestyle:runtime.lifestyle,social:runtime.social,routine:runtime.routine
+            polish:runtime.polish,realism:runtime.realism,motion:runtime.motion,world:runtime.world,living:runtime.living,interaction:runtime.interaction,life:runtime.life,opportunity:runtime.opportunity,worldSystems:runtime.worldSystems,lifestyle:runtime.lifestyle,social:runtime.social,routine:runtime.routine,homeSocial:runtime.homeSocial
           })) if(!v) throw new Error('Missing runtime layer '+k);
 
           await page.getByRole('button',{name:'CREATE PLAYER'}).click();
@@ -125,6 +126,7 @@ jobs:
             v410:window.TGGLifestyle?.getStatus?.()||null,
             v420:window.TGGSocialWorld?.getStatus?.()||null,
             v430:window.TGGRoutineWorld?.getStatus?.()||null,
+            v440:window.TGGHomeSocial?.getStatus?.()||null,
             weather:window.TGGCityWorldMega?.getStatus?.()||null
           }));
 
@@ -132,7 +134,7 @@ jobs:
           if(pageErrors.length) throw new Error('Page errors: '+JSON.stringify(pageErrors));
           if(benign.length) throw new Error('Console errors: '+JSON.stringify(benign));
 
-          console.log('TGG_V430_BROWSER_CERT_PASS '+JSON.stringify({title,runtime,moved,driven,final}));
+          console.log('TGG_V440_BROWSER_CERT_PASS '+JSON.stringify({title,runtime,moved,driven,final}));
           await browser.close();
           EOF
           node tgg-cert.mjs
@@ -141,10 +143,10 @@ jobs:
         if: success()
         run: |
           mkdir -p cert
-          printf '%s\n' '{"runtime":"V4.30 DAILY ROUTINE WELLNESS SCHEDULE WORLD MEGA","production":"READY","browser":"PASS","checks":["load","runtime-layers","create-player","enter-city","player-movement","vehicle-entry","vehicle-movement","camera","horn","save","console-errors"],"result":"CERTIFIED"}' > cert/v430-live-browser-certificate.json
+          printf '%s\n' '{"runtime":"V4.40 HOME SOCIAL LIFE MEGA","production":"READY","browser":"PASS","checks":["load","runtime-layers","create-player","enter-city","player-movement","vehicle-entry","vehicle-movement","camera","horn","save","console-errors"],"result":"CERTIFIED"}' > cert/v440-live-browser-certificate.json
 
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: tgg-v430-live-browser-certificate
-          path: cert/v430-live-browser-certificate.json
+          name: tgg-v440-live-browser-certificate
+          path: cert/v440-live-browser-certificate.json

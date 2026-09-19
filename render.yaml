@@ -6,6 +6,7 @@ services:
     plan: free
     branch: main
     autoDeploy: true
+    rootDir: tgg-core
     buildCommand: npm install
     startCommand: node tgg-core/server.mjs
     healthCheckPath: /health

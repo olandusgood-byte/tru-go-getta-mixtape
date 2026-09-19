@@ -111,6 +111,18 @@ try{
   const additiveFailures=layerCheck.additive.filter(x=>!x.loaded||!x.versionOk||!x.policyOk);
   if(layerCheck.missing.length||additiveFailures.length)throw new Error('Layer check '+JSON.stringify({missing:layerCheck.missing,additiveFailures}));
 
+  await page.waitForFunction(()=>!!window.TGGWorldVisuals&&document.documentElement.dataset.tggVisuals==='v561',{timeout:15000});
+  const visualWorld=await page.evaluate(()=>window.TGGWorldVisuals.getStatus());
+  if(visualWorld?.ok!==true||
+     visualWorld.vehicleParts<18||
+     visualWorld.facadeWindows<250||
+     visualWorld.facadeDoors!==64||
+     visualWorld.rooftopStructures!==64||
+     !visualWorld.features?.includes('vehicle-detail-kit')||
+     !visualWorld.features?.includes('facade-window-depth')){
+    throw new Error('V5.61 world visual realism failed '+JSON.stringify(visualWorld));
+  }
+
   await clickRuntimeControl('#newGame','CREATE PLAYER');
   await page.waitForFunction(()=>document.getElementById('creator')?.classList.contains('active')&&!!document.getElementById('startGame'),{timeout:10000});
   await page.locator('#stageName').fill('TGG Smoke');

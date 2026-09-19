@@ -23,11 +23,10 @@ try{
 
   const launchState=await page.locator('#launch').evaluate(el=>({
     disabled:!!el.disabled,
-    visible:!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length),
-    bound:typeof el.onclick==='function'
+    visible:!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length)
   }));
-  if(launchState.disabled||!launchState.visible||!launchState.bound)throw new Error('LiveViewer launch control unavailable '+JSON.stringify(launchState));
-  await page.locator('#launch').evaluate(el=>el.click());
+  if(launchState.disabled||!launchState.visible)throw new Error('LiveViewer launch control unavailable '+JSON.stringify(launchState));
+  await page.locator('#launch').click();
   await page.waitForFunction(()=>/Enter your real TGG session token first/i.test(document.getElementById('action')?.textContent||''),{timeout:3000});
   const guard=await page.locator('#action').innerText();
   if(!/Enter your real TGG session token first/i.test(guard))throw new Error('Real-session guard failed: '+guard);

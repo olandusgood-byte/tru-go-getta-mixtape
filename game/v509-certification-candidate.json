@@ -1,0 +1,17 @@
+{
+  "project": "TRU GO GETTA WORLD",
+  "runtime": "V5.09 WORLD IMMERSION MEGA",
+  "status": "PENDING",
+  "mode": "UNIFIED_ALL_BATCHES",
+  "candidate_commit": "9530d94c6047ee8abd9ba732400c9d06a4a0a392",
+  "checks": {
+    "static_gate": "PENDING",
+    "mega_regression": "PENDING",
+    "browser_smoke": "PENDING",
+    "liveviewer_smoke": "PENDING",
+    "production_credential": "PENDING",
+    "exact_sha_production_deploy": "PENDING",
+    "production_runtime_verify": "PENDING"
+  },
+  "result": "AWAITING_UNIFIED_CERTIFICATION"
+}

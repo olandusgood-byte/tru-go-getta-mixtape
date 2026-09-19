@@ -1,5 +1,7 @@
 (() => {
-  const DEAD=.22;
+  const DEAD=.14;
+  const CURVE=1.32;
+  const TRIGGER_DEAD=.04;
   let connected=false;
   const held={walkUp:false,walkDown:false,walkLeft:false,walkRight:false,sprint:false,gas:false,reverse:false,steerLeft:false,steerRight:false,drift:false};
   const edge={interact:false,vehicle:false,camera:false,horn:false};
@@ -10,10 +12,13 @@
     return null;
   };
   const value=(p,i)=>Math.max(0,Math.min(1,Number(p?.buttons?.[i]?.value||0)));
+  const trigger=(p,i)=>{const v=value(p,i);return v<=TRIGGER_DEAD?0:(v-TRIGGER_DEAD)/(1-TRIGGER_DEAD);};
   const button=(p,i)=>!!p?.buttons?.[i]?.pressed||value(p,i)>.45;
   const axis=(p,i)=>{
-    const v=Number(p?.axes?.[i]||0);
-    return Math.abs(v)<DEAD?0:v;
+    const v=Math.max(-1,Math.min(1,Number(p?.axes?.[i]||0))),a=Math.abs(v);
+    if(a<=DEAD)return 0;
+    const scaled=(a-DEAD)/(1-DEAD);
+    return Math.sign(v)*Math.pow(scaled,CURVE);
   };
   const change=(key,next,fn)=>{
     if(held[key]===next)return;
@@ -46,7 +51,7 @@
 
     const x=axis(p,0),y=axis(p,1);
     if(s.inVehicle){
-      const rt=value(p,7),lt=value(p,6);
+      const rt=trigger(p,7),lt=trigger(p,6);
       let throttle=rt-lt;
       if(Math.abs(throttle)<.05&&Math.abs(y)>.35)throttle=-y;
       const hb=Math.max(value(p,4),value(p,5));
@@ -61,7 +66,7 @@
         if(held[name]){held[name]=false;g.setWalkKey?.(key,false);}
       }
     }else{
-      const sprint=Math.max(value(p,7),button(p,10)?1:0);
+      const sprint=Math.max(trigger(p,7),button(p,10)?1:0);
       g.setWalkAnalog?.({x,y,sprint});
       change('walkLeft',false,v=>g.setWalkKey?.('left',v));
       change('walkRight',false,v=>g.setWalkKey?.('right',v));
@@ -83,5 +88,5 @@
   window.addEventListener('gamepadconnected',()=>{connected=false;});
   window.addEventListener('gamepaddisconnected',()=>{connected=false;releaseAll();});
   requestAnimationFrame(tick);
-  window.TGGGamepad={isConnected:()=>connected,releaseAll};
+  window.TGGGamepad={isConnected:()=>connected,releaseAll,getInputProfile:()=>({deadzone:DEAD,curve:CURVE,triggerDeadzone:TRIGGER_DEAD})};
 })();

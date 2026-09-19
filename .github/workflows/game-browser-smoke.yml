@@ -101,7 +101,14 @@ jobs:
             const driveTuning = window.TGGGame.getDriveTuning();
             const steeringTuning = driveTuning.highSpeedSteer < driveTuning.lowSpeedSteer &&
               driveTuning.steerOut > driveTuning.steerIn &&
+              driveTuning.yawResponse > 0 && driveTuning.yawCenter > driveTuning.yawResponse &&
+              Number.isFinite(Number(window.TGGGame.getDrivingState()?.yawRate)) &&
               walkTuning.inputResponse > 0;
+            const controllerProfile=window.TGGGamepad?.getInputProfile?.();
+            const controllerCurve=!!controllerProfile &&
+              controllerProfile.deadzone>=.08 && controllerProfile.deadzone<=.2 &&
+              controllerProfile.curve>1 && controllerProfile.curve<2 &&
+              controllerProfile.triggerDeadzone>=0 && controllerProfile.triggerDeadzone<.1;
 
             const overlap=(a,b)=>!(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top);
             const dpadButtons=[...document.querySelectorAll('.dpad button')].map(el=>el.getBoundingClientRect());
@@ -127,6 +134,7 @@ jobs:
               analogWalkMoved,
               analogInputReset,
               steeringTuning,
+              controllerCurve,
               controlsSeparated,
               directionLabels,
               currentScreen: [...document.querySelectorAll('.screen')].find(el => el.classList.contains('active'))?.id || null
@@ -139,7 +147,7 @@ jobs:
             console.error(errors.join('\n'));
             process.exit(1);
           }
-          if (result.missing.length || !result.qaPassed || !result.releasePassed || !result.missionStarted || !result.advanceReturned || !result.progressAdvanced || !result.localStorageSaved || !result.progressionVisible || !result.achievementCatalog || !result.movementApi || !result.smoothWalkMoved || !result.analogWalkMoved || !result.analogInputReset || !result.steeringTuning || !result.controlsSeparated || !result.directionLabels) {
+          if (result.missing.length || !result.qaPassed || !result.releasePassed || !result.missionStarted || !result.advanceReturned || !result.progressAdvanced || !result.localStorageSaved || !result.progressionVisible || !result.achievementCatalog || !result.movementApi || !result.smoothWalkMoved || !result.analogWalkMoved || !result.analogInputReset || !result.steeringTuning || !result.controllerCurve || !result.controlsSeparated || !result.directionLabels) {
             console.error(JSON.stringify(result, null, 2));
             process.exit(1);
           }

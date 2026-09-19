@@ -311,9 +311,30 @@
     return best&&bestDist<=radius?{...best,distance:bestDist}:null;
   }
 
+  function ensureInteractButton(){
+    let interactButton=document.getElementById('interact3dBtn');
+    if(interactButton)return interactButton;
+    const actions=document.querySelector('#game .action-deck .actions');
+    if(!actions)return null;
+    interactButton=document.createElement('button');
+    interactButton.id='interact3dBtn';
+    interactButton.className='action-primary';
+    interactButton.disabled=true;
+    interactButton.textContent='INTERACT';
+    interactButton.addEventListener('click',()=>interactNearest());
+    const cameraButton=document.getElementById('camera3dBtn');
+    if(cameraButton&&cameraButton.parentNode===actions){
+      actions.insertBefore(interactButton,cameraButton);
+    }else{
+      actions.prepend(interactButton);
+    }
+    return interactButton;
+  }
+
+
   function refreshInteractionState(s=window.TGGGame?.getState?.()){
-    const interactButton=document.getElementById('interact3dBtn');
-    if(!interactButton)return {ready:false,reason:'missing-button'};
+    const interactButton=ensureInteractButton();
+    if(!interactButton)return {ready:false,reason:'missing-actions-deck'};
     const near=nearbyDestination(s);
     const storyTarget=window.TGGStoryMissions?.navigationTarget?.();
     const storyHere=!!storyTarget?.arrived;
@@ -660,6 +681,7 @@
     setCarAppearance,
     destinations,
     nearbyDestination,
+    ensureInteractButton,
     refreshInteractionState,
     interactNearest,
     pedestrians,

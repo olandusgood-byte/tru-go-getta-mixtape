@@ -8,7 +8,7 @@ async function select(id){sid=id;count=0;lastEventId=0;if(reconnectTimer)clearTi
 function addEvent(e){count++;$('count').textContent=count;$('flow').textContent=e.event_type||'—';const x=document.createElement('div');x.className='event';x.innerHTML='<b>'+String(e.event_type||'event')+'</b> <span class="muted">'+new Date(e.created_at||Date.now()).toLocaleTimeString()+'</span><div>'+escapeHtml(JSON.stringify(e.payload||{}))+'</div>';$('stream').prepend(x)}
 function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 $('connect').onclick=()=>{token=$('token').value.trim();sid='';$('conn').textContent='Connecting…';load()};
-$('launch').onclick=async()=>{
+window.TGGLiveViewerLaunch=async()=>{
   token=$('token').value.trim();if(!token){$('action').textContent='Enter your real TGG session token first.';return}
   const btn=$('launch');btn.disabled=true;$('action').textContent='Creating browser session…';
   try{
@@ -21,5 +21,6 @@ $('launch').onclick=async()=>{
     await load();await select(sid);
   }catch(e){$('action').textContent='Launch failed: '+(e.message||String(e))}finally{btn.disabled=false}
 };
+$('launch').onclick=window.TGGLiveViewerLaunch;
 $('refresh').onclick=load;
 </script></body></html>

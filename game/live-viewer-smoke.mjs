@@ -21,7 +21,14 @@ try{
     if(!body.includes(text))throw new Error('Missing LiveViewer text: '+text);
   }
 
-  await page.locator('#launch').click();
+  const launchState=await page.locator('#launch').evaluate(el=>({
+    disabled:!!el.disabled,
+    visible:!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length),
+    bound:typeof el.onclick==='function'
+  }));
+  if(launchState.disabled||!launchState.visible||!launchState.bound)throw new Error('LiveViewer launch control unavailable '+JSON.stringify(launchState));
+  await page.locator('#launch').evaluate(el=>el.click());
+  await page.waitForFunction(()=>/Enter your real TGG session token first/i.test(document.getElementById('action')?.textContent||''),{timeout:3000});
   const guard=await page.locator('#action').innerText();
   if(!/Enter your real TGG session token first/i.test(guard))throw new Error('Real-session guard failed: '+guard);
 

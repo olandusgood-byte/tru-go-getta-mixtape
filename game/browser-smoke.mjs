@@ -833,17 +833,44 @@ try{
     throw new Error('V5.06 street encounter handoff failed '+JSON.stringify(encounterResolved));
   }
 
+  await clearIncomingCallOverlay('pre keyboard movement');
+  await page.evaluate(()=>{
+    window.TGGNPCRelations?.closeChoice?.();
+    window.TGGGame?.show?.('game');
+    const active=document.activeElement;
+    active?.blur?.();
+    document.body.tabIndex=-1;
+    document.body.focus({preventScroll:true});
+  });
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
-    const before=await page.evaluate(()=>window.TGGGame.getState());
-    await page.keyboard.down(key);await page.waitForTimeout(450);await page.keyboard.up(key);await page.waitForTimeout(180);
+    const before=await page.evaluate(()=>({...window.TGGGame.getState()}));
+    await page.keyboard.down(key);
+    try{
+      await page.waitForFunction(prev=>{
+        const s=window.TGGGame.getState();
+        const walk=window.TGGGame.getWalkingState?.()||{};
+        return Math.hypot(s.x-prev.x,s.y-prev.y)>.01||Math.hypot(Number(walk.inputX)||0,Number(walk.inputY)||0)>.05;
+      },before,{timeout:1400});
+    }catch{}
+    await page.waitForTimeout(220);
+    await page.keyboard.up(key);
+    await page.waitForTimeout(140);
     const delta=await page.evaluate(prev=>{const s=window.TGGGame.getState();return Math.hypot(s.x-prev.x,s.y-prev.y)},before);
     if(delta>moved){moved=delta;moveKey=key}
     if(moved>0.01)break;
   }
   if(!(moved>0.01)){
-    const diagnostics=await page.evaluate(()=>({state:window.TGGGame.getState(),walking:window.TGGGame.getWalkingState?.(),screen:window.TGGGame.getActiveScreen?.()}));
+    const diagnostics=await page.evaluate(()=>({
+      state:window.TGGGame.getState(),
+      walking:window.TGGGame.getWalkingState?.(),
+      screen:window.TGGGame.getActiveScreen?.(),
+      activeElement:{tag:document.activeElement?.tagName||null,id:document.activeElement?.id||null},
+      incoming:window.TGGIncomingCalls?.snapshot?.().current||null,
+      encounter:window.TGGStreetEncounters?.snapshot?.().active||null,
+      meetup:window.TGGMeetups?.snapshot?.().active||null
+    }));
     throw new Error('Player movement failed '+JSON.stringify(diagnostics));
   }
 

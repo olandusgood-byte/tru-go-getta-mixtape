@@ -1,0 +1,48 @@
+{
+  "project": "TRU GO GETTA Game",
+  "release": "V1.3 City Life",
+  "base": "V1.2 City Progression",
+  "status": "verified",
+  "principles": [
+    "additive-only over verified V1.2",
+    "no changes to V1.2 save keys without migration",
+    "every new module must expose a stable window.TGG API",
+    "browser smoke remains required",
+    "production remains gated"
+  ],
+  "modules": [
+    {
+      "id": "V1.3-CITY-LIFE",
+      "name": "City Events",
+      "scope": "time-independent repeatable city activities with cash, XP, and reputation rewards"
+    },
+    {
+      "id": "V1.3-CREW",
+      "name": "Crew System",
+      "scope": "recruitable crew slots with simple bonuses and persistent local state"
+    },
+    {
+      "id": "V1.3-INVENTORY",
+      "name": "Inventory",
+      "scope": "lightweight item tracking for beats, promo materials, and career unlocks"
+    },
+    {
+      "id": "V1.3-EVENTS-UI",
+      "name": "City Life UI",
+      "scope": "new board and HUD entry points without disturbing existing screens"
+    },
+    {
+      "id": "V1.3-QA",
+      "name": "Regression Gate",
+      "scope": "validate V1.2 APIs, new V1.3 APIs, persistence, and browser interaction"
+    }
+  ],
+  "gates": [
+    "v1_2_integrity_unchanged",
+    "new_api_presence",
+    "save_repair_compatibility",
+    "browser_smoke",
+    "production_gated"
+  ],
+  "completedBy": "V1.4-INVENTORY-VERIFY-PASSED"
+}

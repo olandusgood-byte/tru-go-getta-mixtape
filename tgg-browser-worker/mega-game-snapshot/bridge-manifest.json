@@ -1,0 +1,73 @@
+{
+  "project": "TRU GO GETTA Game",
+  "version": "1.12",
+  "module": "GAME-BRIDGE-V1.12",
+  "name": "Creator OS + Property/Vehicle Discovery Bridge",
+  "principles": [
+    "separate game runtime from Blogger theme",
+    "external launch points only",
+    "no automatic redirects",
+    "no shared mutable page state",
+    "no credential storage in game bundle",
+    "trusted transport injection only"
+  ],
+  "links": [
+    "public_site",
+    "creator_dashboard"
+  ],
+  "snapshot": [
+    "player",
+    "level",
+    "cash",
+    "xp",
+    "reputation",
+    "recordings",
+    "mixtapes",
+    "avatar"
+  ],
+  "worldSync": {
+    "mode": "offline_ready",
+    "transport": "injected",
+    "backendRpcs": [
+      "tgg_world_mvp_v1_bootstrap_player",
+      "tgg_world_v11_6_presence_bootstrap",
+      "tgg_world_v4_phone_bootstrap",
+      "tgg_world_v11_save_avatar",
+      "tgg_world_presence_heartbeat_full",
+      "tgg_world_v11_6_presence_bundle",
+      "tgg_world_next_moves",
+      "tgg_world_career_climb",
+      "tgg_world_career_tracks",
+      "tgg_world_v12_career_industry_bundle",
+      "tgg_world_economy_bundle",
+      "tgg_world_wallet_reconcile",
+      "tgg_world_inventory_equip",
+      "tgg_world_social_hub",
+      "tgg_world_social_lobby_bundle",
+      "tgg_world_social_engagement",
+      "tgg_world_discover_events",
+      "tgg_world_crew_activity",
+      "tgg_world_crew_rides",
+      "tgg_world_crew_bundle",
+      "tgg_world_v12_contact_offers_bundle",
+      "tgg_world_creative_missions",
+      "tgg_world_npc_encounters",
+      "tgg_world_story_control",
+      "tgg_world_memory_history",
+      "tgg_world_location_bundle",
+      "tgg_world_property_market",
+      "tgg_world_property_upgrades",
+      "tgg_world_vehicle_progression",
+      "tgg_world_vehicle_bundle"
+    ]
+  },
+  "workflow": [
+    "BUILD",
+    "TEST",
+    "REPAIR",
+    "VERIFY",
+    "CHECKPOINT",
+    "ADVANCE"
+  ],
+  "next": "V1.13 PROGRESSION + BUSINESS DISCOVERY"
+}

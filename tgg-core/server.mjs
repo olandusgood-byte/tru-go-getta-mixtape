@@ -997,7 +997,12 @@ app.post('/v1/certifications', auth, async (req,res,next)=>{
       'insert into tgg_certifications(browser_session_id,user_id,certification_type,evidence) values($1,$2,$3,$4) returning *',
       [browser_session_id||null,req.user.id,certification_type,evidence]
     );
-    res.status(201).json({certification:r.rows[0]});
+    const job=await pool.query(
+      'insert into tgg_browser_jobs(flow_key,payload) values($1,$2) returning *',
+      ['certification_runtime',{certification_id:r.rows[0].id,browser_session_id:browser_session_id||null,user_id:req.user.id,certification_type}]
+    );
+    await pool.query('update tgg_certifications set evidence=coalesce(evidence,\'{}\'::jsonb)||$2::jsonb where id=$1',[r.rows[0].id,JSON.stringify({browser_job_id:job.rows[0].id})]);
+    res.status(201).json({certification:{...r.rows[0],evidence:{...evidence,browser_job_id:job.rows[0].id}},job:job.rows[0]});
   } catch(e){next(e);}
 });
 

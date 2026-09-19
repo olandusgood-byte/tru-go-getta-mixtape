@@ -61,6 +61,7 @@
     state.show.active=false;
     state.tab='battle';
     state.battle={active:true,round:0,player:0,rival:0,last:'ROUND 1 — set the tone.'};
+    window.TGGLifeOS?.applyCareerAction?.('battle');
     save();render();emitFocus('downtown');notify('RAP BATTLE STARTED');
   }
   function battleChoice(choice){
@@ -70,7 +71,8 @@
     const rival=rivalMoves[(round+state.battleWins)%rivalMoves.length];
     const attr=choice==='bars'?state.attributes.focus:choice==='crowd'?state.attributes.presence:Math.ceil((state.attributes.focus+state.attributes.presence)/2);
     const base={flow:4,bars:4.5,crowd:3.5}[choice]||3;
-    const playerScore=base+attr*.7+battleModifier(choice,rival);
+    const lifeReadiness=window.TGGLifeOS?.performanceModifier?.()||1;
+    const playerScore=(base+attr*.7+battleModifier(choice,rival))*lifeReadiness;
     const rivalScore=3.8+round*.65+(game().level||1)*.12;
     state.battle.player+=playerScore;
     state.battle.rival+=rivalScore;
@@ -99,11 +101,13 @@
     state.battle.active=false;
     state.tab='show';
     state.show={active:true,move:0,energy:clamp(62+state.attributes.stamina*6,0,100),crowd:35,score:0,last:'LIGHTS UP — build the crowd.'};
+    window.TGGLifeOS?.applyCareerAction?.('show');
     save();render();emitFocus('stage');notify('LIVE SHOW STARTED');
   }
   function showMove(move){
     if(!state.show.active)startShow();
     const a=state.attributes;
+    const lifeReadiness=window.TGGLifeOS?.performanceModifier?.()||1;
     if(move==='perform'){
       state.show.energy-=18;
       state.show.crowd+=10+a.presence*2;
@@ -120,6 +124,8 @@
       state.show.score+=7+a.focus;
       state.show.last='PACE THE SET — recover and reset the room.';
     }
+    state.show.score+=Math.round((lifeReadiness-1)*10);
+    state.show.crowd+=Math.round((lifeReadiness-1)*8);
     state.show.energy=clamp(state.show.energy,0,100);
     state.show.crowd=clamp(state.show.crowd,0,100);
     state.show.move++;
@@ -146,6 +152,7 @@
     const contact=contacts.find(x=>x.id===id);
     if(!contact||!contactUnlocked(contact)){notify('BUILD YOUR LEVEL TO UNLOCK THIS CONTACT');return false;}
     state.contacts[id]=(Number(state.contacts[id])||0)+1;
+    window.TGGLifeOS?.contactInteraction?.(id,'call');
     state.activeOpportunity={contactId:id,title:contact.opportunity,detail:contact.detail,createdAt:Date.now()};
     save();render();
     notify(contact.name.toUpperCase()+' PICKED UP — '+contact.opportunity.toUpperCase());
@@ -163,6 +170,7 @@
     if(!window.TGGGame?.spend?.(cost))return false;
     state.attributes[attr]=level+1;
     state.training++;
+    window.TGGLifeOS?.applyCareerAction?.('training');
     window.TGGCareer?.addRep?.(5);
     save();render();
     notify(`${attr.toUpperCase()} +1 • TRAINING COST $${cost}`);

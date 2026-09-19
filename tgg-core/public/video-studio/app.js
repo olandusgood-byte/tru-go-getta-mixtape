@@ -299,30 +299,35 @@ function applyPixelate(bufferCtx,w,h,amount){
   pixelCanvas.width=sw;pixelCanvas.height=sh;pixelCtx.imageSmoothingEnabled=false;pixelCtx.clearRect(0,0,sw,sh);pixelCtx.drawImage(fxCanvas,0,0,sw,sh);
   bufferCtx.clearRect(0,0,w,h);bufferCtx.imageSmoothingEnabled=false;bufferCtx.drawImage(pixelCanvas,0,0,sw,sh,0,0,w,h);bufferCtx.imageSmoothingEnabled=true;
 }
+function maskPath(g,mask,w,h){
+  if(!mask)return;
+  var x=clamp(Number(mask.x==null?50:mask.x),0,100)/100*w,y=clamp(Number(mask.y==null?50:mask.y),0,100)/100*h,mw=clamp(Number(mask.w==null?50:mask.w),1,100)/100*w,mh=clamp(Number(mask.h==null?50:mask.h),1,100)/100*h;
+  g.beginPath();
+  if(String(mask.type||'ellipse')==='rect')g.rect(x-mw/2,y-mh/2,mw,mh);
+  else g.ellipse(x,y,mw/2,mh/2,0,0,Math.PI*2);
+}
 function drawClipLayer(c,w,h){
   var a=assetById(c.assetId),fx=interpolatedFx(c,state.playhead),t=transitionState(c,state.playhead,w);
   ensureFxBuffer(w,h);fxCtx.setTransform(1,0,0,1,0,0);fxCtx.globalAlpha=1;fxCtx.globalCompositeOperation='source-over';fxCtx.filter='none';fxCtx.clearRect(0,0,w,h);
   fxCtx.save();
+  if(c.mask&&!c.mask.invert){maskPath(fxCtx,c.mask,w,h);fxCtx.clip();}
   fxCtx.filter='brightness('+fx.brightness+'%) contrast('+fx.contrast+'%) saturate('+fx.saturation+'%) hue-rotate('+fx.hue+'deg) blur('+fx.blur+'px) sepia('+(fx.sepia||0)+'%) grayscale('+(fx.grayscale||0)+'%)';
   fxCtx.translate(w/2+(fx.x||0)*w/200,h/2+(fx.y||0)*h/200);
   fxCtx.rotate((fx.rotation||0)*Math.PI/180);
   fxCtx.scale(((fx.scale||100)/100)*(fx.mirrorX?-1:1),((fx.scale||100)/100)*(fx.mirrorY?-1:1));
   drawAsset(a,c,w,h,fxCtx);
   fxCtx.restore();fxCtx.filter='none';
+  if(c.mask&&c.mask.invert){fxCtx.save();fxCtx.globalCompositeOperation='destination-out';maskPath(fxCtx,c.mask,w,h);fxCtx.fillStyle='#000';fxCtx.fill();fxCtx.restore();}
   applyChromaKey(fxCtx,w,h,fx);
   applyPixelate(fxCtx,w,h,fx.pixelate);
-
+  var compositeSource=fxCanvas;
+  if(c.gpuFx&&c.gpuFx.enabled&&window.TGGVideoGPU){var gpuSource=window.TGGVideoGPU.process(fxCanvas,c.gpuFx);if(gpuSource)compositeSource=gpuSource;}
   ctx.save();ctx.translate(w/2+t.x,h/2);ctx.rotate(t.rotation);ctx.scale(t.scale,t.scale);ctx.translate(-w/2,-h/2);
   ctx.globalAlpha=clamp((fx.opacity||100)/100,0,1)*t.alpha;
   if(t.blur)ctx.filter='blur('+t.blur+'px)';
-  if(fx.bloom){
-    ctx.save();ctx.globalAlpha*=Math.min(.55,.12+fx.bloom/180);ctx.filter='blur('+(4+fx.bloom*.12)+'px) brightness(145%)';ctx.globalCompositeOperation='screen';ctx.drawImage(fxCanvas,0,0);ctx.restore();
-  }
-  if(fx.rgbSplit){
-    var shift=Math.max(1,Math.round(fx.rgbSplit*.09));
-    ctx.save();ctx.globalCompositeOperation='screen';ctx.globalAlpha*=.15;ctx.drawImage(fxCanvas,-shift,0);ctx.drawImage(fxCanvas,shift,0);ctx.restore();
-  }
-  ctx.drawImage(fxCanvas,0,0);ctx.filter='none';ctx.globalAlpha=1;
+  if(fx.bloom){ctx.save();ctx.globalAlpha*=Math.min(.55,.12+fx.bloom/180);ctx.filter='blur('+(4+fx.bloom*.12)+'px) brightness(145%)';ctx.globalCompositeOperation='screen';ctx.drawImage(compositeSource,0,0);ctx.restore();}
+  if(fx.rgbSplit){var shift=Math.max(1,Math.round(fx.rgbSplit*.09));ctx.save();ctx.globalCompositeOperation='screen';ctx.globalAlpha*=.15;ctx.drawImage(compositeSource,-shift,0);ctx.drawImage(compositeSource,shift,0);ctx.restore();}
+  ctx.drawImage(compositeSource,0,0);ctx.filter='none';ctx.globalAlpha=1;
   if(fx.lightLeak)drawLightLeak(w,h,fx.lightLeak);
   if(t.flash){ctx.fillStyle='rgba(255,255,255,'+t.flash+')';ctx.fillRect(0,0,w,h);}
   ctx.restore();
@@ -592,6 +597,13 @@ function bind(){
   window.addEventListener('beforeunload',function(){saveLocal(true);});
 }
 function registerServiceWorker(){if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(function(){});}
+window.TGGVideoStudio={
+  version:'2.5.0',getState:function(){return state;},selectedClip:selectedClip,assetById:assetById,trackById:trackById,
+  uid:uid,defaultFx:defaultFx,snapshot:snapshot,markDirty:markDirty,renderAll:renderAll,renderTimeline:renderTimeline,
+  renderInspector:renderInspector,ensureDuration:ensureDuration,saveLocal:saveLocal,switchWorkspace:switchWorkspace,drawFrame:drawFrame,
+  toast:toast,setKeyframe:setKeyframe,keyframeList:keyframeList,probeAsset:probeAsset,importFiles:importFiles,resizePreview:resizePreview,
+  mediaElement:function(id){return mediaEls.get(id)||null;},clamp:clamp
+};
 function init(){loadLocal();bind();$('#qualitySelect').value=String(state.previewUserScale);verifyCloud();renderAll();resizePreview(state.previewUserScale);registerServiceWorker();requestPersistentStorage();restoreLocalMedia();requestAnimationFrame(tick);}
 document.addEventListener('DOMContentLoaded',init);
 })();

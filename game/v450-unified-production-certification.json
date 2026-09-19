@@ -1,0 +1,29 @@
+{
+  "project": "TRU GO GETTA WORLD",
+  "runtime": "V4.50 FAMILY HOUSEHOLD LEGACY WORLD MEGA",
+  "status": "CERTIFIED",
+  "mode": "UNIFIED_ALL_BATCHES",
+  "certified_commit": "20773a9f1fd8161dbc74076749f7fc75843a9db1",
+  "unified_run_id": 35450711817,
+  "bulk_range": "V287-V301",
+  "checks": {
+    "static_gate": "PASS",
+    "mega_regression": "PASS 526/526",
+    "browser_smoke": "PASS",
+    "liveviewer_smoke": "PASS",
+    "production_credential": "PASS",
+    "vercel_cli_install": "PASS",
+    "project_link": "PASS",
+    "exact_sha_production_deploy": "PASS",
+    "production_runtime_verify": "PASS",
+    "runtime_errors_last_hour": 0
+  },
+  "production": {
+    "deployment_id": "dpl_77rY7PxzEgwUc6DaK2csdx5Zowcp",
+    "url": "https://tgg-world-play-4iad0ww8b-olandusgood-8594.vercel.app",
+    "public_alias": "https://tgg-world-play.vercel.app",
+    "state": "READY",
+    "rollback_candidate": true
+  },
+  "result": "CLOSED_CERTIFIED"
+}

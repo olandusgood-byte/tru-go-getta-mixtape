@@ -32,6 +32,18 @@
           arrived:!!worldBeat.arrived
         };
       }
+      const meetup=window.TGGMeetups?.navigationTarget?.();
+      if(meetup){
+        const p=toWorld(meetup);
+        return {
+          label:'MEETUP • '+(meetup.name||meetup.label||'CONTACT'),
+          x:p.x,z:p.z,
+          color:meetup.color||'#65d6ff',
+          radius:Number(meetup.radius)||7,
+          meetup:true,
+          arrived:!!meetup.arrived
+        };
+      }
       if(s?.accepted)return {label:'MISSION',x:(72-50)*.92,z:(36-50)*.92,color:'#ff466d'};
       const p=toWorld(s);
       const ds=window.TGG3D?.destinations||[];
@@ -64,8 +76,9 @@
       distance.textContent=(t.arrived||t.meters<4)?'ARRIVED':t.meters+' m';
       arrow.style.transform='rotate('+relative+'deg)';
       root.style.setProperty('--nav-color',t.color);
-      root.classList.toggle('story-active',!!t.story||!!t.worldBeat);
+      root.classList.toggle('story-active',!!t.story||!!t.worldBeat||!!t.meetup);
       root.classList.toggle('world-beat-active',!!t.worldBeat);
+      root.classList.toggle('meetup-active',!!t.meetup);
       root.classList.add('active');
       requestAnimationFrame(update);
     }

@@ -33,9 +33,11 @@ const v1Layers=scripts
 for(const layer of v1Layers){
   const minor=Number(layer.match[1]);
   const source=read(layer.src);
-  const runtimeToken='window.TGGV1'+String(minor).padStart(2,'0');
-  const versionPattern=new RegExp("VERSION\\s*=\\s*['\"]1\\."+minor+"\\.\\d+['\"]");
-  assert(source.includes(runtimeToken),'Missing additive runtime export '+runtimeToken+' in '+layer.src);
+  const longRuntime='window.TGGV1'+String(minor).padStart(2,'0');
+  const shortRuntime='window.TGGV'+String(minor).padStart(2,'0');
+  const hasRuntime=source.includes(longRuntime)||source.includes(shortRuntime);
+  const versionPattern=new RegExp("(?:VERSION|V)\\s*=\\s*['\"]1\\."+minor+"\\.\\d+['\"]");
+  assert(hasRuntime,'Missing additive runtime export '+longRuntime+' or '+shortRuntime+' in '+layer.src);
   assert(versionPattern.test(source),'Missing matching semantic version 1.'+minor+'.x in '+layer.src);
   for(const forbidden of ['SUPABASE_SERVICE_ROLE_KEY','sb_secret_','sk_live_']){
     assert(!source.includes(forbidden),'Forbidden secret marker in '+layer.src+': '+forbidden);

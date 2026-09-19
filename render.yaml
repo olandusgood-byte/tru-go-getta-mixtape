@@ -26,8 +26,9 @@ services:
     plan: free
     branch: main
     autoDeploy: true
-    buildCommand: cd tgg-browser-worker && npm install && npx playwright install chromium
-    startCommand: cd tgg-browser-worker && node worker.mjs
+    rootDir: tgg-browser-worker
+    buildCommand: npm install && npx playwright install chromium
+    startCommand: node worker.mjs
     healthCheckPath: /health
     envVars:
       - key: TGG_CORE_URL

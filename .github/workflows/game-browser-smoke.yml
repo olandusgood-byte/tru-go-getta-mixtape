@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'game/**'
       - '.github/workflows/game-browser-smoke.yml'
 jobs:
   browser-smoke:
@@ -16,7 +17,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Playwright
         run: |
@@ -48,7 +49,7 @@ jobs:
 
           await page.goto('http://127.0.0.1:8765/index.html', {waitUntil:'networkidle'});
           await page.waitForTimeout(1500);
-          const requiredGlobals = ['TGGGame','TGGCareer','TGGContent','TGGExpansion','TGGProgression','TGGBridge','TGGAvatar','TGGWorldSync','TGGQA','TGGReleaseQA'];
+          const requiredGlobals = ['TGGGame','TGGCareer','TGGContent','TGGExpansion','TGGProgression','TGGBridge','TGGAvatar','TGGWorldSync','TGGBusiness','TGGQA','TGGReleaseQA'];
           const missingGlobals = await page.evaluate(required => required.filter(name => !window[name]), requiredGlobals);
           if (missingGlobals.length || errors.length) {
             console.error(JSON.stringify({ missingGlobals, errors }, null, 2));
@@ -57,7 +58,7 @@ jobs:
           }
 
           const result = await page.evaluate(async () => {
-            const ids = ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','worldSyncBtn','saveBtn','pauseBtn','resumeBtn','menuBtn','recordBtn','mixtapeBtn','upgradeBtn'];
+            const ids = ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','worldSyncBtn','saveBtn','pauseBtn','resumeBtn','menuBtn','recordBtn','mixtapeBtn','upgradeBtn','businessBtn','cityAssetsBtn'];
             const missing = ids.filter(id => !document.getElementById(id));
             const qa = window.TGGQA?.run?.();
             const release = window.TGGReleaseQA?.run?.();

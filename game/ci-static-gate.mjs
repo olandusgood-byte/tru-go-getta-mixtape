@@ -18,6 +18,9 @@ for(const name of fs.readdirSync(root).filter(n=>n.endsWith('.json'))){
 const contract=spawnSync(process.execPath,[path.join(root,'static-contract.test.mjs')],{encoding:'utf8'});
 assert(contract.status===0,'V1.13 static contract failed:\n'+(contract.stderr||contract.stdout||''));
 
+const continuity=spawnSync(process.execPath,[path.join(root,'v149-v160-runtime.test.mjs')],{encoding:'utf8'});
+assert(continuity.status===0,'V1.49-V1.60 runtime continuity failed:\n'+(continuity.stderr||continuity.stdout||''));
+
 const html=read('index.html');
 const v114=read('v114-live-city.js');
 const scripts=[...html.matchAll(/<script[^>]+src=["']([^"']+)["']/g)].map(m=>m[1]);

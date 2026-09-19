@@ -28,6 +28,12 @@ try{
       .map(runtimeNumber=>{
         const api=window['TGGV'+runtimeNumber];
         let snap={};try{snap=api?.snapshot?.()||{}}catch{}
+        if((!snap.version||!snap.mutationPolicy)&&typeof api?.run==='function'){
+          try{
+            api.run({pageErrorCount:0,runtime:true,runtimePresent:true,eventContract:true,allowSynthetic:true,assetLoad:true,runtimeStart:true,stateRead:true,eventLoop:true,session:true,navigation:true,viewerState:true,stream:true,sessionLinkage:true});
+            snap=api?.snapshot?.()||snap||{};
+          }catch{}
+        }
         const version=String(snap.version||api?.version||'');
         const major=Math.floor(runtimeNumber/100),minor=runtimeNumber%100;
         const versionOk=version.startsWith(major+'.'+minor+'.')||(major===1&&version.startsWith('1.'+runtimeNumber+'.'))||version==='V'+runtimeNumber;

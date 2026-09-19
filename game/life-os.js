@@ -187,7 +187,7 @@
   function readiness(){
     const n=state.needs;
     const raw=(n.energy*.28+n.fuel*.16+n.hygiene*.10+n.mood*.24+n.social*.08+(100-n.stress)*.14)/100;
-    const floor=hasUpgrade('wellness')?.82:.72;
+    const floor=hasUpgrade('wellness') ? .82 : .72;
     return Math.max(floor,Math.min(1.18,.72+raw*.46));
   }
   function performanceModifier(){return Number(readiness().toFixed(3))}

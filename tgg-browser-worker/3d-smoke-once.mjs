@@ -428,7 +428,7 @@ async function run(){
       add('v244-presentation-hooks',snap.calls.fx.length>0&&snap.calls.audio.length>0&&snap.calls.animation.length>0&&snap.calls.crowd.length>0&&snap.calls.camera.length>0,JSON.stringify(snap.calls));
 
       await mp.evaluate(()=>{window.TGGV244.reset('city-buzz');window.TGGV244.start('city-buzz');document.getElementById('v244StoryPanel')?.classList.add('active')});
-      await mp.waitForTimeout(80);
+      await mp.waitForTimeout(300);
       const layout=await mp.evaluate(()=>{
         const p=document.getElementById('v244StoryPanel')?.getBoundingClientRect();
         const h=document.getElementById('v244StoryHud')?.getBoundingClientRect();

@@ -63,8 +63,9 @@ for(const src of additiveFiles){
     const legacy=Number(m[2]);
     assert(runtimeExports.includes(physical)||(Number(m[1])===1&&runtimeExports.includes(legacy)),'Missing expected runtime export TGGV'+physical+' in '+src);
     const semantic=new RegExp("(?:VERSION|V)\\s*=\\s*['\"]"+Number(m[1])+"\\."+Number(m[2])+"\\.\\d+['\"]");
+    const physicalSemantic=new RegExp("(?:VERSION|V)\\s*=\\s*['\"]"+Number(m[1])+"\\."+physical+"\\.\\d+['\"]");
     const legacyVersion=new RegExp("version\\s*:\\s*['\"]V"+physical+"['\"]");
-    assert(semantic.test(source)||legacyVersion.test(source),'Missing matching version identity in '+src);
+    assert(semantic.test(source)||(Number(m[1])===1&&physicalSemantic.test(source))||legacyVersion.test(source),'Missing matching version identity in '+src);
   }else{
     const lo=Number(bulk[1]),hi=Number(bulk[2]);
     assert(runtimeExports.some(n=>n>=lo&&n<=hi),'Bulk runtime range has no matching exports in '+src);

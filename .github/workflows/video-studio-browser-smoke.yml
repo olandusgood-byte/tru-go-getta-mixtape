@@ -1,0 +1,40 @@
+name: Video Studio Browser Smoke
+
+on:
+  pull_request:
+    paths:
+      - 'tgg-core/public/video-studio/**'
+      - 'scripts/video-studio-browser-smoke.mjs'
+      - '.github/workflows/video-studio-browser-smoke.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tgg-core/public/video-studio/**'
+      - 'scripts/video-studio-browser-smoke.mjs'
+      - '.github/workflows/video-studio-browser-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser test runtime
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run Video Studio browser smoke
+        run: node scripts/video-studio-browser-smoke.mjs
+      - name: Upload smoke screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-studio-browser-smoke
+          path: video-studio-smoke.png
+          if-no-files-found: ignore

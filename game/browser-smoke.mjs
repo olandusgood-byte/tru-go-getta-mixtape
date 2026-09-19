@@ -200,6 +200,32 @@ try{
     throw new Error('V4.97 NPC relation choice resolve failed '+JSON.stringify(relationResolved));
   }
 
+  await page.waitForFunction(()=>!!window.TGGNPCFavors&&!!window.TGGV498,{timeout:15000});
+  const favorReady=await page.evaluate(()=>{
+    const availability=window.TGGNPCFavors.availability('DJ V');
+    const run=window.TGGV498.run();
+    const dock=document.getElementById('v498FavorDock');
+    return {availability,run,dockVisible:!!dock&&!dock.hidden};
+  });
+  if(favorReady.run?.ok!==true||!favorReady.availability?.ready||!favorReady.dockVisible||
+     favorReady.availability?.beat!=='park-cypher'){
+    throw new Error('V4.98 NPC favor readiness failed '+JSON.stringify(favorReady));
+  }
+  await page.locator('#v498FavorList [data-v498-favor="DJ V"]').click();
+  await page.waitForTimeout(120);
+  const favorResult=await page.evaluate(()=>({
+    favor:window.TGGNPCFavors.snapshot(),
+    world:window.TGGWorldDepth?.getStatus?.()||{},
+    nav:window.TGGWorldDepth?.beatNavigation?.()||null
+  }));
+  if(favorResult.favor?.lastFavor?.name!=='DJ V'||
+     favorResult.favor?.lastFavor?.beat!=='park-cypher'||
+     favorResult.world?.activeBeat?.id!=='park-cypher'||
+     favorResult.world?.activeBeat?.source!=='npc-favor'||
+     !favorResult.nav||!(favorResult.nav.meters>=0)){
+    throw new Error('V4.98 NPC favor routing failed '+JSON.stringify(favorResult));
+  }
+
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
@@ -338,7 +364,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat}));
 }finally{
   await browser.close();
 }

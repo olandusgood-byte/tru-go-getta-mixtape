@@ -8,3 +8,4 @@
 #v450FamilyHousehold button{padding:8px 6px;border-radius:9px;font-size:9px;font-weight:900}
 @media(max-width:820px){#v450FamilyHousehold{left:10px;top:64px;width:220px}}
 @media(prefers-reduced-motion:reduce){#v450FamilyHousehold{backdrop-filter:none}}
+html[data-tgg-v450="on"] #v450FamilyHousehold{visibility:visible}

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "5.01",
-  "module": "GAME-V5.01-TGG-CONTACT-PHONE",
-  "name": "V4.97-V5.01 Relationships + Favors + Consequences + Contracts + TGG Phone",
+  "version": "5.02",
+  "module": "GAME-V5.02-INCOMING-CONTACT-CALLS",
+  "name": "V4.97-V5.02 Relationships + Favors + Consequences + Contracts + TGG Phone + Incoming Calls",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -171,7 +171,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V5.02",
+  "next": "V5.03",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

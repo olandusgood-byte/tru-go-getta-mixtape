@@ -1,0 +1,57 @@
+name: Video Studio Production Render Smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tgg-core/**'
+      - 'render.yaml'
+      - '.github/workflows/video-studio-production-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: video-studio-production-smoke
+  cancel-in-progress: true
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Wait for Render auto-deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          health='https://tgg-core.onrender.com/health'
+          studio='https://tgg-core.onrender.com/video-studio/'
+          ok=0
+          for attempt in $(seq 1 30); do
+            echo "Production check attempt $attempt/30"
+            health_body="$(curl -fsS --max-time 20 "$health" 2>/dev/null || true)"
+            studio_body="$(curl -fsSL --max-time 30 "$studio" 2>/dev/null || true)"
+            if [ -n "$health_body" ] \
+              && echo "$studio_body" | grep -q 'TGG Video Studio' \
+              && echo "$studio_body" | grep -q 'previewCanvas' \
+              && echo "$studio_body" | grep -q 'timelineViewport' \
+              && echo "$studio_body" | grep -q 'Server FFmpeg Render'; then
+              ok=1
+              break
+            fi
+            sleep 10
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "Render production did not expose the expected Video Studio contract."
+            exit 1
+          fi
+          echo "Render production Video Studio contract verified."
+
+      - name: Verify static assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/app.js?v=2.3.0' | grep -q 'queueServerRender'
+          curl -fsSL --max-time 30 'https://tgg-core.onrender.com/video-studio/styles.css?v=2.3.0' | grep -q 'monitor-bezel'
+          echo "Video Studio production assets verified."

@@ -196,6 +196,13 @@
     test('v235 native surface mode',surfaceForge.mode==='native-surface-forge'&&surfaceForge.enabled===true);
     test('v235 surface HUD',!!document.getElementById('v235ForgeHud')&&!!document.getElementById('v235ForgePanel'));
     test('v235 surface forge css',!!document.querySelector('link[href*="v235-surface-forge.css"]'));
+    const crowdForge=window.TGGV236?.status?.()||{};
+    test('v236 crowd core api',!!window.TGGV236Core&&typeof window.TGGV236Core.archetype==='function'&&typeof window.TGGV236Core.densityBudget==='function');
+    test('v236 crowd forge api',!!window.TGGV236&&typeof window.TGGV236.rebuild==='function'&&typeof window.TGGV236.restore==='function');
+    test('v236 100 layers',Array.isArray(window.TGGV236?.layers)&&window.TGGV236.layers.length===100);
+    test('v236 native crowd mode',crowdForge.mode==='native-crowd-forge'&&crowdForge.enabled===true);
+    test('v236 crowd HUD',!!document.getElementById('v236ForgeHud')&&!!document.getElementById('v236ForgePanel'));
+    test('v236 crowd forge css',!!document.querySelector('link[href*="v236-crowd-forge.css"]'));
     const cameraForge=window.TGGV234?.status?.()||{};
     test('v234 camera core api',!!window.TGGV234Core&&typeof window.TGGV234Core.preset==='function'&&typeof window.TGGV234Core.blend==='function');
     test('v234 camera forge api',!!window.TGGV234&&typeof window.TGGV234.applyPreset==='function'&&typeof window.TGGV234.pulse==='function'&&typeof window.TGGV234.togglePhoto==='function');
@@ -203,7 +210,7 @@
     test('v234 native camera mode',cameraForge.mode==='native-camera-forge'&&cameraForge.enabled===true);
     test('v234 camera HUD',!!document.getElementById('v234ForgeHud')&&!!document.getElementById('v234ForgePanel'));
     test('v234 camera forge css',!!document.querySelector('link[href*="v234-camera-forge.css"]'));
-    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.35 TGG SURFACE + DETAIL FORGE 100');
+    test('v2 final runtime',window.TGGFinalBuild?.version==='V2.36 TGG CROWD + NPC FORGE 100');
     test('v2 movement hud',!!document.getElementById('playerMoveHud')&&!!document.getElementById('walkModeValue')&&!!document.getElementById('walkSpeedValue'));
     test('v2 sprint control',!!document.getElementById('sprintBtn'));test('v202 world gameplay',!!window.TGGWorldGameplay&&typeof window.TGGWorldGameplay.getNavTarget==='function'&&typeof window.TGGWorldGameplay.performObjective==='function');test('v202 world objective hud',!!document.getElementById('worldObjective'));test('v203 street contacts',!!window.TGGStreetContacts&&Array.isArray(window.TGGStreetContacts.contacts)&&window.TGGStreetContacts.contacts.length>=3&&typeof window.TGGStreetContacts.startContact==='function');test('v203 contact hud',!!document.getElementById('streetContactCard'));test('career api',!!window.TGGCareer);test('content api',!!window.TGGContent);test('expansion api',!!window.TGGExpansion);test('progression api',!!window.TGGProgression);test('bridge api',!!window.TGGBridge);test('chain api',!!window.TGGChains);test('district api',!!window.TGGDistricts);test('save api',!!window.TGGSave);test('inventory api',!!window.TGGInventory);test('crew api',!!window.TGGCrew);test('events api',!!window.TGGEvents);test('economy api',!!window.TGGEconomy&&typeof window.TGGEconomy.apply==='function');test('avatar api',!!window.TGGAvatar&&typeof window.TGGAvatar.get==='function'&&typeof window.TGGAvatar.save==='function');test('world sync api',!!window.TGGWorldSync&&typeof window.TGGWorldSync.snapshot==='function'&&typeof window.TGGWorldSync.setTransport==='function'&&typeof window.TGGWorldSync.sync==='function');
     ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud'].forEach(id=>test('dom:'+id,!!document.getElementById(id)));

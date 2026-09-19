@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "5.40",
-  "module": "GAME-V5.40-BULK",
-  "name": "Bulk V5.26-V5.40 Release Browser Live Viewer Audits Gates",
+  "version": "5.41",
+  "module": "GAME-V5.41-WORLD-CONTINUITY",
+  "name": "V5.41 World Continuity Checkpoint",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -167,11 +167,14 @@
     "v2_00_production_integrity": true,
     "v2_01_browser_runtime_continuity": true,
     "v2_02_release_integrity_gate": true,
-    "v2_02_local_state": true
+    "v2_02_local_state": true,
+    "v5_41_world_continuity": true,
+    "v5_41_prior_v540_required": true,
+    "v5_41_local_only": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V5.41",
+  "next": "V5.42",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,
@@ -194,5 +197,6 @@
     "failClosed": true,
     "noOneByOneUnlessDependencyRequires": true
   },
-  "v5_25_contact_world_mega": true
+  "v5_25_contact_world_mega": true,
+  "v5_41_world_continuity": true
 }

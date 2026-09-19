@@ -1,5 +1,5 @@
 /* TGG VIDEO STUDIO V2.5 — AI DIRECTOR + PRO ACCELERATION */
-.ai-director-view{height:100%;overflow:auto;padding:28px 30px 50px;background:radial-gradient(circle at 10% 0,rgba(73,215,255,.10),transparent 30%),radial-gradient(circle at 90% 8%,rgba(255,49,72,.09),transparent 30%),#07090d}
+.ai-director-view{position:absolute;inset:0;z-index:5;display:block;width:100%;height:100%;overflow:auto;padding:28px 30px 50px;background:radial-gradient(circle at 10% 0,rgba(73,215,255,.10),transparent 30%),radial-gradient(circle at 90% 8%,rgba(255,49,72,.09),transparent 30%),#07090d}
 .ai-hero{max-width:1440px;margin:0 auto 22px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:26px;border:1px solid #252b39;border-radius:22px;background:linear-gradient(145deg,#131824,#090c12);box-shadow:0 22px 70px #0008}
 .ai-hero h1{font-size:clamp(38px,5vw,70px);line-height:.95;margin:8px 0 10px;letter-spacing:-.045em}.ai-hero p{max-width:780px;margin:0;color:#939bab;line-height:1.55}
 .ai-grid{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.ai-card{min-height:250px;padding:20px;border:1px solid #262c3a;border-radius:18px;background:linear-gradient(145deg,#121722,#090c12);box-shadow:0 15px 45px #0007}.ai-card-main{grid-column:span 2;min-height:360px}.ai-card h2{font-size:34px;margin:12px 0 8px}.ai-card h3{font-size:22px;margin:14px 0 8px}.ai-card p{color:#8f98a8;line-height:1.5}
@@ -10,3 +10,5 @@
 .ai-notes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}.ai-notes>div{padding:14px;border:1px solid #ffffff10;border-radius:12px;background:#070a10}.ai-notes b{display:block;font-size:24px;color:#fff}.ai-notes span{font-size:9px;color:#8690a3;text-transform:uppercase;letter-spacing:.1em}.ai-strength{margin-top:16px}.ai-strength input{width:100%}
 @media(max-width:1100px){.ai-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ai-card-main{grid-column:1/-1}}
 @media(max-width:720px){.ai-director-view{padding:14px}.ai-hero{align-items:flex-start;flex-direction:column}.ai-grid{grid-template-columns:1fr}.ai-card-main{grid-column:auto}.ai-form-grid{grid-template-columns:1fr}}
+
+.ai-director-view.view-hidden{display:none!important}

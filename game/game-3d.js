@@ -331,6 +331,12 @@
     const p=toWorld(s);
     return Math.hypot(p.x-car.position.x,p.z-car.position.z);
   }
+  function getCarPositionPercent(){
+    return {
+      x:50+(Number(car.position.x)||0)/.92,
+      y:50+(Number(car.position.z)||0)/.92
+    };
+  }
   function dampAlpha(rate,dt){return 1-Math.exp(-Math.max(0,rate)*Math.max(0,dt));}
   function angleDeltaDegrees(from,to){return ((to-from+540)%360)-180;}
   function syncCarFromState(s,dt=.016){
@@ -602,6 +608,7 @@
     isReady:()=>true,
     canMovePercent,
     distanceToCarPercent,
+    getCarPositionPercent,
     getCarHeading:()=>Number(car.userData.headingDeg)||0,
     setVehicleDynamics,
     getVehicleDynamics:()=>({...vehicleDynamics}),

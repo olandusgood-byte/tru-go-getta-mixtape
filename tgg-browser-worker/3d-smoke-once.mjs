@@ -1926,14 +1926,15 @@ async function run(){
       await page.close();
       const verticalSliceSource=await fs.readFile(path.join(local.serveRoot,'vertical-slice-director.js'),'utf8');
       const mobileCss=await fs.readFile(path.join(local.serveRoot,'style.css'),'utf8');
-      let mobileHtml=await fs.readFile(path.join(local.serveRoot,'index.html'),'utf8');
+      const rawMobileHtml=await fs.readFile(path.join(local.serveRoot,'index.html'),'utf8');
+      let mobileHtml=rawMobileHtml;
       while(mobileHtml.includes('<script')){
         const scriptStart=mobileHtml.indexOf('<script');        const scriptEnd=mobileHtml.indexOf('</script>',scriptStart);
         if(scriptEnd<0)break;
         mobileHtml=mobileHtml.slice(0,scriptStart)+mobileHtml.slice(scriptEnd+9);
       }
       mobileHtml=mobileHtml.replace('<link rel="stylesheet" href="style.css">','<style>'+mobileCss+'</style>');
-      const mobileSourceOk=mobileHtml.includes('V2.18 STREET PRESENCE')&&mobileHtml.includes('id="game"')&&mobileCss.length>1000;
+      const mobileSourceOk=rawMobileHtml.includes('id="game"')&&rawMobileHtml.includes('v218-production-integrity-continuity.js')&&mobileCss.length>1000;
       const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
       const mp=await mobile.newPage();
       const mobileErrors=[];const mobileFailed=[];
@@ -1984,7 +1985,7 @@ async function run(){
       const checks=[];      const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
       add('v218-mega-desktop-ok',desktop.ok===true,'passed='+desktop.passed+'/'+desktop.total);
       add('v218-mega-desktop-volume',desktop.total>=526,desktop.total);
-      add('v218-mega-mobile-source-loaded',mobileSourceOk,'exact V2.18 HTML+CSS from '+path.relative(process.cwd(),local.serveRoot));
+      add('v218-mega-mobile-source-loaded',mobileSourceOk,'canonical HTML+CSS with V2.18 runtime contract from '+path.relative(process.cwd(),local.serveRoot));
       add('v218-mega-mobile-no-overflow',mobileLayout.overflowX===false&&mobileLayout.scrollWidth<=391,JSON.stringify({width:mobileLayout.width,scrollWidth:mobileLayout.scrollWidth}));
       add('v218-mega-mobile-city-contained',!!mobileLayout.city&&mobileLayout.city.left>=0&&mobileLayout.city.right<=mobileLayout.width+1,JSON.stringify(mobileLayout.city));
       add('v218-mega-mobile-dpad-contained',!!mobileLayout.dpad&&mobileLayout.dpad.left>=0&&mobileLayout.dpad.right<=mobileLayout.width+1,JSON.stringify(mobileLayout.dpad));
@@ -2018,6 +2019,7 @@ async function run(){
         new Promise(resolve=>local.proxy.close(()=>resolve())),
         new Promise(resolve=>setTimeout(resolve,1000))
       ]);
+      if(!result.ok)process.exitCode=1;
       return;
     }
 

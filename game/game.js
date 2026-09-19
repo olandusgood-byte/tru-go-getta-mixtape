@@ -460,6 +460,15 @@
       toast('MOVE CLOSER TO THE STARTER CAR');
       return false;
     }
+    const carPosition=window.TGG3D?.getCarPositionPercent?.();
+    if(Number.isFinite(carPosition?.x)&&Number.isFinite(carPosition?.y)){
+      const snapX=Math.max(3,Math.min(94,carPosition.x));
+      const snapY=Math.max(8,Math.min(88,carPosition.y));
+      if(!window.TGG3D?.canMovePercent||window.TGG3D.canMovePercent(snapX,snapY,true)){
+        state.x=snapX;
+        state.y=snapY;
+      }
+    }
     const carHeading=window.TGG3D?.getCarHeading?.();
     if(Number.isFinite(carHeading))state.heading=carHeading;
     clearWalkKeys();

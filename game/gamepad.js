@@ -9,7 +9,8 @@
     for(const p of list)if(p&&p.connected)return p;
     return null;
   };
-  const button=(p,i)=>!!p?.buttons?.[i]?.pressed||Number(p?.buttons?.[i]?.value||0)>.45;
+  const value=(p,i)=>Math.max(0,Math.min(1,Number(p?.buttons?.[i]?.value||0)));
+  const button=(p,i)=>!!p?.buttons?.[i]?.pressed||value(p,i)>.45;
   const axis=(p,i)=>{
     const v=Number(p?.axes?.[i]||0);
     return Math.abs(v)<DEAD?0:v;
@@ -27,6 +28,8 @@
     const g=window.TGGGame;
     ['up','down','left','right','sprint'].forEach(k=>g?.setWalkKey?.(k,false));
     ['forward','reverse','left','right','handbrake'].forEach(k=>g?.setDriveKey?.(k,false));
+    g?.setWalkAnalog?.({x:0,y:0,sprint:0});
+    g?.setDriveAnalog?.({steer:0,throttle:0,handbrake:0});
     Object.keys(held).forEach(k=>held[k]=false);
   }
 
@@ -43,20 +46,29 @@
 
     const x=axis(p,0),y=axis(p,1);
     if(s.inVehicle){
-      change('steerLeft',x<-.25,v=>g.setDriveKey?.('left',v));
-      change('steerRight',x>.25,v=>g.setDriveKey?.('right',v));
-      change('gas',button(p,7)||y<-.4,v=>g.setDriveKey?.('forward',v));
-      change('reverse',button(p,6)||y>.45,v=>g.setDriveKey?.('reverse',v));
-      change('drift',button(p,4)||button(p,5),v=>g.setDriveKey?.('handbrake',v));
+      const rt=value(p,7),lt=value(p,6);
+      let throttle=rt-lt;
+      if(Math.abs(throttle)<.05&&Math.abs(y)>.35)throttle=-y;
+      const hb=Math.max(value(p,4),value(p,5));
+      g.setDriveAnalog?.({steer:x,throttle,handbrake:hb});
+      change('steerLeft',false,v=>g.setDriveKey?.('left',v));
+      change('steerRight',false,v=>g.setDriveKey?.('right',v));
+      change('gas',false,v=>g.setDriveKey?.('forward',v));
+      change('reverse',false,v=>g.setDriveKey?.('reverse',v));
+      change('drift',false,v=>g.setDriveKey?.('handbrake',v));
+      g.setWalkAnalog?.({x:0,y:0,sprint:0});
       for(const [name,key] of [['walkUp','up'],['walkDown','down'],['walkLeft','left'],['walkRight','right'],['sprint','sprint']]){
         if(held[name]){held[name]=false;g.setWalkKey?.(key,false);}
       }
     }else{
-      change('walkLeft',x<-.22,v=>g.setWalkKey?.('left',v));
-      change('walkRight',x>.22,v=>g.setWalkKey?.('right',v));
-      change('walkUp',y<-.22,v=>g.setWalkKey?.('up',v));
-      change('walkDown',y>.22,v=>g.setWalkKey?.('down',v));
-      change('sprint',button(p,7)||button(p,10),v=>g.setWalkKey?.('sprint',v));
+      const sprint=Math.max(value(p,7),button(p,10)?1:0);
+      g.setWalkAnalog?.({x,y,sprint});
+      change('walkLeft',false,v=>g.setWalkKey?.('left',v));
+      change('walkRight',false,v=>g.setWalkKey?.('right',v));
+      change('walkUp',false,v=>g.setWalkKey?.('up',v));
+      change('walkDown',false,v=>g.setWalkKey?.('down',v));
+      change('sprint',false,v=>g.setWalkKey?.('sprint',v));
+      g.setDriveAnalog?.({steer:0,throttle:0,handbrake:0});
       for(const [name,key] of [['gas','forward'],['reverse','reverse'],['steerLeft','left'],['steerRight','right'],['drift','handbrake']]){
         if(held[name]){held[name]=false;g.setDriveKey?.(key,false);}
       }

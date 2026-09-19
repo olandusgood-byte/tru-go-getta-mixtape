@@ -7,7 +7,11 @@ on:
       - 'tgg-core/server.mjs'
       - 'tgg-core/schema.sql'
       - 'tgg-core/public/video-studio/**'
+      - 'scripts/tgg-core-video-render-worker.mjs'
+      - '.github/workflows/tgg-core-video-render-worker.yml'
       - 'docs/VIDEO-STUDIO-EDITOR-V2.md'
+      - 'scripts/tgg-core-video-render-worker.mjs'
+      - '.github/workflows/tgg-core-video-render-worker.yml'
       - '.github/workflows/video-studio-v2-check.yml'
   pull_request:
     paths:
@@ -31,11 +35,14 @@ jobs:
           node --check tgg-core/server.mjs
           node --check tgg-core/public/video-studio/app.js
           node --check tgg-core/public/video-studio/sw.js
+          node --check scripts/tgg-core-video-render-worker.mjs
       - name: Verify Video Studio contract markers
         run: |
           grep -q 'TGG_VIDEO_STUDIO_V2_STATIC' tgg-core/server.mjs
           grep -q 'TGG_VIDEO_STUDIO_V2_API' tgg-core/server.mjs
           grep -q 'TGG_VIDEO_STUDIO_V2_SCHEMA' tgg-core/schema.sql
+          grep -q 'TGG_VIDEO_STUDIO_V2_RENDER_BRIDGE_API' tgg-core/server.mjs
+          grep -q 'TGG_VIDEO_STUDIO_V2_RENDER_BRIDGE_SCHEMA' tgg-core/schema.sql
           grep -q 'id="previewCanvas"' tgg-core/public/video-studio/index.html
           grep -q 'id="timelineViewport"' tgg-core/public/video-studio/index.html
           grep -q 'id="dashboardView"' tgg-core/public/video-studio/index.html
@@ -46,3 +53,7 @@ jobs:
           grep -q 'Parametric EQ' tgg-core/public/video-studio/app.js
           grep -q 'video_studio_projects' tgg-core/schema.sql
           grep -q 'creator-media' tgg-core/schema.sql
+          grep -q 'Server FFmpeg Render' tgg-core/public/video-studio/index.html
+          grep -q 'audioStream.getAudioTracks' tgg-core/public/video-studio/app.js
+          grep -q "OIDC_AUDIENCE='tgg-core-video-render-worker'" scripts/tgg-core-video-render-worker.mjs
+          grep -q 'x-tgg-github-oidc' scripts/tgg-core-video-render-worker.mjs

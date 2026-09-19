@@ -1,0 +1,10 @@
+html[data-tgg-v320="on"] .city3d canvas{filter:saturate(1.04) contrast(1.035) brightness(.99)}
+html[data-tgg-v320="on"] .city-title,
+html[data-tgg-v320="on"] .npc-dialogue{backdrop-filter:blur(12px) saturate(130%)}
+html[data-tgg-v320="on"] .garage-car-stage,
+html[data-tgg-v320="on"] .studio-room,
+html[data-tgg-v320="on"] .loft,
+html[data-tgg-v320="on"] .media-lot{box-shadow:inset 0 0 80px rgba(0,0,0,.22)}
+html[data-tgg-v320-fps-band="low"] #v310BuildBadge::after{content:" • PERF";opacity:.65}
+html[data-tgg-v320-fps-band="high"] #v310BuildBadge::after{content:" • REALISM";opacity:.65}
+@media(prefers-reduced-motion:reduce){html[data-tgg-v320="on"] .city3d canvas{filter:saturate(1.02) contrast(1.02)}}

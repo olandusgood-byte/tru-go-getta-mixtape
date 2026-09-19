@@ -83,20 +83,40 @@ try{
   if(!(await page.evaluate(()=>!!window.TGGGame.getState().inVehicle)))throw new Error('Vehicle entry failed');
   let driven=0;
   let driveAttempt='';
-  const driveAttempts=[['ArrowUp'],['ArrowDown'],['ArrowRight','ArrowUp'],['ArrowLeft','ArrowUp']];
-  for(const keys of driveAttempts){
+  const apiAttempts=[
+    {name:'api-forward',control:'forward'},
+    {name:'api-reverse',control:'reverse'},
+    {name:'api-right-forward',steer:'right',control:'forward'},
+    {name:'api-left-forward',steer:'left',control:'forward'}
+  ];
+  for(const attempt of apiAttempts){
     const before=await page.evaluate(()=>window.TGGGame.getState());
-    for(const key of keys)await page.keyboard.down(key);
-    await page.waitForTimeout(700);
-    for(const key of [...keys].reverse())await page.keyboard.up(key);
-    await page.waitForTimeout(220);
+    const accepted=await page.evaluate(a=>{
+      if(a.steer)window.TGGGame.driveVehicle(a.steer);
+      return window.TGGGame.driveVehicle(a.control);
+    },attempt);
+    if(!accepted)continue;
+    await page.waitForTimeout(650);
     const delta=await page.evaluate(prev=>{const s=window.TGGGame.getState();return Math.hypot(s.x-prev.x,s.y-prev.y)},before);
-    if(delta>driven){driven=delta;driveAttempt=keys.join('+')}
+    if(delta>driven){driven=delta;driveAttempt=attempt.name}
     if(driven>0.01)break;
   }
   if(!(driven>0.01)){
+    const keyAttempts=[['ArrowUp'],['ArrowDown'],['ArrowRight','ArrowUp'],['ArrowLeft','ArrowUp']];
+    for(const keys of keyAttempts){
+      const before=await page.evaluate(()=>window.TGGGame.getState());
+      for(const key of keys)await page.keyboard.down(key);
+      await page.waitForTimeout(700);
+      for(const key of [...keys].reverse())await page.keyboard.up(key);
+      await page.waitForTimeout(220);
+      const delta=await page.evaluate(prev=>{const s=window.TGGGame.getState();return Math.hypot(s.x-prev.x,s.y-prev.y)},before);
+      if(delta>driven){driven=delta;driveAttempt='keys:'+keys.join('+')}
+      if(driven>0.01)break;
+    }
+  }
+  if(!(driven>0.01)){
     const diagnostics=await page.evaluate(()=>({state:window.TGGGame.getState(),driving:window.TGGGame.getDrivingState?.(),screen:window.TGGGame.getActiveScreen?.()}));
-    throw new Error('Vehicle movement failed '+JSON.stringify(diagnostics));
+    throw new Error('Vehicle movement failed across public driving API and key paths '+JSON.stringify(diagnostics));
   }
 
   const continuity=await page.evaluate(()=>{

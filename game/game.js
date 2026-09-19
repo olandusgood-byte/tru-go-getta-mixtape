@@ -434,7 +434,9 @@
       vx:walkRuntime.vx,
       vy:walkRuntime.vy,
       sprinting:walkRuntime.sprinting,
-      blocked:walkRuntime.blocked
+      blocked:walkRuntime.blocked,
+      turnDelta:walkRuntime.turnDelta,
+      desiredHeading:walkRuntime.desiredHeading
     });
     update();
     requestAnimationFrame(updatePlayerPhysics);

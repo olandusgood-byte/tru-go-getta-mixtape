@@ -72,7 +72,8 @@
     if(!list)return;
     const ready=Object.keys(FAVORS).map(availability).filter(x=>x.ready);
     root.hidden=ready.length===0;
-    list.innerHTML=ready.map(x=>'<button type="button" data-v498-favor="'+x.name.replaceAll('"','&quot;')+'"><b>'+x.name+' • '+x.label+'</b><span>CALL FAVOR</span></button>').join('');
+    const html=ready.map(x=>'<button type="button" data-v498-favor="'+x.name.replaceAll('"','&quot;')+'"><b>'+x.name+' • '+x.label+'</b><span>CALL FAVOR</span></button>').join('');
+    if(list.innerHTML!==html)list.innerHTML=html;
     list.querySelectorAll('[data-v498-favor]').forEach(btn=>btn.onclick=()=>callFavor(btn.dataset.v498Favor));
   }
   function snapshot(){return {version:VERSION,mutationPolicy:POLICY,uses:{...state.uses},cooldowns:{...state.cooldowns},history:state.history.slice(-40),lastFavor:state.lastFavor?{...state.lastFavor}:null,availability:Object.keys(FAVORS).map(availability)}}

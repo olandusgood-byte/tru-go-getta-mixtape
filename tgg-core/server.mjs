@@ -412,7 +412,7 @@ app.post('/v1/workers/register-existing', async (req,res,next)=>{
     const worker_id=w.id;
     const worker_token=w.token;
     const r=await pool.query(`insert into tgg_worker_registry(worker_id,worker_token_hash,metadata,last_seen_at)
-      values($1,$2,$3,now()) on conflict(worker_id) do update set worker_token_hash=excluded.worker_token_hash,metadata=excluded.metadata,status='active',updated_at=now(),last_seen_at=now() returning id,worker_id,status`,
+      values($1,$2,$3,now()) on conflict(worker_id) do update set worker_token_hash=excluded.worker_token_hash,metadata=coalesce(tgg_worker_registry.metadata,'{}'::jsonb)||excluded.metadata,status='active',updated_at=now(),last_seen_at=now() returning id,worker_id,status`,
       [worker_id,hashWorkerToken(worker_token),req.body?.metadata||{}]);
     res.status(201).json({worker:r.rows[0]});
   }catch(e){next(e);}

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.38 TGG VEHICLE DAMAGE + INTERIOR FORGE 100';
+  const VERSION='V2.39 TGG STAGE + PERFORMANCE FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

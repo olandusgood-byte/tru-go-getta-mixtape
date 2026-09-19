@@ -22,6 +22,7 @@ const STORY_MISSION_ONLY=String(process.env.TGG_3D_STORY_MISSION_ONLY||'0')==='1
 const STORY_CHAPTER2_ONLY=String(process.env.TGG_3D_STORY_CHAPTER2_ONLY||'0')==='1';
 const STORY_CHAPTER3_ONLY=String(process.env.TGG_3D_STORY_CHAPTER3_ONLY||'0')==='1';
 const STORY_WORLD_3D_ONLY=String(process.env.TGG_3D_STORY_WORLD_3D_ONLY||'0')==='1';
+const MEGA_QA_ONLY=String(process.env.TGG_3D_MEGA_QA_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function run(){
@@ -29,6 +30,65 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(MEGA_QA_ONLY){
+      const consoleErrors=[]; const pageErrors=[]; const failedResources=[];
+      page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+      page.on('requestfailed',req=>failedResources.push(req.url()));
+      const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
+      await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:30000});
+      await page.waitForTimeout(900);
+      const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
+
+      const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+      const mp=await mobile.newPage();
+      const mobileErrors=[];
+      mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
+      await mp.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
+      await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:30000});
+      await mp.waitForTimeout(650);
+      const mobileResult=await mp.evaluate(()=>{
+        const qa=window.TGGMegaQA.run();
+        const body=document.documentElement;
+        const director=document.getElementById('sliceDirector')?.getBoundingClientRect();
+        const actionButtons=[...document.querySelectorAll('#game .actions button')].map(x=>x.getBoundingClientRect());
+        return {
+          qa,
+          width:innerWidth,
+          scrollWidth:body.scrollWidth,
+          overflowX:body.scrollWidth>innerWidth+1,
+          director:director?{left:director.left,right:director.right,width:director.width}:null,
+          actionCount:actionButtons.length,
+          minActionHeight:actionButtons.length?Math.min(...actionButtons.map(x=>x.height)):0
+        };
+      });
+      const checks=[
+        {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
+        {name:'mega-check-volume',pass:desktop.total>=240&&desktop.total<=340,detail:String(desktop.total)},
+        {name:'mega-mobile-core-ok',pass:mobileResult.qa.ok,detail:'passed='+mobileResult.qa.passed+'/'+mobileResult.qa.total},
+        {name:'mega-mobile-no-overflow',pass:!mobileResult.overflowX&&mobileResult.scrollWidth<=391,detail:JSON.stringify({width:mobileResult.width,scrollWidth:mobileResult.scrollWidth})},
+        {name:'mega-mobile-director-contained',pass:!!mobileResult.director&&mobileResult.director.left>=0&&mobileResult.director.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.director)},
+        {name:'mega-mobile-actions-readable',pass:mobileResult.actionCount>=20&&mobileResult.minActionHeight>=50,detail:JSON.stringify({count:mobileResult.actionCount,minHeight:mobileResult.minActionHeight})}
+      ];
+      result={
+        ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&mobileErrors.length===0,
+        status:'done',
+        mode:'mega_vertical_slice_qa',
+        target:TARGET,
+        http_status:response?.status?.()||0,
+        checks,
+        desktop_summary:{total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass).slice(0,30)},
+        mobile_summary:{total:mobileResult.qa.total,passed:mobileResult.qa.passed,failed:mobileResult.qa.failed,failed_checks:mobileResult.qa.checks.filter(x=>!x.pass).slice(0,30)},
+        console_errors:consoleErrors,
+        page_errors:pageErrors,
+        mobile_page_errors:mobileErrors,
+        failed_resources:failedResources,
+        updated_at:new Date().toISOString()
+      };
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await mobile.close();await ctx.close();return;
+    }
 
     if(STORY_CHAPTER3_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
@@ -247,8 +307,7 @@ async function run(){
           active:false,completed:true,step:6,startedAt:1,completedAt:2,
           baselines:{jobs:0,recordings:0,battleWins:0,shows:0,mixtapes:0},
           chapter2:{active:false,completed:false,step:0,startedAt:0,completedAt:0,baselines:null,flags:{manager:false,kane:false,director:false,visual:false}}
-        }));
-      });
+        }));      });
       await lp.addScriptTag({content:storySource});
       await lp.addScriptTag({content:worldSource});
       await lp.evaluate(()=>window.TGGStoryMissions.startChapter2());
@@ -497,8 +556,7 @@ async function run(){
           clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
         }});
         window.__qaGame={cash:0,xp:0,level:1};
-        window.__qaCareer={recordings:0,mixtapes:0,reputation:0,studioLevel:1};
-        window.__qaContent={completed:[]};
+        window.__qaCareer={recordings:0,mixtapes:0,reputation:0,studioLevel:1};        window.__qaContent={completed:[]};
         window.__qaLife={battleWins:0,shows:0,activeOpportunity:null};
         window.__qaDirector={activeContract:null,history:[]};
         window.__qaShown=null; window.__qaTab=null; window.__qaToasts=[];
@@ -747,8 +805,7 @@ async function run(){
       await mobile.close();await ctx.close();return;
     }
 
-    if(CAREER_DIRECTOR_ONLY){
-      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+    if(CAREER_DIRECTOR_ONLY){      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
       const response=await fetch(base+'/career-director.js');
       if(!response.ok)throw new Error('Career Director harness could not fetch deployed script: '+response.status);
       const source=await response.text();
@@ -997,8 +1054,7 @@ async function run(){
           cycleCamera:()=>window.__qaActions.push('camera')
         };
         window.__tggToast=()=>{};
-      });
-      await page.addScriptTag({content:source});
+      });      await page.addScriptTag({content:source});
       await page.waitForTimeout(100);
       const checks=[];
       const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
@@ -1247,8 +1303,7 @@ async function run(){
       walkingApi:typeof window.TGGGame?.getWalkingState==='function'&&typeof window.TGGGame?.setWalkKey==='function',
       walkingTuning:window.TGGGame?.getWalkTuning?.()||null,
       playerDynamicsApi:typeof window.TGG3D?.setPlayerDynamics==='function',
-      sprintButton:!!document.getElementById('sprintBtn'),
-      playerMoveHud:!!document.getElementById('playerMoveHud'),
+      sprintButton:!!document.getElementById('sprintBtn'),      playerMoveHud:!!document.getElementById('playerMoveHud'),
       finalBuildVersion:window.TGGFinalBuild?.version||null
     }));
     record('title-version',initial.title.includes(EXPECT_VERSION),initial.title);
@@ -1497,8 +1552,7 @@ async function run(){
     const coast=await page.evaluate(()=>window.TGGGame?.getDrivingState?.());
     record('coast-deceleration',Math.abs(Number(coast?.speed)||0)<Math.abs(Number(reversed.driving?.speed)||0),`reverse=${reversed.driving?.speed},coast=${coast?.speed}`);
 
-    await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());
-    const exited=await page.evaluate(()=>({
+    await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());    const exited=await page.evaluate(()=>({
       state:window.TGGGame?.getState?.(),
       hudActive:document.getElementById('vehicleHud')?.classList.contains('active'),
       camera:window.TGG3D?.getCameraMode?.()

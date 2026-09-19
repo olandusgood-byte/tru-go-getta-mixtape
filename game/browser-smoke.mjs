@@ -826,7 +826,7 @@ try{
      encounterResolved.snap?.lastCompleted?.handoff?.success!==true||
      encounterResolved.meetup?.active?.name!=='Rico Flame'||
      encounterResolved.meetup?.active?.source!=='street-encounter-handoff'||
-     encounterResolved.handoffMessage?.direction!=='out'||
+     encounterResolved.handoffMessage?.direction!=='in'||
      !(encounterResolved.relation?.relation?.affinity>encounterPrep.before?.relation?.affinity)||
      !encounterResolved.restored||
      Math.hypot(encounterResolved.current.x-encounterRoute.start.x,encounterResolved.current.y-encounterRoute.start.y)>.05){

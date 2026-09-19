@@ -1,0 +1,20 @@
+(() => {
+  const forge=globalThis.__V234ForgeUnderTest;
+  const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
+  assert(forge,'V2.34 Camera Forge adapter API must exist');
+  assert(Array.isArray(forge.layers)&&forge.layers.length===100,'exact 100 Camera Forge layers');
+  assert(typeof forge.status==='function','status API');
+  assert(typeof forge.applyPreset==='function','applyPreset API');
+  assert(typeof forge.pulse==='function','pulse API');
+  assert(typeof forge.togglePhoto==='function','photo API');
+  assert(typeof forge.setEnabled==='function','enabled API');
+  assert(typeof forge.restore==='function','restore API');
+  assert(Array.isArray(forge.presets)&&forge.presets.includes('street')&&forge.presets.includes('action')&&forge.presets.includes('cinematic')&&forge.presets.includes('photo'),'presets');
+  const s=forge.status();
+  assert(s.version==='V2.34 TGG CAMERA + CINEMATIC FORGE 100','version');
+  assert(s.mode==='native-camera-forge','mode');
+  assert(s.enabled===true,'enabled default');
+  assert(s.preset==='street','street default');
+  assert(s.layerCount===100,'layer count');
+  return true;
+})();

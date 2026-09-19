@@ -153,6 +153,7 @@
   }
   function interact(){
     const step=currentStep();if(!step)return false;
+    if(step.kind==='talk'&&window.TGGV245?.interceptStoryTalk?.(step))return true;
     if(step.kind==='arrive'){
       if(near(step.target)){state.arrivals++;return advance('arrival')}
       toast('FOLLOW THE STORY MARKER — '+step.target.label);return false;

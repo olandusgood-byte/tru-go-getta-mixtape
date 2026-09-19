@@ -8,7 +8,7 @@ export function protectedAudioPassObserved(bodyText) {
 
 export function buildProtectedAudioCertificateResult({ job, screenshotBuffer, html, bodyText, playbackStarted, elapsedMs }) {
   if (!protectedAudioPassObserved(bodyText)) throw new Error('PROTECTED_AUDIO_PAGE_PASS_NOT_OBSERVED');
-  const challenge = String(job?.spec?.challenge || '');
+  const challenge = String(job?.spec?.challenge || job?.payload?.challenge || job?.challenge || '');
   if (!challenge) throw new Error('BROWSER_CERT_CHALLENGE_MISSING');
   if (!Buffer.isBuffer(screenshotBuffer) || screenshotBuffer.length === 0) throw new Error('BROWSER_CERT_SCREENSHOT_MISSING');
   if (typeof html !== 'string' || html.length === 0) throw new Error('BROWSER_CERT_HTML_MISSING');

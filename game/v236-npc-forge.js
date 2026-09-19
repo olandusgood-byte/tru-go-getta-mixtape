@@ -120,9 +120,8 @@
     for(const rec of state.registry.values()){
       if(rec.root?.parent)rec.root.parent.remove(rec.root);
       rec.root?.traverse?.(o=>{
+        // Geometry is owned per generated NPC, but V2.27 Forge materials are cached/shared.
         o.geometry?.dispose?.();
-        const ms=Array.isArray(o.material)?o.material:[o.material];
-        ms.filter(Boolean).forEach(m=>m.dispose?.());
       });
       rec.root=null;setLegacy(rec,true);
       if(rec.legacyParts)rec.human.userData.parts=rec.legacyParts;

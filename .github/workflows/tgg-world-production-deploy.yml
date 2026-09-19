@@ -2,7 +2,7 @@ name: TGG World Production Deploy
 
 on:
   workflow_run:
-    workflows: ["Game V2.18 Mega Regression", "Game Static Gate", "Game Browser Smoke"]
+    workflows: ["Game Browser Smoke"]
     types: [completed]
   workflow_dispatch:
 
@@ -50,26 +50,53 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL             -H "Authorization: Bearer $GH_TOKEN"             -H "Accept: application/vnd.github+json"             -H "X-GitHub-Api-Version: 2022-11-28"             "https://api.github.com/repos/$SOURCE_REPO/actions/runs?head_sha=$SOURCE_SHA&status=completed&per_page=100"             > /tmp/tgg-cert-runs.json
           node <<'NODE'
-          const fs=require('fs');
-          const data=JSON.parse(fs.readFileSync('/tmp/tgg-cert-runs.json','utf8'));
+          const {execFileSync}=require('child_process');
           const sha=process.env.SOURCE_SHA;
+          const repo=process.env.SOURCE_REPO;
+          const token=process.env.GH_TOKEN;
           const required=['Game Static Gate','Game Browser Smoke','Game V2.18 Mega Regression'];
-          const mainRuns=(data.workflow_runs||[]).filter(r=>r.head_sha===sha&&r.head_branch==='main');
-          const summary={};
-          for(const name of required){
-            const runs=mainRuns.filter(r=>r.name===name).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at));
-            const latest=runs[0]||null;
-            summary[name]=latest?{id:latest.id,conclusion:latest.conclusion,updated_at:latest.updated_at}:null;
-            if(!latest||latest.conclusion!=='success'){
-              console.error('Certification blocked for exact SHA',sha,JSON.stringify(summary,null,2));
-              process.exit(1);
-            }
+          const terminalFailure=new Set(['failure','cancelled','timed_out','action_required','stale','startup_failure']);
+          const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+          function fetchRuns(){
+            const raw=execFileSync('curl',[
+              '-fsSL',
+              '-H',`Authorization: Bearer ${token}`,
+              '-H','Accept: application/vnd.github+json',
+              '-H','X-GitHub-Api-Version: 2022-11-28',
+              `https://api.github.com/repos/${repo}/actions/runs?head_sha=${sha}&per_page=100`
+            ],{encoding:'utf8'});
+            return JSON.parse(raw).workflow_runs||[];
           }
-          console.log('Exact-SHA certification GREEN',sha,JSON.stringify(summary));
+          (async()=>{
+            for(let attempt=1;attempt<=60;attempt++){
+              const mainRuns=fetchRuns().filter(r=>r.head_sha===sha&&r.head_branch==='main');
+              const summary={};
+              let waiting=false;
+              for(const name of required){
+                const latest=mainRuns.filter(r=>r.name===name).sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at))[0]||null;
+                summary[name]=latest?{id:latest.id,status:latest.status,conclusion:latest.conclusion,updated_at:latest.updated_at}:null;
+                if(!latest||latest.status!=='completed'){waiting=true;continue;}
+                if(terminalFailure.has(latest.conclusion)){
+                  console.error('Certification terminal failure for exact SHA',sha,JSON.stringify(summary,null,2));
+                  process.exit(1);
+                }
+                if(latest.conclusion!=='success'){
+                  console.error('Certification blocked for exact SHA',sha,JSON.stringify(summary,null,2));
+                  process.exit(1);
+                }
+              }
+              if(!waiting){
+                console.log('Exact-SHA certification GREEN',sha,JSON.stringify(summary));
+                return;
+              }
+              console.log(`Waiting for exact-SHA certification attempt ${attempt}/60`,sha,JSON.stringify(summary));
+              await sleep(10000);
+            }
+            console.error('Timed out waiting for exact-SHA certification',sha);
+            process.exit(1);
+          })().catch(error=>{console.error(error);process.exit(1)});
           NODE
-
       - name: Verify canonical regression contract
         id: gate
         shell: bash

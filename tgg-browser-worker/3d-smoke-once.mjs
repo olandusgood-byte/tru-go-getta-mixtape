@@ -123,9 +123,8 @@ async function run(){
       add('v242-index-forge-script',htmlSource.includes('v242-director-forge.js'));
       add('v242-core-api',snap.core&&snap.sequences.length===5,JSON.stringify(snap.sequences));
       add('v242-forge-api',snap.forge?.version==='V2.42 TGG SHOW DIRECTOR FORGE 100'&&snap.forge?.mode==='native-show-director-forge',JSON.stringify(snap.forge));
-      add('v242-100-layers',window?true:true);
       const layerCount=await mp.evaluate(()=>window.TGGV242?.layers?.length||0);
-      checks[checks.length-1].pass=layerCount===100;checks[checks.length-1].detail=String(layerCount);
+      add('v242-100-layers',layerCount===100,String(layerCount));
       add('v242-ui-hosts',snap.ui.btn&&snap.ui.panel&&snap.ui.hud,JSON.stringify(snap.ui));
 
       await mp.evaluate(()=>{window.__v242Calls=[];window.TGGV242.start('battle',{auto:false})});

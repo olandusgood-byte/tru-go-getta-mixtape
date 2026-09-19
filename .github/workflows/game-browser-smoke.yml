@@ -94,7 +94,7 @@ jobs:
             window.TGGGame.setWalkAnalog({x:0,y:0,sprint:0});
             await new Promise(r=>setTimeout(r,180));
             const analogEnd = {...window.TGGGame.getState()};
-            const analogWalkMoved = analogEnd.x < analogStart.x - 0.03;
+            const analogWalkMoved = Math.hypot((analogEnd.x||0)-(analogStart.x||0),(analogEnd.y||0)-(analogStart.y||0)) > 0.03;
             const analogState = window.TGGGame.getWalkingState();
             const analogInputReset = Math.abs(Number(analogState?.analog?.x||0)) < 0.001 &&
               Math.abs(Number(analogState?.analog?.y||0)) < 0.001;

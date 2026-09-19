@@ -39,106 +39,94 @@ async function run(){
 
     if(MEGA_QA_ONLY){
       const megaSha=String(process.env.TGG_3D_MEGA_QA_SHA||'').trim();
-      if(!/^[0-9a-f]{40}$/i.test(megaSha))throw new Error('TGG_3D_MEGA_QA_SHA must be an exact 40-char game commit SHA');
+      const snapshotSha='1f728a7ef0b26f6714c1fad8e01eb7ff4a6977d9';
+      if(megaSha!==snapshotSha)throw new Error('mega snapshot SHA mismatch: expected '+snapshotSha+' got '+megaSha);
       const mimeFor=p=>p.endsWith('.html')?'text/html; charset=utf-8':p.endsWith('.css')?'text/css; charset=utf-8':p.endsWith('.js')?'application/javascript; charset=utf-8':p.endsWith('.json')?'application/json; charset=utf-8':p.endsWith('.png')?'image/png':p.endsWith('.jpg')||p.endsWith('.jpeg')?'image/jpeg':p.endsWith('.webp')?'image/webp':p.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
-      const localRoot=await fs.mkdtemp(path.join(os.tmpdir(),'tgg-mega-'));
-      const archivePath=path.join(localRoot,'repo.tar.gz');
-      try{
-        const archiveUrl='https://codeload.github.com/olandusgood-byte/tru-go-getta-mixtape/tar.gz/'+megaSha;
-        const archiveResponse=await fetch(archiveUrl,{redirect:'follow'});
-        if(!archiveResponse.ok)throw new Error('source archive fetch failed: '+archiveResponse.status);
-        await fs.writeFile(archivePath,Buffer.from(await archiveResponse.arrayBuffer()));
-        await execFileAsync('tar',['-xzf',archivePath,'-C',localRoot],{timeout:30000,maxBuffer:4*1024*1024});
-        const entries=await fs.readdir(localRoot,{withFileTypes:true});
-        const sourceDir=entries.find(e=>e.isDirectory()&&e.name.startsWith('tru-go-getta-mixtape-'));
-        if(!sourceDir)throw new Error('extracted source directory not found');
-        const serveRoot=path.join(localRoot,sourceDir.name,'game');
-        const proxy=http.createServer(async(req,res)=>{
-          try{
-            let pathname=new URL(req.url||'/','http://127.0.0.1').pathname;
-            if(pathname==='/')pathname='/index.html';
-            pathname=decodeURIComponent(pathname);
-            const relative=pathname.replace(/^\/+/, '');
-            const filePath=path.resolve(serveRoot,relative);
-            if(!filePath.startsWith(path.resolve(serveRoot)+path.sep)&&filePath!==path.resolve(serveRoot)){
-              res.statusCode=400;res.end('bad path');return;
-            }
-            const bytes=await fs.readFile(filePath);
-            res.statusCode=200;
-            res.setHeader('content-type',mimeFor(filePath));
-            res.setHeader('cache-control','no-store');
-            res.end(bytes);
-          }catch(error){
-            res.statusCode=error?.code==='ENOENT'?404:500;
-            res.end(error?.message||String(error));
-          }
-        });
-        await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve)});
-        const proxyAddress=proxy.address();
-        const qaTarget='http://127.0.0.1:'+proxyAddress.port+'/';
+      const serveRoot=path.resolve(process.cwd(),'tgg-browser-worker','mega-game-snapshot');
+      await fs.access(path.join(serveRoot,'index.html'));
+      const proxy=http.createServer(async(req,res)=>{
         try{
-          const consoleErrors=[]; const pageErrors=[]; const failedResources=[];
-          page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
-          page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
-          page.on('requestfailed',req=>failedResources.push(req.url()));
-          const response=await page.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
-          await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:30000});
-          await page.waitForTimeout(700);
-          const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
-
-          const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
-          const mp=await mobile.newPage();
-          const mobileErrors=[];
-          mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
-          await mp.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
-          await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:30000});
-          await mp.waitForTimeout(500);
-          const mobileResult=await mp.evaluate(()=>{
-            const qa=window.TGGMegaQA.run();
-            const body=document.documentElement;
-            const director=document.getElementById('sliceDirector')?.getBoundingClientRect();
-            const actionButtons=[...document.querySelectorAll('#game .actions button')].map(x=>x.getBoundingClientRect());
-            return {
-              qa,
-              width:innerWidth,
-              scrollWidth:body.scrollWidth,
-              overflowX:body.scrollWidth>innerWidth+1,
-              director:director?{left:director.left,right:director.right,width:director.width}:null,
-              actionCount:actionButtons.length,
-              minActionHeight:actionButtons.length?Math.min(...actionButtons.map(x=>x.height)):0
-            };
-          });
-          const checks=[
-            {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
-            {name:'mega-check-volume',pass:desktop.total>=250&&desktop.total<=650,detail:String(desktop.total)},
-            {name:'mega-mobile-core-ok',pass:mobileResult.qa.ok,detail:'passed='+mobileResult.qa.passed+'/'+mobileResult.qa.total},
-            {name:'mega-mobile-no-overflow',pass:!mobileResult.overflowX&&mobileResult.scrollWidth<=391,detail:JSON.stringify({width:mobileResult.width,scrollWidth:mobileResult.scrollWidth})},
-            {name:'mega-mobile-director-contained',pass:!!mobileResult.director&&mobileResult.director.left>=0&&mobileResult.director.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.director)},
-            {name:'mega-mobile-actions-readable',pass:mobileResult.actionCount>=20&&mobileResult.minActionHeight>=50,detail:JSON.stringify({count:mobileResult.actionCount,minHeight:mobileResult.minActionHeight})}
-          ];
-          result={
-            ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&mobileErrors.length===0,
-            status:'done',
-            mode:'mega_vertical_slice_qa',
-            target:'github:'+megaSha,
-            served_via:'local-git-archive',
-            http_status:response?.status?.()||0,
-            checks,
-            desktop_summary:{total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass).slice(0,30)},
-            mobile_summary:{total:mobileResult.qa.total,passed:mobileResult.qa.passed,failed:mobileResult.qa.failed,failed_checks:mobileResult.qa.checks.filter(x=>!x.pass).slice(0,30)},
-            console_errors:consoleErrors,
-            page_errors:pageErrors,
-            mobile_page_errors:mobileErrors,
-            failed_resources:failedResources,
-            updated_at:new Date().toISOString()
-          };
-          console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-          await mobile.close();await ctx.close();return;
-        } finally {
-          await new Promise(resolve=>proxy.close(()=>resolve()));
+          let pathname=new URL(req.url||'/','http://127.0.0.1').pathname;
+          if(pathname==='/')pathname='/index.html';
+          pathname=decodeURIComponent(pathname);
+          const relative=pathname.replace(/^\/+/, '');
+          const filePath=path.resolve(serveRoot,relative);
+          if(!filePath.startsWith(serveRoot+path.sep)&&filePath!==serveRoot){
+            res.statusCode=400;res.end('bad path');return;
+          }
+          const bytes=await fs.readFile(filePath);
+          res.statusCode=200;
+          res.setHeader('content-type',mimeFor(filePath));
+          res.setHeader('cache-control','no-store');
+          res.end(bytes);
+        }catch(error){
+          res.statusCode=error?.code==='ENOENT'?404:500;
+          res.end(error?.message||String(error));
         }
+      });
+      await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve)});
+      const proxyAddress=proxy.address();
+      const qaTarget='http://127.0.0.1:'+proxyAddress.port+'/';
+      try{
+        const consoleErrors=[]; const pageErrors=[]; const failedResources=[];
+        page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+        page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+        page.on('requestfailed',req=>failedResources.push(req.url()));
+        const response=await page.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
+        await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:30000});
+        await page.waitForTimeout(700);
+        const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
+
+        const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
+        const mp=await mobile.newPage();
+        const mobileErrors=[];
+        mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
+        await mp.goto(qaTarget,{waitUntil:'domcontentloaded',timeout:30000});
+        await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:30000});
+        await mp.waitForTimeout(500);
+        const mobileResult=await mp.evaluate(()=>{
+          const qa=window.TGGMegaQA.run();
+          const body=document.documentElement;
+          const director=document.getElementById('sliceDirector')?.getBoundingClientRect();
+          const actionButtons=[...document.querySelectorAll('#game .actions button')].map(x=>x.getBoundingClientRect());
+          return {
+            qa,
+            width:innerWidth,
+            scrollWidth:body.scrollWidth,
+            overflowX:body.scrollWidth>innerWidth+1,
+            director:director?{left:director.left,right:director.right,width:director.width}:null,
+            actionCount:actionButtons.length,
+            minActionHeight:actionButtons.length?Math.min(...actionButtons.map(x=>x.height)):0
+          };
+        });
+        const checks=[
+          {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
+          {name:'mega-check-volume',pass:desktop.total>=250&&desktop.total<=650,detail:String(desktop.total)},
+          {name:'mega-mobile-core-ok',pass:mobileResult.qa.ok,detail:'passed='+mobileResult.qa.passed+'/'+mobileResult.qa.total},
+          {name:'mega-mobile-no-overflow',pass:!mobileResult.overflowX&&mobileResult.scrollWidth<=391,detail:JSON.stringify({width:mobileResult.width,scrollWidth:mobileResult.scrollWidth})},
+          {name:'mega-mobile-director-contained',pass:!!mobileResult.director&&mobileResult.director.left>=0&&mobileResult.director.right<=mobileResult.width+1,detail:JSON.stringify(mobileResult.director)},
+          {name:'mega-mobile-actions-readable',pass:mobileResult.actionCount>=20&&mobileResult.minActionHeight>=50,detail:JSON.stringify({count:mobileResult.actionCount,minHeight:mobileResult.minActionHeight})}
+        ];
+        result={
+          ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&mobileErrors.length===0,
+          status:'done',
+          mode:'mega_vertical_slice_qa',
+          target:'github:'+megaSha,
+          served_via:'attached-git-tree-snapshot',
+          http_status:response?.status?.()||0,
+          checks,
+          desktop_summary:{total:desktop.total,passed:desktop.passed,failed:desktop.failed,failed_checks:desktop.checks.filter(x=>!x.pass).slice(0,30)},
+          mobile_summary:{total:mobileResult.qa.total,passed:mobileResult.qa.passed,failed:mobileResult.qa.failed,failed_checks:mobileResult.qa.checks.filter(x=>!x.pass).slice(0,30)},
+          console_errors:consoleErrors,
+          page_errors:pageErrors,
+          mobile_page_errors:mobileErrors,
+          failed_resources:failedResources,
+          updated_at:new Date().toISOString()
+        };
+        console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+        await mobile.close();await ctx.close();return;
       } finally {
-        await fs.rm(localRoot,{recursive:true,force:true}).catch(()=>{});
+        await new Promise(resolve=>proxy.close(()=>resolve()));
       }
     }
 

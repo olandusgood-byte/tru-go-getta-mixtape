@@ -8,7 +8,7 @@ function aiState(){var p=project();p.ai=p.ai||{beats:[],silence:[],analysis:{}};
 function status(msg){var el=document.getElementById('aiStatus');if(el)el.textContent=msg;}
 function createUI(){
   var nav=document.querySelector('.workspace-tabs'),deliver=nav&&nav.querySelector('[data-workspace="deliver"]');
-  if(nav&&!nav.querySelector('[data-ai-workspace]')){var b=document.createElement('button');b.textContent='AI Director';b.dataset.aiWorkspace='1';if(deliver)nav.insertBefore(b,deliver);else nav.appendChild(b);b.onclick=showAI;}
+  if(nav&&!nav.querySelector('[data-ai-workspace]')){var b=document.createElement('button');b.textContent='AI Director';b.dataset.aiWorkspace='1';b.dataset.workspace='ai';if(deliver)nav.insertBefore(b,deliver);else nav.appendChild(b);b.addEventListener('click',function(ev){ev.preventDefault();ev.stopImmediatePropagation();showAI();},true);}
   root=document.createElement('section');root.id='aiDirectorView';root.className='ai-director-view view-hidden';
   root.innerHTML=`
     <div class="ai-hero"><div><span class="eyebrow">V2.5 · AI ASSISTED EDITING</span><h1>Director Mode</h1><p>Automatic cuts, beat-aware pacing, silence detection, smart reframing, masks, tracking and accelerated effects without replacing the pro timeline.</p></div><button id="aiBackEdit" class="primary-btn">Open Timeline</button></div>

@@ -1079,6 +1079,28 @@ try{
     throw new Error('V5.09 district reaction failed '+JSON.stringify({districtReaction,districtMessage}));
   }
 
+  await page.waitForFunction(()=>!!window.TGGV509&&document.documentElement.dataset.tggV509==='on',{timeout:15000});
+  const immersion=await page.evaluate(()=>{
+    const run=window.TGGV509.run();
+    const snap=window.TGGV509.snapshot();
+    const crowd=window.TGG3D?.pedestrians||[];
+    return {
+      run,snap,
+      crowdVisible:crowd.filter(x=>x.visible).length,
+      crowdTotal:crowd.length,
+      hasInteriorHud:!!document.getElementById('v509InteriorHud')
+    };
+  });
+  if(immersion.run?.ok!==true||
+     immersion.crowdTotal<12||
+     immersion.crowdVisible<6||
+     immersion.hasInteriorHud!==true||
+     !immersion.snap?.features?.includes('dynamic-physical-crowd-density')||
+     !immersion.snap?.features?.includes('property-interior-hotspots')||
+     !immersion.snap?.features?.includes('npc-choice-city-consequences')){
+    throw new Error('V5.09 world immersion failed '+JSON.stringify(immersion));
+  }
+
   await clearIncomingCallOverlay('pre keyboard movement');
   await page.evaluate(()=>{
     window.TGGNPCRelations?.closeChoice?.();

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "4.98",
-  "module": "GAME-V4.98-NPC-RELATIONSHIP-FAVORS",
-  "name": "V4.97-V4.98 NPC Relationship Choices + Routed Favors Gameplay",
+  "version": "4.99",
+  "module": "GAME-V4.99-NPC-CONTACT-CONSEQUENCES",
+  "name": "V4.97-V4.99 NPC Relationships + Routed Favors + Contact Consequences",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -171,7 +171,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V4.99",
+  "next": "V5.00",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

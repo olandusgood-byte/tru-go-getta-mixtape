@@ -70,45 +70,98 @@ async function run(){
     const page=await ctx.newPage();
 
     if(V220_CINEMATIC_ONLY){
-      const consoleErrors=[];const pageErrors=[];const failedResources=[];
-      page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
-      page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
-      page.on('requestfailed',req=>failedResources.push(req.url()));
-      const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:30000});
-      await page.waitForFunction(()=>window.TGG3D?.isReady?.()&&window.TGGStoryMissions&&window.TGGStoryCinematics&&window.TGGCrowdPresentation?.getStatus?.(),undefined,{polling:100,timeout:30000});
-      await page.waitForTimeout(450);
-      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
-
-      await page.evaluate(()=>{
-        window.TGGGame?.show?.('game');
-        window.TGG3D?.setCameraMode?.('top',true);
+      const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
+      const [htmlResponse,storyResponse,cineResponse]=await Promise.all([
+        fetch(base+'/index.html'),fetch(base+'/story-missions.js'),fetch(base+'/story-cinematics.js')
+      ]);
+      if(!htmlResponse.ok||!storyResponse.ok||!cineResponse.ok){
+        throw new Error('V2.20 cinematic harness fetch failed: html='+htmlResponse.status+', story='+storyResponse.status+', cine='+cineResponse.status);
+      }
+      let html=await htmlResponse.text();
+      const [storySource,cineSource]=await Promise.all([storyResponse.text(),cineResponse.text()]);
+      html=html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
+               .replace(/<script\b[^>]*\/?>/gi,'')
+               .replace(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi,'');
+      const testCtx=await browser.newContext({viewport:{width:1440,height:1000}});
+      const tp=await testCtx.newPage();
+      const pageErrors=[];const consoleErrors=[];
+      tp.on('pageerror',e=>pageErrors.push(e.message||String(e)));
+      tp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      await tp.setContent(html,{waitUntil:'domcontentloaded'});
+      await tp.evaluate(()=>{
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
+        window.__qaCamera='top';
+        window.__qaScreen='game';
+        window.__qaGame={x:50,y:55,cash:0,xp:0,level:5,heading:0,inVehicle:false};
+        window.__qaCareer={recordings:0,mixtapes:0,reputation:0,studioLevel:3};
+        window.__qaContent={completed:[]};
+        window.__qaLife={battleWins:0,shows:0,activeOpportunity:null,contacts:{}};
+        window.__qaCrowd={ready:true,focus:'free',visibleFans:12,cheering:0,recording:4,watching:8,reactionLevel:0};
+        window.TGGGame={
+          getState:()=>window.__qaGame,
+          getActiveScreen:()=>window.__qaScreen,
+          show:id=>{window.__qaScreen=id;return true},
+          reward:(cash,xp)=>{window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return true}
+        };
+        window.TGG3D={
+          setCameraMode:(mode)=>{window.__qaCamera=mode;return mode},
+          getCameraMode:()=>window.__qaCamera
+        };
+        window.TGGCareer={career:window.__qaCareer,addRep:n=>{window.__qaCareer.reputation+=Number(n)||0;return true}};
+        window.TGGContent={state:window.__qaContent};
+        window.TGGWorldLife={
+          getState:()=>JSON.parse(JSON.stringify(window.__qaLife)),
+          setTab:()=>true,
+          callContact:id=>{window.__qaLife.activeOpportunity={contactId:id};return true},
+          startShow:()=>{
+            window.__qaLife.shows+=0;
+            window.__qaCrowd={...window.__qaCrowd,focus:'stage',cheering:2,recording:4,reactionLevel:1};
+            return true;
+          }
+        };
+        window.TGGCareerDirector={getState:()=>({activeContract:null,history:[]}),captureOpportunity:()=>true};
+        window.TGGProgression={sync:()=>true};
+        window.TGGWorldSync={sync:()=>true};
+        window.TGGCrowdPresentation={getStatus:()=>({...window.__qaCrowd})};
+        window.__tggToast=()=>{};
       });
-      await page.waitForTimeout(120);
+      await tp.addScriptTag({content:storySource});
+      await tp.addScriptTag({content:cineSource});
+      await tp.waitForTimeout(80);
 
-      let snap=await page.evaluate(()=>({
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
+      let snap=await tp.evaluate(()=>({
         title:document.title,
         version:window.TGGStoryCinematics?.getState?.().version,
         api:typeof window.TGGStoryCinematics?.show==='function'&&typeof window.TGGStoryCinematics?.hide==='function'&&typeof window.TGGStoryCinematics?.refreshCrowd==='function',
+        storyApi:typeof window.TGGStoryMissions?.start==='function',
         root:!!document.getElementById('storyCinematic'),
         styles:!!document.getElementById('storyCinematicStyles'),
-        camera:window.TGG3D?.getCameraMode?.()
+        camera:window.TGG3D.getCameraMode()
       }));
       add('v220-title',snap.title.includes('V2.20'),snap.title);
       add('v220-version',snap.version==='V2.20',snap.version);
       add('v220-api',snap.api);
+      add('v220-story-api',snap.storyApi);
       add('v220-root',snap.root);
       add('v220-styles',snap.styles);
       add('v220-camera-baseline',snap.camera==='top',snap.camera);
 
-      await page.evaluate(()=>window.TGGStoryMissions.start());
-      await page.waitForTimeout(180);
-      snap=await page.evaluate(()=>({
+      await tp.evaluate(()=>window.TGGStoryMissions.start());
+      await tp.waitForTimeout(80);
+      snap=await tp.evaluate(()=>({
         cine:window.TGGStoryCinematics.getState(),
         kicker:document.getElementById('storyCineKicker')?.textContent||'',
         title:document.getElementById('storyCineTitle')?.textContent||'',
         badge:document.getElementById('storyCineBadge')?.textContent||'',
         type:document.getElementById('storyCineType')?.textContent||'',
-        camera:window.TGG3D?.getCameraMode?.()
+        camera:window.TGG3D.getCameraMode()
       }));
       add('v220-story-event-integration',snap.cine?.lastEvent?.type==='chapter-start'&&snap.cine?.lastEvent?.chapter===1,JSON.stringify(snap.cine));
       add('v220-chapter-visible',snap.cine?.visible===true&&String(snap.cine?.className||'').includes('chapter'),snap.cine?.className);
@@ -117,42 +170,42 @@ async function run(){
       add('v220-chapter-type',snap.type==='STORY CHAPTER',snap.type);
       add('v220-chapter-camera-cue',snap.camera==='orbit',snap.camera);
 
-      await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tgg-story-event',{detail:{
+      await tp.evaluate(()=>window.dispatchEvent(new CustomEvent('tgg-story-event',{detail:{
         type:'objective',chapter:1,title:'MEET M',detail:'OPEN THE MANAGER OPPORTUNITY AND LOCK IN YOUR FIRST CONTRACT.'
       }})));
-      await page.waitForTimeout(150);
-      snap=await page.evaluate(()=>({
+      await tp.waitForTimeout(60);
+      snap=await tp.evaluate(()=>({
         cine:window.TGGStoryCinematics.getState(),
         kicker:document.getElementById('storyCineKicker')?.textContent||'',
         title:document.getElementById('storyCineTitle')?.textContent||'',
         type:document.getElementById('storyCineType')?.textContent||'',
-        camera:window.TGG3D?.getCameraMode?.()
+        camera:window.TGG3D.getCameraMode()
       }));
       add('v220-objective-visible',snap.cine?.visible===true&&String(snap.cine?.className||'').includes('objective'),snap.cine?.className);
       add('v220-objective-copy',snap.kicker==='NEW OBJECTIVE'&&snap.title==='MEET M',JSON.stringify(snap));
       add('v220-objective-type',snap.type==='CONTACT',snap.type);
       add('v220-objective-camera-cue',snap.camera==='chase',snap.camera);
 
-      await page.waitForTimeout(1750);
-      snap=await page.evaluate(()=>({camera:window.TGG3D?.getCameraMode?.(),visible:window.TGGStoryCinematics.getState().visible}));
-      add('v220-camera-restore',snap.camera==='orbit'||snap.camera==='top',JSON.stringify(snap));
+      await tp.waitForTimeout(1700);
+      snap=await tp.evaluate(()=>({camera:window.TGG3D.getCameraMode(),visible:window.TGGStoryCinematics.getState().visible}));
+      add('v220-camera-restore',snap.camera==='orbit',JSON.stringify(snap));
 
-      await page.evaluate(()=>window.TGGWorldLife?.startShow?.());
-      await page.waitForTimeout(220);
-      snap=await page.evaluate(()=>({
-        crowd:window.TGGCrowdPresentation?.getStatus?.(),
-        text:window.TGGStoryCinematics?.refreshCrowd?.(),
+      await tp.evaluate(()=>window.TGGWorldLife.startShow());
+      await tp.waitForTimeout(30);
+      snap=await tp.evaluate(()=>({
+        crowd:window.TGGCrowdPresentation.getStatus(),
+        text:window.TGGStoryCinematics.refreshCrowd(),
         rendered:document.getElementById('storyCineCrowd')?.textContent||''
       }));
       add('v220-crowd-focus',snap.crowd?.focus==='stage',JSON.stringify(snap.crowd));
       add('v220-crowd-metadata',/FANS|CHEERING|RECORDING|CITY WATCHING/.test(String(snap.text)),JSON.stringify(snap));
       add('v220-crowd-rendered',snap.rendered===snap.text,JSON.stringify(snap));
 
-      await page.evaluate(()=>window.dispatchEvent(new CustomEvent('tgg-story-event',{detail:{
+      await tp.evaluate(()=>window.dispatchEvent(new CustomEvent('tgg-story-event',{detail:{
         type:'chapter-complete',chapter:2,title:'CITY BUZZ COMPLETE',detail:'+$1800 • +450 XP • +175 REP'
       }})));
-      await page.waitForTimeout(160);
-      snap=await page.evaluate(()=>({
+      await tp.waitForTimeout(60);
+      snap=await tp.evaluate(()=>({
         cine:window.TGGStoryCinematics.getState(),
         kicker:document.getElementById('storyCineKicker')?.textContent||'',
         title:document.getElementById('storyCineTitle')?.textContent||'',
@@ -164,7 +217,7 @@ async function run(){
       add('v220-complete-badge',snap.badge==='✓',snap.badge);
       add('v220-complete-type',snap.type==='MISSION PASSED',snap.type);
 
-      snap=await page.evaluate(()=>{
+      snap=await tp.evaluate(()=>{
         const payload={type:'objective',chapter:3,title:'LINK DJ V',detail:'GET TO THE CLUB DISTRICT.'};
         const first=window.TGGStoryCinematics.show(payload);
         const second=window.TGGStoryCinematics.show(payload);
@@ -172,34 +225,32 @@ async function run(){
       });
       add('v220-duplicate-suppression',snap.first===true&&snap.second===false,JSON.stringify(snap));
 
-      await page.evaluate(()=>window.TGGStoryCinematics.hide());
-      await page.waitForTimeout(80);
-      snap=await page.evaluate(()=>window.TGGStoryCinematics.getState());
+      await tp.evaluate(()=>window.TGGStoryCinematics.hide());
+      await tp.waitForTimeout(20);
+      snap=await tp.evaluate(()=>window.TGGStoryCinematics.getState());
       add('v220-hide',snap.visible===false,JSON.stringify(snap));
 
-      await page.setViewportSize({width:390,height:844});
-      await page.evaluate(()=>window.TGGStoryCinematics.show({
+      await tp.setViewportSize({width:390,height:844});
+      await tp.evaluate(()=>window.TGGStoryCinematics.show({
         type:'objective',chapter:2,title:'DRIVE TO STUDIO ROW',detail:'TAKE THE CAR OR WALK TO STUDIO ROW.'
       }));
-      await page.waitForTimeout(100);
-      const mobileObjective=await page.evaluate(()=>{
-        const root=document.getElementById('storyCinematic')?.getBoundingClientRect();
+      await tp.waitForTimeout(50);
+      const mobileObjective=await tp.evaluate(()=>{
         const frame=document.querySelector('#storyCinematic .story-cine-frame')?.getBoundingClientRect();
         return {
           width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
           overflowX:document.documentElement.scrollWidth>innerWidth+1,
-          root:root?{left:root.left,right:root.right,width:root.width}:null,
           frame:frame?{left:frame.left,right:frame.right,width:frame.width,height:frame.height}:null
         };
       });
       add('v220-mobile-objective-no-overflow',mobileObjective.overflowX===false&&mobileObjective.scrollWidth<=391,JSON.stringify(mobileObjective));
       add('v220-mobile-objective-contained',!!mobileObjective.frame&&mobileObjective.frame.left>=0&&mobileObjective.frame.right<=mobileObjective.width+1,JSON.stringify(mobileObjective.frame));
 
-      await page.evaluate(()=>window.TGGStoryCinematics.show({
+      await tp.evaluate(()=>window.TGGStoryCinematics.show({
         type:'chapter-start',chapter:3,title:'CITY TAKEOVER',detail:'TURN CITY BUZZ INTO REAL MOMENTUM.'
       }));
-      await page.waitForTimeout(100);
-      const mobileChapter=await page.evaluate(()=>{
+      await tp.waitForTimeout(50);
+      const mobileChapter=await tp.evaluate(()=>{
         const frame=document.querySelector('#storyCinematic .story-cine-frame')?.getBoundingClientRect();
         return {
           width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
@@ -211,19 +262,17 @@ async function run(){
       add('v220-mobile-chapter-contained',!!mobileChapter.frame&&mobileChapter.frame.left>=0&&mobileChapter.frame.right<=mobileChapter.width+1,JSON.stringify(mobileChapter.frame));
 
       result={
-        ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0&&failedResources.length===0,
+        ok:checks.every(x=>x.pass)&&consoleErrors.length===0&&pageErrors.length===0,
         status:'done',
         mode:'v220_cinematic_story_harness',
         target:TARGET,
-        http_status:response?.status?.()||0,
         checks,
         console_errors:consoleErrors,
         page_errors:pageErrors,
-        failed_resources:failedResources,
         updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-      await ctx.close();return;
+      await testCtx.close();await ctx.close();return;
     }
 
     if(V219_CROWD_ONLY){

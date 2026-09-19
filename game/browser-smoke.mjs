@@ -9,14 +9,21 @@ page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});
 async function clickRuntimeControl(selector,label){
   const result=await page.evaluate(({selector})=>{
     const el=document.querySelector(selector);
-    if(!el)return {found:false,visible:false,disabled:false,clicked:false};
+    if(!el)return {found:false,visible:false,disabled:false,unblocked:false,clicked:false,blockedBy:null};
+    el.scrollIntoView({block:'center',inline:'center'});
     const style=getComputedStyle(el);
-    const visible=!el.hidden&&style.display!=='none'&&style.visibility!=='hidden'&&!!(el.offsetWidth||el.offsetHeight||el.getClientRects().length);
+    const rect=el.getBoundingClientRect();
+    const visible=!el.hidden&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;
     const disabled=!!el.disabled;
-    if(visible&&!disabled)el.click();
-    return {found:true,visible,disabled,clicked:visible&&!disabled};
+    const x=Math.max(0,Math.min(innerWidth-1,rect.left+rect.width/2));
+    const y=Math.max(0,Math.min(innerHeight-1,rect.top+rect.height/2));
+    const top=visible?document.elementFromPoint(x,y):null;
+    const unblocked=!!top&&(top===el||el.contains(top));
+    const blockedBy=unblocked?null:(top?.id||top?.closest?.('[id]')?.id||top?.tagName||null);
+    if(visible&&!disabled&&unblocked)el.click();
+    return {found:true,visible,disabled,unblocked,clicked:visible&&!disabled&&unblocked,blockedBy};
   },{selector});
-  if(!result.found||!result.visible||result.disabled||!result.clicked){
+  if(!result.found||!result.visible||result.disabled||!result.unblocked||!result.clicked){
     throw new Error(label+' runtime control unavailable '+JSON.stringify(result));
   }
 }
@@ -226,7 +233,7 @@ try{
      favorReady.availability?.beat!=='park-cypher'){
     throw new Error('V4.98 NPC favor readiness failed '+JSON.stringify(favorReady));
   }
-  await page.locator('#v498FavorList [data-v498-favor="DJ V"]').click();
+  await clickRuntimeControl('#v498FavorList [data-v498-favor="DJ V"]','V4.98 DJ V favor');
   await page.waitForTimeout(120);
   const favorResult=await page.evaluate(()=>({
     favor:window.TGGNPCFavors.snapshot(),
@@ -350,7 +357,7 @@ try{
      contractInterruption.button?.text!=='START CONTRACT'){
     throw new Error('V5.00 incoming-call interruption did not clear '+JSON.stringify(contractInterruption));
   }
-  await page.locator('#v500ContractStart').click();
+  await clickRuntimeControl('#v500ContractStart','V5.00 start contract');
   await page.waitForTimeout(120);
   const contractStarted=await page.evaluate(()=>({
     contract:window.TGGCareerContracts.snapshot(),
@@ -435,7 +442,7 @@ try{
   await page.waitForFunction(()=>!!window.TGGPhone&&!!window.TGGV501,{timeout:15000});
   const phoneRun=await page.evaluate(()=>window.TGGV501.run());
   if(phoneRun?.ok!==true)throw new Error('V5.01 phone runtime failed '+JSON.stringify(phoneRun));
-  await page.locator('#v501PhoneBtn').click();
+  await clickRuntimeControl('#v501PhoneBtn','V5.01 phone open');
   await page.waitForTimeout(80);
   const phoneState=await page.evaluate(()=>({
     snap:window.TGGPhone.snapshot(),
@@ -449,7 +456,7 @@ try{
      !(phoneState.dj?.affinity>=contractResolved.relation.relation.affinity)){
     throw new Error('V5.01 phone UI failed '+JSON.stringify(phoneState));
   }
-  await page.locator('#v501PhoneClose').click();
+  await clickRuntimeControl('#v501PhoneClose','V5.01 phone close');
   const phoneClosed=await page.evaluate(()=>({snap:window.TGGPhone.snapshot(),hidden:document.getElementById('v501Phone')?.hidden}));
   if(phoneClosed.hidden!==true||phoneClosed.snap?.open!==false){
     throw new Error('V5.01 phone close failed '+JSON.stringify(phoneClosed));
@@ -474,7 +481,7 @@ try{
      incomingOpen.caller!=='Kane'){
     throw new Error('V5.02 incoming call ring failed '+JSON.stringify(incomingOpen));
   }
-  await page.locator('#v502Accept').click();
+  await clickRuntimeControl('#v502Accept','V5.02 incoming call accept');
   await page.waitForTimeout(100);
   const incomingAccepted=await page.evaluate(()=>({
     calls:window.TGGIncomingCalls.snapshot(),
@@ -517,11 +524,11 @@ try{
      !(messageQueued.after?.unread?.M>messageQueued.before?.unread?.M)){
     throw new Error('V5.03 system message delivery failed '+JSON.stringify(messageQueued));
   }
-  await page.locator('#v501PhoneBtn').click();
+  await clickRuntimeControl('#v501PhoneBtn','V5.01 phone open');
   await page.waitForTimeout(80);
   const messageAction=page.locator('#v501Contacts [data-v501-message="M"]');
   if(await messageAction.count()!==1)throw new Error('V5.03 MESSAGE action missing from TGG Phone');
-  await messageAction.click();
+  await clickRuntimeControl('#v501Contacts [data-v501-message="M"]','V5.03 M message action');
   await page.waitForTimeout(80);
   const threadOpen=await page.evaluate(()=>({
     snap:window.TGGMessages.snapshot(),
@@ -536,7 +543,7 @@ try{
      threadOpen.bubbles<1){
     throw new Error('V5.03 thread open failed '+JSON.stringify(threadOpen));
   }
-  await page.locator('#v503Messages [data-v503-reply="LOCKED IN"]').click();
+  await clickRuntimeControl('#v503Messages [data-v503-reply="LOCKED IN"]','V5.03 locked-in reply');
   await page.waitForTimeout(80);
   const messageReply=await page.evaluate(()=>{
     const snap=window.TGGMessages.snapshot();
@@ -546,7 +553,7 @@ try{
   if(messageReply.last?.direction!=='out'||messageReply.last?.text!=='LOCKED IN'){
     throw new Error('V5.03 quick reply persistence failed '+JSON.stringify(messageReply));
   }
-  await page.locator('#v503Close').click();
+  await clickRuntimeControl('#v503Close','V5.03 messages close');
   const messagesClosed=await page.evaluate(()=>({snap:window.TGGMessages.snapshot(),hidden:document.getElementById('v503Messages')?.hidden}));
   if(messagesClosed.hidden!==true||messagesClosed.snap?.active!==null){
     throw new Error('V5.03 messages close failed '+JSON.stringify(messagesClosed));
@@ -642,7 +649,7 @@ try{
      callSessionQueued.calls?.current?.name!=='M'){
     throw new Error('V5.05 call session queue failed '+JSON.stringify(callSessionQueued));
   }
-  await page.locator('#v502Accept').click();
+  await clickRuntimeControl('#v502Accept','V5.02 incoming call accept');
   await page.waitForTimeout(100);
   const callSessionActive=await page.evaluate(()=>({
     session:window.TGGCallSessions.snapshot(),
@@ -654,15 +661,15 @@ try{
      callSessionActive.pending?.name!=='M'){
     throw new Error('V5.05 active call HUD failed '+JSON.stringify(callSessionActive));
   }
-  await page.locator('#v505Mute').click();
-  await page.locator('#v505Speaker').click();
+  await clickRuntimeControl('#v505Mute','V5.05 mute');
+  await clickRuntimeControl('#v505Speaker','V5.05 speaker');
   const callControls=await page.evaluate(()=>window.TGGCallSessions.snapshot());
   if(callControls.active?.muted!==true||callControls.active?.speaker!==true){
     throw new Error('V5.05 call controls failed '+JSON.stringify(callControls));
   }
   await clickRuntimeControl('#v497NpcChoice [data-v497-choice="professional"]','V4.97 professional choice');
   await page.waitForTimeout(80);
-  await page.locator('#v505End').click();
+  await clickRuntimeControl('#v505End','V5.05 call end');
   await page.waitForTimeout(80);
   const callSessionEnded=await page.evaluate(()=>{
     const session=window.TGGCallSessions.snapshot();

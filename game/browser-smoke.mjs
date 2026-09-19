@@ -28,6 +28,25 @@ async function clickRuntimeControl(selector,label){
   }
 }
 
+
+async function inspectInteractControl(){
+  return page.evaluate(()=>{
+    const refresh=window.TGG3D?.refreshInteractionState?.(window.TGGGame?.getState?.())||null;
+    const el=window.TGG3D?.ensureInteractButton?.()||document.getElementById('interact3dBtn');
+    const runtime=window.TGG3D?.interactionRuntimeStatus?.()||null;
+    return {
+      exists:!!el,
+      disabled:el?!!el.disabled:true,
+      text:el?String(el.textContent||'').trim():'',
+      worldBeatReady:!!el?.classList?.contains('world-beat-ready'),
+      meetupReady:!!el?.classList?.contains('meetup-ready'),
+      storyReady:!!el?.classList?.contains('story-ready'),
+      refresh,
+      runtime
+    };
+  });
+}
+
 try{
   const response=await page.goto('http://127.0.0.1:8765/index.html',{waitUntil:'networkidle',timeout:90000});
   if(!response||response.status()>=400)throw new Error('HTTP '+(response?.status()||'NO_RESPONSE'));
@@ -147,12 +166,8 @@ try{
     throw new Error('World beat physical route failed '+JSON.stringify(worldInteractionRoute));
   }
   await page.waitForTimeout(180);
-  const interactState=await page.locator('#interact3dBtn').evaluate(el=>({
-    disabled:!!el.disabled,
-    text:String(el.textContent||'').trim(),
-    worldBeatReady:el.classList.contains('world-beat-ready')
-  }));
-  if(interactState.disabled||!interactState.worldBeatReady||!/^DO\s+/i.test(interactState.text)){
+  const interactState=await inspectInteractControl();
+  if(!interactState.exists||interactState.disabled||!interactState.worldBeatReady||!/^DO\s+/i.test(interactState.text)){
     throw new Error('World beat contextual INTERACT unavailable '+JSON.stringify(interactState));
   }
   await page.evaluate(()=>{
@@ -279,12 +294,8 @@ try{
     throw new Error('V4.99 favor physical route failed '+JSON.stringify(favorPhysicalRoute));
   }
   await page.waitForTimeout(180);
-  const favorInteract=await page.locator('#interact3dBtn').evaluate(el=>({
-    disabled:!!el.disabled,
-    text:String(el.textContent||'').trim(),
-    ready:el.classList.contains('world-beat-ready')
-  }));
-  if(favorInteract.disabled||!favorInteract.ready||!/^DO\s+/i.test(favorInteract.text)){
+  const favorInteract=await inspectInteractControl();
+  if(!favorInteract.exists||favorInteract.disabled||!favorInteract.worldBeatReady||!/^DO\s+/i.test(favorInteract.text)){
     throw new Error('V4.99 favor INTERACT unavailable '+JSON.stringify(favorInteract));
   }
   await page.evaluate(()=>{
@@ -395,12 +406,8 @@ try{
     throw new Error('V5.00 contract physical route failed '+JSON.stringify(contractPhysicalRoute));
   }
   await page.waitForTimeout(180);
-  const contractInteract=await page.locator('#interact3dBtn').evaluate(el=>({
-    disabled:!!el.disabled,
-    text:String(el.textContent||'').trim(),
-    ready:el.classList.contains('world-beat-ready')
-  }));
-  if(contractInteract.disabled||!contractInteract.ready||!/^DO\s+/i.test(contractInteract.text)){
+  const contractInteract=await inspectInteractControl();
+  if(!contractInteract.exists||contractInteract.disabled||!contractInteract.worldBeatReady||!/^DO\s+/i.test(contractInteract.text)){
     throw new Error('V5.00 contract INTERACT unavailable '+JSON.stringify(contractInteract));
   }
   await page.evaluate(()=>{
@@ -598,12 +605,8 @@ try{
     throw new Error('V5.04 physical meetup route failed '+JSON.stringify(meetupRoute));
   }
   await page.waitForTimeout(160);
-  const meetupInteract=await page.locator('#interact3dBtn').evaluate(el=>({
-    disabled:!!el.disabled,
-    text:String(el.textContent||'').trim(),
-    ready:el.classList.contains('meetup-ready')
-  }));
-  if(meetupInteract.disabled||!meetupInteract.ready||!/^MEET\s+KANE/i.test(meetupInteract.text)){
+  const meetupInteract=await inspectInteractControl();
+  if(!meetupInteract.exists||meetupInteract.disabled||!meetupInteract.meetupReady||!/^MEET\s+KANE/i.test(meetupInteract.text)){
     throw new Error('V5.04 meetup INTERACT unavailable '+JSON.stringify(meetupInteract));
   }
   await page.evaluate(()=>document.getElementById('interact3dBtn')?.click());

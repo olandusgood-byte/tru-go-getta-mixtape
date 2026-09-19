@@ -133,7 +133,11 @@
     },type==='objective'?1550:2850);
   }
 
-  function hide(){\n    clearTimeout(timer);\n    if(showFrame){cancelAnimationFrame(showFrame);showFrame=0;}\n    ensure().classList.remove('show');\n  }
+  function hide(){
+    clearTimeout(timer);
+    if(showFrame){cancelAnimationFrame(showFrame);showFrame=0;}
+    ensure().classList.remove('show');
+  }
 
   function show(payload={}){
     const root=ensure();
@@ -166,7 +170,8 @@
 
     cameraCue(type);
     clearTimeout(timer);
-    if(showFrame)cancelAnimationFrame(showFrame);\n    showFrame=requestAnimationFrame(()=>{showFrame=0;root.classList.add('show')});
+    if(showFrame)cancelAnimationFrame(showFrame);
+    showFrame=requestAnimationFrame(()=>{showFrame=0;root.classList.add('show')});
     const duration=type==='objective'?1500:type==='chapter-complete'?3400:2750;
     timer=setTimeout(hide,duration);
     return true;

@@ -125,4 +125,4 @@ for(const runtimeNumber of runtimeNumbers){
 const lastRuntime=runtimeNumbers.at(-1);
 const through=lastRuntime?('V'+Math.floor(lastRuntime/100)+'.'+String(lastRuntime%100).padStart(2,'0')):'V1.87';
 
-console.log(JSON.stringify({ok:true,layers:layers.length+futureLayers.length,from:'V1.49',through,futureResults}));
+console.log(JSON.stringify({ok:true,layers:layers.length+futureFiles.length,from:'V1.49',through,futureResults}));

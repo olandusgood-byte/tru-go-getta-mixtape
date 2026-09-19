@@ -21,7 +21,9 @@ const layers=[
   'v161-production-self-test.js','v162-regression-matrix.js','v163-release-gate.js',
   'v164-production-telemetry.js','v165-incident-journal.js','v166-recovery-evidence.js',
   'v167-production-load-test.js','v168-browser-runtime-audit.js','v169-live-viewer-audit.js',
-  'v170-production-release-readiness.js','v171-cross-system-compatibility.js','v172-final-runtime-integrity.js'
+  'v170-production-release-readiness.js','v171-cross-system-compatibility.js','v172-final-runtime-integrity.js',
+  'v173-production-finalization.js','v174-tgg-browser-viewer-reconciliation.js','v175-final-verification-gate.js',
+  'v176-post-finalization-monitoring.js','v177-autonomous-regression-watch.js','v178-browser-viewer-health.js'
 ];
 for(const file of layers){
   vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
@@ -51,11 +53,17 @@ assert(w.TGGV69.run({viewerState:true,stream:true,sessionLinkage:true,pageErrorC
 assert(w.TGGV70.run({releaseTag:'ci-candidate'}).ok===true,'V1.70 release readiness failed');
 assert(w.TGGV71.run({allowSynthetic:true,game:true,browser:true,liveViewer:true,coreContract:true}).ok===true,'V1.71 compatibility failed');
 assert(w.TGGV72.run().ok===true,'V1.72 final integrity failed');
-for(let n=49;n<=72;n++){
+assert(w.TGGV73.run({allowSynthetic:true,runtimeObjects:true}).ok===true,'V1.73 production finalization failed');
+assert(w.TGGV74.run({eventContract:true}).ok===true,'V1.74 browser-viewer reconciliation failed');
+assert(w.TGGV75.run().ok===true,'V1.75 final verification failed');
+assert(w.TGGV76.run({runtimePresent:true,pageErrorCount:0}).ok===true,'V1.76 monitoring failed');
+assert(w.TGGV77.run().ok===true,'V1.77 regression watch failed');
+assert(w.TGGV78.run().ok===true,'V1.78 browser viewer health failed');
+for(let n=49;n<=78;n++){
   const api=w['TGGV'+n];
   assert(api&&typeof api.snapshot==='function','Missing runtime TGGV'+n);
   const snap=api.snapshot();
   assert(String(snap.version).startsWith('1.'+n+'.'),'Version mismatch TGGV'+n);
   assert(String(snap.mutationPolicy||'').startsWith('local_'),'Non-local mutation policy TGGV'+n);
 }
-console.log(JSON.stringify({ok:true,layers:layers.length,from:'V1.49',through:'V1.72'}));
+console.log(JSON.stringify({ok:true,layers:layers.length,from:'V1.49',through:'V1.78'}));

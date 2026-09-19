@@ -3,7 +3,7 @@
   "canonical_runtime": "V3.00 FINAL MEGA BUILD",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v300_integrated_qa_pending",
+  "verification": "v300_integrated_qa_passed_release_reverify",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V2.50 REALITY MASTER CONSOLIDATION",
   "features": [
@@ -45,5 +45,6 @@
     "focus_input_guard",
     "world_sync_hook",
     "career_economy_inventory_hooks"
-  ]
+  ],
+  "release_gate": "authenticated_production_verification"
 }

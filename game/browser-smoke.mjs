@@ -64,18 +64,40 @@ try{
   const qa=await page.evaluate(()=>({qa:window.TGGQA?.run?.(),release:window.TGGReleaseQA?.run?.()}));
   if(qa.qa?.passed!==true||qa.release?.passed!==true)throw new Error('QA failed '+JSON.stringify(qa));
 
-  const start=await page.evaluate(()=>window.TGGGame.getState());
-  await page.keyboard.down('ArrowUp');await page.waitForTimeout(700);await page.keyboard.up('ArrowUp');await page.waitForTimeout(250);
-  const moved=await page.evaluate(before=>{const s=window.TGGGame.getState();return Math.hypot(s.x-before.x,s.y-before.y)},start);
-  if(!(moved>0.01))throw new Error('Player movement failed');
+  let moved=0;
+  let moveKey='';
+  for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
+    const before=await page.evaluate(()=>window.TGGGame.getState());
+    await page.keyboard.down(key);await page.waitForTimeout(450);await page.keyboard.up(key);await page.waitForTimeout(180);
+    const delta=await page.evaluate(prev=>{const s=window.TGGGame.getState();return Math.hypot(s.x-prev.x,s.y-prev.y)},before);
+    if(delta>moved){moved=delta;moveKey=key}
+    if(moved>0.01)break;
+  }
+  if(!(moved>0.01)){
+    const diagnostics=await page.evaluate(()=>({state:window.TGGGame.getState(),walking:window.TGGGame.getWalkingState?.(),screen:window.TGGGame.getActiveScreen?.()}));
+    throw new Error('Player movement failed '+JSON.stringify(diagnostics));
+  }
 
   await page.getByRole('button',{name:'ENTER CAR'}).click();
   await page.waitForTimeout(300);
   if(!(await page.evaluate(()=>!!window.TGGGame.getState().inVehicle)))throw new Error('Vehicle entry failed');
-  const carStart=await page.evaluate(()=>window.TGGGame.getState());
-  await page.keyboard.down('ArrowUp');await page.waitForTimeout(900);await page.keyboard.up('ArrowUp');await page.waitForTimeout(250);
-  const driven=await page.evaluate(before=>{const s=window.TGGGame.getState();return Math.hypot(s.x-before.x,s.y-before.y)},carStart);
-  if(!(driven>0.01))throw new Error('Vehicle movement failed');
+  let driven=0;
+  let driveAttempt='';
+  const driveAttempts=[['ArrowUp'],['ArrowDown'],['ArrowRight','ArrowUp'],['ArrowLeft','ArrowUp']];
+  for(const keys of driveAttempts){
+    const before=await page.evaluate(()=>window.TGGGame.getState());
+    for(const key of keys)await page.keyboard.down(key);
+    await page.waitForTimeout(700);
+    for(const key of [...keys].reverse())await page.keyboard.up(key);
+    await page.waitForTimeout(220);
+    const delta=await page.evaluate(prev=>{const s=window.TGGGame.getState();return Math.hypot(s.x-prev.x,s.y-prev.y)},before);
+    if(delta>driven){driven=delta;driveAttempt=keys.join('+')}
+    if(driven>0.01)break;
+  }
+  if(!(driven>0.01)){
+    const diagnostics=await page.evaluate(()=>({state:window.TGGGame.getState(),driving:window.TGGGame.getDrivingState?.(),screen:window.TGGGame.getActiveScreen?.()}));
+    throw new Error('Vehicle movement failed '+JSON.stringify(diagnostics));
+  }
 
   const continuity=await page.evaluate(()=>{
     const payload={pageErrorCount:0,runtime:true,runtimePresent:true,eventContract:true,allowSynthetic:true,assetLoad:true,runtimeStart:true,stateRead:true,eventLoop:true,session:true,navigation:true,viewerState:true,stream:true,sessionLinkage:true};

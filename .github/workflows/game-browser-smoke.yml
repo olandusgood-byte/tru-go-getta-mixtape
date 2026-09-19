@@ -85,7 +85,7 @@ jobs:
             process.exit(1);
           }
 
-          const result = await page.evaluate(async () => {
+          const result = await page.evaluate(async (pageErrorCount) => {
             const ids = ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','worldSyncBtn','saveBtn','pauseBtn','resumeBtn','menuBtn','recordBtn','mixtapeBtn','upgradeBtn','businessBtn','cityAssetsBtn'];
             const missing = ids.filter(id => !document.getElementById(id));
             const qa = window.TGGQA?.run?.();
@@ -150,6 +150,59 @@ jobs:
             const controlsSeparated=pairwiseClear(dpadButtons)&&pairwiseClear(actionButtons);
             const directionLabels=['FWD','LEFT','RIGHT','REV'].every(label=>[...document.querySelectorAll('.dpad small')].some(el=>el.textContent.trim()===label));
 
+            const continuity = {};
+            try {
+              continuity.v49 = window.TGGV49?.run?.({before:{world:{cash:1}},after:{world:{cash:2}}});
+              continuity.v50 = window.TGGV50?.run?.({events:[{seq:2,type:'b'},{seq:1,type:'a'}]});
+              continuity.v51 = window.TGGV51?.run?.({expected:{world:{cash:2}},current:{world:{cash:2}}});
+              continuity.v52 = window.TGGV52?.run?.({requireHistory:true,requireReplay:true,requireReconciliation:true});
+              continuity.v53 = window.TGGV53?.run?.({state:{world:{cash:2},player:{xp:1},crew:{},events:{}}});
+              continuity.v54 = window.TGGV54?.run?.({issues:[]});
+              continuity.v55 = window.TGGV55?.run?.({requireHistory:true});
+              continuity.v56 = window.TGGV56?.run?.({requireExecuted:true});
+              continuity.v57 = window.TGGV57?.run?.({schedulerReady:!!window.TGGV42});
+              continuity.v58 = window.TGGV58?.run?.({tag:'browser-smoke'});
+              continuity.v59 = window.TGGV59?.run?.();
+              continuity.v60 = window.TGGV60?.run?.();
+              continuity.v61 = window.TGGV61?.run?.({requireContinuity:true});
+              continuity.v62 = window.TGGV62?.run?.({tag:'browser-smoke'});
+              continuity.v63 = window.TGGV63?.run?.({releaseTag:'browser-smoke'});
+              continuity.v64 = window.TGGV64?.run?.({tag:'browser-smoke'});
+              continuity.v65 = window.TGGV65?.run?.();
+              continuity.v66 = window.TGGV66?.run?.({tag:'browser-smoke'});
+              continuity.v67 = window.TGGV67?.run?.({pageErrorCount});
+              continuity.v68 = window.TGGV68?.run?.({pageErrorCount});
+              continuity.v69 = window.TGGV69?.run?.({pageErrorCount});
+              continuity.v70 = window.TGGV70?.run?.({releaseTag:'browser-smoke'});
+              continuity.v71 = window.TGGV71?.run?.();
+              continuity.v72 = window.TGGV72?.run?.();
+            } catch (error) {
+              continuity.error = String(error?.message || error);
+            }
+            const continuityPassed = !continuity.error &&
+              continuity.v49?.diff?.lastChangeCount === 1 &&
+              continuity.v50?.replay?.lastEventCount === 2 &&
+              continuity.v51?.reconciliation?.lastMismatchCount === 0 &&
+              continuity.v52?.audit?.lastPassed === true &&
+              continuity.v53?.validation?.lastValid === true &&
+              continuity.v55?.integrity?.lastPassed === true &&
+              continuity.v56?.gates?.lastPassed === true &&
+              continuity.v57?.health?.healthy === true &&
+              continuity.v59?.faultDetection?.lastFaultCount === 0 &&
+              continuity.v60?.recovery?.externalMutation === false &&
+              continuity.v61?.ok === true &&
+              continuity.v62?.ok === true &&
+              continuity.v63?.ok === true &&
+              continuity.v64?.ok === true &&
+              continuity.v65?.ok === true &&
+              continuity.v66?.ok === true &&
+              continuity.v67?.ok === true &&
+              continuity.v68?.ok === true &&
+              continuity.v69?.ok === true &&
+              continuity.v70?.ok === true &&
+              continuity.v71?.ok === true &&
+              continuity.v72?.ok === true;
+
             return {
               missing,
               qaPassed: qa?.passed ?? false,
@@ -171,9 +224,11 @@ jobs:
               controllerCurve,
               controlsSeparated,
               directionLabels,
+              continuityPassed,
+              continuity,
               currentScreen: [...document.querySelectorAll('.screen')].find(el => el.classList.contains('active'))?.id || null
             };
-          });
+          }, errors.length);
 
           await browser.close();
 
@@ -181,7 +236,7 @@ jobs:
             console.error(errors.join('\n'));
             process.exit(1);
           }
-          if (result.missing.length || !result.qaPassed || !result.releasePassed || !result.missionStarted || !result.advanceReturned || !result.progressAdvanced || !result.localStorageSaved || !result.progressionVisible || !result.achievementCatalog || !result.movementApi || !result.smoothWalkMoved || !result.analogWalkMoved || !result.analogInputReset || !result.steeringTuning || !result.controllerCurve || !result.controlsSeparated || !result.directionLabels) {
+          if (result.missing.length || !result.qaPassed || !result.releasePassed || !result.missionStarted || !result.advanceReturned || !result.progressAdvanced || !result.localStorageSaved || !result.progressionVisible || !result.achievementCatalog || !result.movementApi || !result.smoothWalkMoved || !result.analogWalkMoved || !result.analogInputReset || !result.steeringTuning || !result.controllerCurve || !result.controlsSeparated || !result.directionLabels || !result.continuityPassed) {
             console.error(JSON.stringify(result, null, 2));
             process.exit(1);
           }

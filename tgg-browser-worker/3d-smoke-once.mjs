@@ -105,7 +105,8 @@ async function run(){
       add('v225-three-rival-models',!!snap.group&&snap.group.visible&&snap.group.children>=8,JSON.stringify(snap.group));
       add('v225-crew-strength-gate',snap.status?.crewStrength>=67,JSON.stringify(snap.status));
 
-      await page.click('#rivalCrewBtn');
+      await page.waitForFunction(()=>document.getElementById('rivalCrewBtn')?.isConnected===true,{timeout:10000});
+      await page.evaluate(()=>document.getElementById('rivalCrewBtn')?.click());
       await page.waitForTimeout(180);
       snap=await page.evaluate(()=>({status:window.TGGV225.status(),nav:window.TGGNavigation?.getTarget?.()}));
       add('v225-track-toggle',snap.status?.tracked===true,JSON.stringify(snap.status));
@@ -122,7 +123,8 @@ async function run(){
       add('v225-face-night-shift-button',snap.interact.disabled===false&&snap.interact.text==='FACE NIGHT SHIFT',JSON.stringify(snap.interact));
       add('v225-rival-hud-visible',snap.hud===true);
 
-      await page.click('#interact3dBtn');
+      await page.waitForFunction(()=>{const b=document.getElementById('interact3dBtn');return !!b&&b.disabled===false&&b.textContent==='FACE NIGHT SHIFT'},{timeout:10000});
+      await page.evaluate(()=>document.getElementById('interact3dBtn')?.click());
       await page.waitForTimeout(180);
       snap=await page.evaluate(()=>({
         status:window.TGGV225.status(),
@@ -297,8 +299,7 @@ async function run(){
       const testCtx=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
       const tp=await testCtx.newPage();
       const pageErrors=[];const consoleErrors=[];
-      tp.on('pageerror',e=>pageErrors.push(e.message||String(e)));
-      tp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
+      tp.on('pageerror',e=>pageErrors.push(e.message||String(e)));      tp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
       await tp.setContent(html,{waitUntil:'domcontentloaded'});
       await tp.evaluate(()=>{
         const store={};
@@ -597,7 +598,6 @@ async function run(){
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await testCtx.close();await ctx.close();return;
     }
-
     if(LIFE_OS_ONLY){
       const base=TARGET.replace(/\/index\.html(?:\?.*)?$/,'').replace(/\/$/,'');
       const [htmlResponse,cssResponse,lifeResponse]=await Promise.all([
@@ -897,8 +897,7 @@ async function run(){
       add('v220-camera-restore',snap.camera==='orbit',JSON.stringify(snap));
 
       await tp.evaluate(()=>window.TGGWorldLife.startShow());
-      await tp.waitForTimeout(30);
-      snap=await tp.evaluate(()=>({
+      await tp.waitForTimeout(30);      snap=await tp.evaluate(()=>({
         crowd:window.TGGCrowdPresentation.getStatus(),
         text:window.TGGStoryCinematics.refreshCrowd(),
         rendered:document.getElementById('storyCineCrowd')?.textContent||''
@@ -1197,8 +1196,7 @@ async function run(){
         first:window.TGGStreetPresence?.citizens?.[0]?{
           x:window.TGGStreetPresence.citizens[0].position.x,
           z:window.TGGStreetPresence.citizens[0].position.z
-        }:null
-      }));
+        }:null      }));
       const moved=firstBefore&&snap.first?Math.hypot(snap.first.x-firstBefore.x,snap.first.z-firstBefore.z):0;
       add('street-roaming-motion',moved>.08,'distance='+moved.toFixed(3));
 
@@ -1498,7 +1496,6 @@ async function run(){
 
       await mp.evaluate(()=>document.querySelector('[data-media="premiere"]')?.click());      await mp.waitForTimeout(25);
       await mp.evaluate(()=>window.TGGStoryMissions.sync());      snap=await mp.evaluate(()=>window.TGGStoryMissions.status());      record('chapter3-premiere',snap.step===6&&snap.current?.id==='home-base',JSON.stringify(snap));
-
       await mp.evaluate(()=>{window.__qaGame.x=63;window.__qaGame.y=24;window.TGGStoryMissions.sync();});
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter3-home-base',snap.step===7&&snap.current?.id==='manager-finale',JSON.stringify(snap));
@@ -1797,8 +1794,7 @@ async function run(){
       record('chapter2-mobile-action-readable',!layout.button||layout.button.height>=42,JSON.stringify(layout.button));
 
       result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'story_chapter2_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
-      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-      await mobile.close();await ctx.close();return;
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));      await mobile.close();await ctx.close();return;
     }
 
     if(STORY_MISSION_ONLY){
@@ -2097,8 +2093,7 @@ async function run(){
         window.TGGProgression={sync:()=>{window.__qaSyncs++;return true}};
         window.TGGWorldSync={sync:()=>true};
         window.__tggToast=()=>{};
-      });
-      await page.addScriptTag({content:source});
+      });      await page.addScriptTag({content:source});
       await page.waitForTimeout(120);
       const checks=[];const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
       record('career-director-api',await page.evaluate(()=>typeof window.TGGCareerDirector?.getState==='function'));
@@ -2397,8 +2392,7 @@ async function run(){
 
       const checks=[];
       const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
-      const initial=await page.evaluate(()=>({
-        title:document.title,
+      const initial=await page.evaluate(()=>({        title:document.title,
         state:window.TGGGame?.getState?.(),
         walkingApi:typeof window.TGGGame?.getWalkingState==='function'&&typeof window.TGGGame?.setWalkKey==='function',
         tune:window.TGGGame?.getWalkTuning?.(),
@@ -2697,8 +2691,7 @@ async function run(){
       window.TGGGame?.refresh?.();
     });
     await page.waitForTimeout(120);
-    await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());    await page.waitForTimeout(150);
-    const entered=await page.evaluate(()=>window.TGGGame?.getState?.());    record('enter-car',entered?.inVehicle===true);
+    await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());    await page.waitForTimeout(150);    const entered=await page.evaluate(()=>window.TGGGame?.getState?.());    record('enter-car',entered?.inVehicle===true);
     console.log(JSON.stringify({tgg_3d_smoke_step:'entered-car'}));
     const driveStart=await page.evaluate(()=>window.TGGGame?.getState?.());
     const startHeading=Number(driveStart?.heading)||0;

@@ -1088,9 +1088,11 @@ app.post('/v1/workers/jobs/complete', async (req,res,next)=>{
     const w=await requireWorker(req,res); if(!w)return;
     const verdict=String(req.body?.verdict||'failed');
     if(!['passed','failed'].includes(verdict)) return res.status(400).json({error:'invalid_verdict'});
-    const r=await pool.query(`update tgg_browser_jobs set status=$1,result=coalesce($2,result),evidence=coalesce($3,evidence),lease_expires_at=null,updated_at=now(),finished_at=now()
+    const resultJson=req.body?.result==null?null:JSON.stringify(req.body.result);
+    const evidenceJson=JSON.stringify(req.body?.evidence||[]);
+    const r=await pool.query(`update tgg_browser_jobs set status=$1,result=coalesce($2::jsonb,result),evidence=coalesce($3::jsonb,evidence),lease_expires_at=null,updated_at=now(),finished_at=now()
       where id=$4 and worker_id=$5 and lease_token=$6 returning *`,
-      [verdict,req.body?.result||null,req.body?.evidence||[],req.body?.job_id,w.id,req.body?.lease_token]);
+      [verdict,resultJson,evidenceJson,req.body?.job_id,w.id,req.body?.lease_token]);
     if(!r.rowCount)return res.status(409).json({error:'job_lease_invalid'});
     const finished=r.rows[0];
     const certId=finished.payload?.certification_id;

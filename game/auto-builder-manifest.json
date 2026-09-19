@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.15",
-  "module": "GAME-V1.15",
-  "name": "Live City Routes + Interior Activity Chains",
+  "version": "1.16",
+  "module": "GAME-V1.16",
+  "name": "Dynamic NPC Routing + Activity Handoffs",
   "workflow": [
     "BUILD",
     "TEST",
@@ -32,9 +32,13 @@
     "v1_15_live_city_routes": true,
     "v1_15_interior_activity_chains": true,
     "v1_15_local_route_state": true,
-    "v1_15_no_external_mutation": true
+    "v1_15_no_external_mutation": true,
+    "v1_16_npc_routing": true,
+    "v1_16_activity_handoffs": true,
+    "v1_16_local_story_routing": true,
+    "v1_16_no_external_mutation": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.16 DYNAMIC NPC ROUTING + ACTIVITY HANDOFFS"
+  "next": "V1.17 CITY SCHEDULES + CONTEXTUAL ACTIVITY DISCOVERY"
 }

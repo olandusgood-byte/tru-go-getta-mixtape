@@ -1044,6 +1044,52 @@ app.get('/v1/browser/sessions/:id', auth, async (req,res,next)=>{
   } catch(e){next(e);}
 });
 
+// TGG Live Viewer: real-time browser-session telemetry over SSE.
+app.post('/v1/browser/sessions/:id/viewer-events', async (req,res,next)=>{
+  try {
+    const w=workerAuthorized(req);
+    if(!w){
+      const header=req.get('authorization')||''; const token=header.startsWith('Bearer ')?header.slice(7):'';
+      if(!token)return res.status(401).json({error:'viewer_session_unauthorized'});
+      const u=await pool.query('select s.user_id as id from sessions s where s.token_hash=$1 and s.expires_at>now()',[hashToken(token)]);
+      if(!u.rowCount)return res.status(401).json({error:'viewer_session_unauthorized'});
+      const own=await pool.query('select 1 from tgg_browser_sessions where id=$1 and user_id=$2',[req.params.id,u.rows[0].id]);
+      if(!own.rowCount)return res.status(404).json({error:'browser_session_not_found'});
+    }
+    const event_type=String(req.body?.event_type||'state').slice(0,80);
+    const payload=req.body?.payload&&typeof req.body.payload==='object'?req.body.payload:{};
+    const e=await pool.query('insert into tgg_browser_viewer_events(browser_session_id,event_type,payload) values($1,$2,$3) returning *',[req.params.id,event_type,payload]);
+    await pool.query('select pg_notify($1,$2)',['tgg_browser_viewer',JSON.stringify({id:e.rows[0].id,browser_session_id:req.params.id,event_type,payload})]);
+    res.status(201).json({event:e.rows[0]});
+  } catch(e){next(e);}
+});
+
+app.get('/v1/browser/sessions/:id/viewer/stream', auth, async (req,res,next)=>{
+  try {
+    const own=await pool.query('select 1 from tgg_browser_sessions where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!own.rowCount)return res.status(404).json({error:'browser_session_not_found'});
+    res.status(200); res.setHeader('Content-Type','text/event-stream'); res.setHeader('Cache-Control','no-cache, no-transform'); res.setHeader('Connection','keep-alive'); res.flushHeaders?.();
+    const after=Number(req.query.after||0); let closed=false; const client=await pool.connect();
+    await client.query('listen tgg_browser_viewer');
+    const send=e=>{if(!closed)res.write('id: '+e.id+'\nevent: '+e.event_type+'\ndata: '+JSON.stringify(e.payload||{})+'\n\n');};
+    const onNotification=msg=>{try{const e=JSON.parse(msg.payload);if(String(e.browser_session_id)===String(req.params.id))send(e);}catch{}};
+    client.on('notification',onNotification);
+    const backlog=await pool.query('select * from tgg_browser_viewer_events where id>$1 and browser_session_id=$2 order by id asc limit 200',[after,req.params.id]);
+    backlog.rows.forEach(send);
+    const heartbeat=setInterval(()=>{if(!closed)res.write(': ping\n\n');},15000);
+    req.on('close',async()=>{if(closed)return;closed=true;clearInterval(heartbeat);client.off('notification',onNotification);try{await client.query('unlisten tgg_browser_viewer');}catch{}client.release();});
+  } catch(e){next(e);}
+});
+
+app.get('/v1/browser/sessions/:id/viewer/state', auth, async (req,res,next)=>{
+  try {
+    const own=await pool.query('select * from tgg_browser_sessions where id=$1 and user_id=$2',[req.params.id,req.user.id]);
+    if(!own.rowCount)return res.status(404).json({error:'browser_session_not_found'});
+    const e=await pool.query('select * from tgg_browser_viewer_events where browser_session_id=$1 order by id desc limit 1',[req.params.id]);
+    res.json({session:own.rows[0],latest_event:e.rows[0]||null});
+  } catch(e){next(e);}
+});
+
 app.patch('/v1/certifications/:id', auth, async (req,res,next)=>{
   try {
     const allowed=['started','passed','failed','expired'];

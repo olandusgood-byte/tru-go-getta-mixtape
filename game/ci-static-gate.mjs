@@ -31,17 +31,18 @@ for(const src of scripts){
 // Auto-discover additive V1.xx gameplay layers so new builder checkpoints cannot load
 // without also exposing a verifiable runtime contract.
 const v1Layers=scripts
-  .map(src=>({src,match:/^v1(\d{2})-[^/]+\.js$/.exec(src)}))
+  .map(src=>({src,match:/^v(1\d{2})-[^/]+\.js$/.exec(src)}))
   .filter(x=>x.match);
 for(const layer of v1Layers){
-  const minor=Number(layer.match[1]);
+  const fileCode=layer.match[1];
+  const shortMinor=Number(fileCode.slice(1));
   const source=read(layer.src);
-  const longRuntime='window.TGGV1'+String(minor).padStart(2,'0');
-  const shortRuntime='window.TGGV'+String(minor).padStart(2,'0');
+  const longRuntime='window.TGGV'+fileCode;
+  const shortRuntime='window.TGGV'+String(shortMinor).padStart(2,'0');
   const hasRuntime=source.includes(longRuntime)||source.includes(shortRuntime);
-  const versionPattern=new RegExp("(?:VERSION|V)\\s*=\\s*['\"]1\\."+minor+"\\.\\d+['\"]");
+  const versionPattern=new RegExp("(?:VERSION|V)\\s*=\\s*['\"]1\\.(?:"+shortMinor+"|"+fileCode+")\\.\\d+['\"]");
   assert(hasRuntime,'Missing additive runtime export '+longRuntime+' or '+shortRuntime+' in '+layer.src);
-  assert(versionPattern.test(source),'Missing matching semantic version 1.'+minor+'.x in '+layer.src);
+  assert(versionPattern.test(source),'Missing matching semantic version 1.'+shortMinor+'.x or 1.'+fileCode+'.x in '+layer.src);
   for(const forbidden of ['SUPABASE_SERVICE_ROLE_KEY','sb_secret_','sk_live_']){
     assert(!source.includes(forbidden),'Forbidden secret marker in '+layer.src+': '+forbidden);
   }

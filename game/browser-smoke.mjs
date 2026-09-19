@@ -79,23 +79,51 @@ try{
 
   const continuity=await page.evaluate(()=>{
     const payload={pageErrorCount:0,runtime:true,runtimePresent:true,eventContract:true,allowSynthetic:true,assetLoad:true,runtimeStart:true,stateRead:true,eventLoop:true,session:true,navigation:true,viewerState:true,stream:true,sessionLinkage:true};
-    const seedNumbers=Object.keys(window)
-      .map(k=>/^TGGV(\\d{2,3})$/.exec(k))
-      .filter(Boolean)
-      .map(m=>Number(m[1]))
-      .filter(n=>n>=176&&n<188)
-      .sort((a,b)=>a-b);
-    const seedFailures=[];
-    for(const runtimeNumber of seedNumbers){
-      const api=window['TGGV'+runtimeNumber];
-      try{
-        const result=api?.run?.(payload);
-        if(result&&result.ok===false)seedFailures.push({runtimeNumber,checks:result.checks||{},result});
-      }catch(error){
-        seedFailures.push({runtimeNumber,error:String(error)});
-      }
-    }
-    if(seedFailures.length)throw new Error('Seed continuity failed '+JSON.stringify(seedFailures));
+    window.TGGV49?.run?.({before:{world:{cash:1}},after:{world:{cash:2}}});
+    window.TGGV50?.run?.({events:[{seq:2,type:'b'},{seq:1,type:'a'}]});
+    window.TGGV51?.run?.({expected:{world:{cash:1}},current:{world:{cash:2}}});
+    window.TGGV52?.run?.({requireHistory:true,requireReplay:true,requireReconciliation:true});
+    window.TGGV53?.run?.({state:{world:{cash:2},player:{xp:1},crew:{},events:{}}});
+    window.TGGV54?.run?.({issues:['timeline_gap']});
+    window.TGGV55?.run?.({requireHistory:true});
+    window.TGGV56?.run?.({requireExecuted:true});
+    window.TGGV57?.run?.({schedulerReady:true});
+    window.TGGV58?.run?.({tag:'browser-smoke'});
+    window.TGGV59?.run?.();
+    window.TGGV60?.run?.();
+    window.TGGV61?.run?.({requireContinuity:true});
+    window.TGGV62?.run?.({tag:'browser-smoke'});
+    window.TGGV63?.run?.({releaseTag:'browser-smoke'});
+    window.TGGV64?.run?.({tag:'browser-smoke'});
+    window.TGGV65?.run?.();
+    window.TGGV66?.run?.({tag:'browser-smoke'});
+    window.TGGV67?.run?.({assetLoad:true,runtimeStart:true,stateRead:true,eventLoop:true,pageErrorCount:0});
+    window.TGGV68?.run?.({session:true,navigation:true,runtime:true,pageErrorCount:0});
+    window.TGGV69?.run?.({viewerState:true,stream:true,sessionLinkage:true,pageErrorCount:0});
+    window.TGGV70?.run?.({releaseTag:'browser-smoke'});
+    window.TGGV71?.run?.({allowSynthetic:true,game:true,browser:true,liveViewer:true,coreContract:true});
+    window.TGGV72?.run?.();
+    window.TGGV73?.run?.({allowSynthetic:true,runtimeObjects:true});
+    window.TGGV74?.run?.({eventContract:true});
+    window.TGGV75?.run?.();
+    window.TGGV76?.run?.({runtimePresent:true,pageErrorCount:0});
+    window.TGGV77?.run?.();
+    window.TGGV78?.run?.();
+    window.TGGV79?.run?.({runtime:true,pageErrorCount:0});
+    window.TGGV80?.run?.();
+    window.TGGV81?.run?.();
+    window.TGGV82?.run?.({runtime:true,pageErrorCount:0});
+    window.TGGV83?.run?.();
+    window.TGGV84?.run?.();
+    window.TGGV85?.run?.({runtime:true,pageErrorCount:0});
+    window.TGGV86?.run?.();
+    window.TGGV87?.run?.();
+    const seedChecks={
+      verification:window.TGGV75?.snapshot?.().verification?.lastOk===true,
+      resilience:window.TGGV85?.snapshot?.().resilience?.lastOk===true,
+      liveSentinel:window.TGGV87?.snapshot?.().liveSentinel?.lastOk===true
+    };
+    if(Object.values(seedChecks).some(v=>!v))throw new Error('Seed continuity failed '+JSON.stringify(seedChecks));
     const runtimeNumbers=Object.keys(window)
       .map(k=>/^TGGV(\d{3})$/.exec(k))
       .filter(Boolean)

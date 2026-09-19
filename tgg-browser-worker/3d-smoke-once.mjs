@@ -433,7 +433,17 @@ async function run(){
         const p=document.getElementById('v244StoryPanel')?.getBoundingClientRect();
         const h=document.getElementById('v244StoryHud')?.getBoundingClientRect();
         const a=document.getElementById('v244HudAction')?.getBoundingClientRect();
-        return {width:innerWidth,scrollWidth:document.documentElement.scrollWidth,panel:p?{left:p.left,right:p.right,width:p.width}:null,hud:h?{left:h.left,right:h.right,width:h.width}:null,action:a?{width:a.width,height:a.height}:null};
+        const panelEl=document.getElementById('v244StoryPanel');
+        const pcs=panelEl?getComputedStyle(panelEl):null;
+        return {
+          width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
+          panel:p?{left:p.left,right:p.right,width:p.width}:null,
+          panelStyle:pcs?{transform:pcs.transform,left:pcs.left,right:pcs.right,position:pcs.position,visibility:pcs.visibility,opacity:pcs.opacity}:null,
+          panelClass:panelEl?.className||'',
+          cssHasMobileActive:[...document.querySelectorAll('style')].some(s=>s.textContent.includes('.v244-story-panel.active{transform:none!important}')),
+          hud:h?{left:h.left,right:h.right,width:h.width}:null,
+          action:a?{width:a.width,height:a.height}:null
+        };
       });
       add('v244-mobile-no-overflow',layout.scrollWidth<=391,JSON.stringify(layout));
       add('v244-mobile-panel-contained',!!layout.panel&&layout.panel.left>=0&&layout.panel.right<=layout.width+1,JSON.stringify(layout.panel));

@@ -103,3 +103,5 @@ for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
 }
 
 console.log('GAME_V4_50_FAMILY_HOUSEHOLD_STATIC_CONTRACT_PASS');
+
+// V4.50 validation refresh

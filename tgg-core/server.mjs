@@ -936,9 +936,10 @@ app.post('/v1/browser/worker-session', async (req,res,next)=>{
 app.post('/v1/browser/worker-session/restore', async (req,res,next)=>{
   try{
     const w=workerAuthorized(req); if(!w)return res.status(401).json({error:'worker_credentials_required'});
-    const r=await pool.query("select metadata->>'owner_refresh_token_encrypted' as refresh_token from tgg_worker_registry where worker_id=$1 and worker_token_hash=$2 and status='active'",[w.id,w.hash]);
+    const r=await pool.query("select metadata->>'owner_refresh_token_encrypted' as refresh_token from tgg_worker_registry where worker_id=$1 and status='active'",[w.id]);
     if(!r.rowCount||!r.rows[0].refresh_token)return res.status(404).json({error:'owner_session_not_found'});
-    const refresh_token=decryptSecret(r.rows[0].refresh_token,w.hash); if(!refresh_token)return res.status(500).json({error:'owner_session_decrypt_failed'});
+    const refresh_token=decryptSecret(r.rows[0].refresh_token,w.hash) || decryptSecret(r.rows[0].refresh_token,TOKEN_SECRET);
+    if(!refresh_token)return res.status(500).json({error:'owner_session_decrypt_failed'});
     res.json({ok:true,refresh_token});
   }catch(e){next(e);}
 });

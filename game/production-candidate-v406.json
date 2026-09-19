@@ -1,0 +1,27 @@
+{
+  "project": "TRU GO GETTA Game",
+  "candidate": "V4.06",
+  "sourceHead": "bfd3cb5ef85f84a33ec86ace27d16afa1c8c8c75",
+  "sourceIncludes": [
+    "V3.92-V4.06 atomic release/browser/viewer/audits-gates bulk",
+    "consolidated locomotion/vehicle/camera realism mega-batch",
+    "CI cancel-in-progress=false continuity fix"
+  ],
+  "certification": {
+    "mode": "ATOMIC_MEGA_BATCH",
+    "required": [
+      "static gate",
+      "mega regression",
+      "browser smoke",
+      "LiveViewer smoke",
+      "production exact-SHA verification",
+      "runtime error scan"
+    ],
+    "failClosed": true
+  },
+  "deployment": {
+    "target": "production",
+    "project": "tgg-world-play",
+    "status": "candidate"
+  }
+}

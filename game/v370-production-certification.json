@@ -1,0 +1,21 @@
+{
+  "project": "TRU GO GETTA WORLD",
+  "runtime": "V3.70 NPC TRAFFIC WORLD INTERACTION MEGA",
+  "status": "CERTIFIED",
+  "public_alias": "https://tgg-world-play.vercel.app",
+  "checks": {
+    "static_gate": true,
+    "mega_regression": true,
+    "browser_smoke": true,
+    "production_deploy": true,
+    "live_browser_interaction": true,
+    "runtime_errors_last_hour": 0
+  },
+  "browser_certification": {
+    "run_id": 35442078084,
+    "artifact_id": 10583868279,
+    "artifact_name": "tgg-v370-live-browser-certificate",
+    "digest": "sha256:d5413641bed206a2bd870cd7e462341ea48a826279e2d76d1d224d255e84aede",
+    "conclusion": "success"
+  }
+}

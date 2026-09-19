@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "2.38",
-  "module": "GAME-V2.38",
-  "name": "Production Certification Watch + Browser Worker Runtime Continuity + Live Viewer E2E Integrity",
+  "version": "2.41",
+  "module": "GAME-V2.41",
+  "name": "Production Certification Recovery + Browser Worker Health Session Watch + Live Viewer Continuity Recovery",
   "workflow": [
     "BUILD",
     "TEST",
@@ -170,5 +170,5 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V2.39"
+  "next": "V2.42"
 }

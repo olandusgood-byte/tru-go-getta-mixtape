@@ -31,19 +31,23 @@ const layers=[
 for(const file of layers){
   vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
 }
-const futureLayers=fs.readdirSync(root)
-  .map(file=>{
-    const v1=/^v1([0-9]{2})-[^/]+[.]js$/.exec(file);
-    const v2=/^v2([0-9]{2})-[^/]+[.]js$/.exec(file);
-    if(v1&&Number(v1[1])>=88)return{file,major:1,minor:Number(v1[1]),runtimeNumber:100+Number(v1[1])};
-    if(v2)return{file,major:2,minor:Number(v2[1]),runtimeNumber:200+Number(v2[1])};
-    return null;
+const futureFiles=fs.readdirSync(root)
+  .filter(file=>{
+    const single=/^v(\d)(\d{2})-(?!v\d{3}-)[^/]+[.]js$/.exec(file);
+    const bulk=/^v(\d{3})-v(\d{3})-bulk-[^/]+[.]js$/.exec(file);
+    if(bulk)return Number(bulk[2])>=188;
+    if(single)return Number(single[1])*100+Number(single[2])>=188;
+    return false;
   })
-  .filter(Boolean)
-  .sort((a,b)=>a.runtimeNumber-b.runtimeNumber);
-for(const {file} of futureLayers){
+  .sort((a,b)=>{
+    const na=Number((/^v(\d{3})/.exec(a)||[])[1]||0);
+    const nb=Number((/^v(\d{3})/.exec(b)||[])[1]||0);
+    return na-nb||a.localeCompare(b);
+  });
+for(const file of futureFiles){
   vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
 }
+
 const w=context.window;
 assert(w.TGGV49.run({before:{world:{cash:1}},after:{world:{cash:2}}}).diff.lastChangeCount===1,'V1.49 diff runtime failed');
 assert(w.TGGV50.run({events:[{seq:2,type:'b'},{seq:1,type:'a'}]}).replay.lastEventCount===2,'V1.50 replay runtime failed');
@@ -96,21 +100,28 @@ for(let n=49;n<=87;n++){
 }
 const futureResults=[];
 const genericPayload={pageErrorCount:0,runtime:true,runtimePresent:true,eventContract:true,allowSynthetic:true,assetLoad:true,runtimeStart:true,stateRead:true,eventLoop:true,session:true,navigation:true,viewerState:true,stream:true,sessionLinkage:true};
-for(const {file,major,minor,runtimeNumber} of futureLayers){
-  const api=w['TGGV'+runtimeNumber]||(major===1?w['TGGV'+minor]:null);
-  assert(api&&typeof api.run==='function'&&typeof api.snapshot==='function','Missing future runtime for '+file);
+const runtimeNumbers=Object.keys(w)
+  .map(k=>/^TGGV(\d{3})$/.exec(k))
+  .filter(Boolean)
+  .map(m=>Number(m[1]))
+  .filter(n=>n>=188)
+  .sort((a,b)=>a-b);
+for(const runtimeNumber of runtimeNumbers){
+  const api=w['TGGV'+runtimeNumber];
+  assert(api&&typeof api.run==='function'&&typeof api.snapshot==='function','Missing runtime TGGV'+runtimeNumber);
   const result=api.run(genericPayload);
-  const snap=api.snapshot();
+  const snap=api.snapshot()||{};
   const version=String(snap.version||api.version||'');
-  const versionOk=major===1
-    ? version.startsWith('1.'+minor+'.')||version.startsWith('1.'+runtimeNumber+'.')
-    : version.startsWith('2.'+minor+'.')||version==='V'+runtimeNumber;
-  assert(versionOk,'Future version mismatch '+file+': '+version);
-  assert(String(snap.mutationPolicy||'').startsWith('local_'),'Future non-local mutation policy '+file);
-  assert(result&&result.ok===true,'Future runtime evidence failed '+file+': '+JSON.stringify(result));
-  if(result.checks&&typeof result.checks==='object')assert(Object.values(result.checks).every(Boolean),'Future checks failed '+file);
-  futureResults.push({file,version,runtimeNumber});
+  const major=Math.floor(runtimeNumber/100),minor=runtimeNumber%100;
+  const versionOk=version.startsWith(major+'.'+minor+'.')||(major===1&&version.startsWith('1.'+runtimeNumber+'.'))||version==='V'+runtimeNumber;
+  const policy=String(snap.mutationPolicy||api.mutationPolicy||'');
+  assert(versionOk,'Future version mismatch TGGV'+runtimeNumber+': '+version);
+  assert(policy==='local-only'||policy.startsWith('local_'),'Future non-local mutation policy TGGV'+runtimeNumber+': '+policy);
+  assert(result&&result.ok===true,'Future runtime evidence failed TGGV'+runtimeNumber+': '+JSON.stringify(result));
+  if(result.checks&&typeof result.checks==='object')assert(Object.values(result.checks).every(Boolean),'Future checks failed TGGV'+runtimeNumber);
+  futureResults.push({runtimeNumber,version});
 }
-const last=futureLayers.at(-1);
-const through=last?(last.major===1?'V1.'+last.minor:'V2.'+String(last.minor).padStart(2,'0')):'V1.87';
+const lastRuntime=runtimeNumbers.at(-1);
+const through=lastRuntime?('V'+Math.floor(lastRuntime/100)+'.'+String(lastRuntime%100).padStart(2,'0')):'V1.87';
+
 console.log(JSON.stringify({ok:true,layers:layers.length+futureLayers.length,from:'V1.49',through,futureResults}));

@@ -899,7 +899,12 @@ app.post('/v1/workers/register-existing', async (req,res,next)=>{
 });
 
 app.post('/v1/workers/heartbeat', async (req,res,next)=>{
-  try{ const w=await requireWorker(req,res); if(!w)return; res.json({ok:true,worker_id:w.worker_id,at:new Date().toISOString()}); }catch(e){next(e);}
+  try{
+    const w=await requireWorker(req,res);
+    if(!w)return;
+    const active=await pool.query("select count(*)::int as count from tgg_browser_jobs where worker_id=$1 and status='running'",[w.id]);
+    res.json({ok:true,worker_id:w.worker_id,active_jobs:active.rows[0]?.count||0,at:new Date().toISOString()});
+  }catch(e){next(e);}
 });
 
 app.post('/v1/workers/certification-status', async (req,res,next)=>{

@@ -76,7 +76,9 @@ jobs:
                   minor,
                   loaded: !!runtime,
                   version,
-                  versionOk: new RegExp('^1[.](?:' + minor + '|' + (100 + minor) + ')[.][0-9]+
+                  versionOk: new RegExp('^1[.](?:' + minor + '|' + (100 + minor) + ')[.][0-9]+$').test(version),
+                  policyOk: String(snapshot.mutationPolicy || '').startsWith('local_')
+                };
               })
               .filter(Boolean);
           });

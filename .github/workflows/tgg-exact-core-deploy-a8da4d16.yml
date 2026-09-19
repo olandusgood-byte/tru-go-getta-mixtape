@@ -1,0 +1,68 @@
+name: TGG Exact Core Deploy a8da4d16
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/tgg-exact-core-deploy-a8da4d16.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgg-core-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy exact prepared TGG Core source to Railway
+    runs-on: ubuntu-latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
+      RAILWAY_PROJECT_ID: "49db9e70-3a4b-4737-ac74-716bebd5ad28"
+      RAILWAY_ENVIRONMENT: "454e3152-df86-4af5-9f3b-0aae6cf1469e"
+      RAILWAY_CORE_SERVICE: "cfa5c70c-9da2-49e6-bea4-21c4474ba8cb"
+      TARGET_SHA: "a8da4d16e35e93d150e5ba6b550df6421634f170"
+
+    steps:
+      - name: Checkout exact prepared source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+
+      - name: Verify exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "Expected: ${TARGET_SHA}"
+          echo "Actual:   ${actual}"
+          test "${actual}" = "${TARGET_SHA}"
+
+      - name: Install Railway CLI
+        shell: bash
+        run: npm install -g @railway/cli
+
+      - name: Validate Railway credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${RAILWAY_TOKEN}" || {
+            echo "Missing GitHub secret RAILWAY_API_KEY"
+            exit 1
+          }
+
+      - name: Deploy exact TGG Core source
+        shell: bash
+        run: |
+          set -euo pipefail
+          railway up --ci --verbose             --project "${RAILWAY_PROJECT_ID}"             --environment "${RAILWAY_ENVIRONMENT}"             --service "${RAILWAY_CORE_SERVICE}"
+
+      - name: Report exact deployment source
+        shell: bash
+        run: |
+          echo "Exact TGG Core source deployed from ${TARGET_SHA}"
+          echo "Project: ${RAILWAY_PROJECT_ID}"
+          echo "Environment: ${RAILWAY_ENVIRONMENT}"
+          echo "Core service: ${RAILWAY_CORE_SERVICE}"

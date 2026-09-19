@@ -32,9 +32,16 @@ try{
   check(await page.getByText('Server FFmpeg Render',{exact:true}).count()===1,'server render export action missing');
   check(await page.locator('.render-presets [data-preset="1080p"]').count()===1,'1080p preset missing');
 
+  const source=await page.locator('script[src*="app.js"]').getAttribute('src');
+  check(Boolean(source),'editor app script missing');
+  const appSource=await page.evaluate(async(src)=>fetch(src).then(r=>r.text()),source);
+  check(appSource.includes('toggleKeyframe'),'keyframe engine missing');
+  check(appSource.includes('data-trim="left"'),'trim handle renderer missing');
+  check(appSource.includes('data-fx-amount'),'effect amount control missing');
+
   await page.screenshot({path:'video-studio-smoke.png',fullPage:true});
   if(failures.length)throw new Error(failures.join('; '));
-  console.log(JSON.stringify({ok:true,url:file,checks:7}));
+  console.log(JSON.stringify({ok:true,url:file,checks:10}));
 } finally {
   await browser.close();
 }

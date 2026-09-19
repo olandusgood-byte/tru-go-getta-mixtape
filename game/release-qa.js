@@ -204,8 +204,8 @@
     test('v236 NPC HUD',!!document.getElementById('v236ForgeHud')&&!!document.getElementById('v236ForgePanel'));
     test('v236 NPC forge css',!!document.querySelector('link[href*="v236-npc-forge.css"]'));
     const audioForgeV237=window.TGGV237?.status?.()||{};
-    test('v237 audio core api',!!window.TGGV237Core&&typeof window.TGGV237Core.profile==='function'&&typeof window.TGGV237Core.clampMix==='function');
-    test('v237 audio forge api',!!window.TGGV237&&typeof window.TGGV237.start==='function'&&typeof window.TGGV237.restore==='function');
+    test('v237 audio core api',!!window.TGGV237Core&&typeof window.TGGV237Core.ambience==='function'&&typeof window.TGGV237Core.cue==='function'&&typeof window.TGGV237Core.normalize==='function');
+    test('v237 audio forge api',!!window.TGGV237&&typeof window.TGGV237.start==='function'&&typeof window.TGGV237.stop==='function'&&typeof window.TGGV237.playCue==='function');
     test('v237 100 layers',Array.isArray(window.TGGV237?.layers)&&window.TGGV237.layers.length===100);
     test('v237 native audio mode',audioForgeV237.mode==='native-audio-forge');
     test('v237 audio HUD',!!document.getElementById('v237ForgeHud')&&!!document.getElementById('v237ForgePanel'));

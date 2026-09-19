@@ -32,9 +32,15 @@ for(const file of layers){
   vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
 }
 const futureLayers=fs.readdirSync(root)
-  .map(file=>({file,match:/^v1([0-9]{2})-[^/]+[.]js$/.exec(file)}))
-  .filter(x=>x.match&&Number(x.match[1])>=88)
-  .sort((a,b)=>Number(a.match[1])-Number(b.match[1]));
+  .map(file=>{
+    const v1=/^v1([0-9]{2})-[^/]+[.]js$/.exec(file);
+    const v2=/^v2([0-9]{2})-[^/]+[.]js$/.exec(file);
+    if(v1&&Number(v1[1])>=88)return{file,major:1,minor:Number(v1[1]),runtimeNumber:100+Number(v1[1])};
+    if(v2)return{file,major:2,minor:Number(v2[1]),runtimeNumber:200+Number(v2[1])};
+    return null;
+  })
+  .filter(Boolean)
+  .sort((a,b)=>a.runtimeNumber-b.runtimeNumber);
 for(const {file} of futureLayers){
   vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
 }
@@ -90,20 +96,21 @@ for(let n=49;n<=87;n++){
 }
 const futureResults=[];
 const genericPayload={pageErrorCount:0,runtime:true,runtimePresent:true,eventContract:true,allowSynthetic:true,assetLoad:true,runtimeStart:true,stateRead:true,eventLoop:true,session:true,navigation:true,viewerState:true,stream:true,sessionLinkage:true};
-for(const {file,match} of futureLayers){
-  const n=Number(match[1]);
-  const api=w['TGGV'+n]||w['TGGV1'+n];
+for(const {file,major,minor,runtimeNumber} of futureLayers){
+  const api=w['TGGV'+runtimeNumber]||(major===1?w['TGGV'+minor]:null);
   assert(api&&typeof api.run==='function'&&typeof api.snapshot==='function','Missing future runtime for '+file);
   const result=api.run(genericPayload);
   const snap=api.snapshot();
   const version=String(snap.version||api.version||'');
-  const logical='1.'+n+'.';
-  const physical='1.'+(100+n)+'.';
-  assert(version.startsWith(logical)||version.startsWith(physical),'Future version mismatch '+file+': '+version);
+  const versionOk=major===1
+    ? version.startsWith('1.'+minor+'.')||version.startsWith('1.'+runtimeNumber+'.')
+    : version.startsWith('2.'+minor+'.');
+  assert(versionOk,'Future version mismatch '+file+': '+version);
   assert(String(snap.mutationPolicy||'').startsWith('local_'),'Future non-local mutation policy '+file);
   assert(result&&result.ok===true,'Future runtime evidence failed '+file+': '+JSON.stringify(result));
   if(result.checks&&typeof result.checks==='object')assert(Object.values(result.checks).every(Boolean),'Future checks failed '+file);
-  futureResults.push({file,version});
+  futureResults.push({file,version,runtimeNumber});
 }
-const through=futureLayers.length?'V1.'+futureLayers.at(-1).match[1]:'V1.87';
+const last=futureLayers.at(-1);
+const through=last?(last.major===1?'V1.'+last.minor:'V2.'+String(last.minor).padStart(2,'0')):'V1.87';
 console.log(JSON.stringify({ok:true,layers:layers.length+futureLayers.length,from:'V1.49',through,futureResults}));

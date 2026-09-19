@@ -85,8 +85,8 @@ async function run(){
       page.on('pageerror',e=>errors.push(e.message||String(e)));
       page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
       page.on('requestfailed',r=>failed.push(r.url()));
-      const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
-      await page.waitForFunction(()=>window.TGGV244&&window.TGGV244Core&&window.TGG3D?.isReady?.()&&window.TGGNavigation?.getTarget,{timeout:30000});
+      const response=await page.goto(TARGET,{waitUntil:'commit',timeout:45000});
+      await page.waitForFunction(()=>window.TGGV244&&window.TGGV244Core&&window.TGG3D?.isReady?.()&&window.TGGNavigation?.getTarget,{timeout:90000,polling:250});
       await page.waitForTimeout(650);
       const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
 
@@ -297,8 +297,7 @@ async function run(){
       const base=TARGET.endsWith('/index.html')?TARGET.slice(0,-11):(TARGET.endsWith('/')?TARGET.slice(0,-1):TARGET);
       const [htmlResponse,cssResponse,coreResponse,forgeResponse]=await Promise.all([
         fetch(base+'/index.html'),fetch(base+'/v242-director-forge.css'),fetch(base+'/v242-director-core.js'),fetch(base+'/v242-director-forge.js')
-      ]);
-      if(!htmlResponse.ok||!cssResponse.ok||!coreResponse.ok||!forgeResponse.ok){
+      ]);      if(!htmlResponse.ok||!cssResponse.ok||!coreResponse.ok||!forgeResponse.ok){
         throw new Error('V2.42 director harness fetch failed: html='+htmlResponse.status+', css='+cssResponse.status+', core='+coreResponse.status+', forge='+forgeResponse.status);
       }
       const [htmlSource,css,coreSource,forgeSource]=await Promise.all([htmlResponse.text(),cssResponse.text(),coreResponse.text(),forgeResponse.text()]);
@@ -597,8 +596,7 @@ async function run(){
         window.TGGStoryMissions={navigationTarget:()=>null};
         window.TGGStoryWorld3D={getStatus:()=>({near:false,target:null})};
         window.TGGSocialSchedule={near:()=>false,navigationTarget:()=>null};
-        window.TGG3D={interactNearest:()=>false,destinations:[]};
-        window.__tggToast=t=>window.__qaToasts.push(String(t));
+        window.TGG3D={interactNearest:()=>false,destinations:[]};        window.__tggToast=t=>window.__qaToasts.push(String(t));
       });
       await mp.addScriptTag({content:coreSource});
       await mp.addScriptTag({content:runtimeSource});
@@ -897,8 +895,7 @@ async function run(){
       await page.waitForTimeout(280);
       snap=await page.evaluate(()=>({
         schedule:window.TGGSocialSchedule.status(),
-        relationship:window.TGGLifeOS.getState().relationships.manager,
-        world:window.TGGStoryWorld3D.getStatus()
+        relationship:window.TGGLifeOS.getState().relationships.manager,        world:window.TGGStoryWorld3D.getStatus()
       }));
       const manager=snap.schedule.invites.find(x=>x.id===managerId);
       add('v224-interact-completes-appointment',manager?.status==='completed',JSON.stringify(manager));
@@ -1197,8 +1194,7 @@ async function run(){
       add('v222-release-rep-runtime',snap.career.mixtapes===1&&snap.career.reputation===95,JSON.stringify(snap));
 
       await tp.evaluate(()=>{
-        window.__qaRewards.length=0;
-        window.TGGWorldLife.startShow();
+        window.__qaRewards.length=0;        window.TGGWorldLife.startShow();
         ['hype','hype','hype','hype'].forEach(m=>window.TGGWorldLife.showMove(m));
       });
       snap=await tp.evaluate(()=>({
@@ -1497,8 +1493,7 @@ async function run(){
 
       await tp.evaluate(()=>window.TGGStoryMissions.start());
       await tp.waitForTimeout(80);
-      snap=await tp.evaluate(()=>({
-        cine:window.TGGStoryCinematics.getState(),
+      snap=await tp.evaluate(()=>({        cine:window.TGGStoryCinematics.getState(),
         kicker:document.getElementById('storyCineKicker')?.textContent||'',        title:document.getElementById('storyCineTitle')?.textContent||'',
         badge:document.getElementById('storyCineBadge')?.textContent||'',
         type:document.getElementById('storyCineType')?.textContent||'',
@@ -1798,7 +1793,6 @@ async function run(){
       await page.waitForFunction(()=>window.TGG3D?.isReady?.()&&window.TGGStreetPresence?.getStatus?.(),undefined,{polling:100,timeout:30000});
       await page.waitForTimeout(350);
       const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail:String(detail??'')});
-
       let snap=await page.evaluate(()=>({
         title:document.title,
         canvas:!!document.querySelector('#city3d canvas'),
@@ -2097,8 +2091,7 @@ async function run(){
       record('chapter3-start-cinematic',snap.cinematic?.lastEvent?.type==='chapter-start'&&snap.cinematic?.lastEvent?.chapter===3,JSON.stringify(snap.cinematic));
 
       await mp.evaluate(()=>{window.__qaGame.x=76;window.__qaGame.y=63;window.TGGStoryMissions.doCurrent();});
-      snap=await mp.evaluate(()=>({
-        status:window.TGGStoryMissions.status(),        opportunity:window.__qaLife.activeOpportunity,
+      snap=await mp.evaluate(()=>({        status:window.TGGStoryMissions.status(),        opportunity:window.__qaLife.activeOpportunity,
         cinematic:window.TGGStoryCinematics.getState()
       }));
       record('chapter3-dj-talk',snap.status?.step===1&&snap.opportunity?.contactId==='dj',JSON.stringify(snap));
@@ -2397,8 +2390,7 @@ async function run(){
       record('chapter2-completes',snap.status?.completed===true&&snap.status?.step===10,JSON.stringify(snap.status));      record('chapter2-final-reward',snap.game.cash===1800&&snap.game.xp===450&&snap.career.reputation===175,JSON.stringify({game:snap.game,career:snap.career}));
       record('chapter2-persistence',snap.stored?.chapter2?.completed===true&&snap.stored?.chapter2?.step===10,JSON.stringify(snap.stored?.chapter2));
 
-      const layout=await mp.evaluate(()=>{
-        window.TGGStoryMissions.reset();
+      const layout=await mp.evaluate(()=>{        window.TGGStoryMissions.reset();
         window.TGGStoryMissions.startChapter2();
         window.__qaShown='game';
         document.querySelectorAll('.screen.active').forEach(x=>x.classList.remove('active'));
@@ -2697,8 +2689,7 @@ async function run(){
         window.TGGGame={
           getState:()=>window.__qaGame,
           reward:(cash,xp)=>{window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return true},
-          show:id=>{window.__qaScreen=id;return true}
-        };
+          show:id=>{window.__qaScreen=id;return true}        };
         window.TGGCareer={
           career:window.__qaCareer,
           addRep:n=>{window.__qaCareer.reputation+=Number(n)||0;return true}        };
@@ -2997,8 +2988,7 @@ async function run(){
       await page.evaluate(()=>{
         document.getElementById('newGame')?.click();
         const stage=document.getElementById('stageName');
-        const style=document.getElementById('styleChoice');
-        if(stage)stage.value='TGG MOVEMENT QA';
+        const style=document.getElementById('styleChoice');        if(stage)stage.value='TGG MOVEMENT QA';
         if(style)style.value='Artist';
         document.getElementById('startGame')?.click();
       });
@@ -3297,8 +3287,7 @@ async function run(){
     await page.evaluate(()=>{      const s=window.TGGGame?.getState?.();
       if(s){s.x=50;s.y=55;s.heading=0;s.inVehicle=false;}
       window.TGGGame?.refresh?.();
-    });
-    await page.waitForTimeout(120);
+    });    await page.waitForTimeout(120);
     await page.evaluate(()=>document.getElementById('vehicleBtn')?.click());    await page.waitForTimeout(150);    const entered=await page.evaluate(()=>window.TGGGame?.getState?.());    record('enter-car',entered?.inVehicle===true);
     console.log(JSON.stringify({tgg_3d_smoke_step:'entered-car'}));
     const driveStart=await page.evaluate(()=>window.TGGGame?.getState?.());

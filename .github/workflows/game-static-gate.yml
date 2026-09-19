@@ -2,7 +2,7 @@ name: Game Static Gate
 
 on:
   push:
-    branches: [main, game/v1-foundation, game/v1-2-build]
+    branches: [main, game/v1-foundation, game/v1-2-build, game/v218-canonical-promotion]
     paths:
       - 'game/**'
       - '.github/workflows/game-static-gate.yml'

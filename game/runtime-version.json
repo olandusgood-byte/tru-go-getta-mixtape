@@ -1,0 +1,22 @@
+{
+  "project": "TRU GO GETTA WORLD",
+  "canonical_runtime": "V2.18 STREET PRESENCE",
+  "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
+  "rollback_branch": "rollback/game-v200-live-08710f3",
+  "verification": "pending_v218_mega_regression",
+  "features": [
+    "threejs_city",
+    "smooth_player_locomotion",
+    "sprint",
+    "vehicle_dynamics",
+    "drift",
+    "garage",
+    "radar",
+    "navigation",
+    "gamepad",
+    "3d_interiors",
+    "story_missions",
+    "street_presence",
+    "adaptive_performance"
+  ]
+}

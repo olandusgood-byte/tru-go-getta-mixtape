@@ -21,13 +21,36 @@
   function routine(){return window.TGGRoutineWorld?.getStatus?.()||{}}
 
   const BEATS=[
-    {id:'studio-call',label:'PRODUCER CALL',district:'STUDIO ROW',minRep:0,kind:'studio',reward:[120,22]},
-    {id:'street-meet',label:'STREET CONTACT',district:'MIXTAPE AVE',minRep:8,kind:'social',reward:[95,20]},
-    {id:'park-cypher',label:'PARK CYPHER',district:'PARKSIDE',minRep:12,kind:'perform',reward:[160,34]},
-    {id:'brand-meeting',label:'BRAND MEETING',district:'DOWNTOWN',minRep:30,kind:'business',reward:[240,38]},
-    {id:'headline-night',label:'HEADLINE NIGHT',district:'DOWNTOWN',minRep:65,kind:'perform',reward:[420,58]},
-    {id:'property-deal',label:'PROPERTY DEAL',district:'DOWNTOWN',minRep:40,kind:'property',reward:[180,28]}
+    {id:'studio-call',label:'PRODUCER CALL',district:'STUDIO ROW',minRep:0,kind:'studio',reward:[120,22],target:{label:'RECORDING STUDIO',x:24,y:37,radius:7,color:'#ff466d'}},
+    {id:'street-meet',label:'STREET CONTACT',district:'MIXTAPE AVE',minRep:8,kind:'social',reward:[95,20],target:{label:'MIXTAPE AVE',x:76,y:63,radius:7,color:'#48d7ff'}},
+    {id:'park-cypher',label:'PARK CYPHER',district:'PARKSIDE',minRep:12,kind:'perform',reward:[160,34],target:{label:'THE PARK',x:76,y:63,radius:7,color:'#4cff88'}},
+    {id:'brand-meeting',label:'BRAND MEETING',district:'DOWNTOWN',minRep:30,kind:'business',reward:[240,38],target:{label:'BUSINESS DISTRICT',x:11,y:50,radius:7,color:'#c7ff00'}},
+    {id:'headline-night',label:'HEADLINE NIGHT',district:'DOWNTOWN',minRep:65,kind:'perform',reward:[420,58],target:{label:'DOWNTOWN STAGE',x:50,y:50,radius:7,color:'#ffc84a'}},
+    {id:'property-deal',label:'PROPERTY DEAL',district:'DOWNTOWN',minRep:40,kind:'property',reward:[180,28],target:{label:'MY APARTMENT',x:63,y:24,radius:7,color:'#ffc84a'}}
   ];
+
+  function hydrateBeat(beat){
+    if(!beat)return null;
+    const template=BEATS.find(x=>x.id===beat.id);
+    return template?{...template,...beat,target:{...(template.target||{}),...(beat.target||{})}}:beat;
+  }
+  function beatNavigation(){
+    const beat=hydrateBeat(state.activeBeat);
+    if(!beat?.target)return null;
+    const g=game(),t=beat.target;
+    const dx=(Number(t.x)||50)-(Number(g.x)||50);
+    const dy=(Number(t.y)||50)-(Number(g.y)||55);
+    const distance=Math.hypot(dx,dy);
+    const bearing=Math.atan2(dy,dx)*180/Math.PI;
+    const heading=Number(g.heading)||0;
+    const relative=((bearing-heading+540)%360)-180;
+    return {
+      beatId:beat.id,label:beat.label,targetLabel:t.label||beat.district,
+      x:t.x,y:t.y,radius:Number(t.radius)||7,color:t.color||'#c7ff00',
+      distance,meters:Math.max(0,Math.round(distance*3.2)),
+      arrived:distance<=(Number(t.radius)||7),relative
+    };
+  }
 
   function propertyUtility(){
     const p=world().properties||{};
@@ -60,7 +83,7 @@
   function spawnBeat(force=false){
     if(state.activeBeat&&!force)return state.activeBeat;
     const beat=chooseBeat(); if(!beat)return null;
-    state.activeBeat={...beat,createdAt:Date.now(),expiresAt:Date.now()+180000};
+    state.activeBeat=hydrateBeat({...beat,createdAt:Date.now(),expiresAt:Date.now()+180000});
     state.lastEventAt=Date.now();
     state.history.push({type:'beat',id:beat.id,at:state.lastEventAt});
     state.history=state.history.slice(-40);
@@ -70,7 +93,15 @@
     return state.activeBeat;
   }
   function completeBeat(){
-    const beat=state.activeBeat;if(!beat)return false;
+    const beat=hydrateBeat(state.activeBeat);if(!beat)return false;
+    state.activeBeat=beat;
+    const route=beatNavigation();
+    if(route&&!route.arrived){
+      window.TGGGame?.show?.('game');
+      window.TGGGameFeel?.objective?.('TRAVEL TO '+route.targetLabel,route.meters+' m • '+beat.label);
+      render();
+      return {ok:false,status:'travel_required',route};
+    }
     const base=beat.reward||[100,20];
     const bonus=1+propertyUtility()/500+state.socialMomentum/800;
     const cash=Math.round(base[0]*bonus),xp=Math.round(base[1]*(1+state.missionIntensity*.08));
@@ -117,7 +148,7 @@
   function ensure(){
     let el=document.getElementById('v460WorldDepth');if(el)return el;
     el=document.createElement('aside');el.id='v460WorldDepth';
-    el.innerHTML='<small>V4.60 WORLD DEPTH</small><b id="v460Beat">CITY FLOW ACTIVE</b><span id="v460Stats">NPC TRUST 18 • OPPORTUNITY 18</span><i id="v460District">DISTRICT PRESSURE 22</i><div><button id="v460Spawn">FIND OPPORTUNITY</button><button id="v460Complete">COMPLETE WORLD BEAT</button></div>';
+    el.innerHTML='<small>V4.60 WORLD DEPTH</small><b id="v460Beat">CITY FLOW ACTIVE</b><span id="v460Stats">NPC TRUST 18 • OPPORTUNITY 18</span><i id="v460District">DISTRICT PRESSURE 22</i><span id="v460Route" style="display:flex;align-items:center;gap:7px;font-style:normal"><strong id="v460RouteArrow" style="display:inline-block">➤</strong><em id="v460RouteText" style="font-style:normal">WORLD NAV READY</em></span><div><button id="v460Spawn">FIND OPPORTUNITY</button><button id="v460Complete">COMPLETE WORLD BEAT</button></div>';
     document.body.appendChild(el);
     document.getElementById('v460Spawn').onclick=()=>spawnBeat(true);
     document.getElementById('v460Complete').onclick=completeBeat;
@@ -125,10 +156,17 @@
   }
   function render(){
     ensure();recalc();
+    if(state.activeBeat)state.activeBeat=hydrateBeat(state.activeBeat);
+    const route=beatNavigation();
     document.getElementById('v460Beat').textContent=state.activeBeat?state.activeBeat.label+' • '+state.activeBeat.district:'CITY FLOW ACTIVE';
     document.getElementById('v460Stats').textContent='NPC TRUST '+Math.round(state.npcTrust)+' • OPPORTUNITY '+Math.round(state.opportunityHeat)+' • PROPERTY '+Math.round(state.propertyUtility);
     document.getElementById('v460District').textContent='DISTRICT PRESSURE '+Math.round(state.districtPressure)+' • MISSION TIER '+state.missionIntensity;
-    document.getElementById('v460Complete').disabled=!state.activeBeat;
+    const routeText=document.getElementById('v460RouteText');
+    const routeArrow=document.getElementById('v460RouteArrow');
+    if(routeText)routeText.textContent=route?(route.arrived?'ARRIVED • '+route.targetLabel:route.meters+' m • '+route.targetLabel):'WORLD NAV READY';
+    if(routeArrow){routeArrow.style.transform='rotate('+(route?.relative||0)+'deg)';routeArrow.style.color=route?.color||'#c7ff00';}
+    const complete=document.getElementById('v460Complete');
+    if(complete){complete.disabled=!state.activeBeat;complete.textContent=route&&!route.arrived?'ROUTE TO WORLD BEAT':'COMPLETE WORLD BEAT';}
   }
   function bind(){
     document.addEventListener('click',e=>{
@@ -143,15 +181,16 @@
       if(/complete/i.test(String(e.detail?.type||''))){state.opportunityHeat=clamp(state.opportunityHeat+8);state.npcTrust=clamp(state.npcTrust+3);save();render()}
     });
   }
-  function getStatus(){return {version:VERSION,...state,npcStates:{...state.npcStates},features:[
+  function getStatus(){return {version:VERSION,...state,npcStates:{...state.npcStates},navigation:beatNavigation(),features:[
     'cross-system-world-orchestrator','dynamic-npc-schedules','npc-trust-dialogue','district-pressure-simulation',
     'adaptive-world-opportunities','mission-intensity-scaling','property-utility-world-effects','social-momentum-effects',
-    'time-limited-world-beats','cross-system-rewards-consequences'
+    'time-limited-world-beats','cross-system-rewards-consequences','physical-world-beat-routing',
+    'arrival-gated-world-beat-completion','heading-aware-world-navigation'
   ]}}
   function boot(){
     ensure();bind();tick();setInterval(tick,5000);
     document.documentElement.dataset.tggV460='on';
-    window.TGGWorldDepth={version:VERSION,getStatus,spawnBeat,completeBeat,npcDialogue,recalc};
+    window.TGGWorldDepth={version:VERSION,getStatus,spawnBeat,completeBeat,npcDialogue,recalc,beatNavigation};
     window.dispatchEvent(new CustomEvent('tgg:v460-ready',{detail:getStatus()}));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.27",
-  "module": "GAME-V1.27",
-  "name": "World Orchestrator + Multi-System Chains + Dynamic Director",
+  "version": "1.30",
+  "module": "GAME-V1.30",
+  "name": "Autonomous World Tick + Adaptive Opportunities + Persistent World State",
   "workflow": [
     "BUILD",
     "TEST",
@@ -66,9 +66,13 @@
     "v1_25_world_orchestrator": true,
     "v1_26_multi_system_chains": true,
     "v1_27_dynamic_director": true,
-    "v1_27_local_director_state": true
+    "v1_27_local_director_state": true,
+    "v1_28_world_tick": true,
+    "v1_29_adaptive_opportunities": true,
+    "v1_30_persistent_world_state": true,
+    "v1_30_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.28 AUTONOMOUS WORLD TICK + ADAPTIVE OPPORTUNITY ENGINE"
+  "next": "V1.31 CROSS-SYSTEM MEMORY + WORLD CONSEQUENCE CHAINS"
 }

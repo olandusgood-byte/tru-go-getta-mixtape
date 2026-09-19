@@ -1098,7 +1098,7 @@ app.post('/v1/workers/jobs/complete', async (req,res,next)=>{
     const certId=finished.payload?.certification_id;
     if(certId){
       const cr=await pool.query(
-        "update tgg_certifications set status=$2,evidence=coalesce(evidence,'{}'::jsonb)||jsonb_build_object('browser_job_id',$3,'browser_result',$4::jsonb),completed_at=case when $2 in ('passed','failed','expired') then now() else completed_at end where id=$1 returning *",
+        "update tgg_certifications set status=$2,evidence=coalesce(evidence,'{}'::jsonb)||jsonb_build_object('browser_job_id',$3::text,'browser_result',$4::jsonb),completed_at=case when $2 in ('passed','failed','expired') then now() else completed_at end where id=$1 returning *",
         [certId,verdict,finished.id,JSON.stringify(req.body?.result||{})]
       );
       const browserSessionId=finished.payload?.browser_session_id;

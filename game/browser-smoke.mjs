@@ -166,6 +166,40 @@ try{
     throw new Error('World beat physical INTERACT completion failed '+JSON.stringify(worldInteractionResult));
   }
 
+  await page.waitForFunction(()=>!!window.TGGNPCRelations&&!!window.TGGV497,{timeout:15000});
+  const relationOpen=await page.evaluate(()=>{
+    const before=window.TGGNPCRelations.relationship('DJ V');
+    const opened=window.TGGNPCRelations.interact('DJ V');
+    const panel=document.getElementById('v497NpcChoice');
+    return {
+      before,
+      opened,
+      panelVisible:!!panel&&!panel.hidden,
+      run:window.TGGV497.run()
+    };
+  });
+  if(!relationOpen.opened?.ok||relationOpen.opened?.status!=='choice_required'||!relationOpen.panelVisible||
+     relationOpen.run?.ok!==true||relationOpen.before?.propertyLevel<1){
+    throw new Error('V4.97 NPC relation choice open failed '+JSON.stringify(relationOpen));
+  }
+  await page.locator('#v497NpcChoice [data-v497-choice="loyal"]').click();
+  await page.waitForTimeout(120);
+  const relationResolved=await page.evaluate(before=>{
+    const snap=window.TGGNPCRelations.snapshot();
+    const after=window.TGGNPCRelations.relationship('DJ V');
+    const world=window.TGGWorldDepth?.getStatus?.()||{};
+    return {snap,after,worldChoice:world.lastNpcChoice,beforeAffinity:before?.relation?.affinity||0};
+  },relationOpen.before);
+  if(relationResolved.snap?.pending||
+     relationResolved.snap?.lastResolved?.name!=='DJ V'||
+     relationResolved.snap?.lastResolved?.choice!=='loyal'||
+     !(relationResolved.after?.relation?.affinity>relationResolved.beforeAffinity)||
+     relationResolved.snap?.lastResolved?.propertyLevel<1||
+     relationResolved.worldChoice?.name!=='DJ V'||
+     relationResolved.worldChoice?.approach!=='loyal'){
+    throw new Error('V4.97 NPC relation choice resolve failed '+JSON.stringify(relationResolved));
+  }
+
   let moved=0;
   let moveKey='';
   for(const key of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
@@ -304,7 +338,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity}));
 }finally{
   await browser.close();
 }

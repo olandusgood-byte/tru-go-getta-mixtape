@@ -59,14 +59,19 @@ jobs:
           const additiveRuntimeCheck = await page.evaluate(() => {
             return [...document.scripts]
               .map(s => (s.getAttribute('src') || '').split('/').pop())
-              .map(src => ({src,match:/^v1(\d{2})-[^/]+\.js$/.exec(src)}))
-              .filter(x => x.match)
-              .map(x => {
-                const minor=Number(x.match[1]);
-                const name='TGGV1'+String(minor).padStart(2,'0');
-                const runtime=window[name];
-                const version=String(runtime?.version||'');
-                return {src:x.src,name,loaded:!!runtime,version,versionOk:new RegExp('^1\\.'+minor+'\\.\\d+            const ids = ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','worldSyncBtn','saveBtn','pauseBtn','resumeBtn','menuBtn','recordBtn','mixtapeBtn','upgradeBtn','businessBtn','cityAssetsBtn'];
+              .map(src => {
+                const match = /^v1([0-9]{2})-[^/]+[.]js$/.exec(src);
+                if (!match) return null;
+                const minor = Number(match[1]);
+                const name = 'TGGV1' + String(minor).padStart(2,'0');
+                const runtime = window[name];
+                const version = String(runtime && runtime.version || '');
+                return {
+                  src,
+                  name,
+                  loaded: !!runtime,
+                  version,
+                  versionOk: new RegExp('^1[.]' + minor + '[.][0-9]+            const ids = ['menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','worldSyncBtn','saveBtn','pauseBtn','resumeBtn','menuBtn','recordBtn','mixtapeBtn','upgradeBtn','businessBtn','cityAssetsBtn'];
             const missing = ids.filter(id => !document.getElementById(id));
             const qa = window.TGGQA?.run?.();
             const release = window.TGGReleaseQA?.run?.();
@@ -174,8 +179,10 @@ jobs:
         if: always()
         run: |
           if [ -f /tmp/tgg-game-server.pid ]; then kill $(cat /tmp/tgg-game-server.pid) || true; fi
-).test(version)};
-              });
+).test(version)
+                };
+              })
+              .filter(Boolean);
           });
           const additiveFailures = additiveRuntimeCheck.filter(x => !x.loaded || !x.versionOk);
           if (missingGlobals.length || additiveFailures.length || errors.length) {

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "2.86",
-  "module": "GAME-V2.86-BULK",
-  "name": "Bulk Release + Browser + Live Viewer + Audits + Gates",
+  "version": "3.01",
+  "module": "GAME-V3.01-BULK",
+  "name": "Bulk Release + Browser + Live Viewer + Audits + Gates + Final Certification",
   "workflow": [
     "BUILD",
     "TEST",
@@ -170,5 +170,5 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V2.87"
+  "next": "V3.02"
 }

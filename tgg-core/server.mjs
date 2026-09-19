@@ -1048,6 +1048,11 @@ app.post('/v1/browser/sessions', auth, async (req,res,next)=>{
       'insert into tgg_browser_sessions(user_id,session_key,metadata) values($1,$2,$3) returning *',
       [req.user.id,crypto.randomBytes(24).toString('hex'),req.body?.metadata||{}]
     );
+    await pool.query(
+      'insert into tgg_browser_viewer_events(browser_session_id,event_type,payload) values($1,$2,$3)',
+      [r.rows[0].id,'session_created',{session_id:r.rows[0].id}]
+    );
+    await pool.query('select pg_notify($1,$2)',['tgg_browser_viewer',JSON.stringify({browser_session_id:r.rows[0].id,event_type:'session_created'})]);
     res.status(201).json({session:r.rows[0]});
   } catch(e){next(e);}
 });
@@ -1191,6 +1196,13 @@ app.post('/v1/certifications', auth, async (req,res,next)=>{
       ['certification_runtime',{certification_id:r.rows[0].id,browser_session_id:browser_session_id||null,user_id:req.user.id,certification_type}]
     );
     await pool.query('update tgg_certifications set evidence=coalesce(evidence,\'{}\'::jsonb)||$2::jsonb where id=$1',[r.rows[0].id,JSON.stringify({browser_job_id:job.rows[0].id})]);
+    if(browser_session_id){
+      await pool.query(
+        'insert into tgg_browser_viewer_events(browser_session_id,event_type,payload) values($1,$2,$3)',
+        [browser_session_id,'certification_started',{certification_id:r.rows[0].id,certification_type,job_id:job.rows[0].id}]
+      );
+      await pool.query('select pg_notify($1,$2)',['tgg_browser_viewer',JSON.stringify({browser_session_id,event_type:'certification_started'})]);
+    }
     res.status(201).json({certification:{...r.rows[0],evidence:{...evidence,browser_job_id:job.rows[0].id}},job:job.rows[0]});
   } catch(e){next(e);}
 });

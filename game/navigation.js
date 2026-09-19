@@ -8,6 +8,8 @@
 
     function toWorld(s){return {x:((Number(s?.x)||50)-50)*.92,z:((Number(s?.y)||50)-50)*.92};}
     function targetFor(s){
+      const storyTarget=window.TGGV244?.navigationTarget?.();
+      if(storyTarget)return storyTarget;
       const worldTarget=window.TGGWorldGameplay?.getNavTarget?.(s);
       if(worldTarget)return worldTarget;
       const contactTarget=window.TGGStreetContacts?.getNavTarget?.();
@@ -41,7 +43,7 @@
       requestAnimationFrame(update);
     }
     update();
-    window.TGGNavigation={update};
+    window.TGGNavigation={update,targetFor,toWorld,getTarget:()=>targetFor(window.TGGGame?.getState?.()||{})};
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();

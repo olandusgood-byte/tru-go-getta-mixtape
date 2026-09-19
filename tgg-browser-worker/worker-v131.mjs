@@ -130,6 +130,61 @@ function allowedGameTarget(raw) {
   }
 }
 
+function allowedLiveViewerTarget(raw) {
+  try {
+    const url = new URL(String(raw || ''));
+    if (url.protocol !== 'https:') return null;
+    if (url.hostname.toLowerCase() !== 'tgg-core-api-production-13bb.up.railway.app') return null;
+    if (!(url.pathname === '/live-viewer' || url.pathname.startsWith('/live-viewer/'))) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+async function runLiveViewerSmokeTarget(target) {
+  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+  const started = Date.now();
+  const consoleErrors = [];
+  const pageErrors = [];
+  const failedResources = [];
+  try {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    const page = await context.newPage();
+    page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text().slice(0, 500)); });
+    page.on('pageerror', err => pageErrors.push(String(err?.message || err).slice(0, 500)));
+    page.on('response', response => {
+      if (response.status() >= 400) failedResources.push({ url: response.url(), status: response.status() });
+    });
+    const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(800);
+    const title = await page.title();
+    const bodyText = await page.locator('body').innerText().catch(() => '');
+    const contentType = String(response?.headers()?.['content-type'] || '');
+    const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
+    const status = response?.status() || 0;
+    const ok = status >= 200 && status < 400 && /^text\/html\b/i.test(contentType) && bodyText.trim().length > 0 && pageErrors.length === 0 && failedResources.length === 0;
+    return {
+      ok,
+      target,
+      version: RUNTIME_VERSION,
+      http_status: status,
+      content_type: contentType,
+      title,
+      body_nonempty: bodyText.trim().length > 0,
+      body_length: bodyText.length,
+      console_errors: consoleErrors.slice(0, 20),
+      page_errors: pageErrors.slice(0, 20),
+      failed_resources: failedResources.slice(0, 20),
+      screenshot_sha256: sha256(screenshot),
+      elapsed_ms: Date.now() - started
+    };
+  } finally {
+    await browser.close();
+  }
+}
+
 async function runGameSmokeTarget(target) {
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   const started = Date.now();
@@ -524,5 +579,5 @@ async function refreshWorkerToken(){const secret=String(process.env.TGG_WORKER_B
   if(!workerToken && !(await ensureWorkerToken()))return;
   if(tggCoreEnabled()) await ensureCoreWorkerRegistration();
   running=true;try{console.log(JSON.stringify({tgg_heartbeat_start:true}));let hb=null;try{hb=await tggWorkerHeartbeat({host:'render',version:RUNTIME_VERSION,session_bootstrapped:Boolean(ownerSession?.access_token),multi_flow_browser_runtime:true});}catch(e){throw e;}console.log(JSON.stringify({tgg_heartbeat_ok:true}));if(!ownerSession?.access_token&&!tggCoreEnabled()){const restored=await restoreOwnerSessionFromRefreshToken();if(!restored){last={status:'awaiting_owner_session',updated_at:new Date().toISOString()};return;}}console.log(JSON.stringify({tgg_claim_start:true,session_present:Boolean(ownerSession?.access_token),native_tgg_mode:tggCoreEnabled()}));if(tggCoreEnabled()){try{const recovered=await tggWorkerRecoverCertification();if(recovered?.job){console.log(JSON.stringify({tgg_certification_recovery:true,ok:true,job_id:recovered.job.id,recovered:Boolean(recovered.recovered)}));}else if(recovered?.reason){console.log(JSON.stringify({tgg_certification_recovery:true,ok:true,reason:recovered.reason}));if(recovered.reason==='no_open_certification'&&Date.now()-lastEnsureCertificationAt>15000){lastEnsureCertificationAt=Date.now();try{let ensured;if(tggCoreEnabled()){ensured=await tggEnsureProtectedAudioCertification();}else{const owner=await verifyOwnerSession(ownerSession.access_token);const email=String(owner?.user?.email||'').toLowerCase().trim();if(!email)throw new Error('owner_email_missing');ensured=await tggEnsureCertification(email,'protected_audio_runtime');}console.log(JSON.stringify({tgg_certification_ensure:true,ok:true,created:Boolean(ensured?.created),certification_id:ensured?.certification?.id||null,job_id:ensured?.job?.id||null}));}catch(ensureError){console.error(JSON.stringify({tgg_certification_ensure:true,ok:false,error:ensureError?.message||String(ensureError)}));}}}}catch(error){console.error(JSON.stringify({tgg_certification_recovery:true,ok:false,error:error?.message||String(error)}));}}const claim=await Promise.race([tggCoreEnabled()?tggWorkerClaim():rpc.rpc('tgg_browser_cert_worker_claim',{p_worker_id:workerId,p_token:workerToken,p_lease_seconds:300}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('WORKER_CLAIM_TIMEOUT')),15000))]);console.log(JSON.stringify({tgg_claim_result:true,ok:!claim?.error,has_data:Boolean(claim?.data)}));if(claim.error)throw claim.error;const job=tggCoreEnabled()?claim?.job:extractClaimJob(claim.data);console.log(JSON.stringify({tgg_claim_job:true,has_job:Boolean(job),job_id_present:Boolean(job?.id),flow_key:job?.flow_key||null}));if(!job?.id){last={status:'idle',updated_at:new Date().toISOString()};return;}last={status:'running',flow_key:job.flow_key,job_id:job.id,updated_at:new Date().toISOString()};try{if(tggCoreEnabled() && !job.tgg_core_access_token && (job.browser_session_id||job.payload?.browser_session_id)){job.tgg_core_access_token=(await tggWorkerGetBrowserCredential(job.browser_session_id||job.payload.browser_session_id)).access_token;}const result=await Promise.race([job.flow_key==='protected_audio_runtime'?runProtectedAudio(job):runGeneric(job),new Promise((_,reject)=>setTimeout(()=>reject(new Error('BROWSER_FLOW_TIMEOUT')),90000))]);await complete(job,'passed',result,result.evidence||result.captures||[]);last={status:'passed',flow_key:job.flow_key,job_id:job.id,updated_at:new Date().toISOString()};console.log(JSON.stringify({tgg_browser_job_complete:true,verdict:'passed',job_id:job.id,flow_key:job.flow_key,evidence_count:Number(result?.evidence_count||result?.evidence?.length||result?.captures?.length||0),playback_started:result?.playback_started===true||result?.playbackStarted===true}));}catch(e){const failure={error:e.message||String(e),real_browser_attempt:true,at:new Date().toISOString()};await complete(job,'failed',failure,[{type:'browser_failure',sha256:sha256(JSON.stringify(failure)),artifact_uri:`tgg://browser-cert/${job.id}/failure.json`,metadata:failure}]);last={status:'failed',flow_key:job.flow_key,job_id:job.id,error:failure.error,updated_at:new Date().toISOString()};console.error(JSON.stringify({tgg_browser_job_complete:true,verdict:'failed',job_id:job.id,flow_key:job.flow_key,error:failure.error}));}}catch(e){last={status:'worker_error',error:e.message||String(e),updated_at:new Date().toISOString()};}finally{running=false;}}
-app.listen(PORT,()=>{console.log(`TGG browser worker ${RUNTIME_VERSION} listening on ${PORT}`);setInterval(loop,POLL_MS);void loop().catch(e=>console.error(JSON.stringify({tgg_initial_loop_error:true,error:e?.message||String(e)})));const smokeTarget=allowedGameTarget(process.env.TGG_GAME_SMOKE_TARGET||'');if(smokeTarget){void runGameSmokeTarget(smokeTarget).then(result=>{last={status:result.ok?'game_smoke_passed':'game_smoke_failed',target:smokeTarget,updated_at:new Date().toISOString()};console.log(JSON.stringify({tgg_game_smoke:true,...result}));}).catch(error=>{last={status:'game_smoke_error',target:smokeTarget,error:error?.message||String(error),updated_at:new Date().toISOString()};console.error(JSON.stringify({tgg_game_smoke:true,ok:false,target:smokeTarget,error:error?.message||String(error)}));});}});
+app.listen(PORT,()=>{console.log(`TGG browser worker ${RUNTIME_VERSION} listening on ${PORT}`);setInterval(loop,POLL_MS);void loop().catch(e=>console.error(JSON.stringify({tgg_initial_loop_error:true,error:e?.message||String(e)})));const smokeTarget=allowedGameTarget(process.env.TGG_GAME_SMOKE_TARGET||'');if(smokeTarget){void runGameSmokeTarget(smokeTarget).then(result=>{last={status:result.ok?'game_smoke_passed':'game_smoke_failed',target:smokeTarget,updated_at:new Date().toISOString()};console.log(JSON.stringify({tgg_game_smoke:true,...result}));}).catch(error=>{last={status:'game_smoke_error',target:smokeTarget,error:error?.message||String(error),updated_at:new Date().toISOString()};console.error(JSON.stringify({tgg_game_smoke:true,ok:false,target:smokeTarget,error:error?.message||String(error)}));});}const liveViewerTarget=allowedLiveViewerTarget(process.env.TGG_LIVE_VIEWER_SMOKE_TARGET||'');if(liveViewerTarget){void runLiveViewerSmokeTarget(liveViewerTarget).then(result=>{last={status:result.ok?'live_viewer_smoke_passed':'live_viewer_smoke_failed',target:liveViewerTarget,updated_at:new Date().toISOString()};console.log(JSON.stringify({tgg_live_viewer_smoke:true,...result}));}).catch(error=>{last={status:'live_viewer_smoke_error',target:liveViewerTarget,error:error?.message||String(error),updated_at:new Date().toISOString()};console.error(JSON.stringify({tgg_live_viewer_smoke:true,ok:false,target:liveViewerTarget,error:error?.message||String(error)}));});}});
 

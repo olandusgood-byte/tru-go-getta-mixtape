@@ -60,21 +60,17 @@ jobs:
             return [...document.scripts]
               .map(s => (s.getAttribute('src') || '').split('/').pop())
               .map(src => {
-                const match = /^v1([0-9]{2})-[^/]+[.]js$/.exec(src);
+                const match = /^v(1[0-9]{2})-[^/]+[.]js$/.exec(src);
                 if (!match) return null;
-                const minor = Number(match[1]);
-                const longName = 'TGGV1' + String(minor).padStart(2,'0');
-                const shortName = 'TGGV' + String(minor).padStart(2,'0');
+                const fileCode = match[1];
+                const shortMinor = Number(fileCode.slice(1));
+                const longName = 'TGGV' + fileCode;
+                const shortName = 'TGGV' + String(shortMinor).padStart(2,'0');
                 const name = window[longName] ? longName : shortName;
                 const runtime = window[name];
                 const version = String(runtime && runtime.version || '');
-                return {
-                  src,
-                  name,
-                  loaded: !!runtime,
-                  version,
-                  versionOk: new RegExp('^1[.]' + minor + '[.][0-9]+$').test(version)
-                };
+                const versionOk = new RegExp('^1[.](' + shortMinor + '|' + fileCode + ')[.][0-9]+$').test(version);
+                return {src,name,loaded:!!runtime,version,versionOk};
               })
               .filter(Boolean);
           });

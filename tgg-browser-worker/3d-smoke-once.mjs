@@ -67,22 +67,28 @@ async function run(){
       await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve)});
       const proxyAddress=proxy.address();
       const qaTarget='http://127.0.0.1:'+proxyAddress.port+'/';
+      console.log(JSON.stringify({tgg_mega_stage:'local-server-ready',target:qaTarget,snapshot:megaSha}));
       try{
         const consoleErrors=[]; const pageErrors=[]; const failedResources=[];
         page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
         page.on('pageerror',e=>pageErrors.push(e.message||String(e)));
         page.on('requestfailed',req=>failedResources.push(req.url()));
         const response=await page.goto(qaTarget,{waitUntil:'commit',timeout:15000});
-        await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGG3D?.isReady?.(),{timeout:90000});
+        console.log(JSON.stringify({tgg_mega_stage:'desktop-page-committed',status:response?.status?.()||0}));
+        await page.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGGGame&&window.TGGStoryMissions,{polling:100,timeout:90000});
+        console.log(JSON.stringify({tgg_mega_stage:'desktop-core-apis-ready',has3d:!!window.TGG3D}));
         await page.waitForTimeout(700);
         const desktop=await page.evaluate(()=>window.TGGMegaQA.run());
+        console.log(JSON.stringify({tgg_mega_stage:'desktop-suite-done',total:desktop.total,passed:desktop.passed,failed:desktop.failed}));
 
         const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true});
         const mp=await mobile.newPage();
         const mobileErrors=[];
         mp.on('pageerror',e=>mobileErrors.push(e.message||String(e)));
-        await mp.goto(qaTarget,{waitUntil:'commit',timeout:15000});
-        await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice,{timeout:90000});
+        const mobileResponse=await mp.goto(qaTarget,{waitUntil:'commit',timeout:15000});
+        console.log(JSON.stringify({tgg_mega_stage:'mobile-page-committed',status:mobileResponse?.status?.()||0}));
+        await mp.waitForFunction(()=>window.TGGMegaQA&&window.TGGVerticalSlice&&window.TGGGame&&window.TGGStoryMissions,{polling:100,timeout:90000});
+        console.log(JSON.stringify({tgg_mega_stage:'mobile-core-apis-ready'}));
         await mp.waitForTimeout(500);
         const mobileResult=await mp.evaluate(()=>{
           const qa=window.TGGMegaQA.run();
@@ -99,6 +105,7 @@ async function run(){
             minActionHeight:actionButtons.length?Math.min(...actionButtons.map(x=>x.height)):0
           };
         });
+        console.log(JSON.stringify({tgg_mega_stage:'mobile-suite-done',total:mobileResult.qa.total,passed:mobileResult.qa.passed,failed:mobileResult.qa.failed}));
         const checks=[
           {name:'mega-desktop-ok',pass:desktop.ok,detail:'passed='+desktop.passed+'/'+desktop.total},
           {name:'mega-check-volume',pass:desktop.total>=250&&desktop.total<=650,detail:String(desktop.total)},

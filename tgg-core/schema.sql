@@ -21,6 +21,8 @@ create table if not exists sessions (
 create index if not exists sessions_user_idx on sessions(user_id);
 create index if not exists sessions_expiry_idx on sessions(expires_at);
 
+create index if not exists tgg_browser_sessions_credential_idx on tgg_browser_sessions(credential_hash,credential_expires_at);
+
 create table if not exists artists (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique references users(id) on delete cascade,
@@ -263,6 +265,11 @@ create table if not exists tgg_browser_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references users(id) on delete set null,
   session_key text not null unique,
+  credential_hash text unique,
+  credential_encrypted text,
+  credential_expires_at timestamptz,
+  revoked_at timestamptz,
+  last_seen_at timestamptz,
   status text not null default 'created' check (status in ('created','bootstrapping','active','closed','failed')),
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),

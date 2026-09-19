@@ -1,62 +1,56 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
-const html=fs.readFileSync(new URL('./index.html',import.meta.url),'utf8');
-const business=fs.readFileSync(new URL('./business.js',import.meta.url),'utf8');
-const world=fs.readFileSync(new URL('./world-sync.js',import.meta.url),'utf8');
-const qa=fs.readFileSync(new URL('./qa.js',import.meta.url),'utf8');
-const release=JSON.parse(fs.readFileSync(new URL('./release-manifest.json',import.meta.url),'utf8'));
-const auto=JSON.parse(fs.readFileSync(new URL('./auto-builder-manifest.json',import.meta.url),'utf8'));
-const qaManifest=JSON.parse(fs.readFileSync(new URL('./qa-manifest.json',import.meta.url),'utf8'));
+const read=name=>fs.readFileSync(new URL('./'+name,import.meta.url),'utf8');
+const html=read('index.html');
+const game=read('game.js');
+const game3d=read('game-3d.js');
+const street=read('street-presence.js');
+const garage=read('garage.js');
+const garage3d=read('garage-3d.js');
+const nav=read('navigation.js');
+const gamepad=read('gamepad.js');
+const finalBuild=read('final-build.js');
+const story=read('story-missions.js');
+const story3d=read('story-world-3d.js');
+const vertical=read('vertical-slice-director.js');
+const mega=read('mega-qa.js');
+const style=read('style.css');
 
-assert.match(html,/Game V1\.13/);
-assert.match(html,/GAME V1\.13 • PROGRESSION \+ BUSINESS DISCOVERY/);
-assert.match(html,/<script src="business\.js"><\/script>/);
-assert.match(html,/id="businessBoard"/);
-assert.match(html,/id="businessBtn"/);
+assert.match(html,/Game V2\.18 STREET PRESENCE/);
+assert.match(html,/GAME V2\.18 • STREET PRESENCE/);
+for(const id of [
+  'city3d','radar3d','radarPlayer','radarCar','vehicleHud','speedValue','gearValue',
+  'driveStateValue','playerMoveHud','walkModeValue','walkSpeedValue','navHud','navArrow',
+  'vehicleBtn','interact3dBtn','camera3dBtn','driftBtn','hornBtn','garageBtn',
+  'worldLifeBtn','storyMissionsBtn','cityAssetsBtn','game','hud'
+]) assert.match(html,new RegExp('id="'+id+'"'),'missing V2.18 DOM contract: '+id);
 
-assert.match(business,/window\.TGGBusiness/);
-assert.match(business,/worldAssetsBundle/);
-assert.match(business,/tgg-business-v1/);
-assert.match(business,/V1\.13 • CITY BUSINESS \+ VEHICLE HUB/);
+for(const src of [
+  'vendor/three-r152.min.js','game.js','game-3d.js','garage.js','garage-3d.js',
+  'studio-3d.js','interiors-3d.js','navigation.js','gamepad.js','final-build.js',
+  'story-missions.js','story-cinematics.js','story-world-3d.js','street-presence.js',
+  'vertical-slice-director.js','mega-qa.js'
+]) assert.ok(html.includes('<script src="'+src+'"></script>'),'missing V2.18 script: '+src);
 
-for (const api of ['propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle']) {
-  assert.match(world,new RegExp('function '+api+'\\b'));
+for(const token of ['window.TGGGame','setDriveKey','getDrivingState']) assert.ok(game.includes(token),'game runtime missing '+token);
+for(const token of ['window.TGG3D','isReady','getVehicleDynamics']) assert.ok(game3d.includes(token),'3D runtime missing '+token);
+for(const token of ['window.TGGStreetPresence','getStatus','setDensity','citizens','socialPeople','activityNodes']) assert.ok(street.includes(token),'street presence missing '+token);
+for(const token of ['window.TGGGarage','paint','tune']) assert.ok(garage.includes(token),'garage runtime missing '+token);
+assert.ok(garage3d.includes('THREE'),'garage 3D runtime missing Three.js integration');
+assert.ok(nav.includes('window.TGGNavigation'),'navigation runtime missing');
+assert.ok(gamepad.includes('gamepad')||gamepad.includes('Gamepad'),'gamepad runtime missing');
+assert.ok(finalBuild.length>1000,'final build runtime unexpectedly small');
+assert.ok(story.includes('window.TGGStoryMissions'),'story mission runtime missing');
+assert.ok(story3d.includes('THREE')||story3d.includes('TGG3D'),'story 3D integration missing');
+assert.ok(vertical.includes('window.TGGVerticalSlice'),'adaptive vertical slice runtime missing');
+assert.ok(mega.includes('window.TGGMegaQA'),'mega QA runtime missing');
+assert.ok(style.includes('.city3d')&&style.includes('.vehicle-hud')&&style.includes('.player-move-hud'),'V2.18 presentation styles missing');
+
+for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
+  for(const [name,source] of Object.entries({game,game3d,street,garage,nav,finalBuild,story,story3d,vertical})){
+    assert.equal(source.includes(forbidden),false,'secret marker '+forbidden+' found in '+name);
+  }
 }
-for (const rpc of ['tgg_world_property_market','tgg_world_property_upgrades','tgg_world_vehicle_progression','tgg_world_vehicle_bundle']) {
-  assert.match(world,new RegExp(rpc));
-}
 
-const forbidden=[
-  'tgg_world_buy_property',
-  'tgg_world_property_market_buy',
-  'tgg_world_property_market_list',
-  'tgg_world_property_market_cancel',
-  'tgg_world_install_property_upgrade',
-  'tgg_world_fast_travel',
-  'tgg_world_v3_travel_to',
-  'tgg_world_vehicle_spawn',
-  'tgg_world_vehicle_join',
-  'tgg_world_vehicle_drive_session',
-  'tgg_world_vehicle_install_tune',
-  'tgg_world_vehicle_music',
-  'tgg_world_party_travel',
-  'sb_secret_',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'sk_live_'
-];
-for (const token of forbidden) {
-  assert.equal(world.includes(token),false,'world-sync must not contain '+token);
-  assert.equal(business.includes(token),false,'business layer must not contain '+token);
-}
-
-assert.match(qa,/business-api/);
-assert.match(qa,/business-catalog/);
-assert.match(qa,/business-persistence/);
-assert.equal(release.release,'V1.13 Progression + Business Discovery');
-assert.equal(auto.version,'1.13');
-assert.ok(Number(qaManifest.version)>=1.13,'qa manifest regressed below 1.13');
-assert.equal(release.browser_smoke,'manual_only');
-assert.equal(release.production,'gated');
-
-console.log('GAME_V1_13_STATIC_CONTRACT_PASS');
+console.log('GAME_V2_18_STATIC_CONTRACT_PASS');

@@ -224,7 +224,7 @@
 
   const cameraModes=['orbit','chase','top'];
   let cameraMode='orbit';
-  let yaw=Math.PI*.25,pitch=.48,distance=17,dragging=false,px=0,py=0,manualCameraUntil=0;
+  let yaw=Math.PI*.25,pitch=.48,distance=17,dragging=false,px=0,py=0,manualCameraUntil=0,chaseHeading=0;
 
   function setCameraMode(mode,quiet=false){
     if(!cameraModes.includes(mode))return cameraMode;
@@ -522,26 +522,32 @@
     traffic.forEach(v=>animateTraffic(v,t,dt));
 
     const subject=s.inVehicle?car.position:player.position;
-    const footLookX=!s.inVehicle?playerDynamics.vx*.11:0;
-    const footLookZ=!s.inVehicle?playerDynamics.vy*.11:0;
+    const stateHeading=(Number(s.heading)||0)*Math.PI/180;
+    const driveLook=s.inVehicle?Math.max(-2.2,Math.min(3.2,vehicleDynamics.speed*.28)):0;
+    const footLookX=!s.inVehicle?playerDynamics.vx*.11:Math.cos(stateHeading)*driveLook;
+    const footLookZ=!s.inVehicle?playerDynamics.vy*.11:Math.sin(stateHeading)*driveLook;
     const target=new THREE.Vector3(subject.x+footLookX,s.inVehicle?1.5:2.2,subject.z+footLookZ);
-    const targetFov=s.inVehicle?60:(playerDynamics.sprinting?64:58);
-    camera.fov=THREE.MathUtils.lerp(camera.fov,targetFov,.08);
+    const vehicleSpeedRatio=Math.min(1,Math.abs(vehicleDynamics.speed)/10);
+    const targetFov=s.inVehicle?58+vehicleSpeedRatio*8:(playerDynamics.sprinting?64:58);
+    camera.fov=THREE.MathUtils.lerp(camera.fov,targetFov,dampAlpha(7.5,dt));
     camera.updateProjectionMatrix();
     let desired;
-    let cameraLerp=.09;
+    let cameraFollowRate=7;
     if(cameraMode==='top'){
       desired=new THREE.Vector3(target.x,32,target.z+.01);
-      cameraLerp=.14;
+      cameraFollowRate=10;
     }else if(cameraMode==='chase'){
-      const heading=(Number(s.heading)||0)*Math.PI/180;
-      const chaseDistance=s.inVehicle?18:(playerDynamics.sprinting?14.5:13);
+      const rawHeading=(Number(s.heading)||0)*Math.PI/180;
+      const headingDelta=Math.atan2(Math.sin(rawHeading-chaseHeading),Math.cos(rawHeading-chaseHeading));
+      chaseHeading+=headingDelta*Math.min(1,dt*(s.inVehicle?6.8:5.2));
+      const chaseDistance=s.inVehicle?(15.5+vehicleSpeedRatio*3.8):(playerDynamics.sprinting?14.5:13);
+      const chaseHeight=s.inVehicle?(6.5+vehicleSpeedRatio*1.25):(playerDynamics.sprinting?6.8:6.2);
       desired=new THREE.Vector3(
-        target.x-Math.cos(heading)*chaseDistance,
-        target.y+(s.inVehicle?7.5:(playerDynamics.sprinting?6.8:6.2)),
-        target.z-Math.sin(heading)*chaseDistance
+        target.x-Math.cos(chaseHeading)*chaseDistance,
+        target.y+chaseHeight,
+        target.z-Math.sin(chaseHeading)*chaseDistance
       );
-      cameraLerp=s.inVehicle ? .16 : (playerDynamics.sprinting ? .15 : .12);
+      cameraFollowRate=s.inVehicle ? 10.5 : (playerDynamics.sprinting ? 9.5 : 8);
     }else{
       if(!s.inVehicle&&playerDynamics.speed>.35&&performance.now()>manualCameraUntil){
         const heading=(Number(s.heading)||0)*Math.PI/180;
@@ -556,9 +562,9 @@
         target.y+followDistance*sp,
         target.z+Math.cos(yaw)*followDistance*cp
       );
-      cameraLerp=s.inVehicle ? .12 : .085;
+      cameraFollowRate=s.inVehicle ? 8.5 : 6.5;
     }
-    camera.position.lerp(desired,cameraLerp);
+    camera.position.lerp(desired,dampAlpha(cameraFollowRate,dt));
     camera.lookAt(target);
 
     npc.position.y=Math.sin(t*2)*.05;

@@ -81,6 +81,18 @@ try{
   await page.getByRole('button',{name:'ENTER CAR'}).click();
   await page.waitForTimeout(300);
   if(!(await page.evaluate(()=>!!window.TGGGame.getState().inVehicle)))throw new Error('Vehicle entry failed');
+  const handlingContract=await page.evaluate(()=>({
+    camera:window.TGG3D?.getCameraMode?.(),
+    drive:window.TGGGame?.getDriveTuning?.(),
+    walk:window.TGGGame?.getWalkTuning?.(),
+    positionValid:window.TGG3D?.canMovePercent?.(window.TGGGame.getState().x,window.TGGGame.getState().y,true)
+  }));
+  if(handlingContract.camera!=='chase'||handlingContract.positionValid!==true||
+     !(handlingContract.drive?.highSpeedSteer<handlingContract.drive?.lowSpeedSteer)||
+     !(handlingContract.drive?.throttleResponse>0)||!(handlingContract.drive?.collisionSlide>0)||
+     !(handlingContract.walk?.sprintSpeed>handlingContract.walk?.walkSpeed)){
+    throw new Error('Handling contract failed '+JSON.stringify(handlingContract));
+  }
   let driven=0;
   let driveAttempt='';
   const apiAttempts=[
@@ -190,7 +202,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,driven,layers:layerCheck.additive.length,continuity:continuity.length}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length}));
 }finally{
   await browser.close();
 }

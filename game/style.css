@@ -381,3 +381,18 @@
 .action-deck .actions .utility-action{border-style:dashed;opacity:.88}
 @media(max-width:980px){.game-controls{grid-template-columns:220px minmax(0,1fr);gap:14px}.dpad{width:174px;height:144px}.action-deck .actions{grid-template-columns:repeat(3,minmax(118px,1fr))}}
 @media(max-width:720px){#game.active{padding:10px 10px 20px}.game-shell{gap:12px}.game-controls{grid-template-columns:1fr;gap:12px}.move-pad,.action-deck{min-height:0;border-radius:18px}.move-pad{padding:12px 14px 14px}.dpad{width:min(260px,82vw);height:182px;gap:12px}.dpad button{min-height:52px;font-size:23px}.action-deck{padding:12px}.action-deck .actions{grid-template-columns:repeat(2,minmax(0,1fr));max-height:none;gap:10px}.action-deck .actions button{min-height:64px;font-size:12px}}
+
+
+/* V4.50 GAMEPLAY REALISM MEGA PASS — touch comfort + clearer active controls */
+.game-controls button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.dpad button,.action-deck .actions button{transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}
+.dpad button:focus-visible,.action-deck .actions button:focus-visible{outline:2px solid #c7ff00;outline-offset:3px}
+@media (pointer:coarse) and (max-width:720px){
+  .game-controls{gap:16px}
+  .move-pad{padding:14px 16px 16px}
+  .dpad{width:min(282px,86vw);height:198px;gap:13px}
+  .dpad button{min-height:58px;font-size:24px;border-radius:18px}
+  .action-deck{padding:14px}
+  .action-deck .actions{gap:12px}
+  .action-deck .actions button{min-height:70px;padding:14px 12px;font-size:12px;line-height:1.2}
+}

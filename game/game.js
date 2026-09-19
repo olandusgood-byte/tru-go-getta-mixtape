@@ -5,8 +5,8 @@
   let activeScreen='menu';
   const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false};
   const driveAnalog={steer:0,throttle:0,handbrake:0};
-  const driveRuntime={speed:0,steer:0,yawRate:0,lastTime:performance.now(),braking:false,handbrake:false};
-  const DRIVE={maxForward:10,maxReverse:-4.5,accel:6.4,reverseAccel:4.7,brake:11.5,coast:2.8,turnRate:102,steerIn:3.25,steerOut:5.9,lowSpeedSteer:.92,highSpeedSteer:.5,yawResponse:165,yawCenter:225};
+  const driveRuntime={speed:0,steer:0,yawRate:0,throttle:0,lastTime:performance.now(),braking:false,handbrake:false,collisionFrames:0};
+  const DRIVE={maxForward:10,maxReverse:-4.5,accel:6.4,reverseAccel:4.7,brake:11.5,coast:2.8,turnRate:102,steerIn:3.25,steerOut:5.9,lowSpeedSteer:.92,highSpeedSteer:.46,yawResponse:165,yawCenter:225,throttleResponse:5.2,throttleRelease:7.4,collisionSlide:.42,collisionDamping:.2};
 
   const walkKeys={up:false,down:false,left:false,right:false,sprint:false};
   const walkAnalog={x:0,y:0,sprint:0};
@@ -14,7 +14,7 @@
   const walkRuntime={vx:0,vy:0,inputX:0,inputY:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false};
   const WALK={walkSpeed:6.4,sprintSpeed:9.8,accel:18,decel:24,turnResponse:8.5,inputResponse:6.2,stopEpsilon:.025};
   function setDriveTuning(next={}){
-    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate','steerIn','steerOut','lowSpeedSteer','highSpeedSteer','yawResponse','yawCenter'].forEach(k=>{
+    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate','steerIn','steerOut','lowSpeedSteer','highSpeedSteer','yawResponse','yawCenter','throttleResponse','throttleRelease','collisionSlide','collisionDamping'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))DRIVE[k]=Number(next[k]);
     });
     return {...DRIVE};
@@ -245,6 +245,8 @@
       driveRuntime.speed=approach(driveRuntime.speed,0,DRIVE.brake*elapsed);
       driveRuntime.steer=approach(driveRuntime.steer,0,6*elapsed);
       driveRuntime.yawRate=approach(driveRuntime.yawRate,0,DRIVE.yawCenter*elapsed);
+      driveRuntime.throttle=approach(driveRuntime.throttle,0,DRIVE.throttleRelease*elapsed);
+      driveRuntime.collisionFrames=0;
       driveRuntime.braking=false;
       driveRuntime.handbrake=false;
       window.TGG3D?.setVehicleDynamics?.({speed:driveRuntime.speed,steer:driveRuntime.steer,braking:false,handbrake:false});
@@ -253,7 +255,10 @@
     }
 
     const keyThrottle=(driveKeys.forward?1:0)-(driveKeys.reverse?1:0);
-    const throttle=Math.abs(keyThrottle)>.01?keyThrottle:driveAnalog.throttle;
+    const rawThrottle=Math.abs(keyThrottle)>.01?keyThrottle:driveAnalog.throttle;
+    const throttleRate=Math.abs(rawThrottle)>.01?DRIVE.throttleResponse:DRIVE.throttleRelease;
+    driveRuntime.throttle=approach(driveRuntime.throttle,rawThrottle,throttleRate*elapsed);
+    const throttle=driveRuntime.throttle;
     const wantsForward=throttle>.05;
     const wantsReverse=throttle<-.05;
     const throttleAmount=Math.min(1,Math.abs(throttle));
@@ -283,9 +288,10 @@
 
       const keySteer=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
       const rawSteer=Math.abs(keySteer)>.01?keySteer:driveAnalog.steer;
+      const shapedSteer=Math.sign(rawSteer)*Math.pow(Math.min(1,Math.abs(rawSteer)),.86);
       const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/Math.max(1,DRIVE.maxForward));
       const steerLimit=DRIVE.lowSpeedSteer+(DRIVE.highSpeedSteer-DRIVE.lowSpeedSteer)*speedRatio;
-      const steerTarget=Math.max(-1,Math.min(1,rawSteer))*steerLimit;
+      const steerTarget=shapedSteer*steerLimit;
       const steerRate=Math.abs(rawSteer)>.01?DRIVE.steerIn:DRIVE.steerOut;
       driveRuntime.steer=approach(driveRuntime.steer,steerTarget,steerRate*dt);
 
@@ -307,12 +313,27 @@
         const rad=(Number(state.heading)||0)*Math.PI/180;
         const nx=Math.max(3,Math.min(94,state.x+Math.cos(rad)*driveRuntime.speed*dt));
         const ny=Math.max(8,Math.min(88,state.y+Math.sin(rad)*driveRuntime.speed*dt));
-        if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny,true)){
-          driveRuntime.speed*=.18;
-          driveRuntime.yawRate*=.35;
+        const canMove=window.TGG3D?.canMovePercent;
+        if(canMove && !canMove(nx,ny,true)){
+          const slideScale=Math.max(0,Math.min(1,DRIVE.collisionSlide));
+          const sx=Math.max(3,Math.min(94,state.x+Math.cos(rad)*driveRuntime.speed*dt*slideScale));
+          const sy=Math.max(8,Math.min(88,state.y+Math.sin(rad)*driveRuntime.speed*dt*slideScale));
+          let slid=false;
+          if(canMove(sx,state.y,true)){state.x=sx;slid=true}
+          if(canMove(state.x,sy,true)){state.y=sy;slid=true}
+          driveRuntime.collisionFrames=slid?0:driveRuntime.collisionFrames+1;
+          if(slid){
+            driveRuntime.speed*=.72;
+            driveRuntime.yawRate*=.62;
+          }else{
+            driveRuntime.speed*=Math.max(0,Math.min(.5,DRIVE.collisionDamping));
+            driveRuntime.yawRate*=.28;
+            if(driveRuntime.collisionFrames>=3)driveRuntime.speed=0;
+          }
         }else{
           state.x=nx;
           state.y=ny;
+          driveRuntime.collisionFrames=0;
         }
       }
     }
@@ -445,6 +466,8 @@
       state.inVehicle=false;
       driveRuntime.speed=0;
       driveRuntime.yawRate=0;
+      driveRuntime.throttle=0;
+      driveRuntime.collisionFrames=0;
       Object.keys(driveKeys).forEach(k=>driveKeys[k]=false);
       driveAnalog.steer=0;driveAnalog.throttle=0;driveAnalog.handbrake=0;
       walkAnalog.x=0;walkAnalog.y=0;walkAnalog.sprint=0;
@@ -478,6 +501,8 @@
     driveRuntime.speed=0;
     driveRuntime.steer=0;
     driveRuntime.yawRate=0;
+    driveRuntime.throttle=0;
+    driveRuntime.collisionFrames=0;
     driveRuntime.lastTime=performance.now();
     window.TGG3D?.setCameraMode?.('chase',true);
     window.TGG3D?.setVehicleDynamics?.({speed:0,steer:0,braking:false,handbrake:false});

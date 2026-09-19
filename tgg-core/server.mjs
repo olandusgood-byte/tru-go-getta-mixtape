@@ -1109,6 +1109,67 @@ app.post('/v1/workers/jobs/complete', async (req,res,next)=>{
   }catch(e){next(e);}
 });
 
+
+function buildProtectedAudioQaWav(){
+  const sampleRate=8000, seconds=1, samples=sampleRate*seconds, dataBytes=samples*2;
+  const b=Buffer.alloc(44+dataBytes);
+  b.write('RIFF',0); b.writeUInt32LE(36+dataBytes,4); b.write('WAVE',8);
+  b.write('fmt ',12); b.writeUInt32LE(16,16); b.writeUInt16LE(1,20); b.writeUInt16LE(1,22);
+  b.writeUInt32LE(sampleRate,24); b.writeUInt32LE(sampleRate*2,28); b.writeUInt16LE(2,32); b.writeUInt16LE(16,34);
+  b.write('data',36); b.writeUInt32LE(dataBytes,40);
+  for(let i=0;i<samples;i++){ const s=Math.round(Math.sin(2*Math.PI*440*i/sampleRate)*9000); b.writeInt16LE(s,44+i*2); }
+  return b;
+}
+
+app.get('/qa/protected-audio', (_req,res)=>{
+  res.set('Cache-Control','no-store');
+  res.set('X-TGG-QA','protected-audio-browser-v2');
+  res.type('html').send('<!doctype html><html><head><meta charset="utf-8"><title>TGG Protected Audio QA</title></head><body><main><h1>Protected Audio Browser QA</h1><button id="run" type="button">Run QA</button><pre id="status">Ready</pre><audio id="audio" controls preload="auto"></audio></main></body></html>');
+});
+
+app.post('/v1/workers/jobs/ensure-protected-audio-certification', async (req,res,next)=>{
+  try{
+    const w=await requireWorker(req,res); if(!w)return;
+    const email='tgg-browser-qa@internal.invalid';
+    let u=await pool.query('select id,email from users where email=$1',[email]);
+    if(!u.rowCount){
+      u=await pool.query('insert into users(email,password_hash,display_name,role) values($1,$2,$3,$4) returning id,email',[email,passwordHash(crypto.randomBytes(32).toString('hex')),'TGG Browser QA','artist']);
+    }
+    const user=u.rows[0];
+    let a=await pool.query('select id from artists where user_id=$1',[user.id]);
+    if(!a.rowCount) a=await pool.query('insert into artists(user_id,stage_name,bio) values($1,$2,$3) returning id',[user.id,'TGG Browser QA','Internal protected-audio certification fixture']);
+    const artistId=a.rows[0].id;
+    let rel=await pool.query("select id from releases where artist_id=$1 and title='TGG Protected Audio QA Fixture' order by created_at desc limit 1",[artistId]);
+    if(!rel.rowCount) rel=await pool.query("insert into releases(artist_id,title,release_type,status) values($1,'TGG Protected Audio QA Fixture','single','published') returning id",[artistId]);
+    const releaseId=rel.rows[0].id;
+    const storageKey='audio/__qa__/protected-audio-runtime.wav';
+    const target=path.resolve(STORAGE_ROOT,storageKey),root=path.resolve(STORAGE_ROOT);
+    if(!target.startsWith(root+path.sep)) return res.status(500).json({error:'qa_fixture_path_invalid'});
+    await fs.mkdir(path.dirname(target),{recursive:true});
+    const wav=buildProtectedAudioQaWav();
+    await fs.writeFile(target,wav);
+    await pool.query(
+      "insert into media_objects(owner_user_id,media_type,storage_key,public_url,size_bytes,mime_type) values($1,'audio',$2,$3,$4,'audio/wav') on conflict(storage_key) do update set owner_user_id=excluded.owner_user_id,size_bytes=excluded.size_bytes,mime_type=excluded.mime_type",
+      [user.id,storageKey,'/v1/storage/object/audio/__qa__/protected-audio-runtime.wav',wav.length]
+    );
+    let tr=await pool.query("select id from tracks where artist_id=$1 and title='Protected Audio QA Tone' order by created_at desc limit 1",[artistId]);
+    if(!tr.rowCount){
+      tr=await pool.query("insert into tracks(release_id,artist_id,title,track_number,audio_url,duration_seconds,published) values($1,$2,'Protected Audio QA Tone',1,$3,1,true) returning id",[releaseId,artistId,'/v1/storage/object/'+storageKey]);
+    }else{
+      await pool.query("update tracks set release_id=$1,audio_url=$2,duration_seconds=1,published=true,updated_at=now() where id=$3",[releaseId,'/v1/storage/object/'+storageKey,tr.rows[0].id]);
+    }
+    const existing=await pool.query("select * from tgg_certifications where user_id=$1 and certification_type='protected_audio_runtime' and status not in ('passed','failed','expired') order by started_at desc limit 1",[user.id]);
+    let cert=existing.rows[0]||null;
+    if(!cert) cert=(await pool.query("insert into tgg_certifications(user_id,certification_type,evidence) values($1,'protected_audio_runtime',$2) returning *",[user.id,{qa_fixture:true,storage_key:storageKey}])).rows[0];
+    const existingJob=await pool.query("select * from tgg_browser_jobs where payload->>'certification_id'=$1 and status in ('queued','running') order by created_at desc limit 1",[String(cert.id)]);
+    if(existingJob.rowCount) return res.json({certification:cert,job:existingJob.rows[0],created:true,existing:true});
+    const payload={certification_id:cert.id,user_id:user.id,certification_type:'protected_audio_runtime',object_key:storageKey,mime_type:'audio/wav',url:(String(process.env.TGG_PUBLIC_BASE_URL||'').replace(/\/$/,'')||'')+'/qa/protected-audio'};
+    const job=(await pool.query("insert into tgg_browser_jobs(flow_key,payload) values('protected_audio_runtime',$1) returning *",[payload])).rows[0];
+    await pool.query("update tgg_certifications set evidence=coalesce(evidence,'{}'::jsonb)||$2::jsonb where id=$1",[cert.id,JSON.stringify({browser_job_id:job.id,qa_fixture:true})]);
+    res.status(201).json({certification:cert,job,created:true});
+  }catch(e){next(e);}
+});
+
 app.post('/v1/workers/jobs/ensure-certification', async (req,res,next)=>{
   try{
     const w=await requireWorker(req,res); if(!w)return;

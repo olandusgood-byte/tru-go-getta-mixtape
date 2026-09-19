@@ -6,15 +6,15 @@
   const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false};
   const driveAnalog={steer:0,throttle:0,handbrake:0};
   const driveRuntime={speed:0,steer:0,yawRate:0,throttle:0,lastTime:performance.now(),braking:false,handbrake:false,collisionFrames:0};
-  const DRIVE={maxForward:10,maxReverse:-4.5,accel:6.4,reverseAccel:4.7,brake:11.5,coast:2.8,turnRate:102,steerIn:3.25,steerOut:5.9,lowSpeedSteer:.92,highSpeedSteer:.46,yawResponse:165,yawCenter:225,throttleResponse:5.2,throttleRelease:7.4,collisionSlide:.42,collisionDamping:.2};
+  const DRIVE={maxForward:10.8,maxReverse:-4.6,accel:7.15,reverseAccel:4.9,brake:12.8,coast:2.35,turnRate:96,steerIn:3.8,steerOut:7.2,lowSpeedSteer:.9,highSpeedSteer:.38,yawResponse:182,yawCenter:255,throttleResponse:5.9,throttleRelease:8.1,collisionSlide:.48,collisionDamping:.16,steerCurve:.78,highSpeedTurnFalloff:.42,handbrakeTurnBoost:1.42};
 
   const walkKeys={up:false,down:false,left:false,right:false,sprint:false};
   const walkAnalog={x:0,y:0,sprint:0};
   const walkReleaseTimers={up:null,down:null,left:null,right:null,sprint:null};
   const walkRuntime={vx:0,vy:0,inputX:0,inputY:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false};
-  const WALK={walkSpeed:6.4,sprintSpeed:9.8,accel:18,decel:24,turnResponse:8.5,inputResponse:6.2,stopEpsilon:.025};
+  const WALK={walkSpeed:6.55,sprintSpeed:10.15,accel:20.5,decel:27,turnResponse:10.2,inputResponse:7.4,stopEpsilon:.02,analogCurve:1.08};
   function setDriveTuning(next={}){
-    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate','steerIn','steerOut','lowSpeedSteer','highSpeedSteer','yawResponse','yawCenter','throttleResponse','throttleRelease','collisionSlide','collisionDamping'].forEach(k=>{
+    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate','steerIn','steerOut','lowSpeedSteer','highSpeedSteer','yawResponse','yawCenter','throttleResponse','throttleRelease','collisionSlide','collisionDamping','steerCurve','highSpeedTurnFalloff','handbrakeTurnBoost'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))DRIVE[k]=Number(next[k]);
     });
     return {...DRIVE};
@@ -22,7 +22,7 @@
   function getDriveTuning(){return {...DRIVE};}
   function getWalkTuning(){return {...WALK};}
   function setWalkTuning(next={}){
-    ['walkSpeed','sprintSpeed','accel','decel','turnResponse','inputResponse'].forEach(k=>{
+    ['walkSpeed','sprintSpeed','accel','decel','turnResponse','inputResponse','analogCurve'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))WALK[k]=Number(next[k]);
     });
     return {...WALK};
@@ -288,17 +288,18 @@
 
       const keySteer=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
       const rawSteer=Math.abs(keySteer)>.01?keySteer:driveAnalog.steer;
-      const shapedSteer=Math.sign(rawSteer)*Math.pow(Math.min(1,Math.abs(rawSteer)),.86);
+      const shapedSteer=Math.sign(rawSteer)*Math.pow(Math.min(1,Math.abs(rawSteer)),Math.max(.45,DRIVE.steerCurve));
       const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/Math.max(1,DRIVE.maxForward));
-      const steerLimit=DRIVE.lowSpeedSteer+(DRIVE.highSpeedSteer-DRIVE.lowSpeedSteer)*speedRatio;
+      const steerBlend=speedRatio*speedRatio*(3-2*speedRatio);
+      const steerLimit=DRIVE.lowSpeedSteer+(DRIVE.highSpeedSteer-DRIVE.lowSpeedSteer)*steerBlend;
       const steerTarget=shapedSteer*steerLimit;
       const steerRate=Math.abs(rawSteer)>.01?DRIVE.steerIn:DRIVE.steerOut;
       driveRuntime.steer=approach(driveRuntime.steer,steerTarget,steerRate*dt);
 
       if(Math.abs(driveRuntime.steer)>.01&&Math.abs(driveRuntime.speed)>.08){
         const reverseSign=driveRuntime.speed<0?-1:1;
-        const turnFactor=.9-speedRatio*.34;
-        const driftBoost=driveRuntime.handbrake?1.55:1;
+        const turnFactor=1-speedRatio*Math.max(.2,Math.min(.7,DRIVE.highSpeedTurnFalloff));
+        const driftBoost=driveRuntime.handbrake?Math.max(1,DRIVE.handbrakeTurnBoost):1;
         const targetYaw=driveRuntime.steer*DRIVE.turnRate*turnFactor*reverseSign*driftBoost;
         const yawAccel=DRIVE.yawResponse*(driveRuntime.handbrake?1.35:1);
         driveRuntime.yawRate=approach(driveRuntime.yawRate,targetYaw,yawAccel*dt);
@@ -371,6 +372,10 @@
     let rawY=Math.abs(keyY)>.01?keyY:walkAnalog.y;
     const rawMag=Math.hypot(rawX,rawY);
     if(rawMag>1){rawX/=rawMag;rawY/=rawMag;}
+    if(rawMag>0&&rawMag<1){
+      const curved=Math.pow(rawMag,Math.max(.7,Math.min(1.4,WALK.analogCurve)));
+      rawX=(rawX/rawMag)*curved;rawY=(rawY/rawMag)*curved;
+    }
 
     walkRuntime.inputX=approach(walkRuntime.inputX,rawX,WALK.inputResponse*dt);
     walkRuntime.inputY=approach(walkRuntime.inputY,rawY,WALK.inputResponse*dt);
@@ -716,8 +721,8 @@
   window.TGGAutoMode={enabled:()=>true,toggle:()=>true};
   window.TGGGame={
     getState:()=>state,getActiveScreen:()=>activeScreen,show,refresh:update,reward,spend,save,load,move,
-    driveVehicle,setDriveKey,setDriveAnalog,getDrivingState:()=>({...driveRuntime,analog:{...driveAnalog}}),setDriveTuning,getDriveTuning,
-    setWalkKey,setWalkAnalog,getWalkingState:()=>({...walkRuntime,analog:{...walkAnalog}}),setWalkTuning,getWalkTuning,
+    driveVehicle,setDriveKey,setDriveAnalog,getDrivingState:()=>({...driveRuntime,analog:{...driveAnalog},handlingVersion:'V5.60'}),setDriveTuning,getDriveTuning,
+    setWalkKey,setWalkAnalog,getWalkingState:()=>({...walkRuntime,analog:{...walkAnalog},handlingVersion:'V5.60'}),setWalkTuning,getWalkTuning,
     horn,mission,toggleVehicle,resetForNewGame,startBusinessActivity,activityReward
   };
 

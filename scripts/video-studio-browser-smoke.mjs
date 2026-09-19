@@ -44,10 +44,21 @@ try{
   check(appSource.includes('transitionOut'),'out transition engine missing');
   check(appSource.includes('function drawScopes'),'live scope engine missing');
   check(appSource.includes('reverbAmt*.48'),'audio FX amount DSP missing');
+  check(appSource.includes("version:'2.5.0'"),'V2.5 extension API missing');
+  check(appSource.includes('function maskPath'),'mask compositor missing');
+  check(appSource.includes('TGGVideoGPU.process'),'GPU compositor hook missing');
+  const aiSource=await readFile(resolve('tgg-core/public/video-studio/pro-ai.js'),'utf8');
+  const gpuSource=await readFile(resolve('tgg-core/public/video-studio/gpu-fx.js'),'utf8');
+  check(aiSource.includes('function autoEdit'),'auto edit engine missing');
+  check(aiSource.includes('function detectBeats'),'beat analysis missing');
+  check(aiSource.includes('function detectSilence'),'silence analysis missing');
+  check(aiSource.includes('tgg-block-match-v1'),'motion tracker missing');
+  check(aiSource.includes('VideoEncoder.isConfigSupported'),'hardware encoder detection missing');
+  check(gpuSource.includes("getContext('webgl2'"),'GPU shader engine missing');
 
   await page.screenshot({path:'video-studio-smoke.png',fullPage:true});
   if(failures.length)throw new Error(failures.join('; '));
-  console.log(JSON.stringify({ok:true,url:file,checks:15}));
+  console.log(JSON.stringify({ok:true,url:file,checks:27}));
 } finally {
   await browser.close();
 }

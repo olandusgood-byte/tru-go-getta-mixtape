@@ -5,14 +5,14 @@
   let activeScreen='menu';
   const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false};
   const driveRuntime={speed:0,steer:0,lastTime:performance.now(),braking:false,handbrake:false};
-  const DRIVE={maxForward:10,maxReverse:-4.5,accel:7.5,reverseAccel:5.5,brake:12,coast:3.4,turnRate:112};
+  const DRIVE={maxForward:10,maxReverse:-4.5,accel:7.5,reverseAccel:5.5,brake:12,coast:3.4,turnRate:108,steerIn:4.2,steerOut:7.4,lowSpeedSteer:1,highSpeedSteer:.58};
 
   const walkKeys={up:false,down:false,left:false,right:false,sprint:false};
   const walkReleaseTimers={up:null,down:null,left:null,right:null,sprint:null};
-  const walkRuntime={vx:0,vy:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false};
-  const WALK={walkSpeed:6.8,sprintSpeed:10.5,accel:27,decel:33,turnResponse:15,stopEpsilon:.025};
+  const walkRuntime={vx:0,vy:0,inputX:0,inputY:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false};
+  const WALK={walkSpeed:6.8,sprintSpeed:10.5,accel:24,decel:30,turnResponse:11,inputResponse:8.5,stopEpsilon:.025};
   function setDriveTuning(next={}){
-    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate'].forEach(k=>{
+    ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate','steerIn','steerOut','lowSpeedSteer','highSpeedSteer'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))DRIVE[k]=Number(next[k]);
     });
     return {...DRIVE};
@@ -20,7 +20,7 @@
   function getDriveTuning(){return {...DRIVE};}
   function getWalkTuning(){return {...WALK};}
   function setWalkTuning(next={}){
-    ['walkSpeed','sprintSpeed','accel','decel','turnResponse'].forEach(k=>{
+    ['walkSpeed','sprintSpeed','accel','decel','turnResponse','inputResponse'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))WALK[k]=Number(next[k]);
     });
     return {...WALK};
@@ -201,14 +201,12 @@
   function driveVehicle(control){
     if(activeScreen!=='game'||!state.inVehicle)return false;
     if(control==='left'||control==='right'){
-      const delta=control==='left'?-8:8;
-      state.heading=(Number(state.heading||0)+delta+360)%360;
-      driveRuntime.steer=control==='left'?-1:1;
-      update();
+      const sign=control==='left'?-1:1;
+      driveRuntime.steer=sign*Math.max(.38,Math.abs(driveRuntime.steer));
       return true;
     }
     if(control==='forward'||control==='reverse'){
-      const impulse=control==='forward'?1.8:-1.25;
+      const impulse=control==='forward'?1.35:-1.0;
       driveRuntime.speed=Math.max(DRIVE.maxReverse,Math.min(DRIVE.maxForward,driveRuntime.speed+impulse));
       return true;
     }
@@ -263,14 +261,17 @@
         driveRuntime.speed=approach(driveRuntime.speed,0,5.8*dt);
       }
 
-      const steerTarget=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
-      driveRuntime.steer=approach(driveRuntime.steer,Math.max(-1,Math.min(1,steerTarget)),5.5*dt);
+      const rawSteer=(driveKeys.left?-1:0)+(driveKeys.right?1:0);
+      const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/Math.max(1,DRIVE.maxForward));
+      const steerLimit=DRIVE.lowSpeedSteer+(DRIVE.highSpeedSteer-DRIVE.lowSpeedSteer)*speedRatio;
+      const steerTarget=Math.max(-1,Math.min(1,rawSteer))*steerLimit;
+      const steerRate=Math.abs(rawSteer)>.01?DRIVE.steerIn:DRIVE.steerOut;
+      driveRuntime.steer=approach(driveRuntime.steer,steerTarget,steerRate*dt);
 
-      const speedRatio=Math.min(1,Math.abs(driveRuntime.speed)/DRIVE.maxForward);
       if(Math.abs(driveRuntime.steer)>.01&&Math.abs(driveRuntime.speed)>.08){
         const reverseSign=driveRuntime.speed<0?-1:1;
-        const turnFactor=.25+speedRatio*.75;
-        const driftBoost=driveRuntime.handbrake?1.65:1;
+        const turnFactor=.9-speedRatio*.34;
+        const driftBoost=driveRuntime.handbrake?1.55:1;
         state.heading=(Number(state.heading||0)+driveRuntime.steer*DRIVE.turnRate*turnFactor*reverseSign*driftBoost*dt+360)%360;
       }
 
@@ -301,6 +302,8 @@
     walkRuntime.lastTime=now;
 
     if(activeScreen!=='game'||state.inVehicle){
+      walkRuntime.inputX=approach(walkRuntime.inputX,0,WALK.inputResponse*dt);
+      walkRuntime.inputY=approach(walkRuntime.inputY,0,WALK.inputResponse*dt);
       walkRuntime.vx=approach(walkRuntime.vx,0,WALK.decel*dt);
       walkRuntime.vy=approach(walkRuntime.vy,0,WALK.decel*dt);
       walkRuntime.speed=Math.hypot(walkRuntime.vx,walkRuntime.vy);
@@ -312,16 +315,21 @@
       return;
     }
 
-    let ix=(walkKeys.right?1:0)-(walkKeys.left?1:0);
-    let iy=(walkKeys.down?1:0)-(walkKeys.up?1:0);
-    const mag=Math.hypot(ix,iy);
-    if(mag>1){ix/=mag;iy/=mag;}
+    let rawX=(walkKeys.right?1:0)-(walkKeys.left?1:0);
+    let rawY=(walkKeys.down?1:0)-(walkKeys.up?1:0);
+    const rawMag=Math.hypot(rawX,rawY);
+    if(rawMag>1){rawX/=rawMag;rawY/=rawMag;}
 
-    const sprinting=!!walkKeys.sprint&&mag>.01;
-    const targetSpeed=sprinting?WALK.sprintSpeed:WALK.walkSpeed;
-    const targetVx=mag>.01?ix*targetSpeed:0;
-    const targetVy=mag>.01?iy*targetSpeed:0;
-    const accel=mag>.01?WALK.accel:WALK.decel;
+    walkRuntime.inputX=approach(walkRuntime.inputX,rawX,WALK.inputResponse*dt);
+    walkRuntime.inputY=approach(walkRuntime.inputY,rawY,WALK.inputResponse*dt);
+    const inputMag=Math.min(1,Math.hypot(walkRuntime.inputX,walkRuntime.inputY));
+    const ix=inputMag>.001?walkRuntime.inputX/inputMag:0;
+    const iy=inputMag>.001?walkRuntime.inputY/inputMag:0;
+    const sprinting=!!walkKeys.sprint&&inputMag>.08;
+    const targetSpeed=(sprinting?WALK.sprintSpeed:WALK.walkSpeed)*inputMag;
+    const targetVx=inputMag>.01?ix*targetSpeed:0;
+    const targetVy=inputMag>.01?iy*targetSpeed:0;
+    const accel=inputMag>.01?WALK.accel:WALK.decel;
 
     walkRuntime.vx=approach(walkRuntime.vx,targetVx,accel*dt);
     walkRuntime.vy=approach(walkRuntime.vy,targetVy,accel*dt);
@@ -421,7 +429,7 @@
     const carHeading=window.TGG3D?.getCarHeading?.();
     if(Number.isFinite(carHeading))state.heading=carHeading;
     clearWalkKeys();
-    walkRuntime.vx=0;walkRuntime.vy=0;walkRuntime.speed=0;
+    walkRuntime.vx=0;walkRuntime.vy=0;walkRuntime.inputX=0;walkRuntime.inputY=0;walkRuntime.speed=0;
     state.inVehicle=true;
     driveRuntime.speed=0;
     driveRuntime.steer=0;

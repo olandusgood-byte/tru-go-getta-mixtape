@@ -1138,7 +1138,12 @@ app.patch('/v1/certifications/:id', auth, async (req,res,next)=>{
       [req.params.id,status ?? null,req.body?.evidence ?? null,req.user.id]
     );
     if(!r.rowCount) return res.status(404).json({error:'certification_not_found'});
-    res.json({certification:r.rows[0]});
+    const certification=r.rows[0];
+    if(certification.browser_session_id){
+      await pool.query('insert into tgg_browser_viewer_events(browser_session_id,event_type,payload) values($1,$2,$3)',[certification.browser_session_id,'certification_updated',{certification_id:certification.id,status:certification.status,evidence:certification.evidence}]);
+      await pool.query('select pg_notify($1,$2)',['tgg_browser_viewer',JSON.stringify({browser_session_id:certification.browser_session_id,event_type:'certification_updated'})]);
+    }
+    res.json({certification});
   } catch(e){next(e);}
 });
 
@@ -1146,6 +1151,10 @@ app.post('/v1/certifications', auth, async (req,res,next)=>{
   try {
     const {browser_session_id,certification_type,evidence={}}=req.body||{};
     if(!certification_type) return res.status(400).json({error:'certification_type_required'});
+    if(browser_session_id){
+      const session=await pool.query('select id from tgg_browser_sessions where id=$1 and user_id=$2',[browser_session_id,req.user.id]);
+      if(!session.rowCount) return res.status(404).json({error:'browser_session_not_found'});
+    }
     const r=await pool.query(
       'insert into tgg_certifications(browser_session_id,user_id,certification_type,evidence) values($1,$2,$3,$4) returning *',
       [browser_session_id||null,req.user.id,certification_type,evidence]

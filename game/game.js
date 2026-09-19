@@ -9,8 +9,8 @@
 
   const walkKeys={up:false,down:false,left:false,right:false,sprint:false};
   const walkReleaseTimers={up:null,down:null,left:null,right:null,sprint:null};
-  const walkRuntime={vx:0,vy:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false};
-  const WALK={walkSpeed:6.4,sprintSpeed:9.8,accel:22,decel:27,turnResponse:11.5,stopEpsilon:.025};
+  const walkRuntime={vx:0,vy:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false,desiredHeading:0,turnDelta:0};
+  const WALK={walkSpeed:6.4,sprintSpeed:9.8,accel:22,decel:27,turnResponse:11.5,turnRateDeg:420,pivotTurnRateDeg:540,stopEpsilon:.025};
   function setDriveTuning(next={}){
     ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate','boostMultiplier','boostAccel','boostDrain','boostRecharge'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))DRIVE[k]=Number(next[k]);
@@ -20,7 +20,7 @@
   function getDriveTuning(){return {...DRIVE};}
   function getWalkTuning(){return {...WALK};}
   function setWalkTuning(next={}){
-    ['walkSpeed','sprintSpeed','accel','decel','turnResponse'].forEach(k=>{
+    ['walkSpeed','sprintSpeed','accel','decel','turnResponse','turnRateDeg','pivotTurnRateDeg'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))WALK[k]=Number(next[k]);
     });
     return {...WALK};
@@ -353,25 +353,48 @@
     if(mag>1){ix/=mag;iy/=mag;}
 
     const sprinting=!!walkKeys.sprint&&mag>.01;
-    const targetSpeed=sprinting?WALK.sprintSpeed:WALK.walkSpeed;
-    const targetVx=mag>.01?ix*targetSpeed:0;
-    const targetVy=mag>.01?iy*targetSpeed:0;
-    const accel=mag>.01?WALK.accel:WALK.decel;
+    const movementCore=window.TGGV235Core;
+    const inputHeading=mag>.01
+      ? (movementCore?.inputHeading?.(ix,iy) ?? ((Math.atan2(iy,ix)*180/Math.PI+360)%360))
+      : null;
 
-    walkRuntime.vx=approach(walkRuntime.vx,targetVx,accel*dt);
-    walkRuntime.vy=approach(walkRuntime.vy,targetVy,accel*dt);
+    if(inputHeading!==null){
+      walkRuntime.desiredHeading=inputHeading;
+      const rawTurnDelta=movementCore?.deltaDeg?.(Number(state.heading)||0,inputHeading)
+        ?? angleDeltaDeg(Number(state.heading)||0,inputHeading);
+      const pivoting=Math.abs(rawTurnDelta)>92;
+      const turnRate=(pivoting?WALK.pivotTurnRateDeg:WALK.turnRateDeg)*(sprinting?1.08:1);
+      state.heading=movementCore?.turnTowards?.(Number(state.heading)||0,inputHeading,turnRate*dt)
+        ?? ((Number(state.heading||0)+rawTurnDelta*Math.min(1,WALK.turnResponse*dt)+360)%360);
+      walkRuntime.turnDelta=movementCore?.deltaDeg?.(Number(state.heading)||0,inputHeading)
+        ?? angleDeltaDeg(Number(state.heading)||0,inputHeading);
+    }else{
+      walkRuntime.turnDelta=0;
+    }
+
+    const turnSpeedScale=mag>.01
+      ? (movementCore?.turnSpeedScale?.(walkRuntime.turnDelta) ?? Math.max(.28,1-Math.min(180,Math.abs(walkRuntime.turnDelta))/225))
+      : 0;
+    const targetSpeed=(sprinting?WALK.sprintSpeed:WALK.walkSpeed)*turnSpeedScale;
+    const forward=movementCore?.forwardVector?.(Number(state.heading)||0) ?? {
+      x:Math.cos((Number(state.heading)||0)*Math.PI/180),
+      y:Math.sin((Number(state.heading)||0)*Math.PI/180)
+    };
+    const targetVx=mag>.01?forward.x*targetSpeed:0;
+    const targetVy=mag>.01?forward.y*targetSpeed:0;
+    const accel=mag>.01?(Math.abs(walkRuntime.turnDelta)>100?WALK.decel:WALK.accel):WALK.decel;
+
+    walkRuntime.vx=movementCore?.approach?.(walkRuntime.vx,targetVx,accel*dt) ?? approach(walkRuntime.vx,targetVx,accel*dt);
+    walkRuntime.vy=movementCore?.approach?.(walkRuntime.vy,targetVy,accel*dt) ?? approach(walkRuntime.vy,targetVy,accel*dt);
     if(Math.abs(walkRuntime.vx)<WALK.stopEpsilon)walkRuntime.vx=0;
     if(Math.abs(walkRuntime.vy)<WALK.stopEpsilon)walkRuntime.vy=0;
 
     walkRuntime.speed=Math.hypot(walkRuntime.vx,walkRuntime.vy);
     walkRuntime.moving=walkRuntime.speed>.08;
-    walkRuntime.sprinting=sprinting&&walkRuntime.speed>WALK.walkSpeed*.78;
+    walkRuntime.sprinting=sprinting&&walkRuntime.speed>WALK.walkSpeed*.72;
     walkRuntime.blocked=false;
 
     if(walkRuntime.moving){
-      const desiredHeading=(Math.atan2(walkRuntime.vy,walkRuntime.vx)*180/Math.PI+360)%360;
-      state.heading=(Number(state.heading||0)+angleDeltaDeg(Number(state.heading||0),desiredHeading)*Math.min(1,WALK.turnResponse*dt)+360)%360;
-
       const dx=walkRuntime.vx*dt;
       const dy=walkRuntime.vy*dt;
       const nx=Math.max(3,Math.min(94,state.x+dx));
@@ -424,7 +447,14 @@
       if(Math.abs(dy)>0)return driveVehicle(dy<0?'forward':'reverse');
       return false;
     }
-    if(dx||dy)state.heading=(Math.atan2(dy,dx)*180/Math.PI+360)%360;
+    if(dx||dy){
+      const movementCore=window.TGGV235Core;
+      const desired=movementCore?.inputHeading?.(dx,dy) ?? ((Math.atan2(dy,dx)*180/Math.PI+360)%360);
+      state.heading=movementCore?.turnTowards?.(Number(state.heading)||0,desired,Math.max(12,WALK.turnRateDeg/18))
+        ?? ((Number(state.heading||0)+angleDeltaDeg(Number(state.heading)||0,desired)*.35+360)%360);
+      walkRuntime.desiredHeading=desired;
+      walkRuntime.turnDelta=movementCore?.deltaDeg?.(Number(state.heading)||0,desired) ?? angleDeltaDeg(Number(state.heading)||0,desired);
+    }
     const nx=Math.max(3,Math.min(94,state.x+dx));
     const ny=Math.max(8,Math.min(88,state.y+dy));
     if(window.TGG3D?.canMovePercent && !window.TGG3D.canMovePercent(nx,ny,false)){

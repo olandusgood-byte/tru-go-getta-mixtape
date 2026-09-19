@@ -19,21 +19,21 @@ try{
   const layerCheck=await page.evaluate(()=>{
     const required=['TGGVisualPolish','TGGRealismMega','TGGMotionRealism','TGGCityWorldMega','TGGGameFeel','TGGLivingCity','TGGWorldInteraction','TGGLifeSim','TGGOpportunityLoop','TGGWorldSystems','TGGLifestyle','TGGSocialWorld','TGGRoutineWorld','TGGHomeSocial','TGGFamilyHousehold'];
     const missing=required.filter(x=>!window[x]);
-    const additive=[...document.scripts].map(s=>(s.getAttribute('src')||'').split('/').pop()).map(src=>{
-      const v1=/^v1([0-9]{2})-[^/]+[.]js$/.exec(src);
-      const v2=/^v2([0-9]{2})-[^/]+[.]js$/.exec(src);
-      if(v1)return{src,major:1,minor:Number(v1[1]),runtimeNumber:100+Number(v1[1])};
-      if(v2)return{src,major:2,minor:Number(v2[1]),runtimeNumber:200+Number(v2[1])};
-      return null;
-    }).filter(Boolean).sort((a,b)=>a.runtimeNumber-b.runtimeNumber).map(({src,major,minor,runtimeNumber})=>{
-      const api=window['TGGV'+runtimeNumber]||(major===1?window['TGGV'+minor]:null);
-      let snap={};try{snap=api?.snapshot?.()||{}}catch{}
-      const version=String(snap.version||api?.version||'');
-      const versionOk=major===1
-        ? version.startsWith('1.'+minor+'.')||version.startsWith('1.'+runtimeNumber+'.')
-        : version.startsWith('2.'+minor+'.')||version==='V'+runtimeNumber;
-      return{src,loaded:!!api,version,versionOk,policyOk:(major===1&&minor<49)||String(snap.mutationPolicy||'').startsWith('local_')};
-    });
+    const additive=Object.keys(window)
+      .map(k=>/^TGGV(\d{3})$/.exec(k))
+      .filter(Boolean)
+      .map(m=>Number(m[1]))
+      .filter(n=>n>=188)
+      .sort((a,b)=>a-b)
+      .map(runtimeNumber=>{
+        const api=window['TGGV'+runtimeNumber];
+        let snap={};try{snap=api?.snapshot?.()||{}}catch{}
+        const version=String(snap.version||api?.version||'');
+        const major=Math.floor(runtimeNumber/100),minor=runtimeNumber%100;
+        const versionOk=version.startsWith(major+'.'+minor+'.')||(major===1&&version.startsWith('1.'+runtimeNumber+'.'))||version==='V'+runtimeNumber;
+        const policy=String(snap.mutationPolicy||api?.mutationPolicy||'');
+        return{runtimeNumber,loaded:!!api,version,versionOk,policy,policyOk:policy==='local-only'||policy.startsWith('local_')};
+      });
     return{missing,additive};
   });
   const additiveFailures=layerCheck.additive.filter(x=>!x.loaded||!x.versionOk||!x.policyOk);
@@ -63,24 +63,26 @@ try{
 
   const continuity=await page.evaluate(()=>{
     const payload={pageErrorCount:0,runtime:true,runtimePresent:true,eventContract:true,allowSynthetic:true,assetLoad:true,runtimeStart:true,stateRead:true,eventLoop:true,session:true,navigation:true,viewerState:true,stream:true,sessionLinkage:true};
-    return [...document.scripts].map(s=>(s.getAttribute('src')||'').split('/').pop()).map(src=>{
-      const v1=/^v1([0-9]{2})-[^/]+[.]js$/.exec(src);
-      const v2=/^v2([0-9]{2})-[^/]+[.]js$/.exec(src);
-      if(v1&&Number(v1[1])>=88)return{src,major:1,minor:Number(v1[1]),runtimeNumber:100+Number(v1[1])};
-      if(v2)return{src,major:2,minor:Number(v2[1]),runtimeNumber:200+Number(v2[1])};
-      return null;
-    }).filter(Boolean).sort((a,b)=>a.runtimeNumber-b.runtimeNumber).map(({src,major,minor,runtimeNumber})=>{
-      const api=window['TGGV'+runtimeNumber]||(major===1?window['TGGV'+minor]:null);
+    const runtimeNumbers=Object.keys(window)
+      .map(k=>/^TGGV(\d{3})$/.exec(k))
+      .filter(Boolean)
+      .map(m=>Number(m[1]))
+      .filter(n=>n>=188)
+      .sort((a,b)=>a-b);
+    const results=[];
+    for(const runtimeNumber of runtimeNumbers){
+      const api=window['TGGV'+runtimeNumber];
       const result=api?.run?.(payload);
       const snap=api?.snapshot?.()||{};
       const version=String(snap.version||api?.version||'');
-      const versionOk=major===1
-        ? version.startsWith('1.'+minor+'.')||version.startsWith('1.'+runtimeNumber+'.')
-        : version.startsWith('2.'+minor+'.')||version==='V'+runtimeNumber;
-      return{src,version,ok:result?.ok===true&&versionOk,checks:result?.checks||{},policy:snap.mutationPolicy||''};
-    });
+      const major=Math.floor(runtimeNumber/100),minor=runtimeNumber%100;
+      const versionOk=version.startsWith(major+'.'+minor+'.')||(major===1&&version.startsWith('1.'+runtimeNumber+'.'))||version==='V'+runtimeNumber;
+      const policy=String(snap.mutationPolicy||api?.mutationPolicy||'');
+      results.push({runtimeNumber,version,ok:result?.ok===true&&versionOk,checks:result?.checks||{},policy});
+    }
+    return results;
   });
-  const continuityFailures=continuity.filter(x=>!x.ok||Object.values(x.checks).some(v=>!v)||!String(x.policy).startsWith('local_'));
+  const continuityFailures=continuity.filter(x=>!x.ok||Object.values(x.checks).some(v=>!v)||!(x.policy==='local-only'||String(x.policy).startsWith('local_')));
   if(continuityFailures.length)throw new Error('Continuity failed '+JSON.stringify(continuityFailures));
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));

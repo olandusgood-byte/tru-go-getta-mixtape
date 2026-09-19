@@ -29,6 +29,21 @@ async function clickRuntimeControl(selector,label){
 }
 
 
+async function clearIncomingCallOverlay(label){
+  const result=await page.evaluate(()=>{
+    const calls=window.TGGIncomingCalls;
+    let cleared=0,guard=0;
+    while(calls?.snapshot?.().current&&guard++<10){calls.declineCurrent();cleared++;}
+    calls?.clearMissed?.();
+    const overlay=document.getElementById('v502IncomingCall');
+    return {cleared,hidden:!overlay||overlay.hidden,current:calls?.snapshot?.().current||null};
+  });
+  if(result.hidden!==true||result.current){
+    throw new Error(label+' incoming-call overlay did not clear '+JSON.stringify(result));
+  }
+  return result;
+}
+
 async function inspectInteractControl(){
   return page.evaluate(()=>{
     const refresh=window.TGG3D?.refreshInteractionState?.(window.TGGGame?.getState?.())||null;
@@ -449,6 +464,7 @@ try{
   await page.waitForFunction(()=>!!window.TGGPhone&&!!window.TGGV501,{timeout:15000});
   const phoneRun=await page.evaluate(()=>window.TGGV501.run());
   if(phoneRun?.ok!==true)throw new Error('V5.01 phone runtime failed '+JSON.stringify(phoneRun));
+  await clearIncomingCallOverlay('V5.01 phone open');
   await clickRuntimeControl('#v501PhoneBtn','V5.01 phone open');
   await page.waitForTimeout(80);
   const phoneState=await page.evaluate(()=>({

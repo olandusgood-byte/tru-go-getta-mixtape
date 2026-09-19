@@ -1,0 +1,11 @@
+#v360CityHud{position:fixed;right:18px;top:78px;z-index:62;min-width:188px;padding:12px 14px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:linear-gradient(180deg,rgba(7,10,16,.88),rgba(7,10,16,.62));backdrop-filter:blur(18px);box-shadow:0 18px 50px rgba(0,0,0,.35);pointer-events:none}
+#v360CityHud small,#v360CityHud span,#v360CityHud i,#v360CityHud b{display:block}
+#v360CityHud small{font-size:9px;letter-spacing:.18em;opacity:.55}
+#v360CityHud b{font-size:14px;margin-top:4px}
+#v360CityHud span{font-size:10px;margin-top:2px;opacity:.76}
+#v360CityHud i{font-style:normal;font-size:9px;margin-top:7px;color:#c7ff00}
+#v360Prompt{position:fixed;left:50%;bottom:118px;transform:translate(-50%,12px);z-index:63;padding:9px 14px;border-radius:999px;background:rgba(5,8,13,.86);border:1px solid rgba(199,255,0,.28);font-size:11px;font-weight:800;letter-spacing:.08em;opacity:0;transition:.2s ease;pointer-events:none}
+#v360Prompt.show{opacity:1;transform:translate(-50%,0)}
+html[data-tgg-weather="rain"] #v360CityHud{box-shadow:0 18px 50px rgba(0,0,0,.45),0 0 28px rgba(89,139,255,.08)}
+@media (max-width:820px){#v360CityHud{right:10px;top:64px;min-width:150px;padding:10px}#v360Prompt{bottom:92px;max-width:85vw;text-align:center}}
+@media (prefers-reduced-motion:reduce){#v360Prompt{transition:none}}

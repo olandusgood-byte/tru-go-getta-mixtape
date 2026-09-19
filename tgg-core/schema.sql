@@ -158,17 +158,6 @@ begin
 end $$;
 
 
--- Live Viewer event journal for TGG-owned browser sessions.
-create table if not exists tgg_browser_viewer_events (
-  id bigserial primary key,
-  browser_session_id uuid not null references tgg_browser_sessions(id) on delete cascade,
-  event_type text not null,
-  payload jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
-);
-create index if not exists tgg_browser_viewer_events_session_idx
-  on tgg_browser_viewer_events(browser_session_id,id);
-
 -- TGG-owned browser worker queue. Kept in schema.sql so fresh TGG Core databases
 -- contain the same queue that server.mjs can safely initialize at runtime.
 create table if not exists tgg_worker_registry (
@@ -275,7 +264,23 @@ create table if not exists tgg_browser_sessions (
   updated_at timestamptz not null default now()
 );
 
+alter table tgg_browser_sessions add column if not exists credential_hash text unique;
+alter table tgg_browser_sessions add column if not exists credential_encrypted text;
+alter table tgg_browser_sessions add column if not exists credential_expires_at timestamptz;
+alter table tgg_browser_sessions add column if not exists revoked_at timestamptz;
+alter table tgg_browser_sessions add column if not exists last_seen_at timestamptz;
 create index if not exists tgg_browser_sessions_credential_idx on tgg_browser_sessions(credential_hash,credential_expires_at);
+
+-- Live Viewer event journal for TGG-owned browser sessions.
+create table if not exists tgg_browser_viewer_events (
+  id bigserial primary key,
+  browser_session_id uuid not null references tgg_browser_sessions(id) on delete cascade,
+  event_type text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists tgg_browser_viewer_events_session_idx
+  on tgg_browser_viewer_events(browser_session_id,id);
 
 create table if not exists tgg_certifications (
   id uuid primary key default gen_random_uuid(),

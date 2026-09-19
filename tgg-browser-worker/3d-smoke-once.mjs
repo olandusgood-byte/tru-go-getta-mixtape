@@ -42,13 +42,17 @@ async function run(){
       if(!/^[0-9a-f]{40}$/i.test(megaSha))throw new Error('TGG_3D_MEGA_QA_SHA must be an exact 40-char game commit SHA');
       const mimeFor=p=>p.endsWith('.html')?'text/html; charset=utf-8':p.endsWith('.css')?'text/css; charset=utf-8':p.endsWith('.js')?'application/javascript; charset=utf-8':p.endsWith('.json')?'application/json; charset=utf-8':p.endsWith('.png')?'image/png':p.endsWith('.jpg')||p.endsWith('.jpeg')?'image/jpeg':p.endsWith('.webp')?'image/webp':p.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
       const localRoot=await fs.mkdtemp(path.join(os.tmpdir(),'tgg-mega-'));
-      const archivePath=path.join(localRoot,'game.tar');
-      const serveRoot=path.join(localRoot,'site');
-      await fs.mkdir(serveRoot,{recursive:true});
+      const archivePath=path.join(localRoot,'repo.tar.gz');
       try{
-        await execFileAsync('git',['fetch','origin',megaSha,'--depth=1'],{cwd:process.cwd(),timeout:90000,maxBuffer:4*1024*1024});
-        await execFileAsync('git',['archive','--format=tar','--output',archivePath,megaSha,'game'],{cwd:process.cwd(),timeout:30000,maxBuffer:4*1024*1024});
-        await execFileAsync('tar',['-xf',archivePath,'-C',serveRoot,'--strip-components=1'],{timeout:30000,maxBuffer:4*1024*1024});
+        const archiveUrl='https://codeload.github.com/olandusgood-byte/tru-go-getta-mixtape/tar.gz/'+megaSha;
+        const archiveResponse=await fetch(archiveUrl,{redirect:'follow'});
+        if(!archiveResponse.ok)throw new Error('source archive fetch failed: '+archiveResponse.status);
+        await fs.writeFile(archivePath,Buffer.from(await archiveResponse.arrayBuffer()));
+        await execFileAsync('tar',['-xzf',archivePath,'-C',localRoot],{timeout:30000,maxBuffer:4*1024*1024});
+        const entries=await fs.readdir(localRoot,{withFileTypes:true});
+        const sourceDir=entries.find(e=>e.isDirectory()&&e.name.startsWith('tru-go-getta-mixtape-'));
+        if(!sourceDir)throw new Error('extracted source directory not found');
+        const serveRoot=path.join(localRoot,sourceDir.name,'game');
         const proxy=http.createServer(async(req,res)=>{
           try{
             let pathname=new URL(req.url||'/','http://127.0.0.1').pathname;
@@ -247,8 +251,7 @@ async function run(){
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter3-media-arrival',snap.step===5&&snap.current?.id==='premiere',JSON.stringify(snap));
 
-      await mp.evaluate(()=>document.querySelector('[data-media="premiere"]')?.click());
-      await mp.waitForTimeout(25);
+      await mp.evaluate(()=>document.querySelector('[data-media="premiere"]')?.click());      await mp.waitForTimeout(25);
       await mp.evaluate(()=>window.TGGStoryMissions.sync());
       snap=await mp.evaluate(()=>window.TGGStoryMissions.status());
       record('chapter3-premiere',snap.step===6&&snap.current?.id==='home-base',JSON.stringify(snap));
@@ -497,7 +500,6 @@ async function run(){
       let snap=await mp.evaluate(()=>({status:window.TGGStoryMissions?.status?.(),api:typeof window.TGGStoryMissions?.startChapter2==='function'&&typeof window.TGGStoryMissions?.navigationTarget==='function'}));
       record('chapter2-api',snap.api);
       record('first-contract-preserved',snap.status?.completed===true&&snap.status?.step===6&&snap.status?.steps?.length===6,JSON.stringify(snap.status));
-
       await mp.evaluate(()=>window.TGGStoryMissions.startChapter2());
       snap=await mp.evaluate(()=>({status:window.TGGStoryMissions.status(),target:window.TGGStoryMissions.navigationTarget(),nav:window.TGGNavigation?.getTarget?.(),hud:document.getElementById('storyWorldHud')?.classList.contains('active')}));
       record('chapter2-starts',snap.status?.active===true&&snap.status?.step===0&&snap.status?.steps?.length===10,JSON.stringify(snap.status));
@@ -747,8 +749,7 @@ async function run(){
       const checks=[];
       const record=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
       const initial=await mp.evaluate(()=>({
-        api:typeof window.TGGWorldLife?.battleChoice==='function'&&typeof window.TGGWorldLife?.showMove==='function'&&typeof window.TGGWorldLife?.callContact==='function'&&typeof window.TGGWorldLife?.train==='function',
-        button:!!document.getElementById('worldLifeBtn'),
+        api:typeof window.TGGWorldLife?.battleChoice==='function'&&typeof window.TGGWorldLife?.showMove==='function'&&typeof window.TGGWorldLife?.callContact==='function'&&typeof window.TGGWorldLife?.train==='function',        button:!!document.getElementById('worldLifeBtn'),
         board:!!document.getElementById('worldLifeBoard'),
         tabs:document.querySelectorAll('[data-life-tab]').length,
         gameIntegrated:window.__gameSourceCheck||false
@@ -998,7 +999,6 @@ async function run(){
       await page.waitForTimeout(420);
       let braking=await page.evaluate(()=>({drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.()}));
       record('vehicle-braking',Math.abs(Number(braking.drive?.speed)||0)<beforeBrake||braking.drive?.braking===true,JSON.stringify({beforeBrake,braking}));
-
       await page.waitForTimeout(700);      const reversed=await page.evaluate(()=>({drive:window.TGGGame?.getDrivingState?.(),dyn:window.TGG3D?.getVehicleDynamics?.(),gear:document.getElementById('gearValue')?.textContent}));
       record('vehicle-reverse',Number(reversed.drive?.speed)<-.2&&reversed.gear==='R',JSON.stringify(reversed));
       await page.evaluate(()=>window.TGGGame?.setDriveKey?.('reverse',false));
@@ -1247,8 +1247,7 @@ async function run(){
         updated_at:new Date().toISOString()
       };
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
-      await ctx.close();
-      return;
+      await ctx.close();      return;
     }
 
     const consoleErrors=[],pageErrors=[],failedResources=[];
@@ -1497,8 +1496,7 @@ async function run(){
       record('player-motion-certified-separately',true,'Dedicated V2 browser locomotion harness PASS');
     }
     const x0=Number((await page.evaluate(()=>window.TGGGame?.getState?.()))?.x);    await page.keyboard.down('ArrowRight');
-    await page.waitForTimeout(220);
-    await page.keyboard.up('ArrowRight');
+    await page.waitForTimeout(220);    await page.keyboard.up('ArrowRight');
     await page.waitForTimeout(100);
     const walk=await page.evaluate(()=>window.TGGGame?.getState?.());
     record('walk-movement',Number(walk?.x)>x0,`${x0}->${walk?.x}`);

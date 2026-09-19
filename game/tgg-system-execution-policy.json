@@ -1,0 +1,29 @@
+{
+  "project": "TRU GO GETTA Game",
+  "policy_id": "TGG-ATOMIC-MEGA-BATCH-V1",
+  "enabled": true,
+  "mode": "ATOMIC_MEGA_BATCH",
+  "purpose": "Persist the TGG build rule that compatible layers, bulks, batches, audits, gates, browser checks, regression checks, certification wiring, and deploy wiring are handled together.",
+  "execution": {
+    "aggregate_before_write": true,
+    "patch_as_one_unit": true,
+    "merge_as_one_atomic_commit_when_possible": true,
+    "certify_one_exact_sha": true,
+    "cancel_stale_intermediate_runs": true,
+    "skip_completed_work": true,
+    "auto_advance_after_success": true,
+    "stop_on_failed_gate": true,
+    "one_by_one_only_when_dependency_or_platform_constraint_requires": true
+  },
+  "certification": [
+    "Game Static Gate",
+    "Game Browser Smoke",
+    "Game V2.18 Mega Regression",
+    "TGG World Production Deploy"
+  ],
+  "source_of_truth": [
+    "game/auto-builder-manifest.json",
+    "game/v300-mega-build.manifest.json",
+    "game/tgg-system-execution-policy.json"
+  ]
+}

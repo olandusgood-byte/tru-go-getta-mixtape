@@ -1,6 +1,6 @@
 {
   "build": "V3.00 FINAL MEGA BUILD",
-  "mode": "MAX BATCH",
+  "mode": "ATOMIC MAX BATCH",
   "base": "V2.50 REALITY MASTER CONSOLIDATION",
   "layers": [
     "graphics",
@@ -17,7 +17,17 @@
     "skip_completed": true,
     "one_runtime": true,
     "one_qa_gate": true,
-    "fail_closed": true
+    "fail_closed": true,
+    "batch_all_compatible_layers": true,
+    "include_audits": true,
+    "include_gates": true,
+    "include_browser_smoke": true,
+    "include_mega_regression": true,
+    "single_atomic_commit": true,
+    "single_exact_sha_certification": true,
+    "cancel_stale_runs": true,
+    "auto_advance": true,
+    "one_by_one_only_for_required_dependencies": true
   },
   "presets": [
     "ultra",

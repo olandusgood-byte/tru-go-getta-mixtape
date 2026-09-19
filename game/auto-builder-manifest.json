@@ -4,12 +4,13 @@
   "module": "GAME-V3.16-BULK",
   "name": "Bulk Release + Browser + Live Viewer + Audits + Gates + Final Certification",
   "workflow": [
-    "BUILD",
-    "TEST",
-    "REPAIR",
-    "VERIFY",
-    "CHECKPOINT",
-    "ADVANCE"
+    "BUILD_ALL",
+    "TEST_ALL",
+    "REPAIR_ALL",
+    "VERIFY_ALL",
+    "ATOMIC_CHECKPOINT",
+    "CERTIFY_EXACT_SHA",
+    "DEPLOY"
   ],
   "gates": {
     "v1_11_integrity": true,
@@ -170,5 +171,27 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V3.17"
+  "next": "V3.17",
+  "executionPolicy": {
+    "mode": "ATOMIC_MEGA_BATCH",
+    "batchAllCompatibleWork": true,
+    "include": [
+      "layers",
+      "bulks",
+      "batches",
+      "audits",
+      "gates",
+      "browser_smoke",
+      "mega_regression",
+      "certification",
+      "deploy_wiring"
+    ],
+    "mergeStrategy": "single_atomic_commit_when_technically_possible",
+    "certificationStrategy": "one_exact_sha_for_static_browser_regression_and_deploy",
+    "cancelStaleRuns": true,
+    "skipCompleted": true,
+    "autoAdvance": true,
+    "failClosed": true,
+    "noOneByOneUnlessDependencyRequires": true
+  }
 }

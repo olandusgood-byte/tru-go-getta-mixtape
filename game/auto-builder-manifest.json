@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.24",
-  "module": "GAME-V1.24",
-  "name": "Crew Missions + Dynamic Economy + Live Events",
+  "version": "1.27",
+  "module": "GAME-V1.27",
+  "name": "World Orchestrator + Multi-System Chains + Dynamic Director",
   "workflow": [
     "BUILD",
     "TEST",
@@ -62,9 +62,13 @@
     "v1_23_dynamic_economy": true,
     "v1_23_local_economy": true,
     "v1_24_live_events": true,
-    "v1_24_local_event_state": true
+    "v1_24_local_event_state": true,
+    "v1_25_world_orchestrator": true,
+    "v1_26_multi_system_chains": true,
+    "v1_27_dynamic_director": true,
+    "v1_27_local_director_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.25 WORLD STATE ORCHESTRATOR + MULTI-SYSTEM CHAINS"
+  "next": "V1.28 AUTONOMOUS WORLD TICK + ADAPTIVE OPPORTUNITY ENGINE"
 }

@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "2.17",
-  "module": "GAME-V2.17",
-  "name": "Continuous Integrity + Browser Session Continuity + Live Viewer Recovery",
+  "version": "2.20",
+  "module": "GAME-V2.20",
+  "name": "Production Integrity Continuity + Browser Recovery Persistence + Live Viewer E2E Recovery",
   "workflow": [
     "BUILD",
     "TEST",
@@ -170,5 +170,5 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V2.18"
+  "next": "V2.21"
 }

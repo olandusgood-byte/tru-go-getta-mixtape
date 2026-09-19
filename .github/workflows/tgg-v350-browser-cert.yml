@@ -29,7 +29,7 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
 
-      - name: Run live V3.50 browser certificate
+      - name: Run live V3.60 browser certificate
         run: |
           cat > tgg-cert.mjs <<'EOF'
           import { chromium } from 'playwright';
@@ -61,11 +61,11 @@ jobs:
             realism:window.TGGRealismMega?.version||null,
             motion:window.TGGMotionRealism?.version||null,
             world:window.TGGCityWorldMega?.version||null,
-            feel:window.TGGLivingCity?.version||null
+            living:window.TGGLivingCity?.version||null
           }));
           if(!runtime.game || !runtime.game3d) throw new Error('Core runtime not ready: '+JSON.stringify(runtime));
           for(const [k,v] of Object.entries({
-            polish:runtime.polish,realism:runtime.realism,motion:runtime.motion,world:runtime.world,living:runtime.feel
+            polish:runtime.polish,realism:runtime.realism,motion:runtime.motion,world:runtime.world,living:runtime.living
           })) if(!v) throw new Error('Missing runtime layer '+k);
 
           await page.getByRole('button',{name:'CREATE PLAYER'}).click();
@@ -110,6 +110,7 @@ jobs:
             state:window.TGGGame.getState?.(),
             qa:window.TGGMegaQA?.getStatus?.()||null,
             v350:window.TGGGameFeel?.getStatus?.()||null,
+            v360:window.TGGLivingCity?.getStatus?.()||null,
             weather:window.TGGCityWorldMega?.getStatus?.()||null
           }));
 

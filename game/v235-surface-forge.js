@@ -3,13 +3,13 @@
   const LAYERS=[
     'surface core bridge','surface enabled state','surface root state','surface rebuild state','surface quality bridge','surface visual-only guard','surface restore path','surface status API','surface deterministic seed','surface diagnostics',
     'road lane dashes','road edge lines','road arrows','road stop bars','road crosswalks','road manhole','road patch','road crack','road oil stain','road tire streak',
-    'sidewalk seams','sidewalk chips','sidewalk utility plate','sidewalk curb paint','sidewalk gum marks','sidewalk drain grate','sidewalk bike marks','sidewalk chalk','sidewalk poster base','sidewalk planter stain',
-    'building window trim','building door trim','building vent','building pipe','building conduit','building fire escape','building ledge','building AC unit','building rooftop box','building rooftop pipe',
-    'store awning seam','store frame trim','store window decal','store door handle','store neon edge','store sign bracket','store light box','store poster','store sticker cluster','store security camera',
-    'studio wall panel','studio acoustic decal','studio cable run','studio rack glow','studio glass trim','club rope post','club queue marker','club neon reflection','club wall poster','club entrance glow',
-    'vehicle parking mark','parking stop','parking number','parking oil patch','parking tire mark','parking curb stripe','parking meter base','parking sign','parking bollard stripe','parking wheel scuff',
-    'grime overlay','rain dirt edge','lower wall grime','window smudge','metal scratch','paint chip','concrete stain','asphalt stain','rust patch','utility wear',
-    'neon road reflection','neon sidewalk reflection','window reflection strip','wet highlight strip','puddle glow bridge','headlight reflection strip','taillight reflection strip','club reflection strip','studio reflection strip','sign reflection strip',
+    'sidewalk seams','sidewalk chips','sidewalk utility plate','sidewalk curb paint','sidewalk gum marks','sidewalk drain grate','sidewalk bike marks','sidewalk chalk',
+    'building window trim','building door trim','building vent','building pipe','building conduit','building fire escape','building AC unit','building rooftop box',
+    'store awning seam','store frame trim','store window decal','store door handle','store neon edge','store sign bracket','store light box','store poster','store security camera',
+    'studio wall panel','studio acoustic decal','studio cable run','studio rack glow','club rope post','club queue marker','club neon reflection','club wall poster','club entrance glow',
+    'vehicle parking mark','parking stop','parking number','parking oil patch','parking tire mark','parking curb stripe','parking meter base','parking sign','parking bollard stripe',
+    'grime overlay','rain dirt edge','lower wall grime','window smudge','paint chip','concrete stain','asphalt stain','rust patch','utility wear',
+    'neon road reflection','neon sidewalk reflection','window reflection strip','wet highlight strip','puddle glow bridge','headlight reflection strip','club reflection strip','studio reflection strip',
     'quality high budget','quality balanced budget','quality performance budget','mobile trim','shadow trim','material cache','geometry cache','batch rebuild','rollback isolation','V2.34 compatibility',
     'surface HUD','surface panel','enabled toggle','rebuild button','restore button','F10 shortcut','mobile panel','landscape panel','100-layer manifest','release QA hooks'
   ];

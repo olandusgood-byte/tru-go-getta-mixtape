@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "5.00",
-  "module": "GAME-V5.00-DYNAMIC-CAREER-CONTRACTS",
-  "name": "V4.97-V5.00 Relationships + Favors + Contact Consequences + Dynamic Career Contracts",
+  "version": "5.01",
+  "module": "GAME-V5.01-TGG-CONTACT-PHONE",
+  "name": "V4.97-V5.01 Relationships + Favors + Consequences + Contracts + TGG Phone",
   "workflow": [
     "BUILD_ALL",
     "TEST_ALL",
@@ -171,7 +171,7 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V5.01",
+  "next": "V5.02",
   "executionPolicy": {
     "mode": "ATOMIC_MEGA_BATCH",
     "batchAllCompatibleWork": true,

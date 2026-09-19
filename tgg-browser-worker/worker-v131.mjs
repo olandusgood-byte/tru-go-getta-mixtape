@@ -322,46 +322,13 @@ app.get('/enroll', (_req, res) => {
   const html = [
     '<!doctype html><html><head><meta charset="utf-8"><title>TGG Browser Worker Enrollment</title>',
     '<style>body{font-family:Arial;background:#080808;color:#fff;max-width:720px;margin:50px auto;padding:24px}button{background:#e50914;color:#fff;border:0;padding:12px 18px;border-radius:8px;font-weight:700}input{display:block;width:100%;margin:8px 0;padding:12px;background:#151515;color:#fff;border:1px solid #333;border-radius:8px;box-sizing:border-box}pre{white-space:pre-wrap;background:#111;padding:15px;border-radius:8px}</style></head><body>',
-    '<h1>TGG Self-Hosted Browser Worker</h1><p>Owner-only enrollment. Credentials are sent only to this HTTPS worker, which signs in to Supabase server-side and never logs your password.</p>',
+    '<h1>TGG Self-Hosted Browser Worker</h1><p>Owner-only enrollment. Login retries automatically and certification starts after enrollment.</p>',
     '<input id="email" type="email" autocomplete="username" placeholder="Owner email"><input id="password" type="password" autocomplete="current-password" placeholder="Owner password"><button id="go">Enroll Worker</button><pre id="out">Waiting...</pre>',
-    '<script>(function(){document.getElementById("go").addEventListener("click",async function(){const out=document.getElementById("out"),btn=this;btn.disabled=true;try{const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value;if(!email||!password)throw new Error("Enter owner email and password.");out.textContent="Signing in securely through TGG Worker...";const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),30000);let r;try{r=await fetch("/enroll/password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password}),signal:ctl.signal});}finally{clearTimeout(timer)}const raw=await r.text();let body={};try{body=JSON.parse(raw)}catch{}if(!r.ok)throw new Error((body.error||("Enrollment HTTP "+r.status))+(body.stage?":"+body.stage:"")+(body.detail?": "+body.detail:""));out.textContent=body.session_persisted===false?"Worker enrolled. Session is active in memory; persistence will retry automatically. TGG certification started.":"Worker enrolled and browser session bootstrapped. Refresh session persisted. TGG certification started.";}catch(e){out.textContent="ERROR: "+(e&&e.name==="AbortError"?"Enrollment request timed out. Retry once.":(e.message||String(e)));}finally{btn.disabled=false}})})();</script></body></html>'
+    '<script>window.__TGG_SUPABASE_URL__=',JSON.stringify(SUPABASE_URL),';window.__TGG_SUPABASE_KEY__=',JSON.stringify(SUPABASE_KEY),';</script>',
+    '<script>(function(){const sleep=ms=>new Promise(r=>setTimeout(r,ms));async function directSignIn(email,password){let last="";for(let i=1;i<=5;i++){try{const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),15000);let r;try{r=await fetch(window.__TGG_SUPABASE_URL__+"/auth/v1/token?grant_type=password",{method:"POST",headers:{"content-type":"application/json","apikey":window.__TGG_SUPABASE_KEY__},body:JSON.stringify({email,password}),signal:ctl.signal});}finally{clearTimeout(timer)}const raw=await r.text();let body={};try{body=JSON.parse(raw)}catch{}if(r.ok&&body.access_token&&body.refresh_token)return body;last=(body.msg||body.error_description||body.error||("HTTP "+r.status));if(![502,503,504].includes(r.status)&&r.status!==429)break;}catch(e){last=e&&e.name==="AbortError"?"timeout":(e.message||String(e));}if(i<5)await sleep(i*900);}throw new Error(last||"Direct sign-in failed");}async function handoff(sess){const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),30000);try{const r=await fetch("/enroll/session",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({access_token:sess.access_token,refresh_token:sess.refresh_token}),signal:ctl.signal});const raw=await r.text();let body={};try{body=JSON.parse(raw)}catch{}if(!r.ok)throw new Error((body.error||("Enrollment HTTP "+r.status))+(body.stage?":"+body.stage:"")+(body.detail?": "+body.detail:""));return body;}finally{clearTimeout(timer)}}document.getElementById("go").addEventListener("click",async function(){const out=document.getElementById("out"),btn=this;btn.disabled=true;try{const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value;if(!email||!password)throw new Error("Enter owner email and password.");out.textContent="Signing in securely...";let sess;try{sess=await directSignIn(email,password);}catch(primary){out.textContent="Primary sign-in route unavailable. Trying secure Worker fallback...";const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),30000);let r;try{r=await fetch("/enroll/password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password}),signal:ctl.signal});}finally{clearTimeout(timer)}const raw=await r.text();let body={};try{body=JSON.parse(raw)}catch{}if(!r.ok)throw new Error((body.error||("Enrollment HTTP "+r.status))+(body.stage?":"+body.stage:"")+(body.detail?": "+body.detail:""));out.textContent="Worker enrolled and certification started.";return;}out.textContent="Owner authenticated. Enrolling Worker...";const body=await handoff(sess);out.textContent=body.session_persisted===false?"Worker enrolled; session active and persistence retrying. Certification started.":"Worker enrolled and browser session bootstrapped. Refresh session persisted. TGG certification started.";}catch(e){out.textContent="ERROR: "+(e&&e.name==="AbortError"?"Enrollment request timed out. Retry once.":(e.message||String(e)));}finally{btn.disabled=false}})})();</script></body></html>'
   ].join('');
   return res.type('html').send(html);
 });
-
-async function finishOwnerEnrollment(access, refresh) {
-  if(!access||!refresh) return {ok:false,status:400,body:{error:'owner_session_required',stage:'request'}};
-  if(!workerId||!workerToken) return {ok:false,status:503,body:{error:'worker_not_configured',stage:'worker_config'}};
-  const owner=await verifyOwnerSession(access);
-  if(!owner.ok) return {ok:false,status:403,body:{error:'owner_auth_failed',stage:'owner_verify',detail:owner.error||'supabase_session_invalid'}};
-  const worker=await verifyWorkerCredential(workerId,workerToken);
-  if(!worker.ok) return {ok:false,status:403,body:{error:'worker_auth_failed',stage:'worker_verify',detail:worker.error||'worker_credential_invalid'}};
-  ownerSession={access_token:access,refresh_token:refresh};
-  last={status:'bootstrapped',worker_id:workerId,updated_at:new Date().toISOString()};
-  let sessionPersisted=false;
-  let persistError=null;
-  for(let attempt=1;attempt<=3&&!sessionPersisted;attempt++){
-    try{ await persistOwnerRefreshToken(workerId,workerToken,refresh); sessionPersisted=true; }
-    catch(error){ persistError=error?.message||String(error); console.error(JSON.stringify({tgg_owner_enroll:true,stage:'session_persist',ok:false,attempt,reason:persistError})); if(attempt<3)await new Promise(r=>setTimeout(r,attempt*500)); }
-  }
-  let certificationEnsured=false;
-  let certificationError=null;
-  try{
-    const email=String(owner?.user?.email||'').toLowerCase().trim();
-    if(email){
-      const ensured=await tggEnsureCertification(email,'protected_audio_runtime');
-      certificationEnsured=Boolean(ensured?.certification||ensured?.job||ensured?.created);
-    }else{
-      certificationError='owner_email_missing';
-    }
-  }catch(error){
-    certificationError=error?.message||String(error);
-    console.error(JSON.stringify({tgg_owner_enroll:true,stage:'ensure_certification',ok:false,reason:certificationError}));
-  }
-  scheduleBootstrapLoop(loop);
-  console.log(JSON.stringify({tgg_owner_enroll:true,stage:'session_ready',ok:true,session_persisted:sessionPersisted,certification_ensured:certificationEnsured,persist_error:persistError||null,certification_error:certificationError||null}));
-  return {ok:true,status:(sessionPersisted&&certificationEnsured)?200:202,body:{ok:true,worker_id:workerId,version:RUNTIME_VERSION,certification_started:certificationEnsured,session_persisted:sessionPersisted,persistence_warning:sessionPersisted?null:'session_memory_only',certification_warning:certificationEnsured?null:(certificationError||'certification_not_created')}};
-}
 
 app.post('/enroll/password', async (req,res)=>{
   try{

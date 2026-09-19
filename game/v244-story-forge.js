@@ -159,6 +159,7 @@
     }
     if(step.kind==='talk'){
       if(!near(step.target)){toast('MOVE CLOSER TO '+step.target.label);return false}
+      if(window.TGGV245?.intercept?.(step))return true;
       state.interactions++;window.TGGV232?.play?.('talk',1900);window.TGGV235?.pulseCrowd?.('mission',1300);
       return advance('conversation');
     }

@@ -63,7 +63,9 @@ jobs:
                 const match = /^v1([0-9]{2})-[^/]+[.]js$/.exec(src);
                 if (!match) return null;
                 const minor = Number(match[1]);
-                const name = 'TGGV1' + String(minor).padStart(2,'0');
+                const longName = 'TGGV1' + String(minor).padStart(2,'0');
+                const shortName = 'TGGV' + String(minor).padStart(2,'0');
+                const name = window[longName] ? longName : shortName;
                 const runtime = window[name];
                 const version = String(runtime && runtime.version || '');
                 return {

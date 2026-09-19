@@ -3,7 +3,7 @@
   "canonical_runtime": "V3.80 LIFE SIM PROPERTY SOCIAL WORLD MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v370_production_deployed_browser_certified",
+  "verification": "v380_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V3.70 NPC TRAFFIC WORLD INTERACTION MEGA",
   "features": [
@@ -113,7 +113,7 @@
     "career_momentum",
     "story_momentum_hook"
   ],
-  "release_gate": "v380_validation_pending",
+  "release_gate": "closed_certified",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -121,10 +121,10 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PENDING_V380_REVALIDATION",
+    "browser_gate": "PASS",
     "public_alias": "https://tgg-world-play.vercel.app",
-    "browser_cert_run_id": 35442078084,
-    "browser_cert_artifact_id": 10583868279,
-    "browser_cert_artifact_digest": "sha256:d5413641bed206a2bd870cd7e462341ea48a826279e2d76d1d224d255e84aede"
+    "browser_cert_run_id": 35442240277,
+    "browser_cert_artifact_id": 10584290716,
+    "browser_cert_artifact_digest": "sha256:d814683c37ae40a691345d2c4dff2a1c8d4817c114a2c9d501c17d5bf54a3e78"
   }
 }

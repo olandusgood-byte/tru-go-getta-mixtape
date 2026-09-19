@@ -33,6 +33,18 @@
           inviteId:appointment.inviteId||''
         };
       }
+      const rival=window.TGGV225?.navigationTarget?.();
+      if(rival){
+        const p=toWorld(rival);
+        return {
+          label:rival.label||'RIVAL CREW',
+          x:p.x,z:p.z,
+          color:rival.color||'#ff466d',
+          radius:Number(rival.radius)||7,
+          rival:true,
+          arrived:!!rival.arrived
+        };
+      }
       if(s?.accepted)return {label:'MISSION',x:(72-50)*.92,z:(36-50)*.92,color:'#ff466d'};
       const p=toWorld(s);
       const ds=window.TGG3D?.destinations||[];
@@ -67,6 +79,7 @@
       root.style.setProperty('--nav-color',t.color);
       root.classList.toggle('story-active',!!t.story);
       root.classList.toggle('schedule-active',!!t.schedule);
+      root.classList.toggle('rival-active',!!t.rival);
       root.classList.add('active');
       requestAnimationFrame(update);
     }

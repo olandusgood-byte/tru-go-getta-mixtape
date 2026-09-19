@@ -4,11 +4,13 @@ on:
   push:
     branches: [main]
     paths:
+      - 'game/**'
       - 'tgg-browser-worker/mega-game-snapshot/**'
       - 'tgg-browser-worker/3d-smoke-once.mjs'
       - '.github/workflows/game-v218-mega-regression.yml'
   pull_request:
     paths:
+      - 'game/**'
       - 'tgg-browser-worker/mega-game-snapshot/**'
       - 'tgg-browser-worker/3d-smoke-once.mjs'
       - '.github/workflows/game-v218-mega-regression.yml'
@@ -33,4 +35,5 @@ jobs:
       - name: Run exact V2.18 desktop + mobile regression
         env:
           TGG_3D_V218_MEGA_ONLY: '1'
+          TGG_3D_V218_ROOT: 'game'
         run: node tgg-browser-worker/3d-smoke-once.mjs

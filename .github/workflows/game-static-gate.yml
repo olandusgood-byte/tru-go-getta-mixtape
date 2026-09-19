@@ -10,86 +10,19 @@ on:
     paths:
       - 'game/**'
       - '.github/workflows/game-static-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   static-gate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Validate JavaScript syntax
-        run: |
-          set -e
-          for f in game/*.js; do
-            node --check "$f"
-          done
-      - name: Validate JSON manifests
-        run: |
-          set -e
-          for f in game/*.json; do
-            node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$f"
-          done
-      - name: Run V1.13 static contract
-        run: node game/static-contract.test.mjs
-
-      - name: Validate script references
-        run: |
-          set -e
-          python - <<'PY'
-          import re
-          from pathlib import Path
-          html=Path('game/index.html').read_text()
-          for src in re.findall(r'<script[^>]+src=[\"\']([^\"\']+)[\"\']', html):
-              p=Path('game')/src
-              assert p.is_file(), f'missing script: {src}'
-          print('All game script references exist.')
-          PY
-      - name: Validate required release controls
-        run: |
-          set -e
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          html=Path('game/index.html').read_text()
-          ids=re.findall(r'id=[\"\']([^\"\']+)[\"\']', html)
-          required={'menu','creator','avatar','game','career','contentBoard','expansionBoard','progressionBoard','inventoryBoard','crewBoard','eventsBoard','bridge','pause','hud','newGame','continueGame','startGame','avatarStart','characterBtn','avatarDone','avatarBack','rotateLeft','rotateRight','missionBtn','careerBtn','contentBtn','advanceContentBtn','expansionBtn','progressionBtn','inventoryBtn','crewBtn','eventsBtn','bridgeBtn','worldSyncBtn','chainBtn','saveBtn','pauseBtn','resumeBtn','menuBtn'}
-          missing=sorted(required-set(ids))
-          assert not missing, 'missing required IDs: '+', '.join(missing)
-          assert len(ids)==len(set(ids)), 'duplicate DOM ids detected'
-          print('Required V1.5 controls and unique IDs verified.')
-          PY
-
-      - name: Validate V1.6 world sync contract
-        run: |
-          set -e
-          node <<'NODE'
-          const fs=require('fs');
-          const sync=fs.readFileSync('game/world-sync.js','utf8');
-          const html=fs.readFileSync('game/index.html','utf8');
-          const manifest=JSON.parse(fs.readFileSync('game/release-manifest.json','utf8'));
-          if(!html.includes('<script src="world-sync.js"></script>')) throw new Error('world-sync.js is not loaded');
-          for(const token of ['window.TGGWorldSync','snapshot','setTransport','syncAvatar','positionPayload','heartbeat','presenceBundle','nextMoves','offline_ready','tgg_world_v11_save_avatar','tgg_world_presence_heartbeat_full','careerBundle','economyBundle','walletReconcile','readRemoteState','tgg_world_economy_bundle','tgg_world_wallet_reconcile','remoteInventory','equipRemoteItem','tgg_world_inventory_equip','socialBundle','crewActivity','crewRides','crewBundle','contactOffers','tgg_world_social_hub','tgg_world_crew_bundle','creativeMissions','npcEncounters','storyControl','memoryHistory','locationBundle','missionStoryBundle','tgg_world_creative_missions','tgg_world_location_bundle','propertyMarket','propertyUpgrades','vehicleProgression','vehicleBundle','worldAssetsBundle','tgg_world_property_market','tgg_world_vehicle_bundle']){
-            if(!sync.includes(token)) throw new Error('missing world sync contract token: '+token);
-          }
-          for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
-            if(sync.includes(forbidden)) throw new Error('forbidden secret marker in game bundle: '+forbidden);
-          }
-          if(!String(manifest.release||'').startsWith('V1.13')) throw new Error('release manifest is not V1.13');
-          if(sync.includes("rpc('tgg_world_purchase'")) throw new Error('tgg_world_purchase must remain excluded from the game adapter');
-                              for(const forbiddenRpc of ['tgg_world_buy_property','tgg_world_property_market_buy','tgg_world_property_market_list','tgg_world_property_market_cancel','tgg_world_install_property_upgrade','tgg_world_fast_travel','tgg_world_v3_travel_to','tgg_world_vehicle_spawn','tgg_world_vehicle_join','tgg_world_vehicle_drive_session','tgg_world_vehicle_install_tune','tgg_world_vehicle_music','tgg_world_party_travel']){
-            if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('property/vehicle mutation RPC must remain excluded: '+forbiddenRpc);
-          }
-for(const forbiddenRpc of ['tgg_world_mvp_v1_accept_mission','tgg_world_mvp_v1_complete_mission','tgg_world_start_story_arc','tgg_world_claim_story_chapter','tgg_world_join_location','tgg_world_join_location_at','tgg_world_v4_record_mission_evidence','tgg_world_v4_verify_and_complete_mission']){
-            if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('mission/story mutation RPC must remain excluded: '+forbiddenRpc);
-          }
-for(const forbiddenRpc of ['tgg_world_crew_create','tgg_world_crew_join','tgg_world_social_post','tgg_world_social_comment','tgg_world_social_react','tgg_world_party_create','tgg_world_party_invite']){
-            if(sync.includes("rpc('"+forbiddenRpc+"'")) throw new Error('social mutation RPC must remain excluded: '+forbiddenRpc);
-          }
-          const business=fs.readFileSync('game/business.js','utf8');
-          for(const token of ['window.TGGBusiness','businessBoard','businessBtn','worldAssetsBundle']){
-            if(!business.includes(token) && !html.includes(token)) throw new Error('missing V1.13 business contract token: '+token);
-          }
-          for(const forbidden of ['tgg_world_buy_property','tgg_world_property_market_buy','tgg_world_vehicle_spawn','tgg_world_vehicle_drive_session']){
-            if(business.includes(forbidden)) throw new Error('V1.13 business layer must remain discovery-only: '+forbidden);
-          }
-          console.log('V1.13 world sync + business discovery contract verified.');
-          NODE
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run game static gate
+        run: node game/ci-static-gate.mjs

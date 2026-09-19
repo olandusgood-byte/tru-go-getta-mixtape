@@ -1145,8 +1145,8 @@ app.post('/v1/browser/worker-session', async (req,res,next)=>{
     if(!refresh_token||!worker_id||worker_id!==w.worker_id)return res.status(400).json({error:'worker_session_fields_required'});
     const workerHash=String(w.worker_token_hash||'');
     if(!workerHash)return res.status(500).json({error:'worker_token_hash_missing'});
-    const encrypted=encryptSecret(refresh_token,workerHash);
-    const r=await pool.query("update tgg_worker_registry set metadata=coalesce(metadata,'{}'::jsonb) || jsonb_build_object('owner_refresh_token_encrypted',$2::text),updated_at=now() where worker_id=$1 and worker_token_hash=$3 returning worker_id",[worker_id,encrypted,workerHash]);
+    const encrypted=encryptSecret(refresh_token,TOKEN_SECRET);
+    const r=await pool.query("update tgg_worker_registry set metadata=coalesce(metadata,'{}'::jsonb) || jsonb_build_object('owner_refresh_token_encrypted',$2::text,'owner_refresh_token_cipher','token_secret_v1'),updated_at=now() where worker_id=$1 and worker_token_hash=$3 returning worker_id",[worker_id,encrypted,workerHash]);
     if(!r.rowCount)return res.status(404).json({error:'worker_not_found'});
     res.json({ok:true});
   }catch(e){next(e);}
@@ -1156,7 +1156,7 @@ app.post('/v1/browser/worker-session/restore', async (req,res,next)=>{
     const w=workerAuthorized(req); if(!w)return res.status(401).json({error:'worker_credentials_required'});
     const r=await pool.query("select metadata->>'owner_refresh_token_encrypted' as refresh_token from tgg_worker_registry where worker_id=$1 and status='active'",[w.id]);
     if(!r.rowCount||!r.rows[0].refresh_token)return res.status(404).json({error:'owner_session_not_found'});
-    const refresh_token=decryptSecret(r.rows[0].refresh_token,w.hash) || decryptSecret(r.rows[0].refresh_token,TOKEN_SECRET);
+    const refresh_token=decryptSecret(r.rows[0].refresh_token,TOKEN_SECRET) || decryptSecret(r.rows[0].refresh_token,w.hash);
     if(!refresh_token)return res.status(500).json({error:'owner_session_decrypt_failed'});
     res.json({ok:true,refresh_token});
   }catch(e){next(e);}

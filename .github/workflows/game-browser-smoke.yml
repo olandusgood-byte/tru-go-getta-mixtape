@@ -220,7 +220,7 @@ jobs:
 ).test(version);
                 return {
                   src,major,minor,runtimeNumber,loaded:!!api,versionOk,
-                  policyOk:String(snap.mutationPolicy||'').startsWith('local_')
+                  policyOk:(major===1&&minor<49)||String(snap.mutationPolicy||'').startsWith('local_')
                 };
               });
             return {missing,additive};

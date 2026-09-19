@@ -35,6 +35,8 @@ app.use('/video-studio', express.static(VIDEO_STUDIO_PUBLIC_ROOT, {
   }
 }));
 
+import './autopilot.mjs';
+
 const PORT = Number(process.env.PORT || 10000);
 const DATABASE_URL = process.env.DATABASE_URL;
 const STORAGE_ROOT = process.env.TGG_STORAGE_ROOT || '/data/media';

@@ -19,20 +19,13 @@ const browserWorkflowPath=path.resolve('.github/workflows/game-browser-smoke.yml
 const browserWorkflow=fs.readFileSync(browserWorkflowPath,'utf8');
 assert((browserWorkflow.match(/- name: Stop local game server/g)||[]).length===1,'Browser workflow duplicate tail detected');
 assert((browserWorkflow.match(/^name: Game Browser Smoke$/gm)||[]).length===1,'Browser workflow header duplicated or missing');
-assert(browserWorkflow.includes("const v2=/^v2([0-9]{2})"),'Browser workflow missing V2.xx discovery');
-const browserStart="cat > browser-smoke.mjs <<'EOF'\n";
-const browserEnd="\n          EOF";
-const startAt=browserWorkflow.indexOf(browserStart);
-const endAt=browserWorkflow.indexOf(browserEnd,startAt+browserStart.length);
-assert(startAt>=0&&endAt>startAt,'Browser smoke heredoc is malformed');
-const browserScript=browserWorkflow
-  .slice(startAt+browserStart.length,endAt)
-  .split('\n')
-  .map(line=>line.startsWith('          ')?line.slice(10):line)
-  .join('\n');
-fs.writeFileSync('/tmp/tgg-browser-smoke-check.mjs',browserScript);
-const browserSyntax=spawnSync(process.execPath,['--check','/tmp/tgg-browser-smoke-check.mjs'],{encoding:'utf8'});
-assert(browserSyntax.status===0,'Browser smoke embedded JavaScript syntax failed:\n'+(browserSyntax.stderr||browserSyntax.stdout||''));
+assert(browserWorkflow.includes('run: node game/browser-smoke.mjs'),'Browser workflow must execute checked-in smoke runner');
+const browserScriptPath=path.join(root,'browser-smoke.mjs');
+assert(fs.existsSync(browserScriptPath),'Checked-in browser smoke runner missing');
+const browserScript=fs.readFileSync(browserScriptPath,'utf8');
+assert(browserScript.includes("const v2=/^v2([0-9]{2})"),'Browser smoke runner missing V2.xx discovery');
+const browserSyntax=spawnSync(process.execPath,['--check',browserScriptPath],{encoding:'utf8'});
+assert(browserSyntax.status===0,'Browser smoke JavaScript syntax failed:\n'+(browserSyntax.stderr||browserSyntax.stdout||''));
 
 const contract=spawnSync(process.execPath,[path.join(root,'static-contract.test.mjs')],{encoding:'utf8'});
 assert(contract.status===0,'V1.13 static contract failed:\n'+(contract.stderr||contract.stdout||''));

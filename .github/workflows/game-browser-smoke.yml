@@ -52,8 +52,9 @@ jobs:
           page.on('console', msg => { if (msg.type() === 'error') errors.push(`console: ${msg.text()}`); });
 
           await page.goto('http://127.0.0.1:8765/index.html', {waitUntil:'networkidle'});
-          await page.waitForTimeout(1500);
           const requiredGlobals = ['TGGGame','TGGCareer','TGGContent','TGGExpansion','TGGProgression','TGGBridge','TGGAvatar','TGGWorldSync','TGGBusiness','TGGQA','TGGReleaseQA'];
+          await page.waitForFunction(required => required.every(name => !!window[name]), requiredGlobals, {timeout:10000}).catch(()=>{});
+          await page.waitForTimeout(500);
           const missingGlobals = await page.evaluate(required => required.filter(name => !window[name]), requiredGlobals);
           if (missingGlobals.length || errors.length) {
             console.error(JSON.stringify({ missingGlobals, errors }, null, 2));

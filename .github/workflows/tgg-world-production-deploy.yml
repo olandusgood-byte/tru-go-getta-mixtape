@@ -46,7 +46,8 @@ jobs:
         run: |
           set -euo pipefail
           grep -q "TGG_3D_V218_ROOT: 'game'" .github/workflows/game-v218-mega-regression.yml
-          grep -q 'GAME V2.18' game/index.html
+          grep -q 'V2.50 REALITY MASTER CONSOLIDATION' game/runtime-version.json
+          grep -q 'GAME V2.50' game/index.html
           grep -q 'window.TGGMegaQA' game/mega-qa.js
           echo "verified=true" >> "$GITHUB_OUTPUT"
 
@@ -90,13 +91,13 @@ jobs:
           url="${{ steps.deploy.outputs.url }}"
           for attempt in 1 2 3 4 5; do
             body="$(curl -fsSL --max-time 30 "$url" || true)"
-            if grep -q 'GAME V2.18' <<<"$body" && grep -q 'city3d' <<<"$body"; then
+            if grep -q 'GAME V2.50' <<<"$body" && grep -q 'city3d' <<<"$body"; then
               echo "TGG World production deployment verified: $url"
               exit 0
             fi
             sleep 5
           done
-          echo "Production deployment did not expose the expected V2.18 contract." >&2
+          echo "Production deployment did not expose the expected V2.50 contract." >&2
           exit 1
 
       - name: Credential status

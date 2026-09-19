@@ -130,6 +130,10 @@
   function clearMissed(){state.missed=0;save();syncBadge();return 0}
   function autoOffer(){
     if(state.current||state.queue.length)return null;
+    if(window.TGGGame?.getActiveScreen?.()!=='game')return null;
+    if(!document.getElementById('v497NpcChoice')?.hidden)return null;
+    if(window.TGGWorldDepth?.getStatus?.().activeBeat)return null;
+    if(window.TGGCareerContracts?.snapshot?.().active)return null;
     const contract=window.TGGCareerContracts?.recommendContract?.();
     if(contract?.eligible)return queueCall(contract.sponsor,contract.label,'contract',{contractId:contract.id});
     const names=CONTACTS;
@@ -156,8 +160,8 @@
   function boot(){
     ensure();render();
     document.getElementById('v501PhoneBtn')?.addEventListener('click',clearMissed);
-    window.addEventListener('tgg:npc-favor-outcome',()=>setTimeout(autoOffer,120));
-    window.addEventListener('tgg:career-contract-outcome',()=>setTimeout(autoOffer,120));
+    window.addEventListener('tgg:npc-favor-outcome',()=>setTimeout(autoOffer,3500));
+    window.addEventListener('tgg:career-contract-outcome',()=>setTimeout(autoOffer,3500));
     window.TGGIncomingCalls={version:VERSION,mutationPolicy:POLICY,queueCall,acceptCurrent,declineCurrent,clearMissed,autoOffer,snapshot,run};
     window.TGGV502={version:VERSION,mutationPolicy:POLICY,run,snapshot};
     document.documentElement.dataset.tggV502='on';

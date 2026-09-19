@@ -246,7 +246,7 @@
     const v=buildVisuals();if(!v)return;
     const target=step?.target,w=worldTarget(target);
     if(!target||!w){v.beacon.visible=false;v.route.visible=false;return}
-    const color=new THREE().Color(target.color||'#c7ff00');
+    const T=THREE();if(!T)return;const color=new T.Color(target.color||'#c7ff00');
     v.beacon.visible=true;v.route.visible=true;v.beacon.position.set(w.x,0,w.z);
     v.ring.material.color.copy(color);v.beam.material.color.copy(color);v.marker.material.color.copy(color);v.marker.material.emissive.copy(color);v.light.color.copy(color);v.route.material.color.copy(color);
     const g=gameState(),p=core().toWorld({x:Number(g.x)||50,y:Number(g.y)||50});

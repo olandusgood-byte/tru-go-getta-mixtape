@@ -7,25 +7,33 @@ page.on('pageerror',e=>errors.push('pageerror: '+e.message));
 page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});
 
 async function clickRuntimeControl(selector,label){
-  const result=await page.evaluate(({selector})=>{
-    const el=document.querySelector(selector);
-    if(!el)return {found:false,visible:false,disabled:false,unblocked:false,clicked:false,blockedBy:null};
-    el.scrollIntoView({block:'center',inline:'center'});
-    const style=getComputedStyle(el);
-    const rect=el.getBoundingClientRect();
-    const visible=!el.hidden&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;
-    const disabled=!!el.disabled;
-    const x=Math.max(0,Math.min(innerWidth-1,rect.left+rect.width/2));
-    const y=Math.max(0,Math.min(innerHeight-1,rect.top+rect.height/2));
-    const top=visible?document.elementFromPoint(x,y):null;
-    const unblocked=!!top&&(top===el||el.contains(top));
-    const blockedBy=unblocked?null:(top?.id||top?.closest?.('[id]')?.id||top?.tagName||null);
-    if(visible&&!disabled&&unblocked)el.click();
-    return {found:true,visible,disabled,unblocked,clicked:visible&&!disabled&&unblocked,blockedBy};
-  },{selector});
-  if(!result.found||!result.visible||result.disabled||!result.unblocked||!result.clicked){
-    throw new Error(label+' runtime control unavailable '+JSON.stringify(result));
+  let result=null;
+  for(let attempt=1;attempt<=3;attempt++){
+    result=await page.evaluate(({selector})=>{
+      const el=document.querySelector(selector);
+      if(!el)return {found:false,visible:false,disabled:false,unblocked:false,clicked:false,blockedBy:null};
+      el.scrollIntoView({block:'center',inline:'center'});
+      const style=getComputedStyle(el);
+      const rect=el.getBoundingClientRect();
+      const visible=!el.hidden&&style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0;
+      const disabled=!!el.disabled;
+      const x=Math.max(0,Math.min(innerWidth-1,rect.left+rect.width/2));
+      const y=Math.max(0,Math.min(innerHeight-1,rect.top+rect.height/2));
+      const top=visible?document.elementFromPoint(x,y):null;
+      const unblocked=!!top&&(top===el||el.contains(top));
+      const blockedBy=unblocked?null:(top?.id||top?.closest?.('[id]')?.id||top?.tagName||null);
+      if(visible&&!disabled&&unblocked)el.click();
+      return {found:true,visible,disabled,unblocked,clicked:visible&&!disabled&&unblocked,blockedBy};
+    },{selector});
+    if(result.found&&result.visible&&!result.disabled&&result.unblocked&&result.clicked)return result;
+    if(result.blockedBy==='v502IncomingCall'){
+      await clearIncomingCallOverlay(label+' retry '+attempt);
+      await page.waitForTimeout(80);
+      continue;
+    }
+    break;
   }
+  throw new Error(label+' runtime control unavailable '+JSON.stringify(result));
 }
 
 

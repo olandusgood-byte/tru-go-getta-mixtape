@@ -916,6 +916,7 @@ try{
     });
     if(!routed.ok||routed.nav?.arrived!==true)throw new Error(label+' physical route failed '+JSON.stringify(routed));
     await page.waitForTimeout(140);
+    await clearIncomingCallOverlay(label+' pre interact');
     const interact=await inspectInteractControl();
     if(!interact.exists||interact.disabled||!interact.streetMissionReady||!/^DO\s+/i.test(interact.text)){
       throw new Error(label+' INTERACT unavailable '+JSON.stringify(interact));

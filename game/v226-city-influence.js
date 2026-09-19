@@ -259,7 +259,7 @@
 
   ensure();load();bind();
   window.TGGV226={
-    version:VERSION,status:()=>({...core().snapshot(state),ready:true,near:near(),target:navigationTarget()}),
+    version:VERSION,status:()=>({...core().snapshot(state),metrics:{...(state?.metrics||{})},ready:true,near:near(),target:navigationTarget()}),
     track,work,navigationTarget,near,render:renderAll,sync:syncMetrics,
     applyActivity:(id,amount,source)=>applyActivity(id,amount,source)
   };

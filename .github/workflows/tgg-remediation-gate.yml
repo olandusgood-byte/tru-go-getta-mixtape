@@ -1,0 +1,35 @@
+name: TGG Remediation Gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/tgg-remediation-gate.mjs'
+      - 'scripts/tgg-remediation-gate.test.mjs'
+      - 'remediation/**'
+      - 'docs/V5660_REMEDIATION_READINESS.md'
+      - '.github/workflows/tgg-remediation-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  remediation-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test fail-closed remediation evaluator
+        run: node --test scripts/tgg-remediation-gate.test.mjs
+
+      - name: Confirm unresolved work remains HOLD
+        shell: bash
+        run: |
+          set +e
+          node scripts/tgg-remediation-gate.mjs \
+            remediation/shell-remediation-2026-09-12.json \
+            remediation-decision.json
+          code=$?
+          set -e
+          test "$code" -eq 2
+          test "$(node -p "require('./remediation-decision.json').decision")" = "HOLD"

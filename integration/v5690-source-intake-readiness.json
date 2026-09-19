@@ -1,0 +1,34 @@
+{
+  "schema": "tgg-source-intake-readiness-v1",
+  "version": "V5690",
+  "decision": "ACCEPTED_FOR_CANDIDATE",
+  "canonical_source_received": true,
+  "source_retrieval": {
+    "status": "EXPORTED_HASHED_AND_VALIDATED",
+    "authenticated": true,
+    "theme_export_access": true,
+    "account_role": "ADMIN_CONFIRMED_BY_PRIVILEGED_THEME_ACCESS",
+    "bytes": 133986,
+    "sha256": "89ac812961eac6fc401a02852e83fe1e5411d2f1f7dae9fc2b4ec8f0236963d7"
+  },
+  "required_files": [
+    "source/blogger/TRU_GO_GETTA_CANONICAL.xml",
+    "source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256"
+  ],
+  "automated_checks": [
+    "companion filename and SHA-256 match",
+    "evidence-calibrated canonical size between 100000 and 2000000 bytes",
+    "required Blogger XML markers",
+    "no server-side secret patterns",
+    "well-formed XML allowing only the standard HTML doctype and no entity declarations",
+    "V5670 Blogger regression lint",
+    "V5680 separate-output candidate generation"
+  ],
+  "controls": {
+    "production_writes": false,
+    "source_overwrite": false,
+    "destructive_actions": false,
+    "auto_remediation": false,
+    "human_approval_required": true
+  }
+}

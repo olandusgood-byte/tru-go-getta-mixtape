@@ -1,0 +1,22 @@
+name: TGG Blogger Predeploy Lint
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/tgg-predeploy-lint.mjs'
+      - 'scripts/tgg-predeploy-lint.test.mjs'
+      - 'patches/v5670/**'
+      - 'docs/V5670_SOURCE_REPAIR_PREPARATION.md'
+      - '.github/workflows/tgg-predeploy-lint.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  predeploy-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Blogger regression rules
+        run: node --test scripts/tgg-predeploy-lint.test.mjs

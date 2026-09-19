@@ -1,0 +1,51 @@
+{
+  "schema": "tgg-integration-readiness-v1",
+  "version": "V5680",
+  "evaluated_at": "2026-09-13T04:45:03Z",
+  "decision": "READY_FOR_HUMAN_REVIEW",
+  "canonical_source": {
+    "available": true,
+    "repository_search": "PRESENT_IN_REVIEW_WORKSPACE",
+    "blogger_connector": "NOT_AVAILABLE",
+    "browser_session": "AUTHENTICATED_ADMIN_THEME_ACCESS",
+    "theme_export_access": true,
+    "admin_permission_controls_visible": false,
+    "rendered_html_substitution_allowed": false,
+    "bytes": 133986,
+    "sha256": "89ac812961eac6fc401a02852e83fe1e5411d2f1f7dae9fc2b4ec8f0236963d7"
+  },
+  "candidate_builder": {
+    "path": "scripts/tgg-blogger-candidate.mjs",
+    "source_hash_required": true,
+    "source_overwrite_allowed": false,
+    "records_candidate_hash": true,
+    "runs_predeploy_lint": true,
+    "human_review_required": true
+  },
+  "candidate_validation": {
+    "decision": "READY_FOR_HUMAN_REVIEW",
+    "sha256": "916c5329a7bc6d62bb5856a21c18eb95dfa423484d7e140171ce018ac8c9de09",
+    "xml_wellformed": true,
+    "predeploy_lint": "PASS",
+    "direct_discovery_queries_replaced": 4,
+    "legacy_player_id_references_renamed": 6,
+    "production_deployed": false
+  },
+  "required_modules": [
+    "patches/v5670/blogger-shell-isolation.js",
+    "patches/v5670/auth-first-rpc-gate.js",
+    "patches/v5670/homepage-discovery-adapter.js",
+    "patches/v5670/creator-store-loader-repair.js",
+    "patches/v5670/truthful-runtime-status.js"
+  ],
+  "blockers": [
+    "Human review and approval of the generated candidate are still required before any controlled deployment.",
+    "Fresh public and authenticated production evidence must be collected after an approved deployment."
+  ],
+  "controls": {
+    "production_writes": false,
+    "destructive_actions": false,
+    "auto_remediation": false,
+    "fail_closed": true
+  }
+}

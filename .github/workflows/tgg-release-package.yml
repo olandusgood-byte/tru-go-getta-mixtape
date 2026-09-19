@@ -1,0 +1,29 @@
+name: TGG Release Package Integrity
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'evidence/**'
+      - 'remediation/**'
+      - 'integration/**'
+      - 'status/**'
+      - 'patches/**'
+      - 'package/**'
+      - 'scripts/tgg-*.mjs'
+      - 'scripts/tgg_xml_wellformed.py'
+      - 'docs/V5720_RELEASE_PACKAGE_INTEGRITY.md'
+      - '.github/workflows/tgg-release-package.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test release-package controls
+        run: node --test scripts/tgg-release-package.test.mjs
+      - name: Verify cryptographic handoff manifest
+        run: node scripts/tgg-release-package.mjs --verify package/v5720-release-readiness.json

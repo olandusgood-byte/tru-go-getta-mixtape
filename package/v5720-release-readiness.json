@@ -1,0 +1,185 @@
+{
+  "schema": "tgg-release-readiness-package-v1",
+  "version": "V5720",
+  "generated_at": "2026-09-13T04:47:47.352Z",
+  "active_production_baseline": "V5640",
+  "current_review_checkpoint": "V5770",
+  "release_decision": "HOLD",
+  "files": [
+    {
+      "path": "evidence/live-evidence-2026-09-12.json",
+      "role": "authenticated-evidence",
+      "bytes": 4294,
+      "sha256": "bbf8bb52b52723e50cdd4003219a3066c8f464f1980cfc19ae7be50fb19a2073"
+    },
+    {
+      "path": "evidence/public-shell-evidence-2026-09-12.json",
+      "role": "public-shell-evidence",
+      "bytes": 6808,
+      "sha256": "f926f38df2db232075c71f388954955c73c7ea49190b36d40a27cd9491786580"
+    },
+    {
+      "path": "evidence/live-public-rpc-contract-2026-09-12.json",
+      "role": "public-rpc-contract",
+      "bytes": 1464,
+      "sha256": "07d4aadda1b3585654ab07d82de95bced946c3ad249166d1409c7e2e410d7478"
+    },
+    {
+      "path": "evidence/authenticated-browser-execution-plan-2026-09-12.json",
+      "role": "execution-plan",
+      "bytes": 3812,
+      "sha256": "fbd554e8957fbb2fd74ed517193f8d50aa70d73b95cffa7f3e2697739211a218"
+    },
+    {
+      "path": "evidence/blogger-source-access-2026-09-12.json",
+      "role": "source-access-evidence",
+      "bytes": 1400,
+      "sha256": "8e10c8e2ad572b141f8fe4321155c271f3a72d708b03d12191a1700b31964a9e"
+    },
+    {
+      "path": "evidence/live-dom-source-map-2026-09-12.json",
+      "role": "source-map-evidence",
+      "bytes": 1701,
+      "sha256": "65f8b8f1306232167385f005be4f09f5a871f6bfee106ce3e57284a824b8d49f"
+    },
+    {
+      "path": "remediation/shell-remediation-2026-09-12.json",
+      "role": "remediation",
+      "bytes": 5153,
+      "sha256": "530b2bf05c423095014cda8dc3bc6591d5b1928cdbb9b6ba54a33778ce21497d"
+    },
+    {
+      "path": "integration/v5680-integration-readiness.json",
+      "role": "integration-readiness",
+      "bytes": 1837,
+      "sha256": "dd532f069edf8c167e70f497f90e15e63f61b8254cfa87f8ba31c2d097399e20"
+    },
+    {
+      "path": "integration/v5690-source-intake-readiness.json",
+      "role": "source-intake-readiness",
+      "bytes": 1166,
+      "sha256": "679f3c272e2d27ab85eede5b318a1b82b23d53a2424afd849f80e775b22470d8"
+    },
+    {
+      "path": "source/blogger/TRU_GO_GETTA_CANONICAL.xml",
+      "role": "canonical-source",
+      "bytes": 133986,
+      "sha256": "89ac812961eac6fc401a02852e83fe1e5411d2f1f7dae9fc2b4ec8f0236963d7"
+    },
+    {
+      "path": "source/blogger/TRU_GO_GETTA_CANONICAL.xml.sha256",
+      "role": "canonical-source-checksum",
+      "bytes": 93,
+      "sha256": "12f9d77eb806cd91c20ea5d105e9e1748a22376fab0b04a92fc2f5c638a8cd44"
+    },
+    {
+      "path": "status/master-status-2026-09-13.json",
+      "role": "master-status",
+      "bytes": 1346,
+      "sha256": "7c49369b6625a1a28291177894226ee6c779ab894f49c7db16bcee808de62e35"
+    },
+    {
+      "path": "patches/v5670/blogger-shell-isolation.js",
+      "role": "repair-asset",
+      "bytes": 1231,
+      "sha256": "deb5029b950b378f49757ab8007402acdf7b56890c29d77a2623ba589a6b6abb"
+    },
+    {
+      "path": "patches/v5670/auth-first-rpc-gate.js",
+      "role": "repair-asset",
+      "bytes": 989,
+      "sha256": "191ffe8d4d265c124f262f2f36c4dbd5f37d4ba22f4fec58dca6f87b1fef95e7"
+    },
+    {
+      "path": "patches/v5670/homepage-discovery-adapter.js",
+      "role": "repair-asset",
+      "bytes": 2997,
+      "sha256": "3a28fc98596658336e95fd754c23036cd1254f803d0246017577b305fb0135ec"
+    },
+    {
+      "path": "patches/v5670/creator-store-loader-repair.js",
+      "role": "repair-asset",
+      "bytes": 2182,
+      "sha256": "00a1d6b998b64d1b2a7360b366b7d3271611e900f010848f0be5a1d2273b12f3"
+    },
+    {
+      "path": "patches/v5670/truthful-runtime-status.js",
+      "role": "repair-asset",
+      "bytes": 915,
+      "sha256": "6eb5e2a3bdfd3304c3825ee56ab6db10058db124e7d70ca047a5b3c0df504067"
+    },
+    {
+      "path": "scripts/tgg-evidence-gate.mjs",
+      "role": "control-executable",
+      "bytes": 5785,
+      "sha256": "5ff60169c00a7aecc719bfc788ec5c252d9805bef8103e2b9f6333465416596b"
+    },
+    {
+      "path": "scripts/tgg-approval-envelope.mjs",
+      "role": "control-executable",
+      "bytes": 4467,
+      "sha256": "30eacbc089bcdb65cb262b272b19fa2335353f7eb462b92e9e3b692f1be6e193"
+    },
+    {
+      "path": "scripts/tgg-remediation-gate.mjs",
+      "role": "control-executable",
+      "bytes": 6423,
+      "sha256": "8991e1dddd1baa9da2339548f79f767d004adb92b0b2c6bcac37a8caf75ca72e"
+    },
+    {
+      "path": "scripts/tgg-master-status.mjs",
+      "role": "control-executable",
+      "bytes": 7926,
+      "sha256": "f33b834a39afedab15d1612ae297cce8a29057c8c58ea5075539840dc0387553"
+    },
+    {
+      "path": "scripts/tgg-readiness-runner.mjs",
+      "role": "control-executable",
+      "bytes": 4556,
+      "sha256": "18fef9b06104c5be808f56a49cc55cbe7f8744330a4487f2568cc302fb53282b"
+    },
+    {
+      "path": "scripts/tgg-result-intake.mjs",
+      "role": "control-executable",
+      "bytes": 6923,
+      "sha256": "db704bc9dc3dbe38e3982b0b5dfc5bd992b23c5e41707c9687b51ea5a5ee6434"
+    },
+    {
+      "path": "scripts/tgg-source-review-summary.mjs",
+      "role": "control-executable",
+      "bytes": 4109,
+      "sha256": "e4cca6fad5185f2aed4eeeae678a7311f96935e8900dd3cdd28370c67f827236"
+    },
+    {
+      "path": "scripts/tgg-predeploy-lint.mjs",
+      "role": "control-executable",
+      "bytes": 2622,
+      "sha256": "40748033d43d751f49aa70ace07d6ebc4dd80a70ac9c2e7a7d9dfa50170f3f36"
+    },
+    {
+      "path": "scripts/tgg-blogger-candidate.mjs",
+      "role": "control-executable",
+      "bytes": 7684,
+      "sha256": "3f852219892dbf1c603cc7b3d65efa9e60e49bada3ce2ae89fac8dd7a5954205"
+    },
+    {
+      "path": "scripts/tgg-source-intake.mjs",
+      "role": "control-executable",
+      "bytes": 3887,
+      "sha256": "63445933202996db91993b853eeb316308c7c02dfa87a6446679649d1c5b19fb"
+    },
+    {
+      "path": "scripts/tgg_xml_wellformed.py",
+      "role": "control-executable",
+      "bytes": 1744,
+      "sha256": "f3cf54115095dadafb4f4d1109a149a36f0b71e8e1c95a71aa421e5cf80b677d"
+    }
+  ],
+  "controls": {
+    "fail_closed": true,
+    "production_writes": false,
+    "destructive_actions": false,
+    "auto_remediation": false,
+    "human_approval_required": true
+  }
+}

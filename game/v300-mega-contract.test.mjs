@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const root=new URL('.',import.meta.url);
+const read=n=>fs.readFileSync(new URL(n,root),'utf8');
+const finalBuild=read('final-build.js');
+const runtime=JSON.parse(read('runtime-version.json'));
+const manifest=JSON.parse(read('v300-mega-build.manifest.json'));
+assert.equal(runtime.canonical_runtime,'V3.00 FINAL MEGA BUILD');
+assert.equal(runtime.consolidation,'all-compatible-layers-one-runtime');
+assert.equal(manifest.mode,'MAX BATCH');
+assert.deepEqual(manifest.presets,['ultra','high','balanced','performance']);
+for(const token of ['unified_quality_presets','unified_movement_tuning','unified_vehicle_tuning','adaptive_crowd_density','integrated_readiness_matrix','integrated_mega_qa'])assert.ok(runtime.features.includes(token),token);
+for(const token of ['V3.00 FINAL MEGA BUILD','applyPreset','readiness','runIntegratedQA','TGGRealism','setWalkTuning','setDriveTuning','setDensity'])assert.match(finalBuild,new RegExp(token));
+console.log(JSON.stringify({ok:true,version:runtime.canonical_runtime,checks:16}));

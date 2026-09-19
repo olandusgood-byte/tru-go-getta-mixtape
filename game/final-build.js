@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.32 TGG ANIMATION FORGE 100';
+  const VERSION='V2.33 TGG WEATHER + ATMOSPHERE FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

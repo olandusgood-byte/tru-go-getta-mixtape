@@ -400,25 +400,28 @@ function makeAudioImpulse(context,seconds,decay){
   return buffer;
 }
 function configureAudioNode(c,node){
-  var names=(c.effects||[]).filter(function(f){return f.enabled!==false;}).map(function(f){return String(f.name||'').toLowerCase();});
-  var has=function(term){return names.some(function(n){return n.indexOf(term)>=0;});};
+  var enabled=(c.effects||[]).filter(function(f){return f.enabled!==false;});
+  var amount=function(term){
+    var vals=enabled.filter(function(f){return String(f.name||'').toLowerCase().indexOf(term)>=0;}).map(function(f){return clamp(Number(f.amount==null?50:f.amount),0,100)/100;});
+    return vals.length?Math.max.apply(Math,vals):0;
+  };
+  var gainAmt=amount('gain'),eqAmt=amount('parametric eq'),deEss=amount('de-esser'),excite=amount('exciter'),compAmt=amount('compressor'),limitAmt=amount('limiter');
+  var delayAmt=amount('delay'),chorusAmt=amount('chorus'),flangerAmt=amount('flanger'),reverbAmt=amount('reverb'),wideAmt=amount('stereo widener'),pitchAmt=amount('pitch');
   var vol=clamp(Number(c.volume==null?1:c.volume),0,1);
-  node.gain.gain.value=vol*(has('gain')?1.25:1);
-  node.low.gain.value=has('parametric eq')?2:0;
-  node.mid.gain.value=has('parametric eq')?2.5:0;
-  node.high.gain.value=has('parametric eq')?2:0;
-  if(has('de-esser'))node.high.gain.value-=5;
-  if(has('exciter'))node.high.gain.value+=4;
-  node.comp.threshold.value=has('limiter')?-4:has('compressor')?-18:0;
-  node.comp.knee.value=has('limiter')?1:has('compressor')?10:40;
-  node.comp.ratio.value=has('limiter')?20:has('compressor')?4:1;
-  node.comp.attack.value=.003;node.comp.release.value=has('limiter')?.08:.22;
-  node.delay.delayTime.value=has('flanger')?.012:has('chorus')?.025:has('delay')?.22:0;
-  node.delayGain.gain.value=has('delay')?.27:has('chorus')?.18:has('flanger')?.14:0;
-  node.feedback.gain.value=has('delay')?.22:has('flanger')?.08:0;
-  node.reverbGain.gain.value=has('reverb')?.3:0;
-  node.pan.pan.value=has('stereo widener')?(Math.sin(state.playhead*1.7)*.35):0;
-  if(has('pitch'))node.pitchRate=1.05946;else node.pitchRate=1;
+  node.gain.gain.value=vol*(1+gainAmt*.5);
+  node.low.gain.value=eqAmt*4;
+  node.mid.gain.value=eqAmt*5;
+  node.high.gain.value=eqAmt*4-deEss*7+excite*6;
+  node.comp.threshold.value=limitAmt?(-2-limitAmt*5):(compAmt?(-8-compAmt*18):0);
+  node.comp.knee.value=limitAmt?Math.max(.5,3-limitAmt*2):Math.max(4,40-compAmt*28);
+  node.comp.ratio.value=limitAmt?(8+limitAmt*14):(1+compAmt*5);
+  node.comp.attack.value=.003;node.comp.release.value=limitAmt?(.05+.06*(1-limitAmt)):(.12+.16*(1-compAmt));
+  node.delay.delayTime.value=flangerAmt?(.004+.012*flangerAmt):chorusAmt?(.012+.025*chorusAmt):delayAmt?(.08+.34*delayAmt):0;
+  node.delayGain.gain.value=delayAmt*.38+chorusAmt*.24+flangerAmt*.17;
+  node.feedback.gain.value=delayAmt*.32+flangerAmt*.12;
+  node.reverbGain.gain.value=reverbAmt*.48;
+  node.pan.pan.value=wideAmt?(Math.sin(state.playhead*1.7)*.42*wideAmt):0;
+  node.pitchRate=pitchAmt?Math.pow(2,(pitchAmt*4)/12):1;
 }
 async function ensureAudioGraph(){
   var AC=window.AudioContext||window.webkitAudioContext;

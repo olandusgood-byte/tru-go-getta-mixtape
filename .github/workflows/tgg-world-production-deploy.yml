@@ -63,7 +63,7 @@ jobs:
 
       - name: Install pinned Vercel CLI
         if: steps.auth.outputs.ready == 'true'
-        run: npm install --global vercel@latest
+        run: npm install --global vercel@59.23.1
 
       - name: Link production project
         if: steps.auth.outputs.ready == 'true'

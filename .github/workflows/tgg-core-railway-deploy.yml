@@ -50,15 +50,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          railway link --project "${RAILWAY_PROJECT_ID}" --environment "${RAILWAY_ENVIRONMENT}" --service "${RAILWAY_CORE_SERVICE}" --json
-          railway up --ci --service "${RAILWAY_CORE_SERVICE}" --verbose
+          railway up --ci --verbose \
+            --project "${RAILWAY_PROJECT_ID}" \
+            --environment "${RAILWAY_ENVIRONMENT}" \
+            --service "${RAILWAY_CORE_SERVICE}"
 
       - name: Deploy TGG Job Worker
         shell: bash
         run: |
           set -euo pipefail
-          railway link --project "${RAILWAY_PROJECT_ID}" --environment "${RAILWAY_ENVIRONMENT}" --service "${RAILWAY_WORKER_SERVICE}" --json
-          railway up --ci --service "${RAILWAY_WORKER_SERVICE}" --verbose
+          railway up --ci --verbose \
+            --project "${RAILWAY_PROJECT_ID}" \
+            --environment "${RAILWAY_ENVIRONMENT}" \
+            --service "${RAILWAY_WORKER_SERVICE}"
 
       - name: Report deployed commit
         shell: bash

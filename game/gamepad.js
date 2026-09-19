@@ -1,5 +1,5 @@
 (() => {
-  const DEAD=.22;
+  const DEAD=.18;
   let connected=false;
   const held={walkUp:false,walkDown:false,walkLeft:false,walkRight:false,sprint:false,gas:false,reverse:false,steerLeft:false,steerRight:false,drift:false};
   const edge={interact:false,vehicle:false,camera:false,horn:false};
@@ -12,8 +12,11 @@
   const value=(p,i)=>Math.max(0,Math.min(1,Number(p?.buttons?.[i]?.value||0)));
   const button=(p,i)=>!!p?.buttons?.[i]?.pressed||value(p,i)>.45;
   const axis=(p,i)=>{
-    const v=Number(p?.axes?.[i]||0);
-    return Math.abs(v)<DEAD?0:v;
+    const v=Number(p?.axes?.[i]||0),a=Math.abs(v);
+    if(a<DEAD)return 0;
+    const n=(a-DEAD)/(1-DEAD);
+    const curved=n*n*(3-2*n);
+    return Math.sign(v)*curved;
   };
   const change=(key,next,fn)=>{
     if(held[key]===next)return;

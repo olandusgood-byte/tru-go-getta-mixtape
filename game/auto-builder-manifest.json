@@ -1,7 +1,7 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "2.02",
-  "module": "GAME-V2.02",
+  "version": "2.05",
+  "module": "GAME-V2.05",
   "name": "Production Integrity + Browser Runtime Continuity + Release Integrity Gate",
   "workflow": [
     "BUILD",
@@ -170,5 +170,5 @@
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V2.03 CONTINUOUS PRODUCTION WATCH"
+  "next": "V2.06 CONTINUOUS INTEGRITY"
 }

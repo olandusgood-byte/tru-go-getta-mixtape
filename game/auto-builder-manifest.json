@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.57",
-  "module": "GAME-V1.57",
-  "name": "Production World Integrity + Certification Gates + Automated Runtime Health",
+  "version": "1.60",
+  "module": "GAME-V1.60",
+  "name": "Production Observability + Autonomous Fault Detection + Runtime Recovery Controller",
   "workflow": [
     "BUILD",
     "TEST",
@@ -106,9 +106,13 @@
     "v1_55_world_integrity": true,
     "v1_56_certification_gates": true,
     "v1_57_runtime_health": true,
-    "v1_57_local_state": true
+    "v1_57_local_state": true,
+    "v1_58_observability": true,
+    "v1_59_fault_detection": true,
+    "v1_60_recovery_controller": true,
+    "v1_60_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.58 PRODUCTION OBSERVABILITY + SELF-HEALING"
+  "next": "V1.61 PRODUCTION SELF-TEST + REGRESSION MATRIX"
 }

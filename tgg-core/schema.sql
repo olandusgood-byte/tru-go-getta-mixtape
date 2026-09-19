@@ -157,6 +157,17 @@ begin
 end $$;
 
 
+-- Live Viewer event journal for TGG-owned browser sessions.
+create table if not exists tgg_browser_viewer_events (
+  id bigserial primary key,
+  browser_session_id uuid not null references tgg_browser_sessions(id) on delete cascade,
+  event_type text not null,
+  payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists tgg_browser_viewer_events_session_idx
+  on tgg_browser_viewer_events(browser_session_id,id);
+
 -- TGG-owned browser worker queue. Kept in schema.sql so fresh TGG Core databases
 -- contain the same queue that server.mjs can safely initialize at runtime.
 create table if not exists tgg_worker_registry (

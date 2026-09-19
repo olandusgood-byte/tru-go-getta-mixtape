@@ -19,6 +19,7 @@ const contract=spawnSync(process.execPath,[path.join(root,'static-contract.test.
 assert(contract.status===0,'V1.13 static contract failed:\n'+(contract.stderr||contract.stdout||''));
 
 const html=read('index.html');
+const v114=read('v114-live-city.js');
 const scripts=[...html.matchAll(/<script[^>]+src=["']([^"']+)["']/g)].map(m=>m[1]);
 for(const src of scripts){
   const scriptPath=path.join(root,src);assert(fs.existsSync(scriptPath)&&fs.statSync(scriptPath).isFile(),'Missing script referenced by index.html: '+src);
@@ -59,7 +60,10 @@ for(const token of syncTokens)assert(sync.includes(token),'Missing world sync co
 for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   assert(!sync.includes(forbidden),'Forbidden secret marker in game bundle: '+forbidden);
 }
-assert(String(manifest.release||'').startsWith('V1.13'),'Release manifest is not V1.13');
+assert(String(manifest.release||'').startsWith('V1.14'),'Release manifest is not V1.14');
+assert(html.includes('<script src="v114-live-city.js"></script>'),'v114-live-city.js is not loaded');
+for(const token of ['window.TGGV114','LIVE CITY ACTIVITIES','propertyCheckIn','vehicleRun','mutationPolicy'])assert(v114.includes(token),'Missing V1.14 runtime token: '+token);
+for(const forbidden of ['tgg_world_buy_property','tgg_world_property_market_buy','tgg_world_vehicle_spawn','tgg_world_vehicle_drive_session','SUPABASE_SERVICE_ROLE_KEY','sb_secret_','sk_live_'])assert(!v114.includes(forbidden),'V1.14 forbidden mutation/secret token: '+forbidden);
 assert(!sync.includes("rpc('tgg_world_purchase'"),'tgg_world_purchase must remain excluded from the game adapter');
 
 const forbiddenRpcs=[
@@ -85,6 +89,7 @@ for(const forbidden of ['tgg_world_buy_property','tgg_world_property_market_buy'
 }
 
 console.log(JSON.stringify({
+  v114:'LIVE_CITY_VEHICLE_PROPERTY_GAMEPLAY',
   ok:true,
   release:manifest.release,
   jsFiles:fs.readdirSync(root).filter(n=>n.endsWith('.js')).length,

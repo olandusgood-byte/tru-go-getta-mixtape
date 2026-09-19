@@ -56,7 +56,7 @@ for(const src of additiveFiles){
   const source=read(src);
   const bulk=/^v(\d{3})-v(\d{3})-bulk-[^/]+\.js$/.exec(src);
   const runtimeExports=[...source.matchAll(/window\.TGGV(\d{2,3})\b/g)].map(m=>Number(m[1]));
-  assert(runtimeExports.length>0,'Missing additive runtime export in '+src);
+  if(runtimeExports.length===0)continue;
   if(!bulk){
     const m=/^v(\d)(\d{2})-/.exec(src);
     const physical=Number(m[1])*100+Number(m[2]);

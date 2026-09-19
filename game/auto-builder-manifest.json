@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.48",
-  "module": "GAME-V1.48",
-  "name": "World Action Queue + Consequence Resolution + Persistent World Continuity",
+  "version": "1.51",
+  "module": "GAME-V1.51",
+  "name": "World Snapshot Diff + Deterministic Replay + State Reconciliation",
   "workflow": [
     "BUILD",
     "TEST",
@@ -94,9 +94,13 @@
     "v1_46_world_action_queue": true,
     "v1_47_consequence_resolution": true,
     "v1_48_persistent_world_continuity": true,
-    "v1_48_local_state": true
+    "v1_48_local_state": true,
+    "v1_49_snapshot_diff": true,
+    "v1_50_deterministic_replay": true,
+    "v1_51_state_reconciliation": true,
+    "v1_51_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.49 WORLD SNAPSHOT DIFF + REPLAY ENGINE"
+  "next": "V1.52 CONTINUITY AUDIT + WORLD INTEGRITY"
 }

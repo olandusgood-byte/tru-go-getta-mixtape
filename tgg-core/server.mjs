@@ -22,7 +22,6 @@ app.use((req,res,next)=>{
 
 // TGG_VIDEO_STUDIO_V2_STATIC
 const VIDEO_STUDIO_PUBLIC_ROOT = path.resolve(process.cwd(), 'tgg-core/public/video-studio');
-app.get('/video-studio', (_req,res)=>res.redirect(301,'/video-studio/'));
 app.use('/video-studio', express.static(VIDEO_STUDIO_PUBLIC_ROOT, {
   etag: true,
   maxAge: '5m',

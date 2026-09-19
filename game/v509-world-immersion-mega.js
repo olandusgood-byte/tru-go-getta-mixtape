@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const VERSION='5.9.0';
+  const mutationPolicy='local_only';
   const KEY='tgg-world-immersion-v509';
   const defaults={
     choices:0,worldCompletions:0,storyTransitions:0,
@@ -236,7 +237,7 @@
     syncCrowd();syncInterior();
     setInterval(()=>{wrapNpcChoices();bindPropertyEntrances();syncCrowd();syncInterior()},1200);
     document.documentElement.dataset.tggV509='on';
-    window.TGGV509={version:VERSION,run,snapshot,syncCrowd,syncInterior,recordDistrict,consequenceFromChoice};
+    window.TGGV509={version:VERSION,mutationPolicy,run,snapshot,syncCrowd,syncInterior,recordDistrict,consequenceFromChoice};
     window.dispatchEvent(new CustomEvent('tgg:v509-ready',{detail:snapshot()}));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

@@ -316,6 +316,73 @@ app.post('/qa/game-smoke', async (req, res) => {
   }
 });
 
+async function finishOwnerEnrollment(access, refresh) {
+  if(!access||!refresh) return {ok:false,status:400,body:{error:'owner_session_required',stage:'request'}};
+  if(!workerId||!workerToken) return {ok:false,status:503,body:{error:'worker_not_configured',stage:'worker_config'}};
+
+  const owner=await verifyOwnerSession(access);
+  if(!owner.ok) return {ok:false,status:403,body:{error:'owner_auth_failed',stage:'owner_verify',detail:owner.error||'supabase_session_invalid'}};
+
+  const worker=await verifyWorkerCredential(workerId,workerToken);
+  if(!worker.ok) return {ok:false,status:403,body:{error:'worker_auth_failed',stage:'worker_verify',detail:worker.error||'worker_credential_invalid'}};
+
+  ownerSession={access_token:access,refresh_token:refresh};
+  last={status:'bootstrapped',worker_id:workerId,updated_at:new Date().toISOString()};
+
+  let sessionPersisted=false;
+  let persistError=null;
+  for(let attempt=1;attempt<=3&&!sessionPersisted;attempt++){
+    try{
+      await persistOwnerRefreshToken(workerId,workerToken,refresh);
+      sessionPersisted=true;
+    }catch(error){
+      persistError=error?.message||String(error);
+      console.error(JSON.stringify({tgg_owner_enroll:true,stage:'session_persist',ok:false,attempt,reason:persistError}));
+      if(attempt<3) await new Promise(r=>setTimeout(r,attempt*500));
+    }
+  }
+
+  let certificationEnsured=false;
+  let certificationError=null;
+  try{
+    const email=String(owner?.user?.email||'').toLowerCase().trim();
+    if(email){
+      const ensured=await tggEnsureCertification(email,'protected_audio_runtime');
+      certificationEnsured=Boolean(ensured?.certification||ensured?.job||ensured?.created);
+    }else{
+      certificationError='owner_email_missing';
+    }
+  }catch(error){
+    certificationError=error?.message||String(error);
+    console.error(JSON.stringify({tgg_owner_enroll:true,stage:'ensure_certification',ok:false,reason:certificationError}));
+  }
+
+  scheduleBootstrapLoop(loop);
+  console.log(JSON.stringify({
+    tgg_owner_enroll:true,
+    stage:'session_ready',
+    ok:true,
+    session_persisted:sessionPersisted,
+    certification_ensured:certificationEnsured,
+    persist_error:persistError||null,
+    certification_error:certificationError||null
+  }));
+
+  return {
+    ok:true,
+    status:(sessionPersisted&&certificationEnsured)?200:202,
+    body:{
+      ok:true,
+      worker_id:workerId,
+      version:RUNTIME_VERSION,
+      certification_started:certificationEnsured,
+      session_persisted:sessionPersisted,
+      persistence_warning:sessionPersisted?null:'session_memory_only',
+      certification_warning:certificationEnsured?null:(certificationError||'certification_not_created')
+    }
+  };
+}
+
 const enrollmentJobs = new Map();
 function enrollmentPublicState(id){
   const job=enrollmentJobs.get(id);

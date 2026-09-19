@@ -27,11 +27,12 @@ const v350=read('v350-gamefeel-cinematic.js');
 const v360=read('v360-living-city.js');
 const v370=read('v370-world-interaction.js');
 const v380=read('v380-life-sim.js');
+const v390=read('v390-opportunity-loop.js');
 
-assert.match(html,/V3\.80 LIFE SIM PROPERTY SOCIAL WORLD MEGA/i);
-assert.match(html,/GAME V3\.80 • LIFE SIM \+ PROPERTY \+ SOCIAL WORLD/);
-assert.equal(runtime.canonical_runtime,'V3.80 LIFE SIM PROPERTY SOCIAL WORLD MEGA');
-assert.equal(runtime.base_runtime,'V3.70 NPC TRAFFIC WORLD INTERACTION MEGA');
+assert.match(html,/V3\.90 CAREER MISSION ECONOMY WORLD LOOP MEGA/i);
+assert.match(html,/GAME V3\.90 • CAREER \+ MISSION \+ ECONOMY WORLD LOOP/);
+assert.equal(runtime.canonical_runtime,'V3.90 CAREER MISSION ECONOMY WORLD LOOP MEGA');
+assert.equal(runtime.base_runtime,'V3.80 LIFE SIM PROPERTY SOCIAL WORLD MEGA');
 assert.equal(runtime.consolidation,'all-compatible-layers-one-runtime');
 for(const id of [
   'city3d','radar3d','radarPlayer','radarCar','vehicleHud','speedValue','gearValue',
@@ -46,7 +47,7 @@ for(const src of [
   'story-missions.js','story-cinematics.js','story-world-3d.js','street-presence.js',
   'vertical-slice-director.js','mega-qa.js','photoreal-core.js','reality-master.js',
   'v310-aaa-visual-polish.js','v320-realism-mega.js','v330-motion-realism.js',
-  'v340-city-world-mega.js','v350-gamefeel-cinematic.js','v360-living-city.js','v370-world-interaction.js','v380-life-sim.js'
+  'v340-city-world-mega.js','v350-gamefeel-cinematic.js','v360-living-city.js','v370-world-interaction.js','v380-life-sim.js','v390-opportunity-loop.js'
 ]) assert.ok(html.includes('<script src="'+src+'"></script>'),'missing V2.18 script: '+src);
 
 for(const token of ['window.TGGGame','setDriveKey','getDrivingState']) assert.ok(game.includes(token),'game runtime missing '+token);
@@ -73,11 +74,12 @@ for(const token of ['V3.50 GAME FEEL CINEMATIC MEGA','cinematic-letterbox','stor
 for(const token of ['V3.60 LIVING CITY REACTIVE WORLD MEGA','district-heat-system','dynamic-city-events','context-interaction-prompts','performance-safe-density-sync']) assert.ok(v360.includes(token),'V3.60 layer missing '+token);
 for(const token of ['V3.70 NPC TRAFFIC WORLD INTERACTION MEGA','proximity-npc-reactions','traffic-player-awareness','simulation-tier-scaling','keyboard-street-talk-hook']) assert.ok(v370.includes(token),'V3.70 layer missing '+token);
 for(const token of ['V3.80 LIFE SIM PROPERTY SOCIAL WORLD MEGA','persistent-life-stats','daily-balance-loop','relationship-state','career-momentum']) assert.ok(v380.includes(token),'V3.80 layer missing '+token);
+for(const token of ['V3.90 CAREER MISSION ECONOMY WORLD LOOP MEGA','dynamic-world-opportunities','life-stat-gating','economy-reward-hooks','adaptive-opportunity-ranking']) assert.ok(v390.includes(token),'V3.90 layer missing '+token);
 for(const token of [
   'human_realism','vehicle_realism','world_detail','unified_quality_presets','unified_movement_tuning',
   'unified_vehicle_tuning','adaptive_crowd_density','integrated_readiness_matrix','integrated_mega_qa',
   'v310_aaa_visual_polish','v320_realism_mega_pass','v330_motion_vehicle_character',
-  'v340_city_world_mega_pass','v350_game_feel_cinematic_mega','v360_living_city_reactive_world','v370_npc_traffic_world_interaction','v380_life_sim_property_social_world'
+  'v340_city_world_mega_pass','v350_game_feel_cinematic_mega','v360_living_city_reactive_world','v370_npc_traffic_world_interaction','v380_life_sim_property_social_world','v390_career_mission_economy_world_loop'
 ]) assert.ok(runtime.features.includes(token),'runtime feature missing '+token);
 
 for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
@@ -86,4 +88,4 @@ for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   }
 }
 
-console.log('GAME_V3_80_LIFE_SIM_STATIC_CONTRACT_PASS');
+console.log('GAME_V3_90_OPPORTUNITY_LOOP_STATIC_CONTRACT_PASS');

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.40 TGG AUDIO + SPATIAL FORGE 100';
+  const VERSION='V2.41 TGG STAGE + PERFORMANCE FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

@@ -55,6 +55,7 @@
     return -1;
   }
   function startBattle(){
+    state.show.active=false;
     state.battle={active:true,round:0,player:0,rival:0,last:'ROUND 1 — set the tone.'};
     save();render();notify('RAP BATTLE STARTED');
   }
@@ -91,6 +92,7 @@
   }
 
   function startShow(){
+    state.battle.active=false;
     state.show={active:true,move:0,energy:clamp(62+state.attributes.stamina*6,0,100),crowd:35,score:0,last:'LIGHTS UP — build the crowd.'};
     save();render();notify('LIVE SHOW STARTED');
   }

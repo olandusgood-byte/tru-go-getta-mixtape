@@ -1197,13 +1197,13 @@ try{
   });
   let moved=0;
   let moveAttempt='';
-  const apiAttempts=[
+  const walkApiAttempts=[
     {name:'api-up',control:'up'},
     {name:'api-right',control:'right'},
     {name:'api-down',control:'down'},
     {name:'api-left',control:'left'}
   ];
-  for(const attempt of apiAttempts){
+  for(const attempt of walkApiAttempts){
     const before=await page.evaluate(()=>({...window.TGGGame.getState()}));
     const supported=await page.evaluate(({control})=>{
       const g=window.TGGGame;

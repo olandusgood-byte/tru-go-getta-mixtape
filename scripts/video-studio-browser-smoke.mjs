@@ -24,6 +24,18 @@ try{
   await page.locator('#librarySearch').fill('Chroma Key');
   check(await page.getByText('Chroma Key',{exact:true}).count()>=1,'Chroma Key effect missing');
 
+  await page.locator('[data-workspace="captions"]').click();
+  await page.getByText('Bold Center',{exact:true}).click();
+  check(await page.locator('.clip').count()>=1,'title clip was not created');
+  check(await page.locator('.clip .trim-handle.left').count()>=1,'trim handle missing');
+  const kf=page.locator('[data-keyframe="x"]').first();
+  await kf.click();
+  check(await kf.evaluate(el=>el.classList.contains('active')),'keyframe toggle failed');
+  const mute=page.locator('[data-track-action="mute"][data-track="v3"]');
+  await mute.click();
+  check(await mute.evaluate(el=>el.classList.contains('active')),'track mute failed');
+  await mute.click();
+
   await page.locator('[data-workspace="deliver"]').click();
   const renderText=await page.locator('#inspectorContent').innerText();
   check(renderText.includes('Production FFmpeg Pipeline'),'production render panel missing');
@@ -34,7 +46,7 @@ try{
 
   await page.screenshot({path:'video-studio-smoke.png',fullPage:true});
   if(failures.length)throw new Error(failures.join('; '));
-  console.log(JSON.stringify({ok:true,url:file,checks:7}));
+  console.log(JSON.stringify({ok:true,url:file,checks:11}));
 } finally {
   await browser.close();
 }

@@ -63,3 +63,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 @media(max-width:1050px){:root{--rail:54px}.brand-lockup{min-width:160px}.brand-lockup span{display:none}.workspace-tabs button{padding:0 9px}.top-actions{min-width:210px}.save-state{display:none}.editor-grid{grid-template-columns:200px 1fr 220px}.asset-grid{grid-template-columns:1fr}}
 @media(max-width:820px){body{overflow:auto}.app-shell{min-height:100vh;height:auto}.topbar{position:sticky;top:0}.workspace-tabs{overflow:auto;justify-content:start}.brand-lockup{min-width:auto}.brand-lockup>div:last-child{display:none}.top-actions{min-width:auto}.top-actions .ghost-btn{display:none}.toolrail{display:none}.workspace{position:relative;left:auto;top:auto;height:auto;overflow:visible}.editor-grid{height:auto;display:flex;flex-direction:column;padding:6px}.browser-panel{height:240px;order:2}.viewer-stack{height:430px;order:1}.inspector-panel{height:320px;order:3}.timeline-panel{height:300px;order:4}.dashboard-view{padding:18px}.stat-grid{grid-template-columns:repeat(2,1fr)}.dashboard-grid{grid-template-columns:1fr}.dash-panel.wide{grid-column:1}.dashboard-hero h1{font-size:24px}}
 @media(max-width:540px){.workspace-tabs button{font-size:9px;padding:0 7px}.top-actions #saveBtn{display:none}.viewer-stack{height:360px}.sequence-meta span{display:none}.transport .zoom-label{display:none}.stat-grid{grid-template-columns:1fr 1fr}.render-history{grid-template-columns:1fr}.export-grid{grid-template-columns:1fr}}
+
+/* V2.4 timeline mechanics */
+.track-head button.active{color:#fff;border:1px solid #53657a;background:#263342}
+.track-head.muted{opacity:.62}.track-head.solo{box-shadow:inset 3px 0 #49d7ff}.track-head.locked .track-name:after{content:" · LOCKED";color:#ffc857}
+.track-row.track-disabled{opacity:.34}.track-row.track-locked{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.014) 0 8px,transparent 8px 16px)}
+.clip.locked{cursor:not-allowed;filter:saturate(.72)}
+.trim-handle{position:absolute;top:0;bottom:0;width:7px;z-index:3;cursor:ew-resize;background:transparent}
+.trim-handle.left{left:0}.trim-handle.right{right:0}
+.clip.selected .trim-handle{background:rgba(255,255,255,.18)}
+.clip.selected .trim-handle.left{border-right:1px solid rgba(255,255,255,.35)}
+.clip.selected .trim-handle.right{border-left:1px solid rgba(255,255,255,.35)}

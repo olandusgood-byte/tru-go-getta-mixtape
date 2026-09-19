@@ -41,6 +41,7 @@ const V225_RIVAL_ONLY=String(process.env.TGG_3D_V225_RIVAL_ONLY||'0')==='1';
 const V226_INFLUENCE_ONLY=String(process.env.TGG_3D_V226_INFLUENCE_ONLY||'0')==='1';
 const V227_CONSEQUENCES_ONLY=String(process.env.TGG_3D_V227_CONSEQUENCES_ONLY||'0')==='1';
 const V242_DIRECTOR_ONLY=String(process.env.TGG_3D_V242_DIRECTOR_ONLY||'0')==='1';
+const V243_REPLAY_ONLY=String(process.env.TGG_3D_V243_REPLAY_ONLY||'0')==='1';
 let result={ok:false,status:'pending',target:TARGET,updated_at:new Date().toISOString()};
 
 async function startV218SnapshotServer(){
@@ -77,6 +78,91 @@ async function run(){
   try{
     const ctx=await browser.newContext({viewport:{width:1440,height:1000}});
     const page=await ctx.newPage();
+
+    if(V243_REPLAY_ONLY){
+      const errors=[];const consoleErrors=[];const failed=[];
+      page.on('pageerror',e=>errors.push(e.message||String(e)));
+      page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
+      page.on('requestfailed',r=>failed.push(r.url()));
+      const response=await page.goto(TARGET,{waitUntil:'domcontentloaded',timeout:45000});
+      await page.waitForFunction(()=>window.TGGV243&&window.TGGV243Core&&window.TGG3D?.isReady?.(),{timeout:30000});
+      await page.waitForTimeout(600);
+      const checks=[];const add=(name,pass,detail='')=>checks.push({name,pass:Boolean(pass),detail});
+      let snap=await page.evaluate(()=>({
+        title:document.title,
+        status:window.TGGV243.status(),
+        layers:window.TGGV243.layers.length,
+        ui:{btn:!!document.getElementById('v243ForgeBtn'),panel:!!document.getElementById('v243ForgePanel'),hud:!!document.getElementById('v243ForgeHud'),overlay:!!document.getElementById('v243ReplayOverlay')},
+        final:window.TGGFinalBuild?.version||''
+      }));
+      add('v243-title',snap.title.includes('V2.43 TGG REPLAY + HIGHLIGHT FORGE 100'),snap.title);
+      add('v243-forge-api',snap.status?.mode==='native-replay-highlight-forge'&&snap.status?.enabled===true,JSON.stringify(snap.status));
+      add('v243-100-layers',snap.layers===100,String(snap.layers));
+      add('v243-ui-hosts',snap.ui.btn&&snap.ui.panel&&snap.ui.hud&&snap.ui.overlay,JSON.stringify(snap.ui));
+      add('v243-final-runtime',snap.final==='V2.43 TGG REPLAY + HIGHLIGHT FORGE 100',snap.final);
+
+      snap=await page.evaluate(()=>{
+        window.TGGV243.setAutoHighlights(false);window.TGGV243.clearHistory();
+        const gs=window.TGGGame.getState();const base={x:gs.x,y:gs.y,cash:gs.cash,xp:gs.xp,level:gs.level,accepted:gs.accepted};
+        const now=Date.now(),p=window.TGG3D.player,c=window.TGG3D.car;
+        for(let i=0;i<7;i++){
+          p.position.x=i*.7;p.position.z=i*.45;c.position.x=i*.5;c.position.z=i*.3;
+          window.TGGV243.captureNow(now-3600+i*600);
+        }
+        const mark=window.TGGV243.mark('manual',{qa:true});
+        const exported=window.TGGV243.exportLast();
+        return {base,mark,exported,status:window.TGGV243.status()};
+      });
+      add('v243-buffer-capture',snap.status.buffer>=7&&snap.status.captures>=7,JSON.stringify(snap.status));
+      add('v243-highlight-mark',snap.mark?.type==='manual'&&snap.status.marks===1,JSON.stringify(snap.mark));
+      add('v243-export-schema',snap.exported?.schema==='tgg-highlight-v1'&&snap.exported.samples?.length>=2,JSON.stringify({schema:snap.exported?.schema,samples:snap.exported?.samples?.length}));
+
+      await page.evaluate(()=>window.TGGV243.replay('manual'));
+      await page.waitForTimeout(180);
+      snap=await page.evaluate(()=>({
+        status:window.TGGV243.status(),
+        root:{visible:window.TGGV243?.status?.().replaying===true,scene:!!window.TGG3D.scene.getObjectByName('tgg-replay-highlight')},
+        trailCount:window.TGG3D.scene.getObjectByName('tgg-replay-highlight')?.children?.find(x=>x.type==='Line')?.geometry?.attributes?.position?.count||0,
+        overlay:document.getElementById('v243ReplayOverlay')?.classList.contains('active'),
+        game:{...window.TGGGame.getState()}
+      }));
+      add('v243-replay-starts',snap.status.replaying===true&&snap.status.replaySamples>=2,JSON.stringify(snap.status));
+      add('v243-3d-root',snap.root.scene===true,JSON.stringify(snap.root));
+      add('v243-3d-trail',snap.trailCount>=2,String(snap.trailCount));
+      add('v243-overlay-active',snap.overlay===true);
+      const base=snap.game;
+      await page.waitForTimeout(220);
+      const after=await page.evaluate(()=>({...window.TGGGame.getState()}));
+      add('v243-nondestructive-state',after.x===base.x&&after.y===base.y&&after.cash===base.cash&&after.xp===base.xp&&after.level===base.level&&after.accepted===base.accepted,JSON.stringify({base,after}));
+
+      await page.evaluate(()=>window.TGGV243.stop());
+      snap=await page.evaluate(()=>({
+        status:window.TGGV243.status(),
+        rootVisible:window.TGG3D.scene.getObjectByName('tgg-replay-highlight')?.visible,
+        overlay:document.getElementById('v243ReplayOverlay')?.classList.contains('active')
+      }));
+      add('v243-stop-clean',snap.status.replaying===false&&snap.rootVisible===false&&snap.overlay===false,JSON.stringify(snap));
+
+      await page.evaluate(()=>{window.TGGV243.setAutoHighlights(false);window.dispatchEvent(new CustomEvent('tgg:mission-complete',{detail:{qa:true}}))});
+      await page.waitForTimeout(80);
+      snap=await page.evaluate(()=>window.TGGV243.status());
+      add('v243-event-mark',snap.lastMark?.type==='mission'&&snap.marks>=2,JSON.stringify(snap.lastMark));
+
+      await page.setViewportSize({width:390,height:844});
+      await page.evaluate(()=>document.getElementById('v243ForgePanel')?.classList.add('active'));
+      await page.waitForTimeout(60);
+      const layout=await page.evaluate(()=>{
+        const p=document.getElementById('v243ForgePanel')?.getBoundingClientRect();
+        const buttons=[...document.querySelectorAll('#v243ForgePanel button')].map(x=>x.getBoundingClientRect());
+        return {width:innerWidth,scrollWidth:document.documentElement.scrollWidth,panel:p?{left:p.left,right:p.right,width:p.width}:null,minButton:buttons.length?Math.min(...buttons.map(x=>x.height)):0};
+      });
+      add('v243-mobile-panel-contained',!!layout.panel&&layout.panel.left>=0&&layout.panel.right<=layout.width+1,JSON.stringify(layout));
+      add('v243-mobile-buttons-readable',layout.minButton>=44,String(layout.minButton));
+
+      result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'v243_replay_highlight_harness',target:TARGET,http_status:response?.status?.()||0,checks,console_errors:consoleErrors,page_errors:errors,failed_resources:failed,updated_at:new Date().toISOString()};
+      console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
+      await ctx.close();return;
+    }
 
     if(V242_DIRECTOR_ONLY){
       const base=TARGET.endsWith('/index.html')?TARGET.slice(0,-11):(TARGET.endsWith('/')?TARGET.slice(0,-1):TARGET);

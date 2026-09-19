@@ -1,0 +1,21 @@
+{
+  "project": "TRU GO GETTA WORLD",
+  "runtime": "V3.50 GAME FEEL CINEMATIC MEGA",
+  "production_deployment": {
+    "id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
+    "url": "https://tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
+    "target": "production",
+    "state": "READY",
+    "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56"
+  },
+  "checks": {
+    "code_stack_merged": true,
+    "runtime_manifest_reconciled": true,
+    "production_deployment_ready": true,
+    "production_commit_matches_release": true,
+    "runtime_errors_last_hour": 0,
+    "browser_interaction_verified": false
+  },
+  "browser_blocker": "Vercel Authentication redirects automated access to SSO; no browser interaction certificate issued yet.",
+  "status": "DEPLOYED_READY_BROWSER_CERT_PENDING"
+}

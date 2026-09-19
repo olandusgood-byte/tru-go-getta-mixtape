@@ -1,0 +1,48 @@
+name: Video Studio V2 Static Check
+
+on:
+  push:
+    branches: [video-studio-v2-pro, main]
+    paths:
+      - 'tgg-core/server.mjs'
+      - 'tgg-core/schema.sql'
+      - 'tgg-core/public/video-studio/**'
+      - 'docs/VIDEO-STUDIO-EDITOR-V2.md'
+      - '.github/workflows/video-studio-v2-check.yml'
+  pull_request:
+    paths:
+      - 'tgg-core/server.mjs'
+      - 'tgg-core/schema.sql'
+      - 'tgg-core/public/video-studio/**'
+
+permissions:
+  contents: read
+
+jobs:
+  static-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Parse server and editor JavaScript
+        run: |
+          node --check tgg-core/server.mjs
+          node --check tgg-core/public/video-studio/app.js
+          node --check tgg-core/public/video-studio/sw.js
+      - name: Verify Video Studio contract markers
+        run: |
+          grep -q 'TGG_VIDEO_STUDIO_V2_STATIC' tgg-core/server.mjs
+          grep -q 'TGG_VIDEO_STUDIO_V2_API' tgg-core/server.mjs
+          grep -q 'TGG_VIDEO_STUDIO_V2_SCHEMA' tgg-core/schema.sql
+          grep -q 'id="previewCanvas"' tgg-core/public/video-studio/index.html
+          grep -q 'id="timelineViewport"' tgg-core/public/video-studio/index.html
+          grep -q 'id="dashboardView"' tgg-core/public/video-studio/index.html
+      - name: Verify required editor features
+        run: |
+          grep -q 'Quick Browser Render' tgg-core/public/video-studio/index.html
+          grep -q 'Chroma Key' tgg-core/public/video-studio/app.js
+          grep -q 'Parametric EQ' tgg-core/public/video-studio/app.js
+          grep -q 'video_studio_projects' tgg-core/schema.sql
+          grep -q 'creator-media' tgg-core/schema.sql

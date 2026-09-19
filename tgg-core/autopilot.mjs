@@ -113,7 +113,7 @@ if (!DATABASE_URL) {
   }
 
   async function sourceTruthAudit() {
-    const names = ['users','artists','releases','tracks','media_objects','tgg_jobs','tgg_browser_sessions','tgg_certifications','tgg_audit_log'];
+    const names = ['users','artists','releases','tracks','media_objects','tgg_jobs','tgg_browser_jobs','tgg_worker_registry','tgg_browser_sessions','tgg_certifications','tgg_audit_log'];
     const counts = await Promise.all(names.map(async name => [name, await countIfExists(name)]));
     return Object.fromEntries(counts);
   }
@@ -141,16 +141,51 @@ if (!DATABASE_URL) {
   }
 
   async function recoverExpiredJobs() {
-    if (!(await tableExists('tgg_jobs'))) return { recovered_jobs: 0, skipped: 'tgg_jobs_missing' };
-    const r = await pool.query(`
-      update public.tgg_jobs
-      set status='queued', available_at=now(), error=coalesce(error,'Recovered by TGG Autopilot')
-      where status='running' and available_at < now() - interval '10 minutes'
-      returning id
-    `);
-    return { recovered_jobs: r.rowCount };
-  }
+    let recovered_jobs = 0;
+    let recovered_browser_jobs = 0;
+    let failed_browser_jobs = 0;
 
+    if (await tableExists('tgg_jobs')) {
+      const r = await pool.query(`
+        update public.tgg_jobs
+        set status='queued', available_at=now(), error=coalesce(error,'Recovered by TGG Autopilot')
+        where status='running' and available_at < now() - interval '10 minutes'
+        returning id
+      `);
+      recovered_jobs = r.rowCount;
+    }
+
+    if (await tableExists('tgg_browser_jobs')) {
+      const r = await pool.query(`
+        with expired as (
+          select id, attempts, max_attempts
+          from public.tgg_browser_jobs
+          where status='running'
+            and lease_expires_at is not null
+            and lease_expires_at < now()
+          for update skip locked
+        )
+        update public.tgg_browser_jobs j
+        set
+          status = case when expired.attempts >= expired.max_attempts then 'failed' else 'queued' end,
+          worker_id = null,
+          lease_token = null,
+          lease_expires_at = null,
+          finished_at = case when expired.attempts >= expired.max_attempts then now() else null end,
+          result = case when expired.attempts >= expired.max_attempts
+            then coalesce(j.result,'{}'::jsonb) || jsonb_build_object('error','browser_job_max_attempts_exhausted','recovered_by','tgg_autopilot')
+            else j.result end,
+          updated_at = now()
+        from expired
+        where j.id = expired.id
+        returning j.status
+      `);
+      recovered_browser_jobs = r.rowCount;
+      failed_browser_jobs = r.rows.filter(x => x.status === 'failed').length;
+    }
+
+    return { recovered_jobs, recovered_browser_jobs, failed_browser_jobs };
+  }
   async function heartbeat() {
     await pool.query(`
       create table if not exists public.tgg_autopilot_heartbeat (

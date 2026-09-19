@@ -85,7 +85,8 @@ async function run(){
         fans:window.TGGCrowdPresentation?.fans?.length||0,
         clusters:window.TGGCrowdPresentation?.clusters?.length||0
       }));
-      add('v219-title',snap.title.includes('V2.19'),snap.title);
+      const versionMatch=String(snap.title||'').match(/V2\.(\d+)/);
+      add('v219-title',!!versionMatch&&Number(versionMatch[1])>=19,snap.title);
       add('v219-api',snap.api);
       add('v219-fan-pool',snap.fans===12,snap.fans);
       add('v219-clusters',snap.clusters===4,snap.clusters);

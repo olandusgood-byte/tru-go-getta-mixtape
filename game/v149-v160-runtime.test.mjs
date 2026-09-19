@@ -31,6 +31,13 @@ const layers=[
 for(const file of layers){
   vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
 }
+const futureLayers=fs.readdirSync(root)
+  .map(file=>({file,match:/^v1([0-9]{2})-[^/]+[.]js$/.exec(file)}))
+  .filter(x=>x.match&&Number(x.match[1])>=88)
+  .sort((a,b)=>Number(a.match[1])-Number(b.match[1]));
+for(const {file} of futureLayers){
+  vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
+}
 const w=context.window;
 assert(w.TGGV49.run({before:{world:{cash:1}},after:{world:{cash:2}}}).diff.lastChangeCount===1,'V1.49 diff runtime failed');
 assert(w.TGGV50.run({events:[{seq:2,type:'b'},{seq:1,type:'a'}]}).replay.lastEventCount===2,'V1.50 replay runtime failed');
@@ -81,4 +88,22 @@ for(let n=49;n<=87;n++){
   assert(version.startsWith(logical)||version.startsWith(physical),'Version mismatch TGGV'+n+': '+version);
   assert(String(snap.mutationPolicy||'').startsWith('local_'),'Non-local mutation policy TGGV'+n);
 }
-console.log(JSON.stringify({ok:true,layers:layers.length,from:'V1.49',through:'V1.87'}));
+const futureResults=[];
+const genericPayload={pageErrorCount:0,runtime:true,runtimePresent:true,eventContract:true,allowSynthetic:true,assetLoad:true,runtimeStart:true,stateRead:true,eventLoop:true,session:true,navigation:true,viewerState:true,stream:true,sessionLinkage:true};
+for(const {file,match} of futureLayers){
+  const n=Number(match[1]);
+  const api=w['TGGV'+n]||w['TGGV1'+n];
+  assert(api&&typeof api.run==='function'&&typeof api.snapshot==='function','Missing future runtime for '+file);
+  const result=api.run(genericPayload);
+  const snap=api.snapshot();
+  const version=String(snap.version||api.version||'');
+  const logical='1.'+n+'.';
+  const physical='1.'+(100+n)+'.';
+  assert(version.startsWith(logical)||version.startsWith(physical),'Future version mismatch '+file+': '+version);
+  assert(String(snap.mutationPolicy||'').startsWith('local_'),'Future non-local mutation policy '+file);
+  assert(result&&result.ok===true,'Future runtime evidence failed '+file+': '+JSON.stringify(result));
+  if(result.checks&&typeof result.checks==='object')assert(Object.values(result.checks).every(Boolean),'Future checks failed '+file);
+  futureResults.push({file,version});
+}
+const through=futureLayers.length?'V1.'+futureLayers.at(-1).match[1]:'V1.87';
+console.log(JSON.stringify({ok:true,layers:layers.length+futureLayers.length,from:'V1.49',through,futureResults}));

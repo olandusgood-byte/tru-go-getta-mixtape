@@ -312,8 +312,23 @@
   }
 
   function interactNearest(){
+    const storyTarget=window.TGGStoryMissions?.navigationTarget?.();
+    if(storyTarget?.arrived){
+      const st=window.TGGStoryMissions?.status?.();
+      window.__tggToast?.('STORY — '+(st?.current?.title||storyTarget.label||'OBJECTIVE'));
+      window.TGGStoryMissions?.doCurrent?.();
+      return true;
+    }
+    const worldBeat=window.TGGWorldDepth?.beatNavigation?.();
+    if(worldBeat?.arrived){
+      const result=window.TGGWorldDepth?.completeBeat?.();
+      if(result!==false&&result?.status!=='travel_required'){
+        window.__tggToast?.('WORLD BEAT — '+(worldBeat.label||'COMPLETE'));
+        return true;
+      }
+    }
     const d=nearbyDestination(window.TGGGame?.getState?.());
-    if(!d){window.__tggToast?.('MOVE CLOSER TO A 3D DESTINATION');return false;}
+    if(!d){window.__tggToast?.('MOVE CLOSER TO AN OBJECTIVE OR 3D DESTINATION');return false;}
     const button=document.getElementById(d.buttonId);
     if(!button){window.__tggToast?.(d.label+' IS NOT READY YET');return false;}
     window.__tggToast?.('ENTERING '+d.label);
@@ -589,9 +604,20 @@
     });
     const interactButton=document.getElementById('interact3dBtn');
     if(interactButton){
-      interactButton.disabled=!near;
-      interactButton.textContent=near?'ENTER '+near.label:'INTERACT';
-      interactButton.classList.toggle('nearby',!!near);
+      const storyTarget=window.TGGStoryMissions?.navigationTarget?.();
+      const storyHere=!!storyTarget?.arrived;
+      const worldBeat=window.TGGWorldDepth?.beatNavigation?.();
+      const beatHere=!!worldBeat?.arrived;
+      const storyStatus=storyHere?window.TGGStoryMissions?.status?.():null;
+      interactButton.disabled=!near&&!storyHere&&!beatHere;
+      interactButton.textContent=storyHere
+        ?'DO '+String(storyStatus?.current?.title||storyTarget?.label||'STORY OBJECTIVE').toUpperCase()
+        :beatHere
+          ?'DO '+String(worldBeat?.label||'WORLD BEAT').toUpperCase()
+          :near?'ENTER '+near.label:'INTERACT';
+      interactButton.classList.toggle('nearby',!!near||storyHere||beatHere);
+      interactButton.classList.toggle('story-ready',storyHere);
+      interactButton.classList.toggle('world-beat-ready',beatHere);
     }
 
     renderer.render(scene,camera);

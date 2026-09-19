@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.78",
-  "module": "GAME-V1.78",
-  "name": "Post-Finalization Monitoring + Autonomous Regression Watch + Browser Viewer Health",
+  "version": "1.81",
+  "module": "GAME-V1.81",
+  "name": "Continuous Production Watch + Browser Viewer Recovery Monitoring + Autonomous Runtime Controller",
   "workflow": [
     "BUILD",
     "TEST",
@@ -134,9 +134,13 @@
     "v1_76_post_finalization_monitoring": true,
     "v1_77_autonomous_regression_watch": true,
     "v1_78_browser_viewer_health": true,
-    "v1_78_local_state": true
+    "v1_78_local_state": true,
+    "v1_79_continuous_production_watch": true,
+    "v1_80_browser_viewer_recovery_monitor": true,
+    "v1_81_autonomous_runtime_controller": true,
+    "v1_81_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.79 CONTINUOUS PRODUCTION WATCH"
+  "next": "V1.82 CONTINUOUS HARDENING"
 }

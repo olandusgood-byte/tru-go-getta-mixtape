@@ -3,7 +3,7 @@
   "canonical_runtime": "V3.60 LIVING CITY REACTIVE WORLD MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v350_production_deployed_browser_certified",
+  "verification": "v360_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V3.50 GAME FEEL CINEMATIC MEGA",
   "features": [
@@ -95,7 +95,7 @@
     "district_entry_callouts",
     "story_activity_reactivity"
   ],
-  "release_gate": "v360_validation_pending",
+  "release_gate": "closed_certified",
   "production": {
     "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
     "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
@@ -103,10 +103,10 @@
     "state": "READY",
     "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PENDING_V360_REVALIDATION",
+    "browser_gate": "PASS",
     "public_alias": "https://tgg-world-play.vercel.app",
-    "browser_cert_run_id": 35441341802,
-    "browser_cert_artifact_id": 10583164514,
-    "browser_cert_artifact_digest": "sha256:3b769b7c9bd60bbc064b5aad1e211b285c43c92e82fb9683b77dae38343b721b"
+    "browser_cert_run_id": 35441849417,
+    "browser_cert_artifact_id": 10584062941,
+    "browser_cert_artifact_digest": "sha256:19b1d42a03fc64d93113d4ae9ec1d182dde12f3999656e430e4be5be8286f68b"
   }
 }

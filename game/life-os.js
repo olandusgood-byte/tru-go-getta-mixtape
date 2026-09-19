@@ -137,6 +137,27 @@
       perks:relationshipPerks().filter(x=>x.active)
     };
   }
+  function adjustRelationship(id,amount,reason=''){
+    if(!(id in state.relationships))return false;
+    const before=state.relationships[id];
+    state.relationships[id]=clamp(before+(Number(amount)||0));
+    state.lastAction=(reason||('Relationship updated • '+id))+' • '+(Number(amount)>=0?'+':'')+(Number(amount)||0);
+    save();
+    return state.relationships[id];
+  }
+  function applySocialAppointment(id,minutes=60,relationship=10,label='Appointment'){
+    if(!(id in state.relationships))return false;
+    advance(Math.max(15,Number(minutes)||60),true);
+    state.relationships[id]=clamp((state.relationships[id]||0)+(Number(relationship)||0));
+    changeNeed('social',18);
+    changeNeed('mood',10);
+    changeNeed('stress',-6);
+    state.stats.hangouts++;
+    state.lastAction=label+' complete • relationship +'+(Number(relationship)||0);
+    save();
+    notify(state.lastAction.toUpperCase());
+    return true;
+  }
   function contactInteraction(id,type='call'){
     const c=CONTACTS.find(x=>x.id===id);if(!c)return false;
     if(!availability(id)){notify(c.name.toUpperCase()+' IS BUSY RIGHT NOW');return false;}
@@ -321,7 +342,7 @@
   }
   window.TGGLifeOS={
     version:VERSION,getState:snapshot,load,save,render,advance,sleep,nap,meal,shower,chill,upgrade,
-    contactInteraction,availability,performanceModifier,readinessLabel,applyCareerAction,careerOutcome,relationshipPerks,perkFor,
+    contactInteraction,adjustRelationship,applySocialAppointment,availability,performanceModifier,readinessLabel,applyCareerAction,careerOutcome,relationshipPerks,perkFor,
     contacts:CONTACTS.map(x=>({...x})),upgrades:UPGRADES.map(x=>({...x}))
   };
   load();

@@ -138,7 +138,16 @@
     panel&&(panel.dataset.tier=t.toLowerCase());
     const active=window.TGGGame?.getActiveScreen?.()==='game'&&near&&!blockedByPriority();
     hud?.classList.toggle('active',active);
-    if(active&&q('v225HudInfo'))q('v225HudInfo').textContent=t+' • '+(distance()<=RADIUS?'INTERACT':Math.round(distance()*3.2)+' M');
+    const d=distance();
+    if(active&&q('v225HudInfo'))q('v225HudInfo').textContent=t+' • '+(d<=RADIUS?'INTERACT':Math.round(d*3.2)+' M');
+    const interact=document.getElementById('interact3dBtn');
+    if(interact){
+      interact.classList.toggle('rival-contact-near',active&&d<=RADIUS);
+      if(active&&d<=RADIUS){
+        interact.disabled=false;
+        interact.textContent='FACE NIGHT SHIFT';
+      }
+    }
   }
   function open(){
     ensureUi();
@@ -177,7 +186,8 @@
   }
   function animate(ts){
     requestAnimationFrame(animate);
-    ensureUi();boot3d();wrapInteract();render();
+    ensureUi();boot3d();wrapInteract();
+    if(ts-lastFrame>100){lastFrame=ts;render()}
     if(!group)return;
     const t=tier(),near=distance()<=TRACK_RADIUS;
     group.userData.ring.material.emissiveIntensity=(t==='RIVALS'?3.4:t==='ALLIES'?2.8:2.2)+(near?Math.sin(ts*.008)*.45:0);
@@ -189,7 +199,6 @@
       if(r.userData.leftArm)r.userData.leftArm.rotation.x=Math.sin(ts*.006+i)*.22;
       if(r.userData.rightArm)r.userData.rightArm.rotation.x=-Math.sin(ts*.006+i)*.22;
     });
-    lastFrame=ts;
   }
   function status(){
     const r=state.rival||core()?.createState?.();

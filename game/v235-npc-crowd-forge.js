@@ -124,7 +124,9 @@
     const npc=makeNpc(spawn.profile,index);if(!npc)return null;
     npc.position.set(spawn.x,0,spawn.z);npc.rotation.y=spawn.heading||0;
     npc.userData.anchor={x:spawn.x,z:spawn.z};
-    npc.userData.behavior=spawn.behavior||'idle';
+    npc.userData.id=String(spawn.id||('npc-'+index));
+    npc.userData.baseBehavior=spawn.behavior||'idle';
+    npc.userData.behavior=npc.userData.baseBehavior;
     npc.userData.phase=index*.71;
     npc.userData.seed=index;
     npc.userData.speedScale=.82+(index%5)*.06;
@@ -157,6 +159,47 @@
   function setEnabled(v){
     state.enabled=!!v;if(state.root)state.root.visible=state.enabled;if(state.audienceRoot)state.audienceRoot.visible=state.enabled;
     renderUI();return state.enabled;
+  }
+
+  function setBehavior(id,behavior,duration=0){
+    if(!core()?.behaviors?.includes(behavior))return false;
+    const all=[...state.people,...state.audience];
+    const npc=all.find(x=>x?.userData?.id===String(id)||x?.name===String(id));
+    if(!npc)return false;
+    const previous=npc.userData.baseBehavior||npc.userData.behavior||'idle';
+    npc.userData.behavior=behavior;
+    if(Number(duration)>0&&hasDOM()){
+      const token=(npc.userData.behaviorToken||0)+1;
+      npc.userData.behaviorToken=token;
+      setTimeout(()=>{
+        if(npc.userData.behaviorToken===token){
+          npc.userData.behavior=previous;
+          npc.userData.behaviorToken=0;
+        }
+      },clamp(Number(duration)||0,150,12000));
+    }
+    return true;
+  }
+
+  function pulseCrowd(kind='cheer',duration=2200){
+    const map={concert:'cheer',rap:'rap',mission:'talk',rival:'talk',weather:'idle',phone:'phone',cheer:'cheer'};
+    const behavior=map[kind]||kind;
+    if(!core()?.behaviors?.includes(behavior))return false;
+    const all=[...state.people,...state.audience];
+    all.forEach(npc=>{
+      const previous=npc.userData.baseBehavior||npc.userData.behavior||'idle';
+      npc.userData.behavior=behavior;
+      const token=(npc.userData.behaviorToken||0)+1;
+      npc.userData.behaviorToken=token;
+      if(Number(duration)>0&&hasDOM())setTimeout(()=>{
+        if(npc.userData.behaviorToken===token){
+          npc.userData.behavior=previous;
+          npc.userData.behaviorToken=0;
+        }
+      },clamp(Number(duration)||2200,150,12000));
+    });
+    if(hasDOM())window.dispatchEvent(new CustomEvent('tgg:crowd-pulse',{detail:{kind,behavior,count:all.length,duration}}));
+    return behavior;
   }
 
   function currentPlayerWorld(){
@@ -269,8 +312,10 @@
     window.addEventListener('tgg:concert-complete',()=>setTimeout(clearAudience,1800));
     window.addEventListener('tgg:rap-battle-start',()=>spawnAudience('rap',10000));
     window.addEventListener('tgg:rap-battle-round',()=>{state.audience.forEach(x=>x.userData.behavior='rap')});
-    window.addEventListener('tgg:rival-choice',()=>{state.people.slice(0,4).forEach(x=>x.userData.behavior='talk')});
-    window.addEventListener('tgg:mission-start',()=>{state.people.slice(0,3).forEach(x=>x.userData.behavior='phone')});
+    window.addEventListener('tgg:rival-choice',()=>pulseCrowd('rival',1800));
+    window.addEventListener('tgg:mission-start',()=>pulseCrowd('phone',2200));
+    window.addEventListener('tgg:mission-complete',()=>pulseCrowd('cheer',2600));
+    window.addEventListener('tgg:weather-change',e=>{if(['rain','storm'].includes(e.detail?.preset))pulseCrowd('weather',1600)});
   }
 
   function ensureUI(){
@@ -331,7 +376,7 @@
     renderUI();
   }
 
-  const api={version:VERSION,layers:LAYERS,districts:['downtown','studio-row','shops','park','media','business'],status,rebuild,setDistrict,setEnabled,clear,spawnAudience};
+  const api={version:VERSION,layers:LAYERS,districts:['downtown','studio-row','shops','park','media','business'],status,rebuild,setDistrict,setEnabled,clear,spawnAudience,setBehavior,pulseCrowd};
   globalThis.TGGV235=api;
   if(hasDOM()){
     window.TGGV235=api;document.addEventListener('keydown',keyHandler);ensureUI();requestAnimationFrame(tick);

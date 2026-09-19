@@ -6,13 +6,13 @@
   const driveKeys={forward:false,reverse:false,left:false,right:false,handbrake:false};
   const driveAnalog={steer:0,throttle:0,handbrake:0};
   const driveRuntime={speed:0,steer:0,yawRate:0,lastTime:performance.now(),braking:false,handbrake:false};
-  const DRIVE={maxForward:10,maxReverse:-4.5,accel:7.5,reverseAccel:5.5,brake:12,coast:3.4,turnRate:108,steerIn:4.2,steerOut:7.4,lowSpeedSteer:1,highSpeedSteer:.58,yawResponse:180,yawCenter:235};
+  const DRIVE={maxForward:10,maxReverse:-4.5,accel:6.4,reverseAccel:4.7,brake:11.5,coast:2.8,turnRate:102,steerIn:3.25,steerOut:5.9,lowSpeedSteer:.92,highSpeedSteer:.5,yawResponse:165,yawCenter:225};
 
   const walkKeys={up:false,down:false,left:false,right:false,sprint:false};
   const walkAnalog={x:0,y:0,sprint:0};
   const walkReleaseTimers={up:null,down:null,left:null,right:null,sprint:null};
   const walkRuntime={vx:0,vy:0,inputX:0,inputY:0,speed:0,lastTime:performance.now(),moving:false,sprinting:false,blocked:false,wasNearMission:false};
-  const WALK={walkSpeed:6.8,sprintSpeed:10.5,accel:24,decel:30,turnResponse:11,inputResponse:8.5,stopEpsilon:.025};
+  const WALK={walkSpeed:6.4,sprintSpeed:9.8,accel:18,decel:24,turnResponse:8.5,inputResponse:6.2,stopEpsilon:.025};
   function setDriveTuning(next={}){
     ['maxForward','maxReverse','accel','reverseAccel','brake','coast','turnRate','steerIn','steerOut','lowSpeedSteer','highSpeedSteer','yawResponse','yawCenter'].forEach(k=>{
       if(Number.isFinite(Number(next[k])))DRIVE[k]=Number(next[k]);

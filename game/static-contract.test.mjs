@@ -107,3 +107,5 @@ console.log('GAME_V4_50_FAMILY_HOUSEHOLD_STATIC_CONTRACT_PASS');
 // V4.50 validation refresh
 
 // V4.50 final gate refresh
+
+// V2.53 exact-head certification refresh

@@ -81,17 +81,25 @@
     const idx=(state.tick+Math.round(state.opportunityHeat)+Math.round(state.socialMomentum))%pool.length;
     return pool[idx];
   }
-  function spawnBeat(force=false){
-    if(state.activeBeat&&!force)return state.activeBeat;
-    const beat=chooseBeat(); if(!beat)return null;
-    state.activeBeat=hydrateBeat({...beat,createdAt:Date.now(),expiresAt:Date.now()+180000});
+  function activateBeat(beat,source='world'){
+    if(!beat)return null;
+    state.activeBeat=hydrateBeat({...beat,source,createdAt:Date.now(),expiresAt:Date.now()+180000});
     state.lastEventAt=Date.now();
-    state.history.push({type:'beat',id:beat.id,at:state.lastEventAt});
+    state.history.push({type:'beat',id:beat.id,source,at:state.lastEventAt});
     state.history=state.history.slice(-40);
     save();render();
-    window.TGGGameFeel?.objective?.(beat.label,beat.district+' • WORLD OPPORTUNITY');
+    window.TGGGameFeel?.objective?.(beat.label,beat.district+' • '+(source==='npc-favor'?'NPC FAVOR':'WORLD OPPORTUNITY'));
     window.TGGLivingCity?.nudgeHeat?.(2+state.missionIntensity);
     return state.activeBeat;
+  }
+  function spawnBeat(force=false){
+    if(state.activeBeat&&!force)return state.activeBeat;
+    return activateBeat(chooseBeat(),'world');
+  }
+  function spawnBeatFor(id,{force=false,source='npc-favor'}={}){
+    if(state.activeBeat&&!force)return state.activeBeat;
+    const beat=BEATS.find(x=>x.id===id);
+    return beat?activateBeat(beat,source):null;
   }
   function completeBeat(){
     const beat=hydrateBeat(state.activeBeat);if(!beat)return false;
@@ -215,12 +223,12 @@
     'cross-system-world-orchestrator','dynamic-npc-schedules','npc-trust-dialogue','district-pressure-simulation',
     'adaptive-world-opportunities','mission-intensity-scaling','property-utility-world-effects','social-momentum-effects',
     'time-limited-world-beats','cross-system-rewards-consequences','physical-world-beat-routing',
-    'arrival-gated-world-beat-completion','heading-aware-world-navigation','physical-npc-proximity-interaction','trust-branching-npc-consequences'
+    'arrival-gated-world-beat-completion','heading-aware-world-navigation','physical-npc-proximity-interaction','trust-branching-npc-consequences','npc-favor-specific-opportunities'
   ]}}
   function boot(){
     ensure();bind();tick();setInterval(tick,5000);
     document.documentElement.dataset.tggV460='on';
-    window.TGGWorldDepth={version:VERSION,getStatus,spawnBeat,completeBeat,npcDialogue,interactNPC,chooseNpcApproach,recalc,beatNavigation};
+    window.TGGWorldDepth={version:VERSION,getStatus,spawnBeat,spawnBeatFor,completeBeat,npcDialogue,interactNPC,chooseNpcApproach,recalc,beatNavigation};
     window.dispatchEvent(new CustomEvent('tgg:v460-ready',{detail:getStatus()}));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

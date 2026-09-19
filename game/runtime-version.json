@@ -3,7 +3,7 @@
   "canonical_runtime": "V4.30 DAILY ROUTINE WELLNESS SCHEDULE WORLD MEGA",
   "source_snapshot": "tgg-browser-worker/mega-game-snapshot",
   "rollback_branch": "rollback/game-v200-live-08710f3",
-  "verification": "v420_production_deployed_browser_certified",
+  "verification": "v430_production_deployed_browser_certified",
   "consolidation": "all-compatible-layers-one-runtime",
   "base_runtime": "V4.20 SOCIAL NETWORK CITY STATUS MEGA",
   "features": [
@@ -158,18 +158,18 @@
     "opportunity_wellness_modifier",
     "routine_consequence_loop"
   ],
-  "release_gate": "v430_validation_pending",
+  "release_gate": "closed_certified",
   "production": {
-    "deployment_id": "dpl_6ZquXHa14HRcvhP396diUv5hxnAB",
-    "deployment_url": "tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app",
+    "deployment_id": "dpl_Ak9WHsgpMW6aUQXLZDLrivGgaJ6t",
+    "deployment_url": "tgg-world-play-qgj9m0r56-olandusgood-8594.vercel.app",
     "target": "production",
     "state": "READY",
-    "commit": "6c6e241cb4bcc187639eb93a6a8acb8c8ad14c56",
+    "commit": "e410ae48401c1aa52133f52835e03efb3480e171",
     "runtime_errors_last_hour": 0,
-    "browser_gate": "PENDING_V430_REVALIDATION",
+    "browser_gate": "PASS",
     "public_alias": "https://tgg-world-play.vercel.app",
-    "browser_cert_run_id": 35443380948,
-    "browser_cert_artifact_id": 10585135256,
-    "browser_cert_artifact_digest": "sha256:65f99750ff4502f70bd5098e66a264ec1c8474f48fc9f114fe18781478cee627"
+    "browser_cert_run_id": 35443619578,
+    "browser_cert_artifact_id": 10584661520,
+    "browser_cert_artifact_digest": "sha256:e478ffdf67a3a6649612ad40fbae3dfb8702f4d36c819be7ac39f580e353e122"
   }
 }

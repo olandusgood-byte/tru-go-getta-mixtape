@@ -1,8 +1,8 @@
 {
   "project": "TRU GO GETTA Game",
-  "version": "1.36",
-  "module": "GAME-V1.36",
-  "name": "World Simulation Bus + Scheduled Reactions + Cross-System Event Coordination",
+  "version": "1.39",
+  "module": "GAME-V1.39",
+  "name": "World Observability + Persistent World Analytics + Unified Gameplay Event Timeline",
   "workflow": [
     "BUILD",
     "TEST",
@@ -78,9 +78,13 @@
     "v1_34_world_simulation_bus": true,
     "v1_35_scheduled_world_reactions": true,
     "v1_36_cross_system_event_coordination": true,
-    "v1_36_local_state": true
+    "v1_36_local_state": true,
+    "v1_37_world_observability": true,
+    "v1_38_persistent_world_analytics": true,
+    "v1_39_unified_event_timeline": true,
+    "v1_39_local_state": true
   },
   "browserPolicy": "manual_only",
   "networkPolicy": "transport injection only",
-  "next": "V1.37 WORLD OBSERVABILITY + ACTIVITY TELEMETRY"
+  "next": "V1.40 WORLD STATE ORCHESTRATION + RECOVERY BUS"
 }

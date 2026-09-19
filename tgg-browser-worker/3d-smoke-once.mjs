@@ -98,7 +98,13 @@ async function run(){
       mp.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text())});
       await mp.setContent(html,{waitUntil:'domcontentloaded'});
       await mp.evaluate(()=>{
-        localStorage.clear();
+        const store={};
+        Object.defineProperty(window,'localStorage',{configurable:true,value:{
+          getItem:k=>Object.prototype.hasOwnProperty.call(store,k)?store[k]:null,
+          setItem:(k,v)=>{store[k]=String(v)},
+          removeItem:k=>{delete store[k]},
+          clear:()=>{Object.keys(store).forEach(k=>delete store[k])}
+        }});
         window.__qaScreen='game';
         window.__qaGame={x:50,y:55,heading:0,inVehicle:false,cash:1000,xp:100,level:4};
         window.__qaCareer={recordings:2,mixtapes:1,reputation:30,studioLevel:2};
@@ -347,7 +353,6 @@ async function run(){
       add('v225-respect-path',coreCheck.respect?.respect===24&&coreCheck.respect?.rivalry===16&&coreCheck.respect?.route==='RESPECT ROUTE',JSON.stringify(coreCheck.respect));
       add('v225-compete-path',coreCheck.compete?.rivalry===41&&coreCheck.compete?.respect===16&&coreCheck.compete?.route==='RIVAL ROUTE',JSON.stringify(coreCheck.compete));
       add('v225-collab-lock-without-strength',coreCheck.locked===null,JSON.stringify(coreCheck.locked));
-
       await page.setViewportSize({width:390,height:844});
       await page.evaluate(()=>{window.TGGV225.open();});
       await page.waitForTimeout(180);
@@ -697,8 +702,7 @@ async function run(){
         recording:window.TGGLifeOS?.careerOutcome?.('recording'),
         show:window.TGGLifeOS?.careerOutcome?.('show'),
         visual:window.TGGLifeOS?.careerOutcome?.('visual'),
-        training:window.TGGLifeOS?.careerOutcome?.('training'),
-        release:window.TGGLifeOS?.careerOutcome?.('release')
+        training:window.TGGLifeOS?.careerOutcome?.('training'),        release:window.TGGLifeOS?.careerOutcome?.('release')
       }));
       add('v222-title',snap.title.includes('V2.22 RELATIONSHIP PERKS'),snap.title);
       add('v222-life-version',snap.version==='V2.22',snap.version);
@@ -1047,8 +1051,7 @@ async function run(){
         title:document.getElementById('storyCineTitle')?.textContent||'',
         badge:document.getElementById('storyCineBadge')?.textContent||'',
         type:document.getElementById('storyCineType')?.textContent||'',
-        camera:window.TGG3D.getCameraMode()
-      }));
+        camera:window.TGG3D.getCameraMode()      }));
       add('v220-story-event-integration',snap.cine?.lastEvent?.type==='chapter-start'&&snap.cine?.lastEvent?.chapter===1,JSON.stringify(snap.cine));
       add('v220-chapter-visible',snap.cine?.visible===true&&String(snap.cine?.className||'').includes('chapter'),snap.cine?.className);
       add('v220-chapter-copy',snap.kicker.includes('CHAPTER 1')&&snap.title==='FIRST CONTRACT',JSON.stringify(snap));
@@ -1397,8 +1400,7 @@ async function run(){
           density:status.density,
           citizens:window.TGGStreetPresence.citizens.filter(x=>x.visible).length,
           social:window.TGGStreetPresence.socialPeople.filter(x=>x.visible).length,
-          total:status.totalStreetPopulation
-        };
+          total:status.totalStreetPopulation        };
       });
       add('street-high-density',snap.density==='HIGH'&&snap.citizens===14&&snap.social===8&&snap.total>=28,JSON.stringify(snap));
 
@@ -1747,8 +1749,7 @@ async function run(){
         window.__qaContent={completed:['flyer-run']};
         window.__qaLife={battleWins:1,shows:1,activeOpportunity:null,contacts:{}};
         window.__qaShown='game'; window.__qaToasts=[];
-        window.TGGGame={
-          getState:()=>window.__qaGame,
+        window.TGGGame={          getState:()=>window.__qaGame,
           getActiveScreen:()=>window.__qaShown,
           show:id=>{window.__qaShown=id;return true},
           reward:(cash,xp)=>{window.__qaGame.cash+=Number(cash)||0;window.__qaGame.xp+=Number(xp)||0;return true}
@@ -2098,7 +2099,6 @@ async function run(){
       record('story-mobile-shell-contained',!!layout.shell&&layout.shell.left>=0&&layout.shell.right<=layout.width+1,JSON.stringify(layout.shell));
       record('story-mobile-one-column',!!layout.columns&&!layout.columns.includes(' '),layout.columns);
       record('story-mobile-action-readable',!!layout.action&&layout.action.height>=50&&layout.action.width>=300,JSON.stringify(layout.action));
-
       result={ok:checks.every(x=>x.pass)&&errors.length===0,status:'done',mode:'story_mission_harness',target:TARGET,checks,page_errors:errors,updated_at:new Date().toISOString()};
       console.log(JSON.stringify({tgg_3d_smoke_once:true,...result}));
       await mobile.close();await ctx.close();return;
@@ -2447,8 +2447,7 @@ async function run(){
         window.__qaCalls=[];
         window.__qaActions=[];
         window.__qaPad={
-          connected:true,
-          axes:[0,0,0,0],
+          connected:true,          axes:[0,0,0,0],
           buttons:Array.from({length:16},()=>({pressed:false,value:0}))
         };
         Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.__qaPad]});
@@ -2797,8 +2796,7 @@ async function run(){
         const tuning=window.TGGGame?.getDriveTuning?.();
         const paint=window.TGG3D?.car?.userData?.bodyMaterial?.color?.getHexString?.();
         const stored=JSON.parse(localStorage.getItem('tgg-garage-v1')||'null');
-        return {before,after,tuning,paint,stored};
-      });
+        return {before,after,tuning,paint,stored};      });
       record('garage-paint-runtime',garageResult.paint==='ff315f',JSON.stringify(garageResult));
       record('garage-tune-runtime',Number(garageResult.tuning?.maxForward)>10,JSON.stringify(garageResult.tuning));
       record('garage-persistence',garageResult.stored?.color==='#ff315f'&&garageResult.stored?.tuning==='sport',JSON.stringify(garageResult.stored));

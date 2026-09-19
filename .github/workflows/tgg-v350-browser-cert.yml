@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      TGG_URL: "https://tgg-world-play-1mmj4vno6-olandusgood-8594.vercel.app/?_vercel_share=m6LHf9lssRva3VUWcRZjOCOL8oxq0FUU"
+      TGG_URL: "https://tgg-world-play.vercel.app"
     steps:
       - uses: actions/checkout@v4
 

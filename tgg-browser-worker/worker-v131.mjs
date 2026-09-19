@@ -11,7 +11,7 @@ import { buildStoredSupabaseSession } from './access-session.mjs';
 import { protectedAudioBrowserFlow } from './protected-audio-browser-flow.mjs';
 import { prepareTrustedQaNavigationResponse } from './qa-navigation-response.mjs';
 import { runMultiFlowBrowser } from './multi-flow-browser-runner.mjs';
-import { tggCoreEnabled, tggWorkerHeartbeat, tggWorkerClaim, tggWorkerRecoverCertification, tggWorkerComplete, tggStoreOwnerRefreshToken, tggRestoreOwnerRefreshToken, tggWorkerGetBrowserCredential, tggWorkerBootstrap, tggWorkerRegister } from './tgg-core-client.mjs';
+import { tggCoreEnabled, tggWorkerHeartbeat, tggWorkerClaim, tggWorkerRecoverCertification, tggWorkerComplete, tggStoreOwnerRefreshToken, tggRestoreOwnerRefreshToken, tggWorkerGetBrowserCredential, tggWorkerBootstrap, tggWorkerRegister, tggEnsureCertification } from './tgg-core-client.mjs';
 
 const SUPABASE_URL = process.env.TGG_SUPABASE_URL || 'https://xsofowzvwetamhyuvlpj.supabase.co';
 const SUPABASE_KEY = process.env.TGG_SUPABASE_KEY || 'sb_publishable_mJQg4LjW-9KsW5B1zzJH8Q_e-kA-bbv';
@@ -344,9 +344,23 @@ async function finishOwnerEnrollment(access, refresh) {
     try{ await persistOwnerRefreshToken(workerId,workerToken,refresh); sessionPersisted=true; }
     catch(error){ persistError=error?.message||String(error); console.error(JSON.stringify({tgg_owner_enroll:true,stage:'session_persist',ok:false,attempt,reason:persistError})); if(attempt<3)await new Promise(r=>setTimeout(r,attempt*500)); }
   }
+  let certificationEnsured=false;
+  let certificationError=null;
+  try{
+    const email=String(owner?.user?.email||'').toLowerCase().trim();
+    if(email){
+      const ensured=await tggEnsureCertification(email,'protected_audio_runtime');
+      certificationEnsured=Boolean(ensured?.certification||ensured?.job||ensured?.created);
+    }else{
+      certificationError='owner_email_missing';
+    }
+  }catch(error){
+    certificationError=error?.message||String(error);
+    console.error(JSON.stringify({tgg_owner_enroll:true,stage:'ensure_certification',ok:false,reason:certificationError}));
+  }
   scheduleBootstrapLoop(loop);
-  console.log(JSON.stringify({tgg_owner_enroll:true,stage:'session_ready',ok:true,session_persisted:sessionPersisted,persist_error:persistError||null}));
-  return {ok:true,status:sessionPersisted?200:202,body:{ok:true,worker_id:workerId,version:RUNTIME_VERSION,certification_started:true,session_persisted:sessionPersisted,persistence_warning:sessionPersisted?null:'session_memory_only'}};
+  console.log(JSON.stringify({tgg_owner_enroll:true,stage:'session_ready',ok:true,session_persisted:sessionPersisted,certification_ensured:certificationEnsured,persist_error:persistError||null,certification_error:certificationError||null}));
+  return {ok:true,status:(sessionPersisted&&certificationEnsured)?200:202,body:{ok:true,worker_id:workerId,version:RUNTIME_VERSION,certification_started:certificationEnsured,session_persisted:sessionPersisted,persistence_warning:sessionPersisted?null:'session_memory_only',certification_warning:certificationEnsured?null:(certificationError||'certification_not_created')}};
 }
 
 app.post('/enroll/password', async (req,res)=>{

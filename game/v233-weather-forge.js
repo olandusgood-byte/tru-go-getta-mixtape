@@ -143,7 +143,9 @@
   function rebuildVisuals(){
     if(!hasDOM())return false;
     const s=scene(),THREE=T();if(!s||!THREE)return false;
+    if(state.root?.parent)state.root.parent.remove(state.root);
     [state.rain,state.mist,state.wet,state.puddles,state.cloud,state.lightning].forEach(disposeObject);
+    state.root=null;
     const q=quality(),budget=core()?.particleBudget?.(q)||240;
     state.rain=makeRain(budget);
     state.mist=makeMist(q==='performance'?24:q==='balanced'?44:70);
@@ -163,7 +165,7 @@
     state.wet?.children?.forEach(m=>{m.material.opacity=on?c.wetness*.22:0;m.material.roughness=.48-c.wetness*.34});
     state.puddles?.children?.forEach(m=>{m.material.opacity=on?c.wetness*.32:0});
     if(state.cloud?.material)state.cloud.material.opacity=on?c.cloud*.18:0;
-    applyFog();
+    if(on)applyFog();else restoreFog();
   }
 
   function applyPreset(id='clear'){
@@ -326,7 +328,7 @@
   if(hasDOM()){
     window.TGGV233=api;
     document.addEventListener('keydown',keyHandler);
-    window.addEventListener('tgg:lighting-mood',()=>{captureFogBaseline();rebaseFog()});
+    window.addEventListener('tgg:lighting-mood',()=>{captureFogBaseline();if(state.enabled)applyFog()});
     ensureUI();requestAnimationFrame(tick);
   }
 })();

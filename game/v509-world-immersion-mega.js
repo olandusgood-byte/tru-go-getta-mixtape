@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const VERSION='5.09.0';
+  const VERSION='5.9.0';
   const KEY='tgg-world-immersion-v509';
   const defaults={
     choices:0,worldCompletions:0,storyTransitions:0,

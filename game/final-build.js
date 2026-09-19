@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='V2.37 TGG AUDIO + AMBIENCE FORGE 100';
+  const VERSION='V2.38 TGG EFFECTS + IMPACT FORGE 100';
   const startedAt=Date.now();
   let quality='high';
   let autosaves=0;

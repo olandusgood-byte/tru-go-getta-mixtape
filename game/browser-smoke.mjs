@@ -1439,6 +1439,12 @@ try{
   const continuityFailures=continuity.filter(x=>!x.ok||Object.values(x.checks).some(v=>!v)||!(x.policy==='local-only'||String(x.policy).startsWith('local_')));
   if(continuityFailures.length)throw new Error('Continuity failed '+JSON.stringify(continuityFailures));
 
+  await page.waitForFunction(()=>window.TGGStreetRacing?.getStatus?.()?.ok===true,{timeout:30000});
+  const streetRacing=await page.evaluate(()=>window.TGGStreetRacing.getStatus());
+  if(streetRacing.routes!==4||streetRacing.totalCheckpoints!==28||streetRacing.navigationIntegrated!==true||streetRacing.worldScale<2.5){
+    throw new Error('V7.54-V7.62 street racing runtime failed '+JSON.stringify(streetRacing));
+  }
+
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
   console.log(JSON.stringify({ok:true,title,moved,moveAttempt,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status,worldInteract:worldInteractionResult.completed?.id||true,npcChoice:relationResolved.snap.lastResolved.choice,npcAffinity:relationResolved.after.relation.affinity,npcFavor:favorResult.favor.lastFavor.beat,favorOutcome:obligationResolved.contact.lastOutcome.type,contactAffinity:obligationResolved.relation.relation.affinity,careerContract:contractStarted.contract.active.id,contractOutcome:completedContract.id,contractAffinity:contractResolved.relation.relation.affinity,phoneContacts:phoneState.cards,incomingCall:incomingAccepted.calls.lastResult.call.name,messageThread:messageReply.last.name,messageReply:messageReply.last.text,meetupContact:meetupResolved.meetup.lastCompleted.name,callSession:callSessionEnded.session.lastEnded.name,districtReaction:districtReaction.reaction.lastReaction.tier}));

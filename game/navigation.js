@@ -6,7 +6,8 @@
     const arrow=document.getElementById('navArrow');
     if(!root||!label||!distance||!arrow)return;
 
-    function toWorld(s){return {x:((Number(s?.x)||50)-50)*.92,z:((Number(s?.y)||50)-50)*.92};}
+    function worldScale(){return Number(window.TGG3D?.WORLD_SCALE)||2.75;}
+    function toWorld(s){const scale=worldScale();return {x:((Number(s?.x)||50)-50)*scale,z:((Number(s?.y)||50)-50)*scale};}
     function targetFor(s){
       const story=window.TGGStoryMissions?.navigationTarget?.();
       if(story){
@@ -56,6 +57,11 @@
           arrived:!!encounter.arrived
         };
       }
+      const raceTarget=window.TGGStreetRacing?.navigationTarget?.();
+      if(raceTarget){
+        const p=toWorld(raceTarget);
+        return {label:'RACE • '+(raceTarget.label||'CHECKPOINT'),x:p.x,z:p.z,color:raceTarget.color||'#ff4d3d',radius:Number(raceTarget.radius)||8,streetRace:true,arrived:!!raceTarget.arrived};
+      }
       const streetMission=window.TGGStreetMissions?.navigationTarget?.();
       if(streetMission){
         const p=toWorld(streetMission);
@@ -68,7 +74,7 @@
           arrived:!!streetMission.arrived
         };
       }
-      if(s?.accepted)return {label:'MISSION',x:(72-50)*.92,z:(36-50)*.92,color:'#ff466d'};
+      if(s?.accepted)return {label:'MISSION',x:(72-50)*worldScale(),z:(36-50)*worldScale(),color:'#ff466d'};
       const p=toWorld(s);
       const ds=window.TGG3D?.destinations||[];
       let best=null,bestDist=Infinity;
@@ -105,6 +111,7 @@
       root.classList.toggle('meetup-active',!!t.meetup);
       root.classList.toggle('encounter-active',!!t.encounter);
       root.classList.toggle('street-mission-active',!!t.streetMission);
+      root.classList.toggle('street-race-active',!!t.streetRace);
       root.classList.add('active');
       requestAnimationFrame(update);
     }

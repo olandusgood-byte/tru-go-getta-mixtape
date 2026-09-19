@@ -6,6 +6,7 @@
     tick:0, districtPressure:22, opportunityHeat:18, propertyUtility:0,
     socialMomentum:25, npcTrust:18, missionIntensity:1, activeBeat:null,
     history:[], npcStates:{M:'working','DJ V':'networking',Kane:'studio','Rico Flame':'street'},
+    npcInteractions:{M:0,'DJ V':0,Kane:0,'Rico Flame':0}, lastNpcChoice:null,
     lastEventAt:0
   };
   let state=load();
@@ -135,6 +136,35 @@
     if(trust>=40)return name+': I got something for you if you stay locked in. • '+status.toUpperCase();
     return name+': Build your name and keep showing up. • '+status.toUpperCase();
   }
+  function chooseNpcApproach(name,approach='professional'){
+    recalc();updateNpcStates();
+    const valid=['professional','street','loyal'];
+    approach=valid.includes(approach)?approach:'professional';
+    const pressure=Number(state.districtPressure)||0;
+    const trustBefore=Number(state.npcTrust)||0;
+    const delta=approach==='professional'?(pressure>60?1:3):approach==='loyal'?4:(pressure>55?3:-1);
+    state.npcTrust=clamp(state.npcTrust+delta);
+    state.socialMomentum=clamp(state.socialMomentum+(approach==='street'?3:approach==='loyal'?2:1));
+    if(approach==='street')window.TGGWorldSystems?.applyConsequence?.('street approach with '+name,pressure>65?2:1);
+    if(approach==='professional')window.TGGWorldSystems?.coolConsequence?.(1);
+    state.lastNpcChoice={name,approach,delta,trustBefore,trustAfter:state.npcTrust,at:Date.now()};
+    state.history.push({type:'npc-choice',name,approach,delta,at:Date.now()});
+    state.history=state.history.slice(-40);
+    save();render();
+    return {...state.lastNpcChoice,status:state.npcStates[name]||'around',dialogue:npcDialogue(name)};
+  }
+  function interactNPC(name){
+    if(!Object.prototype.hasOwnProperty.call(state.npcStates,name))return {ok:false,status:'unknown_npc',name};
+    state.npcInteractions[name]=(Number(state.npcInteractions[name])||0)+1;
+    const pressure=Number(state.districtPressure)||0;
+    const approach=state.npcTrust>=55?'professional':pressure>=55?'street':'loyal';
+    const result=chooseNpcApproach(name,approach);
+    const line=result.dialogue;
+    window.TGGGameFeel?.objective?.(name,line);
+    if(name==='M'&&state.npcTrust>=35&&!state.activeBeat)spawnBeat(true);
+    return {ok:true,name,approach,interactionCount:state.npcInteractions[name],...result};
+  }
+
   function tick(){
     state.tick++;recalc();updateNpcStates();
     if(state.activeBeat&&Date.now()>state.activeBeat.expiresAt){
@@ -185,12 +215,12 @@
     'cross-system-world-orchestrator','dynamic-npc-schedules','npc-trust-dialogue','district-pressure-simulation',
     'adaptive-world-opportunities','mission-intensity-scaling','property-utility-world-effects','social-momentum-effects',
     'time-limited-world-beats','cross-system-rewards-consequences','physical-world-beat-routing',
-    'arrival-gated-world-beat-completion','heading-aware-world-navigation'
+    'arrival-gated-world-beat-completion','heading-aware-world-navigation','physical-npc-proximity-interaction','trust-branching-npc-consequences'
   ]}}
   function boot(){
     ensure();bind();tick();setInterval(tick,5000);
     document.documentElement.dataset.tggV460='on';
-    window.TGGWorldDepth={version:VERSION,getStatus,spawnBeat,completeBeat,npcDialogue,recalc,beatNavigation};
+    window.TGGWorldDepth={version:VERSION,getStatus,spawnBeat,completeBeat,npcDialogue,interactNPC,chooseNpcApproach,recalc,beatNavigation};
     window.dispatchEvent(new CustomEvent('tgg:v460-ready',{detail:getStatus()}));
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();

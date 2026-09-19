@@ -281,7 +281,8 @@
     {id:'shops',label:'SHOP DISTRICT',buttonId:'shopsBtn',x:-12,z:24,color:0x48d7ff},
     {id:'home',label:'MY APARTMENT',buttonId:'homeBtn',x:12,z:-24,color:0xffc84a},
     {id:'media',label:'MEDIA DISTRICT',buttonId:'mediaBtn',x:0,z:36,color:0xc56cff},
-    {id:'business',label:'BUSINESS',buttonId:'businessBtn',x:-36,z:0,color:0xc7ff00}
+    {id:'business',label:'BUSINESS',buttonId:'businessBtn',x:-36,z:0,color:0xc7ff00},
+    {id:'garage',label:'GARAGE',buttonId:'garageBtn',x:24,z:-24,color:0x7a8cff}
   ];
   const destinations=destinationDefs.map(d=>{
     const group=new THREE.Group();
@@ -336,23 +337,25 @@
     const interactButton=ensureInteractButton();
     if(!interactButton)return {ready:false,reason:'missing-actions-deck'};
     const near=nearbyDestination(s);
+    const person=nearbyNamedNpc(s);
     const storyTarget=window.TGGStoryMissions?.navigationTarget?.();
     const storyHere=!!storyTarget?.arrived;
     const worldBeat=window.TGGWorldDepth?.beatNavigation?.();
     const beatHere=!!worldBeat?.arrived;
     const storyStatus=storyHere?window.TGGStoryMissions?.status?.():null;
-    interactButton.disabled=!near&&!storyHere&&!beatHere;
+    interactButton.disabled=!near&&!person&&!storyHere&&!beatHere;
     interactButton.textContent=storyHere
       ?'DO '+String(storyStatus?.current?.title||storyTarget?.label||'STORY OBJECTIVE').toUpperCase()
       :beatHere
         ?'DO '+String(worldBeat?.label||'WORLD BEAT').toUpperCase()
-        :near?'ENTER '+near.label:'INTERACT';
-    interactButton.classList.toggle('nearby',!!near||storyHere||beatHere);
+        :person?'TALK TO '+person.name.toUpperCase():near?'ENTER '+near.label:'INTERACT';
+    interactButton.classList.toggle('nearby',!!near||!!person||storyHere||beatHere);
     interactButton.classList.toggle('story-ready',storyHere);
     interactButton.classList.toggle('world-beat-ready',beatHere);
     return {
       ready:!interactButton.disabled,
       near:near?.id||null,
+      person:person?.name||null,
       storyHere,
       beatHere,
       text:String(interactButton.textContent||'').trim()
@@ -375,10 +378,15 @@
         return true;
       }
     }
-    const d=nearbyDestination(window.TGGGame?.getState?.());
-    if(!d){window.__tggToast?.('MOVE CLOSER TO AN OBJECTIVE OR 3D DESTINATION');return false;}
+    const gameState=window.TGGGame?.getState?.();
+    const person=nearbyNamedNpc(gameState);
+    if(person)return interactNamedNpc(person.name);
+    const d=nearbyDestination(gameState);
+    if(!d){window.__tggToast?.('MOVE CLOSER TO AN NPC, OBJECTIVE OR 3D DESTINATION');return false;}
     const button=document.getElementById(d.buttonId);
     if(!button){window.__tggToast?.(d.label+' IS NOT READY YET');return false;}
+    const propertyId=d.id==='home'?'apartment':d.id==='studio'?'studio':d.id==='business'?'office':d.id==='garage'?'garage':null;
+    if(propertyId)window.TGGWorldSystems?.useProperty?.(propertyId);
     window.__tggToast?.('ENTERING '+d.label);
     button.click();
     return true;
@@ -436,6 +444,75 @@
     scene.add(human);
     return human;
   });
+
+  const namedNpcDefs=[
+    {name:'M',color:0x3b82f6,skin:0x8c5d40,home:{x:72,y:36},schedule:{planning:{x:68,y:34},meetings:{x:58,y:46},managing:{x:72,y:36},working:{x:72,y:36}}},
+    {name:'DJ V',color:0xa855f7,skin:0x9d6a49,home:{x:52,y:68},schedule:{networking:{x:52,y:68},club:{x:48,y:72},'event-hosting':{x:50,y:62}}},
+    {name:'Kane',color:0xff8a3d,skin:0xb98562,home:{x:24,y:37},schedule:{studio:{x:24,y:37},offline:{x:18,y:30}}},
+    {name:'Rico Flame',color:0xff3b30,skin:0x8c5d40,home:{x:76,y:63},schedule:{street:{x:74,y:62},nearby:{x:78,y:64}}}
+  ];
+  const namedNpcs=namedNpcDefs.map((def,i)=>{
+    const human=makeHuman(def.color,def.skin);
+    human.scale.set(.86,.86,.86);
+    human.userData.namedNpc=true;
+    human.userData.name=def.name;
+    human.userData.schedule=def.schedule;
+    human.userData.home=def.home;
+    human.userData.walkPhase=i*.8;
+    const p=toWorld(def.home);
+    human.position.set(p.x,0,p.z);
+    const label=makeTextSprite(def.name,'#'+new THREE.Color(def.color).getHexString());
+    label.position.y=5.1;
+    label.scale.set(5.4,1.35,1);
+    human.add(label);
+    scene.add(human);
+    return human;
+  });
+  function syncNamedNpcs(dt){
+    const status=window.TGGWorldDepth?.getStatus?.()||{};
+    const states=status.npcStates||{};
+    namedNpcs.forEach(h=>{
+      const npcState=states[h.userData.name]||'around';
+      const targetPct=h.userData.schedule?.[npcState]||h.userData.home;
+      const target=toWorld(targetPct);
+      const dx=target.x-h.position.x,dz=target.z-h.position.z;
+      const dist=Math.hypot(dx,dz);
+      if(dist>.08){
+        const step=Math.min(dist,dt*(npcState==='offline'?.8:1.45));
+        h.position.x+=dx/dist*step;
+        h.position.z+=dz/dist*step;
+        h.rotation.y=Math.atan2(dx,dz);
+        h.userData.walkPhase+=dt*6.5;
+        const p=h.userData.parts;
+        if(p){
+          const swing=Math.sin(h.userData.walkPhase)*.45;
+          p.leftArm.rotation.x=swing;p.rightArm.rotation.x=-swing;
+          p.leftLeg.rotation.x=-swing*.75;p.rightLeg.rotation.x=swing*.75;
+        }
+      }
+      h.userData.state=npcState;
+    });
+  }
+  function nearbyNamedNpc(s,radius=8.5){
+    const p=toWorld(s);
+    let best=null,bestDist=Infinity;
+    for(const h of namedNpcs){
+      const d=Math.hypot(p.x-h.position.x,p.z-h.position.z);
+      if(d<bestDist){bestDist=d;best=h;}
+    }
+    return best&&bestDist<=radius*.92?{name:best.userData.name,state:best.userData.state||'around',distance:bestDist,human:best}:null;
+  }
+  function interactNamedNpc(name){
+    const result=window.TGGWorldDepth?.interactNPC?.(name);
+    if(result?.ok){
+      const dialogue=String(result.dialogue||name+' is ready to talk.');
+      const box=document.getElementById('npcDialogue');
+      if(box)box.textContent=dialogue;
+      window.__tggToast?.(name+' • '+String(result.approach||'talk').toUpperCase());
+      return true;
+    }
+    return false;
+  }
 
   const trafficDefs=[
     {axis:'x',lane:-24,dir:1,speed:5.4,offset:4,color:0xff4d67},
@@ -582,6 +659,7 @@
     });
     if(car.userData.headGlow)car.userData.headGlow.intensity=s.inVehicle?4.8:2.2;
     pedestrians.forEach(h=>animatePedestrian(h,dt));
+    syncNamedNpcs(dt);
     traffic.forEach(v=>animateTraffic(v,t,dt));
 
     const subject=s.inVehicle?car.position:player.position;
@@ -684,6 +762,9 @@
     ensureInteractButton,
     refreshInteractionState,
     interactNearest,
+    nearbyNamedNpc,
+    interactNamedNpc,
+    namedNpcs,
     pedestrians,
     traffic,
     cycleCamera,

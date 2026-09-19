@@ -40,31 +40,41 @@ for(const src of scripts){
   const scriptPath=path.join(root,src);assert(fs.existsSync(scriptPath)&&fs.statSync(scriptPath).isFile(),'Missing script referenced by index.html: '+src);
 }
 
-// Auto-discover additive V1.88+ and V2.xx gameplay layers so new builder checkpoints
-// cannot load without exposing a verifiable, evidence-based local runtime contract.
-const additiveLayers=scripts
-  .map(src=>{
-    const v1=/^v1(\d{2})-[^/]+\.js$/.exec(src);
-    const v2=/^v2(\d{2})-[^/]+\.js$/.exec(src);
-    if(v1&&Number(v1[1])>=88)return{src,major:1,minor:Number(v1[1]),runtimeNumber:100+Number(v1[1])};
-    if(v2)return{src,major:2,minor:Number(v2[1]),runtimeNumber:200+Number(v2[1])};
-    return null;
-  })
-  .filter(Boolean);
-for(const layer of additiveLayers){
-  const source=read(layer.src);
-  const runtimeToken='window.TGGV'+layer.runtimeNumber;
-  const legacyToken=layer.major===1?'window.TGGV'+layer.minor:null;
-  const hasRuntime=source.includes(runtimeToken)||(legacyToken&&source.includes(legacyToken));
-  const versionPattern=layer.major===1
-    ? new RegExp("(?:VERSION|V)\\s*=\\s*['\"]1\\.(?:"+layer.minor+"|"+layer.runtimeNumber+")\\.\\d+['\"]")
-    : new RegExp("(?:VERSION|V)\\s*=\\s*['\"]2\\."+layer.minor+"\\.\\d+['\"]");
-  assert(hasRuntime,'Missing additive runtime export '+runtimeToken+' in '+layer.src);
-  assert(versionPattern.test(source),'Missing matching semantic version in '+layer.src);
-  assert(!/\bok\s*:\s*true\b/.test(source),'False-green audit/gate is forbidden in '+layer.src+'; derive ok from evidence');
-  assert(/\.snapshot\b|getState\b|document\.|performance\b/.test(source),'Evidence-free runtime audit forbidden in '+layer.src);
+// Auto-discover additive runtime files. Single-version and bulk-range files use
+// different discovery rules; both remain fail-closed for secrets and false-green evidence.
+const additiveFiles=scripts.filter(src=>{
+  const single=/^v(\d)(\d{2})-(?!v\d{3}-)[^/]+\.js$/.exec(src);
+  const bulk=/^v(\d{3})-v(\d{3})-bulk-[^/]+\.js$/.exec(src);
+  if(bulk)return Number(bulk[2])>=188;
+  if(single){
+    const n=Number(single[1])*100+Number(single[2]);
+    return n>=188;
+  }
+  return false;
+});
+for(const src of additiveFiles){
+  const source=read(src);
+  const bulk=/^v(\d{3})-v(\d{3})-bulk-[^/]+\.js$/.exec(src);
+  const runtimeExports=[...source.matchAll(/window\.TGGV(\d{2,3})\b/g)].map(m=>Number(m[1]));
+  assert(runtimeExports.length>0,'Missing additive runtime export in '+src);
+  if(!bulk){
+    const m=/^v(\d)(\d{2})-/.exec(src);
+    const physical=Number(m[1])*100+Number(m[2]);
+    const legacy=Number(m[2]);
+    assert(runtimeExports.includes(physical)||(Number(m[1])===1&&runtimeExports.includes(legacy)),'Missing expected runtime export TGGV'+physical+' in '+src);
+    const semantic=new RegExp("(?:VERSION|V)\\s*=\\s*['\"]"+Number(m[1])+"\\."+Number(m[2])+"\\.\\d+['\"]");
+    const legacyVersion=new RegExp("version\\s*:\\s*['\"]V"+physical+"['\"]");
+    assert(semantic.test(source)||legacyVersion.test(source),'Missing matching version identity in '+src);
+  }else{
+    const lo=Number(bulk[1]),hi=Number(bulk[2]);
+    assert(runtimeExports.some(n=>n>=lo&&n<=hi),'Bulk runtime range has no matching exports in '+src);
+    assert(/(?:VERSION|version)\s*[:=]\s*['\"](?:\d+\.\d+\.\d+|V\d+)['\"]/.test(source),'Bulk runtime file has no version identity in '+src);
+  }
+  assert(!/\bok\s*:\s*true\b/.test(source),'False-green audit/gate is forbidden in '+src+'; derive ok from evidence');
+  assert(/\.snapshot\b|getState\b|document\.|performance\b/.test(source),'Evidence-free runtime audit forbidden in '+src);
+  assert(/mutationPolicy\s*:\s*['\"]local(?:_|-)/.test(source)||/POLICY\s*=\s*['\"]local(?:_|-)/.test(source),'Non-local mutation policy in '+src);
   for(const forbidden of ['SUPABASE_SERVICE_ROLE_KEY','sb_secret_','sk_live_']){
-    assert(!source.includes(forbidden),'Forbidden secret marker in '+layer.src+': '+forbidden);
+    assert(!source.includes(forbidden),'Forbidden secret marker in '+src+': '+forbidden);
   }
 }
 

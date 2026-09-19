@@ -81,9 +81,18 @@
       const payout=Math.round(35*lvl*(1+propertyBonus().income));
       window.TGGGame?.reward?.(payout,Math.max(2,lvl));
       state.cityRep=clamp(state.cityRep+lvl*.5,0,999);
-      window.TGGGameFeel?.objective?.('OFFICE BUSINESS MOVE','+    const r=life().relationships||{};
+      window.TGGGameFeel?.objective?.('OFFICE BUSINESS MOVE','+$'+payout+' • REP UP');
+    }
+    state.careerScore+=2+lvl;
+    save();render();
+    return {ok:true,status:'used',id,level:lvl,uses:state.propertyUses[id]};
+  }
+
+  function relationScore(){
+    const r=life().relationships||{};
     return Object.values(r).reduce((a,b)=>a+(Number(b)||0),0);
   }
+
   function reputationTier(){
     const v=state.cityRep;
     return v>=180?'CITY ICON':v>=120?'HEADLINER':v>=70?'CITY KNOWN':v>=30?'LOCAL NAME':'NEW FACE';

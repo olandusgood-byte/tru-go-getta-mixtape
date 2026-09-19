@@ -81,9 +81,10 @@ try{
     const guide=story?.routeGuide?.()||null;
     const beat=world?.spawnBeat?.(true)||null;
     const nav=world?.beatNavigation?.()||null;
+    const cityNav=window.TGGNavigation?.getTarget?.()||null;
     const guard=world?.completeBeat?.()||null;
     const worldStatus=world?.getStatus?.()||null;
-    return {api,checkpoint,missionOps,guide,beat,nav,guard,worldStatus};
+    return {api,checkpoint,missionOps,guide,beat,nav,cityNav,guard,worldStatus};
   });
   const gameplayFeatures=gameplayMega.worldStatus?.features||[];
   const gameplayApiOk=Object.values(gameplayMega.api).every(Boolean);
@@ -94,6 +95,7 @@ try{
      !gameplayMega.guide?.objective||
      !target||!Number.isFinite(Number(target.x))||!Number.isFinite(Number(target.y))||
      !gameplayMega.nav||gameplayMega.nav.arrived!==false||!(gameplayMega.nav.meters>0)||
+     gameplayMega.cityNav?.worldBeat!==true||!(gameplayMega.cityNav?.meters>0)||!/WORLD/i.test(String(gameplayMega.cityNav?.label||''))||
      gameplayMega.guard?.status!=='travel_required'||
      !['physical-world-beat-routing','arrival-gated-world-beat-completion','heading-aware-world-navigation'].every(x=>gameplayFeatures.includes(x))){
     throw new Error('V4.60/Mission Ops gameplay contract failed '+JSON.stringify(gameplayMega));
@@ -237,7 +239,7 @@ try{
 
   const benign=errors.filter(x=>!/favicon|audio.*not allowed|autoplay/i.test(x));
   if(benign.length)throw new Error(benign.join('\n'));
-  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,worldTravelGuard:gameplayMega.guard.status}));
+  console.log(JSON.stringify({ok:true,title,moved,moveKey,driven,driveAttempt,camera:handlingContract.camera,layers:layerCheck.additive.length,continuity:continuity.length,missionOps:true,worldRouteMeters:gameplayMega.nav.meters,cityNavWorldBeat:gameplayMega.cityNav.worldBeat,worldTravelGuard:gameplayMega.guard.status}));
 }finally{
   await browser.close();
 }

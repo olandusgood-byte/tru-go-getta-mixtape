@@ -19,6 +19,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: game-v218-mega-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   v218-mega:
     runs-on: ubuntu-latest

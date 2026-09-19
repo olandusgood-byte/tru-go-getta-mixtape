@@ -43,6 +43,19 @@ if (!DATABASE_URL) {
         finished_at timestamptz
       );
       create index if not exists tgg_autopilot_runs_task_idx on tgg_autopilot_runs(task_key,started_at desc);
+      create table if not exists tgg_idea_queue (
+        id uuid primary key default gen_random_uuid(),
+        idea_key text not null unique,
+        title text not null,
+        category text not null,
+        rationale text not null,
+        priority integer not null default 0,
+        status text not null default 'new' check (status in ('new','accepted','rejected','implemented')),
+        source_snapshot jsonb not null default '{}'::jsonb,
+        created_at timestamptz not null default now(),
+        updated_at timestamptz not null default now()
+      );
+      create index if not exists tgg_idea_queue_status_idx on tgg_idea_queue(status,priority desc,created_at desc);
     `);
 
     await pool.query(`
@@ -72,7 +85,29 @@ if (!DATABASE_URL) {
     return r.rows[0];
   }
 
-  async function recoverExpiredJobs() {
+  async function generateIdeas(snapshot) {
+    const ideas = [];
+    if (Number(snapshot.code_issues || 0) > 0)
+      ideas.push(['resolve_open_code_issues','Resolve open code issues','reliability','Open issues exist in the source inventory and should be resolved before adding duplicate implementations.',100]);
+    if (Number(snapshot.change_queue || 0) > 0)
+      ideas.push(['drain_change_queue','Process pending change queue','automation','Existing queued changes should be reconciled through the source-of-truth pipeline.',90]);
+    ideas.push(['continuous_drift_scan','Run continuous architecture drift scan','governance','Compare live runtime, master inventory, code snapshots, and completion ledger before new work.',80]);
+    ideas.push(['idea_expansion_cycle','Generate next-wave product ideas from current inventory','innovation','Use completed capabilities and observed gaps to propose additive work without rebuilding completed components.',70]);
+    for (const [idea_key,title,category,rationale,priority] of ideas) {
+      await pool.query(
+        `insert into tgg_idea_queue(idea_key,title,category,rationale,priority,source_snapshot)
+         values($1,$2,$3,$4,$5,$6)
+         on conflict(idea_key) do update set
+           rationale=excluded.rationale,priority=greatest(tgg_idea_queue.priority,excluded.priority),
+           source_snapshot=excluded.source_snapshot,updated_at=now()
+         where tgg_idea_queue.status not in ('implemented','rejected')`,
+        [idea_key,title,category,rationale,priority,snapshot]
+      );
+    }
+    return {ideas_generated: ideas.length};
+  }
+
+  async function recoverExpiredJobs()
     const r = await pool.query(`
       update tgg_jobs
       set status='queued', available_at=now(), error=coalesce(error,'Recovered by TGG Autopilot')
@@ -104,7 +139,7 @@ if (!DATABASE_URL) {
     );
     try {
       let summary = {};
-      if (task.task_key === 'source_truth_audit') summary = await sourceTruthAudit();
+      if (task.task_key === 'source_truth_audit') { const snapshot = await sourceTruthAudit(); summary = {...snapshot, ...(await generateIdeas(snapshot))}; }
       if (task.task_key === 'job_queue_maintenance') summary = await recoverExpiredJobs();
       if (task.task_key === 'runtime_heartbeat') summary = await heartbeat();
 
@@ -146,7 +181,7 @@ if (!DATABASE_URL) {
         order by next_run_at asc
         for update skip locked limit 10
       `);
-      for (const task of due.rows) await runTask(task);
+      await Promise.all(due.rows.map(task => runTask(task)));
     } catch (e) {
       console.error('[TGG Autopilot] tick failed', e.message);
     } finally {

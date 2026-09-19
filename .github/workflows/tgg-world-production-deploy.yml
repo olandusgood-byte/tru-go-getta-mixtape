@@ -91,7 +91,7 @@ jobs:
           set -euo pipefail
           url="${{ steps.deploy.outputs.url }}"
           for attempt in 1 2 3 4 5; do
-            body="$(vercel curl "$url" --token="$VERCEL_TOKEN" 2>/tmp/vercel-curl.log || true)"
+            body="$(vercel curl "$url" 2>/tmp/vercel-curl.log || true)"
             cat /tmp/vercel-curl.log || true
             if grep -q 'GAME V2.50' <<<"$body" && grep -q 'city3d' <<<"$body"; then
               echo "TGG World production deployment verified: $url"

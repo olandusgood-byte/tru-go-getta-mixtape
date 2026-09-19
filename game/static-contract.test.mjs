@@ -24,11 +24,12 @@ const v320=read('v320-realism-mega.js');
 const v330=read('v330-motion-realism.js');
 const v340=read('v340-city-world-mega.js');
 const v350=read('v350-gamefeel-cinematic.js');
+const v360=read('v360-living-city.js');
 
-assert.match(html,/V3\.50 GAME FEEL CINEMATIC MEGA/i);
-assert.match(html,/GAME V3\.50 • GAME FEEL \+ CINEMATIC/);
-assert.equal(runtime.canonical_runtime,'V3.50 GAME FEEL CINEMATIC MEGA');
-assert.equal(runtime.base_runtime,'V3.40 CITY WORLD MEGA PASS');
+assert.match(html,/V3\.60 LIVING CITY REACTIVE WORLD MEGA/i);
+assert.match(html,/GAME V3\.60 • LIVING CITY \+ REACTIVE WORLD/);
+assert.equal(runtime.canonical_runtime,'V3.60 LIVING CITY REACTIVE WORLD MEGA');
+assert.equal(runtime.base_runtime,'V3.50 GAME FEEL CINEMATIC MEGA');
 assert.equal(runtime.consolidation,'all-compatible-layers-one-runtime');
 for(const id of [
   'city3d','radar3d','radarPlayer','radarCar','vehicleHud','speedValue','gearValue',
@@ -43,7 +44,7 @@ for(const src of [
   'story-missions.js','story-cinematics.js','story-world-3d.js','street-presence.js',
   'vertical-slice-director.js','mega-qa.js','photoreal-core.js','reality-master.js',
   'v310-aaa-visual-polish.js','v320-realism-mega.js','v330-motion-realism.js',
-  'v340-city-world-mega.js','v350-gamefeel-cinematic.js'
+  'v340-city-world-mega.js','v350-gamefeel-cinematic.js','v360-living-city.js'
 ]) assert.ok(html.includes('<script src="'+src+'"></script>'),'missing V2.18 script: '+src);
 
 for(const token of ['window.TGGGame','setDriveKey','getDrivingState']) assert.ok(game.includes(token),'game runtime missing '+token);
@@ -67,11 +68,12 @@ for(const token of ['V3.20 REALISM MEGA PASS','physical-lighting-balance','adapt
 for(const token of ['V3.30 MOTION VEHICLE CHARACTER','body-weight-transfer','vehicle-pitch-roll']) assert.ok(v330.includes(token),'V3.30 layer missing '+token);
 for(const token of ['V3.40 CITY WORLD MEGA PASS','dynamic-cloud-layer','crowd-quality-sync']) assert.ok(v340.includes(token),'V3.40 layer missing '+token);
 for(const token of ['V3.50 GAME FEEL CINEMATIC MEGA','cinematic-letterbox','story-cinematic-sync']) assert.ok(v350.includes(token),'V3.50 layer missing '+token);
+for(const token of ['V3.60 LIVING CITY REACTIVE WORLD MEGA','district-heat-system','dynamic-city-events','context-interaction-prompts','performance-safe-density-sync']) assert.ok(v360.includes(token),'V3.60 layer missing '+token);
 for(const token of [
   'human_realism','vehicle_realism','world_detail','unified_quality_presets','unified_movement_tuning',
   'unified_vehicle_tuning','adaptive_crowd_density','integrated_readiness_matrix','integrated_mega_qa',
   'v310_aaa_visual_polish','v320_realism_mega_pass','v330_motion_vehicle_character',
-  'v340_city_world_mega_pass','v350_game_feel_cinematic_mega'
+  'v340_city_world_mega_pass','v350_game_feel_cinematic_mega','v360_living_city_reactive_world'
 ]) assert.ok(runtime.features.includes(token),'runtime feature missing '+token);
 
 for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
@@ -80,4 +82,4 @@ for(const forbidden of ['sb_secret_','SUPABASE_SERVICE_ROLE_KEY','sk_live_']){
   }
 }
 
-console.log('GAME_V3_50_FINAL_MEGA_STATIC_CONTRACT_PASS');
+console.log('GAME_V3_60_LIVING_CITY_STATIC_CONTRACT_PASS');

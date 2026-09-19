@@ -177,9 +177,11 @@
     const c=state.chapter2;if(c.completed)return;
     c.active=false;c.completed=true;c.step=cityBuzzSteps.length;c.completedAt=Date.now();
     save();
-    window.TGGGame?.reward?.(1800,450);window.TGGCareer?.addRep?.(175);window.TGGProgression?.sync?.();
-    notify('CITY BUZZ COMPLETE — +$1800 • +450 XP • +175 REP');
-    emit('chapter-complete',2,'CITY BUZZ COMPLETE','+$1800 • +450 XP • +175 REP');
+    const visualBonus=Number(window.TGGLifeOS?.careerOutcome?.('visual')?.repBonus)||0;
+    const totalRep=175+visualBonus;
+    window.TGGGame?.reward?.(1800,450);window.TGGCareer?.addRep?.(totalRep);window.TGGProgression?.sync?.();
+    notify('CITY BUZZ COMPLETE — +$1800 • +450 XP • +'+totalRep+' REP');
+    emit('chapter-complete',2,'CITY BUZZ COMPLETE','+$1800 • +450 XP • +'+totalRep+' REP');
     render();
   }
 
